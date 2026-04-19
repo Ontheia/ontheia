@@ -55,7 +55,7 @@ GEMINI_CONFIG_DIR=/home/rock/.gemini
 ```
 
 **Note for other users/OS:** Paths vary by operating system and username. Examples:
-- Linux with user `wbrangl`: `NVM_DIR=/home/wbrangl/.nvm`
+- Linux with user `user`: `NVM_DIR=/home/user/.nvm`
 - macOS: `NVM_DIR=/Users/rock/.nvm`
 
 ### Why the mounted .nvm path stays fixed

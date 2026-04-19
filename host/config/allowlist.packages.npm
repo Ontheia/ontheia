@@ -1,2 +1,0 @@
-# Allowed npm packages that MCP servers are permitted to install.
-# One entry per line; packages not in this list will be blocked.
