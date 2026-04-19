@@ -60,7 +60,7 @@ These variables control API access and browser security.
 | `XAI_API_KEY` | Global API key for xAI (Grok). |
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID of the chain used for prompt optimization. |
 | `BUILDER_CHAIN_ID` | UUID of the chain used for the agent builder. |
-| `EMBEDDING_CONFIG_PATH` | Path to the embedding configuration file (`embedding.config.json`). **Optional:** The database configuration (Admin → Settings → Embedding) takes precedence. This file is only used as a fallback. |
+| `EMBEDDING_CONFIG_PATH` | Path to the embedding configuration file (`embedding.config.json`). **Optional:** The database configuration (Administration → AI Provider → Embedding tab) takes precedence. This file is only used as a fallback. |
 
 ## 6. Initial Setup (Bootstrap)
 

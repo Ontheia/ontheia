@@ -29,7 +29,7 @@ WARN: MemoryAdapter could not be initialized — memory features disabled.
 
 ## Hinweis in der Admin-UI
 
-In den Einstellungen unter **Embedding** wird ein gelbes Warn-Banner angezeigt, solange der Memory-Modus deaktiviert ist:
+Unter **Administration → AI-Provider → Tab Embedding** wird ein gelbes Warn-Banner angezeigt, solange der Memory-Modus deaktiviert ist:
 
 > **Memory deaktiviert** – Es ist kein Embedding-Provider konfiguriert. Vektor-Suche und Langzeitgedächtnis stehen nicht zur Verfügung.
 

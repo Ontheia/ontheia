@@ -29,7 +29,7 @@ WARN: MemoryAdapter could not be initialized — memory features disabled.
 
 ## Warning in the Admin UI
 
-In Settings under **Embedding**, a yellow warning banner is shown while memory is disabled:
+Under **Administration → AI Provider → Embedding tab**, a yellow warning banner is shown while memory is disabled:
 
 > **Memory disabled** – No embedding provider is configured. Vector search and long-term memory are not available.
 

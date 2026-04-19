@@ -4,7 +4,7 @@ Ontheia nutzt Embedding-Modelle, um Texte in Vektordarstellungen für die semant
 
 ## Wo konfigurieren
 
-**Admin → Einstellungen → Embedding**
+**Administration → AI-Provider → Tab Embedding**
 
 Die Embedding-Konfiguration wird in der Datenbank gespeichert und hat Vorrang vor der dateibasierten `embedding.config.json`. Die Datei dient als Fallback, wenn keine Datenbankkonfiguration vorhanden ist.
 

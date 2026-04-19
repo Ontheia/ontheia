@@ -4,7 +4,7 @@ Ontheia uses embedding models to convert text into vector representations for se
 
 ## Where to Configure
 
-**Admin → Settings → Embedding**
+**Administration → AI Provider → Embedding tab**
 
 The embedding configuration is stored in the database and takes precedence over the file-based `embedding.config.json`. The file serves as a fallback if no database configuration exists.
 
