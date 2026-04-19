@@ -13,4 +13,4 @@ Customize the appearance and interaction of Ontheia to your personal preferences
 
 ## 3. Chat Options
 
-- **Technical Details in Chat:** When this option is enabled, Ontheia displays information about internal processes (Run events, tool calls, memory hits) directly in the chat history. This is particularly helpful for power users who want to understand how the agent arrived at its result.
+- **Technical Details in Chat:** Toggle via the **eye icon** at the top right of the chat window. Shows run events, tool calls, and memory hits directly in the chat history.

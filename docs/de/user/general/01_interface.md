@@ -13,4 +13,4 @@ Passe das Erscheinungsbild und die Interaktion von Ontheia an deine persönliche
 
 ## 3. Chat-Optionen
 
-- **Technische Details im Chat:** Wenn diese Option aktiviert ist, blendet Ontheia Informationen über interne Abläufe (Run-Events, Tool-Calls, Memory-Treffer) direkt im Chatverlauf ein. Dies ist besonders hilfreich für Power-User, die verstehen wollen, wie der Agent zu seinem Ergebnis gekommen ist.
+- **Technische Details im Chat:** Ein-/Ausblenden über das **Augen-Icon** oben rechts im Chat-Fenster. Zeigt Run-Events, Tool-Calls und Memory-Treffer direkt im Chatverlauf an.
