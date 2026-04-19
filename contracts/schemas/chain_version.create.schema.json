@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chain Version Create",
+  "type": "object",
+  "properties": {
+    "chain_id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "kind": { "type": "string" },
+    "spec": { "type": "object" },
+    "active": { "type": "boolean" }
+  },
+  "required": ["chain_id", "version", "kind", "spec"],
+  "additionalProperties": false
+}

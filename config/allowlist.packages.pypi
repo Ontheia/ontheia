@@ -1,0 +1,15 @@
+# Allowlist: PyPI packages that MCP servers are permitted to install and run via uvx.
+#
+# One entry per line. Package names, versioned names, or git URLs are supported.
+# Lines starting with # are comments and are ignored.
+#
+# Examples:
+#   mcp-server-time
+#   mcp-server-fetch
+#   git+https://github.com/example/mcp-server@main
+#
+# For additional private or third-party packages, add them to allowlist.packages.pypi.local
+# (that file is gitignored and will be merged automatically at runtime).
+
+mcp-server-time
+mcp-server-fetch

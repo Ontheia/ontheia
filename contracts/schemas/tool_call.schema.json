@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tool Call Event",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "type": { "const": "tool_call" },
+    "call_id": { "type": "string" },
+    "tool": { "type": "string", "minLength": 1 },
+    "server": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["requested", "success", "error"]
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "result": {
+      "description": "Raw tool output (text or structured JSON).",
+      "type": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if the tool call failed."
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["type", "tool", "status"]
+}

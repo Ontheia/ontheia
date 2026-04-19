@@ -1,0 +1,60 @@
+[
+  {
+    "id": "c795461d-66a9-4772-a7c7-6c7c169ad270",
+    "label": "Mail-Agent",
+    "providerId": "openai",
+    "modelId": "gpt-5-codex-medium",
+    "toolApprovalMode": "prompt",
+    "mcpServers": [],
+    "tools": [],
+    "tasks": [
+      {
+        "id": "3f90b68f-c2ea-42a8-976e-8c9e0d6f73a2",
+        "label": "Kundenanfragen beantworten",
+        "contextPrompt": "Du beantwortest Kundenmails freundlich, prägnant und mit einer kurzen Abschlussformel."
+      },
+      {
+        "id": "fb07a2c4-cbc0-437a-ba17-e56bfe266954",
+        "label": "Lieferantenanfragen beantworten",
+        "contextPrompt": "Antworte sachlich und nenne konkrete Termine, falls vorhanden."
+      }
+    ]
+  },
+  {
+    "id": "eacd32fb-914e-4a16-9977-9e4ca3d32ebf",
+    "label": "File-Agent",
+    "providerId": "ollama",
+    "modelId": "mistral-small",
+    "toolApprovalMode": "prompt",
+    "mcpServers": [],
+    "tools": [],
+    "tasks": [
+      {
+        "id": "88fde35d-6fc8-4579-b10b-7ba1328a656d",
+        "label": "Backup",
+        "contextPrompt": "Arbeite mit Dateien in /data/backups und dokumentiere jeden Schritt stichpunktartig."
+      },
+      {
+        "id": "c6c2ff3d-196f-4940-a484-24de803be34f",
+        "label": "Restore",
+        "contextPrompt": "Stelle Dateien aus dem neuesten Backup wieder her und bestätige das Ergebnis."
+      }
+    ]
+  },
+  {
+    "id": "e54a7995-5e39-4350-8d77-dde67c292079",
+    "label": "Test-Agent",
+    "providerId": "openai",
+    "modelId": "gpt-5-codex-medium",
+    "toolApprovalMode": "prompt",
+    "mcpServers": [],
+    "tools": [],
+    "tasks": [
+      {
+        "id": "81c6c854-ac26-4827-9cd2-f2bd62cfa634",
+        "label": "Task Test",
+        "contextPrompt": "Nutze diesen Task für manuelle Tests; sei knapp, aber vollständig."
+      }
+    ]
+  }
+]

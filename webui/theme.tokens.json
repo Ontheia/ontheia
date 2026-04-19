@@ -1,0 +1,26 @@
+{
+  "colors": {
+    "background": "#0f172a",
+    "surface": "#111827",
+    "surface-alt": "#1f2937",
+    "primary": "#38bdf8",
+    "accent": "#facc15",
+    "success": "#22c55e",
+    "warning": "#f97316",
+    "danger": "#ef4444",
+    "text": "#f8fafc",
+    "text-muted": "#9ca3af"
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24
+  },
+  "radius": {
+    "sm": 4,
+    "md": 8,
+    "lg": 12
+  }
+}

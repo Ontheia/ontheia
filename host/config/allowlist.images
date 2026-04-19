@@ -1,0 +1,3 @@
+# List of allowed container images or binaries that the orchestrator is permitted to start.
+# Each line contains a full image string (e.g., docker.io/library/python:3.11).
+mcp-server-mail:latest

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussion
+    url: https://github.com/Ontheia/ontheia/discussions
+    about: Use Discussions for questions, not Issues
+  - name: Documentation
+    url: https://docs.ontheia.ai
+    about: Check the documentation first

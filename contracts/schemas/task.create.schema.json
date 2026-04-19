@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task Create",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "prompt": { "type": "string" },
+    "tone": { "type": "string" },
+    "policies": { "type": "object" },
+    "memory": { "type": "object" },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "server": { "type": "string" },
+          "tool": { "type": "string" },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "config": { "type": "object" }
+        },
+        "required": ["server", "tool"],
+        "additionalProperties": false
+      }
+    },
+    "chains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string", "enum": ["pre", "main", "post"] },
+          "chain_version_id": { "type": "string", "format": "uuid" },
+          "overrides": { "type": "object" }
+        },
+        "required": ["role", "chain_version_id"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

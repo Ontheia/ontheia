@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Create",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "visibility": { "type": "string", "enum": ["private", "project", "org"] },
+    "owner_id": { "type": "string", "format": "uuid" },
+    "persona": { "type": "string" },
+    "model": { "type": "object" },
+    "limits": { "type": "object" },
+    "defaults": { "type": "object" },
+    "memory": { "type": "object" },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "server": { "type": "string" },
+          "tool": { "type": "string" },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "config": { "type": "object" }
+        },
+        "required": ["server", "tool"],
+        "additionalProperties": false
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "./task.create.schema.json"
+      }
+    },
+    "idempotency_key": { "type": "string", "minLength": 1 }
+  },
+  "required": ["name", "visibility", "owner_id"],
+  "additionalProperties": false
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Run-Event Stream",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/definitions/step_start" },
+    { "$ref": "#/definitions/tool_call" },
+    { "$ref": "#/definitions/memory_hits" },
+    { "$ref": "#/definitions/tokens" },
+    { "$ref": "#/definitions/complete" },
+    { "$ref": "#/definitions/error" }
+  ],
+  "definitions": {
+    "step_start": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "step_start" },
+        "step": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "step", "timestamp"]
+    },
+    "tool_call": { "$ref": "./schemas/tool_call.schema.json" },
+    "memory_hits": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "memory_hits" },
+        "hits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "namespace": { "type": "string" },
+              "score": { "type": "number" },
+              "metadata": { "type": "object" }
+            },
+            "required": ["namespace", "score"]
+          }
+        }
+      },
+      "required": ["type", "hits"]
+    },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "tokens" },
+        "prompt": { "type": "integer", "minimum": 0 },
+        "completion": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["type", "prompt", "completion"]
+    },
+    "complete": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "complete" },
+        "status": { "type": "string", "enum": ["success", "cancelled"] },
+        "output": { "type": "string" }
+      },
+      "required": ["type", "status"]
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "error" },
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["type", "code", "message"]
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Servers Config",
+  "type": "object",
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        ".+": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "enum": ["uvx", "npx", "bun", "bunx", "docker", "binary", "npm", "ssh", "python", "python3"]
+            },
+            "args": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "transport": {
+              "type": "string",
+              "enum": ["stdio", "sse", "http"]
+            },
+            "env": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["always", "missing", "never"],
+              "default": "missing"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpus": { "type": "number", "exclusiveMinimum": 0 },
+                "memory": { "type": "string" },
+                "pids": { "type": "integer", "minimum": 1 }
+              },
+              "additionalProperties": false
+            },
+            "network": {
+              "type": "object",
+              "properties": {
+                "mode": { "type": "string", "enum": ["bridge", "none"] },
+                "allowlist": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            },
+            "envFrom": {
+              "type": "object",
+              "properties": {
+                "secretRef": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "oneOf": [
+            { "required": ["command", "args"] },
+            { "required": ["url"] }
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["mcpServers"],
+  "additionalProperties": false
+}

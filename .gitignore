@@ -1,0 +1,79 @@
+# Dependencies
+node_modules/
+
+# Environment / Secrets
+.env
+.env.local
+!.env.example
+*.pem
+flyway.conf
+
+# Project specific
+host/dist/
+host/node_modules/
+host/logs/
+webui/dist/
+webui/node_modules/
+webui/.next/
+webui/node_modules_backup/
+
+# Application Data (not in git)
+mcp_server/
+config/mail/
+config/allowlist.*.local
+config/embedding.config.json
+config/prometheus.yml
+config/orchestrator.hardening.json
+config/mcp-server-filesystem.example.json
+backup/
+tools/
+test/
+
+# Scripts — private/server-specific
+scripts/remote-sync.sh
+scripts/deploy-test.sh
+scripts/migrate-onaris-to-ontheia.sh
+scripts/test_mail_internal.py
+scripts/backup-ontheia.sh
+
+# Logs
+*.log
+host/host_server.log
+host/host_server.pid
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gemini/
+.claude/
+*.swp
+*.swo
+
+# Temporary / Dumps
+tmp/
+ontheia.dump
+*.dump
+scripts/chat_id
+scripts/messages-
+scripts/metadata-
+scripts/options-
+scripts/content
+
+# Development artifacts
+Dockerfile.host
+Dockerfile.pgvector
+docker-compose.override.yml
+
+# Docker
+.docker
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/

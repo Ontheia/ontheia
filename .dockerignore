@@ -1,0 +1,48 @@
+# Node / build artifacts
+node_modules
+webui/node_modules
+webui/dist
+host/node_modules
+host/dist
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs / runtime
+host/host_server.log
+host/host_server.pid
+logs
+*.log
+
+# Temp / caches / dumps
+tmp/
+.cache
+.npm
+.npx
+.pnpm-store
+ontheia.dump
+*.dump
+
+# Application Data (not in git)
+namespaces/
+mcp_server/
+config/
+backup/
+tools/
+scripts/
+test/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Tests / coverage
+coverage
+*.lcov
+
+# Misc
+docker-compose.override.yml

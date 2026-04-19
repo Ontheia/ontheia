@@ -1,0 +1,542 @@
+openapi: 3.1.0
+info:
+  title: MCP Host Admin API (Stub)
+  version: 0.1.5
+servers:
+  - url: http://localhost:8080
+paths:
+  /runs:
+    post:
+      summary: Startet einen neuen Agenten-Run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/run.request.schema.json'
+      responses:
+        '200':
+          description: Run angenommen
+        '400':
+          description: Ungültige Eingabe (invalid_argument, invalid_chain_spec, invalid_chain_version, invalid_chain)
+  /agents:
+    post:
+      summary: Legt einen Agenten inkl. Tasks/Tools an
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/agent.create.schema.json'
+      responses:
+        '201':
+          description: Agent erstellt
+  /tasks:
+    post:
+      summary: Erstellt ein Task-Profil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/task.create.schema.json'
+      responses:
+        '201':
+          description: Task erstellt
+  /prompt-templates:
+    get:
+      summary: Listet Prompt-Vorlagen des aktuellen Nutzers auf
+      parameters:
+        - in: query
+          name: scope
+          schema:
+            type: string
+            enum: [task, agent, global]
+        - in: query
+          name: target_id
+          schema:
+            type: string
+        - in: query
+          name: includeGlobal
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Prompt-Vorlagen
+    post:
+      summary: Legt eine neue Prompt-Vorlage an
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                  enum: [task, agent, global]
+                target_id:
+                  type: string
+                title:
+                  type: string
+                content:
+                  type: string
+              required: [scope, content]
+      responses:
+        '201':
+          description: Vorlage erstellt
+  /prompt-templates/{id}:
+    put:
+      summary: Aktualisiert eine bestehende Prompt-Vorlage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                title:
+                  type: string
+              required: [content]
+      responses:
+        '200':
+          description: Vorlage aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  scope:
+                    type: string
+                  target_id:
+                    type: string
+                    nullable: true
+                  title:
+                    type: string
+                  content:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Ungültige Eingabe (invalid_argument)
+        '404':
+          description: Vorlage nicht gefunden
+    delete:
+      summary: Löscht eine Prompt-Vorlage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Vorlage gelöscht
+        '404':
+          description: Vorlage nicht gefunden
+  /chains:
+    get:
+      summary: Listet Chains inkl. aktiver Version
+      responses:
+        '200':
+          description: Chains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    description:
+                      type: string
+                      nullable: true
+                    created_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    version_id:
+                      type: string
+                      format: uuid
+                      nullable: true
+                    version:
+                      type: integer
+                      nullable: true
+                    kind:
+                      type: string
+                      nullable: true
+                    active:
+                      type: boolean
+                    version_description:
+                      type: string
+                      nullable: true
+                    version_created_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+  /chains/{id}/versions:
+    post:
+      summary: Legt eine neue Chain-Version an
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                version:
+                  type: integer
+                kind:
+                  type: string
+                description:
+                  type: string
+                spec:
+                  $ref: './schemas/chain.spec.schema.json'
+                active:
+                  type: boolean
+              required: [version, kind, spec]
+      responses:
+        '201':
+          description: Chain-Version erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  chain_id:
+                    type: string
+                    format: uuid
+                  version:
+                    type: integer
+                  kind:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  created_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '400':
+          description: Ungültige Eingabe (invalid_argument, invalid_chain_spec)
+    get:
+      summary: Listet Versionen einer Chain
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chain-Versionen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    chain_id:
+                      type: string
+                      format: uuid
+                    version:
+                      type: integer
+                    kind:
+                      type: string
+                  description:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  created_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+  /chains/{id}/run:
+    post:
+      summary: Startet eine Chain (aktive Version oder spezifizierte chain_version_id)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chain_version_id:
+                  type: string
+                  description: Optionale konkrete Version; sonst aktive Version
+                input:
+                  type: object
+                  description: Run-Input (z. B. text/messages)
+              additionalProperties: true
+      responses:
+        '200':
+          description: Chain-Run erfolgreich angenommen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chain_id:
+                    type: string
+                  chain_version_id:
+                    type: string
+                  run_id:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      type: object
+                  output:
+                    type: string
+                    nullable: true
+        '400':
+          description: Ungültige Eingabe (invalid_argument, invalid_chain, invalid_chain_version, invalid_chain_spec)
+        '404':
+          description: Chain nicht gefunden
+  /chains/{id}/versions/activate:
+    post:
+      summary: Setzt eine Chain-Version aktiv
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chain_version_id:
+                  type: string
+                  description: Zu aktivierende Version
+              required: [chain_version_id]
+      responses:
+        '200':
+          description: Version aktiviert
+        '400':
+          description: Ungültige Eingabe (invalid_argument, invalid_chain_version)
+        '404':
+          description: Chain oder Version nicht gefunden
+  /runs/{id}:
+    get:
+      summary: Liefert Run-Trace inkl. Events und Chain-Kontext
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Run-Details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  agent_id:
+                    type: string
+                    nullable: true
+                  task_id:
+                    type: string
+                    nullable: true
+                  chain_id:
+                    type: string
+                    nullable: true
+                  chain_version_id:
+                    type: string
+                    nullable: true
+                  events:
+                    type: array
+                    items:
+                      type: object
+                  output:
+                    type: string
+                    nullable: true
+        '400':
+          description: Ungültige Eingabe (invalid_run_id)
+        '404':
+          description: Run nicht gefunden
+  /chains:
+    post:
+      summary: Erstellt eine Chain-Version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/chain_version.create.schema.json'
+      responses:
+        '201':
+          description: Chain erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+  /memory/namespaces:
+    get:
+      summary: Listet alle für den Benutzer zugänglichen Memory-Namespaces auf
+      responses:
+        '200':
+          description: Namespace-Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  namespaces:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - vector.user.84a9cfd4.memory
+                      - vector.global.ontheia.docs
+  /memory/health:
+    get:
+      summary: Status-Check des Memory-Systems (pgvector-Verbindung)
+      responses:
+        '200':
+          description: Memory-System erreichbar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, error]
+                  total_documents:
+                    type: integer
+        '503':
+          description: Memory-System nicht erreichbar
+  /memory/reembed:
+    post:
+      summary: Stellt Einträge in die Re-Embedding-Warteschlange (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                namespace:
+                  type: string
+                  description: Ziel-Namespace für Re-Embedding
+                embedding_model:
+                  type: string
+                  description: Zu verwendendes Embedding-Modell
+                chunk_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Optionale Liste konkreter Chunk-IDs
+                scheduled_at:
+                  type: string
+                  format: date-time
+                  description: Optionaler Startzeitpunkt
+              required: [namespace, embedding_model]
+      responses:
+        '200':
+          description: Jobs eingereiht
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  enqueued:
+                    type: integer
+        '400':
+          description: Ungültige Eingabe (namespace oder embedding_model fehlt)
+        '403':
+          description: Nur für Admins zugänglich
+  /servers/validate:
+    post:
+      summary: Validiert eine MCP-Server-Konfiguration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/mcpServers.schema.json'
+      responses:
+        '200':
+          description: Validierung erfolgreich
+  /servers/start:
+    post:
+      summary: Startet einen MCP-Server nach erfolgreicher Validierung
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/mcpServers.schema.json'
+      responses:
+        '202':
+          description: Start initiiert
+components:
+  schemas: {}

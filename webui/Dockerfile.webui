@@ -1,0 +1,27 @@
+# TODO: finalisieren – Platzhalter für WebUI (Vite Dev/Build)
+ARG VITE_HOST_API_URL=http://localhost:8080
+ARG VITE_PROMPT_OPTIMIZER_CHAIN_ID
+ARG VITE_BUILDER_CHAIN_ID
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+FROM deps AS build
+ARG VITE_HOST_API_URL
+ARG VITE_PROMPT_OPTIMIZER_CHAIN_ID
+ARG VITE_BUILDER_CHAIN_ID
+ARG GIT_HASH
+ENV VITE_HOST_API_URL=$VITE_HOST_API_URL
+ENV VITE_PROMPT_OPTIMIZER_CHAIN_ID=$VITE_PROMPT_OPTIMIZER_CHAIN_ID
+ENV VITE_BUILDER_CHAIN_ID=$VITE_BUILDER_CHAIN_ID
+ENV GIT_HASH=$GIT_HASH
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+RUN npm install -g serve
+EXPOSE 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]

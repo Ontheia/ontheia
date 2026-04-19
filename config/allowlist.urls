@@ -1,0 +1,17 @@
+# Allowlist: Remote MCP servers (SSE/HTTP) the orchestrator may connect to.
+#
+# One entry per line. Format: host or host:port
+# Wildcards are supported (e.g. *.example.com).
+# Lines starting with # are comments and are ignored.
+#
+# Examples:
+#   localhost:8000
+#   127.0.0.1:8000
+#   mcp.example.com
+#   *.internal.corp
+#
+# For site-specific hosts, add them to allowlist.urls.local
+# (that file is gitignored and will be merged automatically at runtime).
+
+localhost:8000
+127.0.0.1:8000

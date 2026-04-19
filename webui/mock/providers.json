@@ -1,0 +1,24 @@
+[
+  {
+    "id": "openai",
+    "label": "OpenAI",
+    "models": [
+      { "id": "gpt-5-codex-medium", "label": "GPT-5 Codex (Medium)" },
+      { "id": "gpt-5-codex-high", "label": "GPT-5 Codex (High)" }
+    ]
+  },
+  {
+    "id": "anthropic",
+    "label": "Anthropic",
+    "models": [
+      { "id": "claude-opus", "label": "Claude Opus" }
+    ]
+  },
+  {
+    "id": "ollama",
+    "label": "Ollama",
+    "models": [
+      { "id": "mistral-small", "label": "Mistral Small" }
+    ]
+  }
+]

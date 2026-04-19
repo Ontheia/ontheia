@@ -1,0 +1,84 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Ontheia
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in all required fields — this helps us reproduce and fix the issue faster.
+
+  - type: input
+    id: version
+    attributes:
+      label: Ontheia Version
+      description: "Run: `docker compose exec host node -e \"console.log(require('./package.json').version)\"`"
+      placeholder: "0.1.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI Provider
+      description: Which AI provider were you using when the bug occurred?
+      options:
+        - Anthropic Claude
+        - OpenAI ChatGPT
+        - Google Gemini
+        - xAI Grok
+        - Ollama (local)
+        - Other
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps, starting from a fresh login. Be as specific as possible.
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include any error messages shown in the UI.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: "Run `docker compose logs --tail=50` and paste relevant lines here."
+      render: shell
+
+  - type: input
+    id: os
+    attributes:
+      label: Host OS & Docker Version
+      placeholder: "Ubuntu 24.04, Docker 26.1"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I am running the latest version of Ontheia
+          required: false

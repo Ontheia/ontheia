@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chain Spec",
+  "type": "object",
+  "properties": {
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/step" },
+      "maxItems": 50
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "to": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "map": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "required": ["from", "to"],
+        "additionalProperties": false
+      },
+      "maxItems": 200
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": false,
+  "definitions": {
+    "when": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string" }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "type": {
+          "type": "string",
+          "enum": [
+            "memory_search",
+            "tool",
+            "llm",
+            "router",
+            "branch",
+            "parallel",
+            "memory_write",
+            "rest_call",
+            "delay",
+            "loop",
+            "retry",
+            "transform",
+            "agent"
+          ]
+        },
+        "agent_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "task_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "input": { "type": "string" },
+        "when": { "$ref": "#/definitions/when" },
+        "params": { "type": "object" },
+        "inputs": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean", "object", "array", "null"] } },
+        "outputs": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean", "object", "array", "null"] } },
+        "prompt": { "type": "string" },
+        "system_prompt": { "type": "string" },
+        "model": { "type": "string" },
+        "server": { "type": "string" },
+        "tool": { "type": "string" },
+        "args": { "type": "object" },
+        "delay_ms": { "type": "number", "minimum": 0 },
+        "count": { "type": "number", "minimum": 1 },
+        "fail_on_warnings": { "type": "boolean" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": { "$ref": "#/definitions/when" },
+              "steps": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/step" },
+                "maxItems": 20
+              }
+            },
+            "required": ["steps"],
+            "additionalProperties": false
+          },
+          "maxItems": 10
+        },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/step" },
+          "maxItems": 4
+        },
+        "default": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/step" },
+          "maxItems": 20
+        },
+        "url": { "type": "string" },
+        "method": { "type": "string" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "body": {}
+      },
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "rest_call" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "url": { "type": "string", "minLength": 1 },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+              },
+              "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "delay" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "delay_ms": { "type": "number", "minimum": 0, "maximum": 600000 },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "delay_ms": { "type": "number", "minimum": 0, "maximum": 600000 }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "loop" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "count": { "type": "number", "minimum": 1, "maximum": 20 },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "number", "minimum": 1, "maximum": 20 }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "retry" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "count": { "type": "number", "minimum": 1, "maximum": 5 },
+              "delay_ms": { "type": "number", "minimum": 0, "maximum": 600000 },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "number", "minimum": 1, "maximum": 5 },
+                  "delay_ms": { "type": "number", "minimum": 0, "maximum": 600000 },
+                  "success_when": { "type": "string" },
+                  "fail_on_warnings": { "type": "boolean" }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "transform" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "input": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

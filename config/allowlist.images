@@ -1,0 +1,13 @@
+# Allowlist: Docker images the orchestrator is permitted to start.
+#
+# One entry per line. Wildcards (*) are supported.
+# Lines starting with # are comments and are ignored.
+#
+# Examples:
+#   node:20-slim
+#   python:3.11-slim
+#   ghcr.io/myorg/my-mcp-server:latest
+#   myregistry.example.com/*
+#
+# For site-specific or private images, add them to allowlist.images.local
+# (that file is gitignored and will be merged automatically at runtime).

@@ -1,0 +1,20 @@
+# Allowlist: npm packages that MCP servers are permitted to install and run.
+#
+# One entry per line. Exact package names or name@version are supported.
+# Lines starting with # are comments and are ignored.
+#
+# Examples:
+#   @modelcontextprotocol/server-filesystem
+#   @modelcontextprotocol/server-filesystem@2025.11.25
+#   my-custom-mcp-server@latest
+#
+# For additional private or third-party packages, add them to allowlist.packages.npm.local
+# (that file is gitignored and will be merged automatically at runtime).
+
+@modelcontextprotocol/server-filesystem
+@modelcontextprotocol/server-filesystem@2025.11.25
+@modelcontextprotocol/server-postgres
+@modelcontextprotocol/server-puppeteer
+@modelcontextprotocol/server-sequential-thinking
+playwright-mcp
+playwright
