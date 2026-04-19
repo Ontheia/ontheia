@@ -59,7 +59,6 @@ These variables control API access and browser security.
 | `ANTHROPIC_API_KEY` | Global API key for Anthropic. |
 | `XAI_API_KEY` | Global API key for xAI (Grok). |
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID of the chain used for prompt optimization. |
-| `BUILDER_CHAIN_ID` | UUID of the chain used for the agent builder. |
 | `EMBEDDING_CONFIG_PATH` | Path to the embedding configuration file (`embedding.config.json`). **Optional:** The database configuration (Administration → AI Provider → Embedding tab) takes precedence. This file is only used as a fallback. |
 
 ## 6. Initial Setup (Bootstrap)
@@ -81,7 +80,6 @@ These variables must be prefixed with `VITE_` to be available in the browser cod
 | :--- | :--- |
 | `VITE_HOST_API_URL` | The URL where the frontend can reach the host service (e.g., `http://192.168.2.13:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Must be identical to `PROMPT_OPTIMIZER_CHAIN_ID`. |
-| `VITE_BUILDER_CHAIN_ID` | Must be identical to `BUILDER_CHAIN_ID`. |
 
 ## 8. Security & Tenant Separation (RLS)
 
@@ -103,7 +101,7 @@ Avoid exporting `DATABASE_URL` as an environment variable in your shell. Docker 
 ---
 
 ### Example for a Local Network (Production)
-```env
+```bash
 APP_ENV=production
 ALLOWED_ORIGINS=http://192.168.2.*,http://localhost:5173
 VITE_HOST_API_URL=http://192.168.2.13:8080

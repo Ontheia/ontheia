@@ -7,11 +7,6 @@ The Prompt Optimizer automatically improves user requests before they are sent t
 - **Configuration:** Selection of provider (e.g., OpenAI) and model (e.g., GPT-4o).
 - **Requirement:** Since this step serves quality assurance, a powerful model should be chosen here.
 
-## 2. Agent Builder
-The Agent Builder supports administrators and users in creating new agent definitions and task contexts.
-- **Configuration:** Selection of provider and model.
-- **Purpose:** Based on short descriptions, the model generates complex system prompts and suggests suitable tools.
-
 ---
 
 ### Note on Selection

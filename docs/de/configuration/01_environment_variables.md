@@ -59,7 +59,6 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 | `ANTHROPIC_API_KEY` | Globaler API-Key für Anthropic. |
 | `XAI_API_KEY` | Globaler API-Key für xAI (Grok). |
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID der Chain, die für die Prompt-Optimierung genutzt wird. |
-| `BUILDER_CHAIN_ID` | UUID der Chain, die für den Agent-Builder genutzt wird. |
 | `EMBEDDING_CONFIG_PATH` | Pfad zur Embedding-Konfigurationsdatei (`embedding.config.json`). **Optional:** Die Datenbankkonfiguration (Administration → AI-Provider → Tab Embedding) hat Vorrang. Diese Datei wird nur als Fallback verwendet. |
 
 ## 6. Initiales Setup (Bootstrap)
@@ -81,7 +80,6 @@ Diese Variablen müssen mit dem Präfix `VITE_` versehen sein, damit sie im Brow
 | :--- | :--- |
 | `VITE_HOST_API_URL` | Die URL, unter der das Frontend den Host-Service erreichen kann (z.B. `http://192.168.2.13:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Muss identisch mit `PROMPT_OPTIMIZER_CHAIN_ID` sein. |
-| `VITE_BUILDER_CHAIN_ID` | Muss identisch mit `BUILDER_CHAIN_ID` sein. |
 
 ## 8. Sicherheit & Mandantentrennung (RLS)
 
@@ -103,7 +101,7 @@ Vermeiden Sie es, `DATABASE_URL` als Umgebungsvariable in Ihrer Shell zu exporti
 ---
 
 ### Beispiel für ein lokales Netzwerk (Produktion)
-```env
+```bash
 APP_ENV=production
 ALLOWED_ORIGINS=http://192.168.2.*,http://localhost:5173
 VITE_HOST_API_URL=http://192.168.2.13:8080

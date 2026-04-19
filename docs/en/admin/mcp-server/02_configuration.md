@@ -12,7 +12,7 @@ The server is launched as a subprocess on the host. Communication occurs via sta
 **Supported Commands:**
 *   `npx`, `npm`: For Node.js-based servers.
 *   `uvx`: For Python-based servers (recommended for fast execution).
-*   `python`, `python3`: For local Python scripts (e.g., the Ontheia CLI server).
+*   `python`, `python3`: For local Python scripts.
 *   `bun`, `bunx`: For extremely fast JavaScript runtime.
 *   `docker`: Runs the server in an isolated container.
 
@@ -30,9 +30,9 @@ The configuration is expected in the standard MCP format:
   "mcpServers": {
     "cli-tools": {
       "command": "python3",
-      "args": ["/app/mcp-server/mcp-server-cli/cli_server.py"],
+      "args": ["--arg1", "value"],
       "env": {
-        "ALLOWED_COMMANDS": "ls,cat,grep,s-nail"
+        "API_KEY": "secret:MY_API_KEY"
       }
     }
   }
@@ -46,11 +46,3 @@ To protect sensitive data such as API keys, Ontheia supports the **Secret-Ref Pa
 - **Example:** `"env": { "KEY": "secret:FILESYSTEM_KEY" }`.
 - The host resolves this reference at runtime from the host container's environment variables or a secured `.env` file.
 
-## 4. Ontheia CLI Server
-
-Ontheia comes with a specialized CLI server (`mcp-server-cli`) that allows secure access to the host system.
-
-**Features:**
-*   **Allowlist:** Only explicitly allowed commands can be executed.
-*   **Spam Protection:** Integrated check via `bogofilter` for email content.
-*   **Isolation:** Each Ontheia user receives their own isolated process if required.
