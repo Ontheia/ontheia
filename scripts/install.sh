@@ -737,17 +737,17 @@ if [ "$EMBED_MODE" != "disabled" ]; then
             echo "[ingest] Copying docs/en to namespaces/vector/global/ontheia/docs..."
             mkdir -p ./namespaces/vector/global/ontheia/docs
             cp -r ./docs/en/. ./namespaces/vector/global/ontheia/docs/
-            echo "[ingest] Token acquired, running bulk-ingest..."
-            INGEST_RESULT=$(curl -s -X POST "http://localhost:$API_PORT/admin/memory/bulk-ingest" \
+            echo "[ingest] Token acquired, running directory ingest (subdirectory-aware)..."
+            INGEST_SSE=$(curl -s --max-time 300 -X POST "http://localhost:$API_PORT/memory/ingest/directory" \
                 -H "Content-Type: application/json" \
                 -H "Authorization: Bearer $SESSION_TOKEN" \
-                -d '{"namespace":"vector.global.ontheia.docs","path":"/app/host/namespaces/vector/global/ontheia/docs/","recursive":true}' \
+                -d '{"dir_path":"/app/host/namespaces/vector/global/ontheia/docs/","namespace":"vector.global.ontheia.docs","chunk_size":1000,"overlap_pct":10,"chunk_mode":"sliding-window","on_conflict":"replace"}' \
                 2>/dev/null) || true
-            echo "[ingest] Result: $INGEST_RESULT"
-            INGEST_OK=$(echo "$INGEST_RESULT" | jq -r '.ok // false' 2>/dev/null) || true
-            INGEST_FILES=$(echo "$INGEST_RESULT" | jq -r '.files // 0' 2>/dev/null) || true
-            INGEST_CHUNKS=$(echo "$INGEST_RESULT" | jq -r '.chunks // 0' 2>/dev/null) || true
-            if [ "$INGEST_OK" = "true" ]; then
+            COMPLETE_DATA=$(echo "$INGEST_SSE" | grep "^data:" | tail -1 | sed 's/^data://') || true
+            INGEST_STATUS=$(echo "$COMPLETE_DATA" | jq -r '.status // "error"' 2>/dev/null) || true
+            INGEST_FILES=$(echo "$COMPLETE_DATA" | jq -r '.files | if type=="array" then length else . end // 0' 2>/dev/null) || true
+            INGEST_CHUNKS=$(echo "$COMPLETE_DATA" | jq -r '.inserted // 0' 2>/dev/null) || true
+            if [ "$INGEST_STATUS" = "ok" ]; then
                 echo -e "${GREEN}$MSG_INGEST_OK (${INGEST_FILES} files, ${INGEST_CHUNKS} chunks)${NC}"
             else
                 echo -e "${YELLOW}$MSG_INGEST_FAIL${NC}"
