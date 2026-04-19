@@ -2,17 +2,24 @@
 
 Ontheia ermöglicht eine feingranulare Steuerung darüber, welcher Nutzer welchen Agenten sehen und nutzen darf.
 
-## 1. Sichtbarkeits-Modi
+## 1. Berechtigte Benutzer
 
-### Privat (Standard)
-Der Agent ist grundsätzlich nur für seinen Besitzer (Owner) und Administratoren sichtbar. 
-- **Zuweisung:** Über das Feld "Zugriffsberechtigte Benutzer" können weitere Personen explizit freigeschaltet werden.
-- **Vorteil:** Ideal für spezialisierte Agenten einzelner Mitarbeiter oder vertrauliche Test-Setups.
+Die Zugriffskontrolle erfolgt über das Multiselect-Feld **„Berechtigte Benutzer"** im Agent-Formular.
 
-### Öffentlich (Public)
-Der Agent steht **allen authentifizierten Benutzern** des Systems zur Verfügung.
-- **Anzeige:** Erscheint automatisch bei jedem Nutzer in der Agenten-Auswahl.
-- **Vorteil:** Perfekt für allgemeine Assistenten (z. B. "Standard Chat" oder "HR-Auskunft").
+| Auswahl | Wirkung |
+|---|---|
+| `* Alle Benutzer` | Der Agent ist für alle eingeloggten Benutzer zugänglich (öffentlich). |
+| Einzelne Benutzer | Zugriff nur für die explizit genannten Accounts. |
+| Keine Auswahl | Nur der Owner und Administratoren haben Zugriff. |
 
-## 2. Berechtigungs-Prüfung (RLS)
+**Schnelllinks:**
+- **Alle auswählen** — setzt automatisch `* Alle Benutzer`
+- **Auswahl leeren** — entfernt alle Berechtigungen (nur Owner/Admin)
+
+## 2. Sichtbarkeit im Composer
+
+Das Feld **„Im Composer anzeigen"** steuert, ob der Agent in der Agenten-Auswahl des Composers erscheint. Ein Agent kann zugriffsberechtigt sein, ohne im Composer aufzutauchen — etwa für reine Delegations-Agenten die nur von anderen Agenten aufgerufen werden.
+
+## 3. Berechtigungs-Prüfung (RLS)
+
 Technisch wird die Sichtbarkeit über die PostgreSQL-Tabelle `app.agent_permissions` und entsprechende RLS-Policies erzwungen. Selbst wenn ein Nutzer die UUID eines Agenten kennt, kann er diesen nicht ansprechen, sofern er keine explizite Erlaubnis besitzt.
