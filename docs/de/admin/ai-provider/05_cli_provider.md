@@ -15,7 +15,7 @@ Ein CLI-Provider verbindet Ontheia mit einem lokal installierten KI-Kommandozeil
 | Feld | Beschreibung | Beispiel |
 | :--- | :--- | :--- |
 | Provider-Typ | `CLI` auswählen | `CLI` |
-| CLI-Befehl | Vollständiger Pfad zum Binary oder Befehlsname | `/home/rock/.nvm/versions/node/v25.8.1/bin/gemini` |
+| CLI-Befehl | Vollständiger Pfad zum Binary oder Befehlsname | `~/.nvm/versions/node/<version>/bin/gemini` |
 | CLI-Format | Ausgabeformat des Tools | `Gemini`, `Claude`, `Generisch` |
 
 ### Modelle
@@ -40,27 +40,27 @@ Da Ontheia im Docker-Container läuft, müssen die CLI-Tools und ihre Konfigurat
 
 ```yaml
 volumes:
-  - ${NVM_DIR:-/home/rock/.nvm}:/home/rock/.nvm:ro
-  - ${GEMINI_CONFIG_DIR:-/home/rock/.gemini}:/root/.gemini
+  - ${NVM_DIR:-$NVM_DIR}:$NVM_DIR:ro
+  - ${GEMINI_CONFIG_DIR:-$HOME/.gemini}:/root/.gemini
 ```
 
 ### .env – Pfade anpassen
 
 ```env
 # Pfad zur nvm-Installation des Host-Users
-NVM_DIR=/home/rock/.nvm
+NVM_DIR=$NVM_DIR
 
 # Pfad zum Gemini-CLI-Konfigurationsverzeichnis (enthält Auth-Credentials)
-GEMINI_CONFIG_DIR=/home/rock/.gemini
+GEMINI_CONFIG_DIR=$HOME/.gemini
 ```
 
 **Hinweis für andere Nutzer/OS:** Pfade variieren je nach Betriebssystem und Benutzername. Beispiele:
 - Linux mit User `user`: `NVM_DIR=/home/user/.nvm`
-- macOS: `NVM_DIR=/Users/rock/.nvm`
+- macOS: `NVM_DIR=$NVM_DIR`
 
 ### Warum der gemountete .nvm-Pfad fest bleibt
 
-Das Gemini-CLI-Binary enthält einen Shebang (`#!/home/rock/.nvm/.../bin/node`), der auf den exakten Pfad des Node.js-Interpreters zeigt. Der Container-seitige Pfad muss daher mit dem im Binary kodierten Pfad übereinstimmen — deshalb wird `/home/rock/.nvm` im Container immer als `/home/rock/.nvm` gemountet, auch wenn die Quelle auf dem Host unter einem anderen Benutzerpfad liegt.
+Das Gemini-CLI-Binary enthält einen Shebang (`#!$NVM_DIR/.../bin/node`), der auf den exakten Pfad des Node.js-Interpreters zeigt. Der Container-seitige Pfad muss daher mit dem im Binary kodierten Pfad übereinstimmen — deshalb wird `$NVM_DIR` im Container immer als `$NVM_DIR` gemountet, auch wenn die Quelle auf dem Host unter einem anderen Benutzerpfad liegt.
 
 ## Verbindungstest
 

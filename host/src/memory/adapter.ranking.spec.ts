@@ -185,16 +185,16 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
 
   const adapter = new MemoryAdapter(mockDb as any, mockProvider as any, config as any);
 
-  const results = await adapter.search(['vector.user.rock.howto', 'vector.user.rock.memory'], { query: 'test', topK: 5, dimension: 3 });
+  const results = await adapter.search(['vector.user.testuser.howto', 'vector.user.testuser.memory'], { query: 'test', topK: 5, dimension: 3 });
 
   // Expected scores:
-  // Hit 1 (rock.howto):
+  // Hit 1 (testuser.howto):
   //   Base: 0.9
   //   Pattern "vector.user" matches -> bonus +0.0
   //   Pattern "vector.user.${user_id}.howto" matches -> bonus +0.05
   //   Final: 0.9 * (1.0 + 0 + 0.05) = 0.945
   
-  // Hit 2 (rock.memory):
+  // Hit 2 (testuser.memory):
   //   Base: 0.9
   //   Pattern "vector.user" matches -> bonus +0.0
   //   Final: 0.9 * 1.0 = 0.9

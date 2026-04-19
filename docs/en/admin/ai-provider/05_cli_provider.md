@@ -15,7 +15,7 @@ A CLI provider connects Ontheia to a locally installed AI command-line tool (e.g
 | Field | Description | Example |
 | :--- | :--- | :--- |
 | Provider Type | Select `CLI` | `CLI` |
-| CLI Command | Full path to the binary or command name | `/home/rock/.nvm/versions/node/v25.8.1/bin/gemini` |
+| CLI Command | Full path to the binary or command name | `~/.nvm/versions/node/<version>/bin/gemini` |
 | CLI Format | Output format of the tool | `Gemini`, `Claude`, `Generic` |
 
 ### Models
@@ -40,27 +40,27 @@ Since Ontheia runs in a Docker container, the CLI tools and their configuration 
 
 ```yaml
 volumes:
-  - ${NVM_DIR:-/home/rock/.nvm}:/home/rock/.nvm:ro
-  - ${GEMINI_CONFIG_DIR:-/home/rock/.gemini}:/root/.gemini
+  - ${NVM_DIR:-$NVM_DIR}:$NVM_DIR:ro
+  - ${GEMINI_CONFIG_DIR:-$HOME/.gemini}:/root/.gemini
 ```
 
 ### .env – Adjust Paths
 
 ```env
 # Path to the nvm installation of the host user
-NVM_DIR=/home/rock/.nvm
+NVM_DIR=$NVM_DIR
 
 # Path to the Gemini CLI configuration directory (contains auth credentials)
-GEMINI_CONFIG_DIR=/home/rock/.gemini
+GEMINI_CONFIG_DIR=$HOME/.gemini
 ```
 
 **Note for other users/OS:** Paths vary by operating system and username. Examples:
 - Linux with user `user`: `NVM_DIR=/home/user/.nvm`
-- macOS: `NVM_DIR=/Users/rock/.nvm`
+- macOS: `NVM_DIR=$NVM_DIR`
 
 ### Why the mounted .nvm path stays fixed
 
-The Gemini CLI binary contains a shebang (`#!/home/rock/.nvm/.../bin/node`) pointing to the exact path of the Node.js interpreter. The container-side path must therefore match the path encoded in the binary — this is why `/home/rock/.nvm` is always mounted as `/home/rock/.nvm` in the container, even if the source on the host is located under a different user path.
+The Gemini CLI binary contains a shebang (`#!$NVM_DIR/.../bin/node`) pointing to the exact path of the Node.js interpreter. The container-side path must therefore match the path encoded in the binary — this is why `$NVM_DIR` is always mounted as `$NVM_DIR` in the container, even if the source on the host is located under a different user path.
 
 ## Connection Test
 
