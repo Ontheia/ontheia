@@ -8,6 +8,10 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 [![License: Commercial](https://img.shields.io/badge/License-Commercial-green.svg)](./LICENSE-COMMERCIAL.md)
+![Self-hosted](https://img.shields.io/badge/self--hosted-yes-brightgreen)
+![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791?logo=postgresql)
 
 ---
 
