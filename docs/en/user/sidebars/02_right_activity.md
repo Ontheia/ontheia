@@ -2,12 +2,7 @@
 
 The right sidebar provides real-time information about what's happening "under the hood" while you chat with the AI.
 
-## 1. System Header
-- **Rootless Docker Status:** Indicates whether security isolation for MCP servers is active.
-- **Active Runs:** Number of AI processes currently running in the background.
-- **Warnings:** Number of notifications that have occurred during the current session.
-
-## 2. Activity Areas
+## 1. Activity Areas
 
 ### Run Status
 Track the progress of your requests. Each Run is listed with its ID and current status (Running, Success, Error).
@@ -20,6 +15,9 @@ Tool calls waiting for your **manual authorization** are listed here. You can se
 
 ### MCP Servers
 A list of all MCP servers relevant to your current agent, including their real-time status.
+
+### Automation
+Overview of active cron jobs and their last execution.
 
 ### Warnings & Error Codes
 If problems occur (e.g., network errors or rejected tool calls), they are listed here with a specific error code. You can copy this list via the "Copy" button for support.

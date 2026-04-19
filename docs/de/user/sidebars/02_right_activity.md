@@ -2,12 +2,7 @@
 
 Die rechte Sidebar liefert dir Echtzeit-Informationen über das, was "unter der Haube" passiert, während du mit der KI chattest.
 
-## 1. System-Header
-- **Rootless Docker Status:** Zeigt an, ob die Sicherheitsisolation für MCP-Server aktiv ist.
-- **Aktive Runs:** Anzahl der aktuell im Hintergrund laufenden KI-Prozesse.
-- **Warnungen:** Anzahl der während der aktuellen Sitzung aufgetretenen Hinweise.
-
-## 2. Aktivitäts-Bereiche
+## 1. Aktivitäts-Bereiche
 
 ### Run-Status
 Verfolge den Fortschritt deiner Anfragen. Jeder Run wird mit seiner ID und dem aktuellen Status (Läuft, Erfolgreich, Fehler) aufgelistet.
@@ -20,6 +15,9 @@ Hier werden Werkzeug-Aufrufe gelistet, die auf deine **manuelle Freigabe** warte
 
 ### MCP-Server
 Eine Liste aller für deinen aktuellen Agenten relevanten MCP-Server inklusive ihres Echtzeit-Status.
+
+### Automatisierung
+Übersicht der aktiven Cron-Jobs und deren letzter Ausführung.
 
 ### Warnungen & Fehlercodes
 Falls Probleme auftreten (z. B. Netzwerkfehler oder abgelehnte Tool-Aufrufe), werden diese hier mit einem spezifischen Fehlercode gelistet. Du kannst diese Liste über die Schaltfläche "Copy" für den Support kopieren.
