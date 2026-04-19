@@ -27,6 +27,8 @@ Für CLI-Provider wird die Modell-ID als `-m`-Parameter an das CLI übergeben. D
 | Gemini CLI | `gemini-2.5-flash`, `gemini-2.5-pro` |
 | Claude CLI | `claude-opus-4-6`, `claude-sonnet-4-6` |
 
+> **Hinweis:** Die vollständige Funktionsfähigkeit des Claude CLI als Provider ist seit 04/2026 nicht mehr gewährleistet.
+
 **Tipp:** Falls der interne Anzeigename vom echten Modellnamen abweichen soll (z.B. `gemini-flatrate` als Anzeigename, aber `gemini-2.5-flash` als tatsächliches Modell), kann in den Modell-Metadaten das Feld `cli_model` gesetzt werden:
 ```json
 { "cli_model": "gemini-2.5-flash" }
@@ -46,7 +48,7 @@ volumes:
 
 ### .env – Pfade anpassen
 
-```env
+```bash
 # Pfad zur nvm-Installation des Host-Users
 NVM_DIR=$NVM_DIR
 

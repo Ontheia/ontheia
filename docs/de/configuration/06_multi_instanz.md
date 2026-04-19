@@ -44,7 +44,7 @@ Jede Instanz läuft in einem eigenen Docker-Compose-Stack mit eigener Datenbank,
    ```
 
 3. In der `.env` die Ports anpassen, damit sich die Instanzen nicht überschneiden:
-   ```env
+   ```bash
    HOST_PORT=8081
    WEBUI_PORT=5174
    ```

@@ -13,7 +13,7 @@ Antworten der KI werden als formatiertes Markdown gerendert. Dies beinhaltet:
 Bilder können direkt im Composer an eine Nachricht angehängt werden. Unterstützte Formate: **JPEG, PNG, GIF, WebP**.
 
 - Das Bild wird zusammen mit dem Nachrichtentext an das KI-Modell übertragen (Vision-Input).
-- Unterstützt von multimodalen Providern (z. B. Claude, GPT-4o).
+- Unterstützt von multimodalen Providern (z. B. Claude, ChatGPT).
 - Anwendungsfälle: Screenshots, Diagramme, Dokumente, Fotos — der Agent kann sie beschreiben, analysieren oder Daten daraus extrahieren.
 
 > **Hinweis:** Bildunterstützung erfordert einen Provider mit Vision-Fähigkeit. Unterstützt das gewählte Modell keine Bilder, wird der Anhang ignoriert.

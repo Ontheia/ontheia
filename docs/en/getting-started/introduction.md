@@ -54,7 +54,7 @@ The master planner automatically calls the responsible specialists — without y
 ### 2. Specialized Agents in Action
 
 The following agents illustrate exemplarily what is possible with Ontheia. Each agent has a clearly defined area of responsibility, optimized workflows (SOPs), and direct access to the relevant tools via MCP servers.
-(Ontheia does not ship pre-configured agents or MCP servers — it provides the platform to define any agents you need. Each agent receives a system prompt, a selection of MCP tools, and optional visibility rules. What an agent can do is entirely up to you.)
+**Ontheia does not ship pre-configured agents or MCP servers — it provides the platform to define any agents you need. Each agent receives a system prompt, a selection of MCP tools, and optional visibility rules. What an agent can do is entirely up to you.**
 
 #### Email — Agent_Email
 Intelligent management of the email inbox. The agent reads, sends, and organizes emails autonomously. It automatically detects spam, immediately moves obvious junk mail, and flags suspicious messages for manual review. File attachments can be sent directly from the cloud storage.
@@ -197,7 +197,7 @@ Ontheia is designed from the ground up for multi-user operation:
 - **Agent visibility**: Agents can be public, visible to specific users, or private to the creator.
 - **Audit logging**: Every action — chat message, tool call, memory access — is logged in a tamper-proof manner.
 - **Row Level Security**: Data separation directly in the database. Backend programming errors cannot cause data leaks, as the database itself denies access.
-- **Multiple AI providers**: Different teams can use different LLMs (Claude, GPT-4, local models) — all through the same platform.
+- **Multiple AI providers**: Different teams can use different LLMs (Claude, ChatGPT, local models) — all through the same platform.
 
 ---
 

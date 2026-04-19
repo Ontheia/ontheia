@@ -44,7 +44,7 @@ Each instance runs in its own Docker Compose stack with its own database, its ow
    ```
 
 3. Adjust the ports in `.env` to avoid conflicts between instances:
-   ```env
+   ```bash
    HOST_PORT=8081
    WEBUI_PORT=5174
    ```

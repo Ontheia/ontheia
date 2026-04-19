@@ -13,7 +13,7 @@ AI responses are rendered as formatted Markdown. This includes:
 Images can be attached directly to a message in the Composer. Supported formats: **JPEG, PNG, GIF, WebP**.
 
 - The image is sent to the AI model together with the message text (vision input).
-- Supported by multimodal providers (e.g. Claude, GPT-4o).
+- Supported by multimodal providers (e.g. Claude, GPT-5).
 - Use cases: screenshots, diagrams, documents, photos — the agent can describe, analyze, or extract data from them.
 
 > **Note:** Image support requires a provider with vision capability. If the selected model does not support images, the attachment is ignored.

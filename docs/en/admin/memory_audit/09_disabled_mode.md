@@ -39,7 +39,7 @@ Under **Administration → AI Provider → Embedding tab**, a yellow warning ban
 
 Add the API key of your chosen embedding provider to `.env` (or Docker environment variables):
 
-```env
+```bash
 # OpenAI (recommended)
 OPENAI_API_KEY=sk-...
 

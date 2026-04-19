@@ -39,7 +39,7 @@ Unter **Administration → AI-Provider → Tab Embedding** wird ein gelbes Warn-
 
 Trage in der `.env`-Datei (oder den Docker-Umgebungsvariablen) den API-Key des gewünschten Embedding-Providers ein:
 
-```env
+```bash
 # OpenAI (empfohlen)
 OPENAI_API_KEY=sk-...
 

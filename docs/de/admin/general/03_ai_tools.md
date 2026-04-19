@@ -4,7 +4,7 @@ Hier legt der Administrator fest, welche AI-Modelle für systeminterne Werkzeuge
 
 ## 1. Prompt-Optimierer
 Der Prompt-Optimierer verbessert Benutzeranfragen automatisch, bevor sie an den eigentlichen Agenten gesendet werden.
-- **Konfiguration:** Auswahl von Provider (z. B. OpenAI) und Modell (z. B. GPT-4o).
+- **Konfiguration:** Auswahl von Provider (z. B. OpenAI) und Modell (z. B. GPT-5).
 - **Anforderung:** Da dieser Schritt der Qualitätssicherung dient, sollte hier ein leistungsfähiges Modell gewählt werden.
 
 ---

@@ -64,7 +64,7 @@ sudo systemctl reload caddy
 
 ### `.env` anpassen
 
-```env
+```bash
 VITE_HOST_API_URL=https://meine-domain.de/api
 ALLOWED_ORIGINS=https://meine-domain.de
 ```
@@ -146,7 +146,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 Nach der Einrichtung des Reverse Proxys müssen folgende Variablen in `.env` angepasst werden:
 
-```env
+```bash
 # URL des Backends – wie der Browser es sieht (über den Proxy)
 VITE_HOST_API_URL=https://meine-domain.de/api
 
