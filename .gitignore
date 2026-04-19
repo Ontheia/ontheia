@@ -46,6 +46,7 @@ host/host_server.pid
 Thumbs.db
 .vscode/
 .idea/
+*.code-workspace
 .gemini/
 .claude/
 *.swp
