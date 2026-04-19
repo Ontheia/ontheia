@@ -63,8 +63,6 @@ scripts/options-
 scripts/content
 
 # Development artifacts
-Dockerfile.host
-Dockerfile.pgvector
 docker-compose.override.yml
 
 # Docker

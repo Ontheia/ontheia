@@ -1,0 +1,55 @@
+FROM node:20-bookworm AS base
+# Docker CLI und PostgreSQL Client 16
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg git build-essential && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce-cli postgresql-client-16 && \
+    # Puppeteer/Chrome dependencies — only needed when markdown2pdf-mcp runs as subprocess.
+    # Currently disabled: markdown2pdf-mcp is tested as a containerised MCP server instead.
+    # apt-get install -y --no-install-recommends \
+    # libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    # libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+    # libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
+    # fonts-liberation xdg-utils && \
+    rm -rf /var/lib/apt/lists/*
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# uv/uvx global verfügbar machen
+RUN ln -sf /root/.local/bin/uvx /usr/local/bin/uvx && \
+    ln -sf /root/.local/bin/uv /usr/local/bin/uv
+# markdown2pdf-mcp as subprocess — disabled, pending test as containerised MCP server.
+# RUN npm install -g markdown2pdf-mcp@latest && \
+#     sed -i 's/if (process.argv\[1\] && path.resolve(process.argv\[1\]) === __filename)/if (true)/' /usr/local/lib/node_modules/markdown2pdf-mcp/build/index.js
+ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
+# Source NVM from mounted host path so CLI tools (claude, gemini) are found in login shells
+RUN echo 'export NVM_DIR="/home/rock/.nvm"' >> /root/.profile && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.profile
+WORKDIR /app
+
+FROM base AS deps
+WORKDIR /app/host
+COPY host/package.json host/package-lock.json ./
+RUN npm ci
+
+FROM deps AS build
+WORKDIR /app/host
+COPY host/tsconfig.json ./
+COPY host/src ./src
+COPY contracts ../contracts
+RUN npm run build
+
+FROM base AS prod
+WORKDIR /app/host
+ENV NODE_ENV=production
+ENV TZ=Europe/Berlin
+COPY host/package.json host/package-lock.json ./
+RUN npm ci --omit=dev
+COPY contracts ../contracts
+COPY --from=build /app/host/dist ./dist
+EXPOSE 8080
+CMD ["node", "dist/index.js"]
