@@ -141,7 +141,7 @@ The CLA is a short, one-page document. It means: you keep your copyright, but gr
 
 > A CLA Assistant bot will automatically comment on your pull request with a link to sign the CLA. Merge is blocked until signing is complete.
 
-Read the full CLA: [CLA.md](./CLA.md) — questions: [ontheia.ai/contact](https://ontheia.ai/contact)
+Read the full CLA: [CLA.md](./CLA.md) — questions: [ontheia.ai/contact](https://ontheia.ai/en/#contact)
 
 ---
 

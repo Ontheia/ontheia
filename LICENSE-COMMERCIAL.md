@@ -56,7 +56,7 @@ Please contact us for a quote.
 For commercial licensing inquiries:
 
 **Web:** https://ontheia.ai
-**Contact:** [ontheia.ai/contact](https://ontheia.ai/contact)
+**Contact:** [ontheia.ai/en/#contact](https://ontheia.ai/en/#contact)
 
 ---
 

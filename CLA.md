@@ -54,7 +54,7 @@ Your Contribution is provided **"as is"**, without warranty of any kind, express
 
 Signing is handled automatically via the **CLA Assistant** GitHub App. When you open a pull request, a bot will comment with a link to sign this CLA electronically. Your pull request cannot be merged until signing is confirmed.
 
-For questions or manual signing, contact us via [ontheia.ai/contact](https://ontheia.ai/contact)
+For questions or manual signing, contact us via [ontheia.ai/contact](https://ontheia.ai/en/#contact)
 
 ---
 
