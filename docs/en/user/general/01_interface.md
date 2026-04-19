@@ -5,9 +5,7 @@ Customize the appearance and interaction of Ontheia to your personal preferences
 ## 1. Language & Theme
 
 - **Preferred Language:** Choose between German and English. This affects the labels of menus, buttons, and system messages.
-- **Theme:** 
-    - **Light / Dark:** Select a fixed color scheme.
-    - **System Default:** The application automatically follows your operating system's setting (e.g., automatic change at sunset).
+- **Theme:** Choose between **Light** and **Dark**.
 
 ## 2. Notifications
 

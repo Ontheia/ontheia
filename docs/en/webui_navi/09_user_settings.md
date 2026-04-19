@@ -13,7 +13,7 @@ Tab bar: **General** · **Account** · **Info**
 | Field | Type | Options | Description |
 | --- | --- | --- | --- |
 | Language | Dropdown | `German`, `English` | Language of the interface and feedback messages. |
-| Theme | Dropdown | `System Default`, `Light`, `Dark` | Appearance of the application. "System Default" follows the operating system. |
+| Theme | Dropdown | `Light`, `Dark` | Appearance of the application. |
 | Desktop Notifications | Toggle | — | When active, notifies you about new replies and run events. |
 
 ### Sidebar Startup State

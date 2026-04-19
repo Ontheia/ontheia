@@ -5,9 +5,7 @@ Passe das Erscheinungsbild und die Interaktion von Ontheia an deine persönliche
 ## 1. Sprache & Theme
 
 - **Bevorzugte Sprache:** Wähle zwischen Deutsch und Englisch. Dies beeinflusst die Beschriftungen der Menüs, Schaltflächen und Systemmeldungen.
-- **Theme:** 
-    - **Hell / Dunkel:** Wähle ein festes Farbschema.
-    - **System-Standard:** Die Anwendung folgt automatisch der Einstellung deines Betriebssystems (z. B. automatischer Wechsel bei Sonnenuntergang).
+- **Theme:** Wähle zwischen **Hell** und **Dunkel**.
 
 ## 2. Benachrichtigungen
 

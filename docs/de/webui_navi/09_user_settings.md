@@ -13,7 +13,7 @@ Tab-Leiste: **Allgemein** · **Benutzerkonto** · **Info**
 | Feld | Typ | Optionen | Beschreibung |
 | --- | --- | --- | --- |
 | Sprache | Dropdown | `Deutsch`, `Englisch` | Sprache der Oberfläche und Rückmeldungen. |
-| Theme | Dropdown | `System-Standard`, `Hell`, `Dunkel` | Erscheinungsbild der Anwendung. „System-Standard" folgt dem Betriebssystem. |
+| Theme | Dropdown | `Hell`, `Dunkel` | Erscheinungsbild der Anwendung. |
 | Desktop-Benachrichtigungen | Toggle | — | Bei aktiven Benachrichtigungen werden neue Antworten und Run-Events angezeigt. |
 
 ### Sidebar Startzustand
