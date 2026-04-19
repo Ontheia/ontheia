@@ -87,7 +87,7 @@ Full documentation at **[docs.ontheia.ai](https://docs.ontheia.ai)**
 |---|---|---|
 | Introduction | [EN](https://docs.ontheia.ai/en/getting-started/introduction) | [DE](https://docs.ontheia.ai/de/getting-started/introduction) |
 | Installation | [EN](https://docs.ontheia.ai/en/getting-started/installation) | [DE](https://docs.ontheia.ai/de/getting-started/installation) |
-| Environment variables | [EN](https://docs.ontheia.ai/en/admin/configuration/01_environment_variables) | [DE](https://docs.ontheia.ai/de/admin/configuration/01_environment_variables) |
+| Environment variables | [EN](https://docs.ontheia.ai/en/configuration/01_environment_variables) | [DE](https://docs.ontheia.ai/de/configuration/01_environment_variables) |
 | Agents | [EN](https://docs.ontheia.ai/en/admin/agents/01_concept) | [DE](https://docs.ontheia.ai/de/admin/agents/01_concept) |
 | Chain Engine | [EN](https://docs.ontheia.ai/en/admin/chains/01_concept) | [DE](https://docs.ontheia.ai/de/admin/chains/01_concept) |
 | Memory / RAG | [EN](https://docs.ontheia.ai/en/admin/memory_audit/01_architecture) | [DE](https://docs.ontheia.ai/de/admin/memory_audit/01_architecture) |
