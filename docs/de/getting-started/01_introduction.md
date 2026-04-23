@@ -54,7 +54,7 @@ Der Master-Planer ruft dabei automatisch die zuständigen Spezialisten auf — o
 ### 2. Spezialisierte Agenten im Einsatz
 
 Die folgenden Agenten zeigen exemplarisch, was mit Ontheia möglich ist. Jeder Agent hat ein klar definiertes Aufgabengebiet, optimierte Abläufe (SOPs) und direkten Zugriff auf die relevanten Tools über MCP-Server.
-**Ontheia liefert keine vorkonfigurierten Agenten und keine MCP-Server — es liefert die Plattform, um beliebige Agenten zu definieren. Jeder Agent erhält einen System-Prompt, eine Auswahl an MCP-Tools und optionale Sichtbarkeitsregeln. Was ein Agent kann, entscheiden Sie.**
+(Ontheia liefert keine vorkonfigurierten Agenten und keine MCP-Server — es liefert die Plattform, um beliebige Agenten zu definieren. Jeder Agent erhält einen System-Prompt, eine Auswahl an MCP-Tools und optionale Sichtbarkeitsregeln. Was ein Agent kann, entscheide Sie.)
 
 #### E-Mail — Agent_Email
 Intelligente Verwaltung des E-Mail-Postfachs. Der Agent liest, sendet und organisiert E-Mails eigenständig. Er erkennt Spam automatisch, verschiebt offensichtliche Werbemails sofort und kennzeichnet verdächtige Nachrichten zur manuellen Prüfung. Dateianhänge können direkt mitgesendet werden.
@@ -185,8 +185,6 @@ Ontheia setzt vollständig auf den offenen Standard MCP. Beliebige externe Syste
 
 Jeder MCP-Server läuft in einem eigenen Docker-Container (rootless, ohne Root-Rechte, read-only Dateisystem). Die Isolation schützt das Hostsystem auch dann, wenn ein Server kompromittiert wird.
 
-> **Kompatibilität mit Claude Desktop:** Das MCP-Server-JSON-Format in Ontheia ist kompatibel mit dem Format von Claude Desktop. Vorhandene Konfigurationen können direkt übernommen werden. Standardmäßig wird das JSON-Format verwendet; alternativ können MCP-Server auch über das grafische Formular in der Admin-Konsole parametriert werden.
-
 ---
 
 ### 9. Unternehmenseinsatz & Multi-Tenant-Fähigkeit
@@ -197,7 +195,7 @@ Ontheia ist von Grund auf für den Mehrbenutzerbetrieb ausgelegt:
 - **Agenten-Sichtbarkeit**: Agenten können öffentlich, für bestimmte Nutzer oder nur für den Ersteller sichtbar sein.
 - **Audit-Logging**: Jede Aktion — Chat-Nachricht, Tool-Aufruf, Speicherzugriff — wird revisionssicher protokolliert.
 - **Row Level Security**: Datentrennung direkt in der Datenbank. Programmierfehler im Backend können keine Datenlecks verursachen, da die Datenbank selbst den Zugriff verweigert.
-- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, ChatGPT, lokale Modelle) nutzen — alle über dieselbe Plattform.
+- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, GPT-4, lokale Modelle) nutzen — alle über dieselbe Plattform.
 
 ---
 

@@ -16,6 +16,14 @@ Der Server wird als Subprozess auf dem Host gestartet. Die Kommunikation erfolgt
 *   `bun`, `bunx`: Für extrem schnelle JavaScript-Runtime.
 *   `docker`: Führt den Server in einem isolierten Container aus.
 
+> **Hinweis für eigene Docker-Images:** Ontheia verwendet den **rootless Docker-Daemon**, der über `ROOTLESS_DOCKER_HOST` / `DOCKER_SOCKET_PATH` in der `.env` konfiguriert ist (Standard: `unix:///run/user/1000/docker.sock`). Selbst erstellte Images müssen explizit gegen diesen Daemon gebaut werden – ein Build mit dem regulären System-Docker (`/var/run/docker.sock`) macht das Image für Ontheia unsichtbar.
+>
+> ```bash
+> DOCKER_HOST=unix:///run/user/1000/docker.sock docker build -t mein-mcp-server:latest ./pfad
+> ```
+>
+> Anschließend muss der Image-Name in `config/allowlist.images` oder `config/allowlist.images.local` eingetragen sein.
+
 ### Remote (SSE/HTTP)
 Die Verbindung erfolgt zu einem bereits laufenden Server über HTTP (Server-Sent Events).
 - **Vorteil:** Der Server kann auf einer anderen Maschine oder in einer anderen Cloud laufen.

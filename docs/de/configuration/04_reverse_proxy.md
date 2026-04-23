@@ -24,7 +24,7 @@ Beide Dienste laufen im Docker-Netzwerk `ontheia-net`. Der Proxy ist entweder im
 
 ### Caddyfile (HTTPS mit automatischem Zertifikat)
 
-```caddy
+```bash
 meine-domain.de {
     # WebUI
     handle /* {
@@ -175,7 +175,7 @@ openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
 
 Im Caddyfile mit lokalem TLS:
 
-```caddy
+```bash
 192.168.1.10 {
     tls ontheia.crt ontheia.key
     handle /* { reverse_proxy localhost:5173 }
