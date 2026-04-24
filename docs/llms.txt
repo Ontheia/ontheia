@@ -1,0 +1,101 @@
+# Ontheia Documentation
+
+> Ontheia is a self-hosted, open-source AI agent platform (AGPL-3.0). It connects language models with external tools via the Model Context Protocol (MCP), provides persistent vector memory, multi-agent orchestration, and a visual chain designer — all running exclusively on your own infrastructure.
+
+Ontheia turns isolated language models into integrated, action-capable assistants. A master planner analyzes complex requests, breaks them into subtasks, and delegates them to specialized agents. Each agent has its own tools, decision logic, and persistent memory. All data stays on-premise.
+
+Core capabilities: multi-agent orchestration with A2A delegation (up to 5 levels deep), MCP server integration (Docker-isolated), long-term vector memory (pgvector), visual chain/workflow designer, scheduled automation (cron), multi-tenancy with RBAC and Row-Level Security.
+
+Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, PostgreSQL + pgvector, rootless Docker for MCP server isolation.
+
+## Getting Started
+- [Introduction](https://docs.ontheia.ai/en/getting-started/01_introduction): What is Ontheia, core principles, use cases, architecture overview
+- [Installation](https://docs.ontheia.ai/en/getting-started/02_installation): Server setup in under 30 minutes
+- [Compatible MCP Servers](https://docs.ontheia.ai/en/getting-started/03_compatible-mcp-servers): Supported MCP servers and integration patterns
+- [Compatible AI Providers](https://docs.ontheia.ai/en/getting-started/04_compatible-providers): Supported LLM providers (Claude, GPT-4, Gemini, Ollama, Mistral, ...)
+
+## Admin: MCP Servers
+- [Basics](https://docs.ontheia.ai/en/admin/mcp-server/01_basics): What MCP servers are and how Ontheia uses them
+- [Configuration](https://docs.ontheia.ai/en/admin/mcp-server/02_configuration): JSON config format, STDIO vs. HTTP, secret-ref pattern, Docker images and rootless daemon
+- [Lifecycle](https://docs.ontheia.ai/en/admin/mcp-server/03_lifecycle): Server start, stop, autostart behavior
+- [Security](https://docs.ontheia.ai/en/admin/mcp-server/04_security): Container isolation, capability restrictions, allowlists
+- [Monitoring](https://docs.ontheia.ai/en/admin/mcp-server/05_monitoring): Status, logs, diagnostics
+
+## Admin: Agents
+- [Concept](https://docs.ontheia.ai/en/admin/agents/01_concept): What agents are, master planner vs. specialist agents
+- [Creation](https://docs.ontheia.ai/en/admin/agents/02_creation): How to define and configure agents
+- [Access and Visibility](https://docs.ontheia.ai/en/admin/agents/03_access_and_visibility): Public, user-specific, private agents
+- [Capabilities](https://docs.ontheia.ai/en/admin/agents/04_capabilities): Tools, memory access, system prompt
+- [Agent Delegation (A2A)](https://docs.ontheia.ai/en/admin/agents/05_agent_delegation): Agent-to-agent delegation, delegation depth, context passing
+
+## Admin: Chain Engine (Workflows)
+- [Concept](https://docs.ontheia.ai/en/admin/chains/01_concept): What chains are and when to use them
+- [Management](https://docs.ontheia.ai/en/admin/chains/02_management): Create, edit, delete chains
+- [Chain Designer](https://docs.ontheia.ai/en/admin/chains/03_designer): Visual workflow designer
+- [Logic and Data Flow](https://docs.ontheia.ai/en/admin/chains/04_logic_and_data_flow): Step inputs/outputs, branching
+- [Engine Specification](https://docs.ontheia.ai/en/admin/chains/05_engine_specification): Technical chain execution details
+- [Agent-Chain Binding](https://docs.ontheia.ai/en/admin/chains/06_agent_chain_binding): Connecting agents and chains
+
+## Admin: AI Providers
+- [Concept](https://docs.ontheia.ai/en/admin/ai-provider/01_concept): Provider model, API key management
+- [Configuration](https://docs.ontheia.ai/en/admin/ai-provider/02_configuration): Adding and managing providers
+- [Models](https://docs.ontheia.ai/en/admin/ai-provider/03_models): Model selection and defaults
+- [Diagnostics](https://docs.ontheia.ai/en/admin/ai-provider/04_diagnostics): Provider health checks
+- [CLI Provider](https://docs.ontheia.ai/en/admin/ai-provider/05_cli_provider): Local CLI-based AI tools (Gemini CLI, Claude Code)
+- [Embedding](https://docs.ontheia.ai/en/admin/ai-provider/06_embedding): Embedding models for vector memory
+
+## Admin: Memory & Audit
+- [Context and Memory Flow](https://docs.ontheia.ai/en/admin/memory_audit/00_context_and_memory_flow): How memory is retrieved and written during agent runs
+- [Architecture](https://docs.ontheia.ai/en/admin/memory_audit/01_architecture): Namespace structure, pgvector, RLS
+- [Permissions](https://docs.ontheia.ai/en/admin/memory_audit/02_permissions): Who can read/write which namespaces
+- [Policies and Templates](https://docs.ontheia.ai/en/admin/memory_audit/03_policies_and_templates): Memory policies per agent
+- [Best Practices](https://docs.ontheia.ai/en/admin/memory_audit/04_best_practices): Namespace design, TTL, cleanup
+- [Admin Tools](https://docs.ontheia.ai/en/admin/memory_audit/05_admin_tools): Memory browser, manual operations
+- [Ranking Algorithm](https://docs.ontheia.ai/en/admin/memory_audit/10_ranking_algorithm): How relevant memories are scored and selected
+
+## Admin: Scheduled Tasks
+- [Concept](https://docs.ontheia.ai/en/admin/tasks/01_concept): Cron-based automation
+- [Configuration](https://docs.ontheia.ai/en/admin/tasks/02_configuration): Cron syntax, agent/chain targets
+- [Control](https://docs.ontheia.ai/en/admin/tasks/03_control): Enable, disable, run manually
+- [Memory Integration](https://docs.ontheia.ai/en/admin/tasks/04_memory_integration): Persistent state across scheduled runs
+
+## Security
+- [Security Concept](https://docs.ontheia.ai/en/security/01_security_concept): Defense-in-depth architecture overview
+- [Allowlists](https://docs.ontheia.ai/en/security/02_allowlists): Docker image, npm, pypi, bun allowlists
+- [Auth Baseline](https://docs.ontheia.ai/en/security/03_auth-baseline): Session management, password policy
+- [RBAC](https://docs.ontheia.ai/en/security/05_rbac): Role-based access control, admin vs. user
+- [Secrets](https://docs.ontheia.ai/en/security/06_secrets): Secret-ref pattern, environment variable resolution
+
+## Configuration
+- [Environment Variables](https://docs.ontheia.ai/en/configuration/01_environment_variables): All .env settings documented
+- [Backup and Restore](https://docs.ontheia.ai/en/configuration/02_backup_and_restore): Database and volume backup
+- [Update](https://docs.ontheia.ai/en/configuration/03_update): How to update Ontheia
+- [Reverse Proxy](https://docs.ontheia.ai/en/configuration/04_reverse_proxy): nginx/Caddy setup with TLS
+- [API Reference](https://docs.ontheia.ai/en/configuration/05_api_reference): Internal API endpoints
+- [Multi-Instance](https://docs.ontheia.ai/en/configuration/06_multi_instance): Running multiple Ontheia instances
+
+## API
+- [API Reference](https://docs.ontheia.ai/en/api/01_api-ref): REST API endpoints for external integrations
+- [Dry Run](https://docs.ontheia.ai/en/api/02_dry_run): Test agent and chain execution without side effects
+
+## Automation
+- [Overview](https://docs.ontheia.ai/en/automation/01_overview): Automation capabilities, webhooks, triggers
+
+## Observability
+- [Logging](https://docs.ontheia.ai/en/observability/01_logging): Log levels, log files, structured logging
+
+## User Guide
+- [Interface Overview](https://docs.ontheia.ai/en/user/general/01_interface): Main UI areas
+- [Chat](https://docs.ontheia.ai/en/user/chat/01_overview): Starting and managing chats
+- [Composer](https://docs.ontheia.ai/en/user/chat/02_composer): Message input, attachments, agent selection
+- [Trace Panel](https://docs.ontheia.ai/en/user/chat/05_trace_panel): Inspect agent reasoning and tool calls
+- [Keyboard Shortcuts](https://docs.ontheia.ai/en/user/01_keyboard_shortcuts): Full shortcut reference
+
+## Optional
+- [User Management](https://docs.ontheia.ai/en/admin/user-management/01_roles_and_permissions): User roles and permission matrix
+- [System Status](https://docs.ontheia.ai/en/admin/info/01_system_status): Health dashboard
+- [Memory Audit Reference](https://docs.ontheia.ai/en/admin/memory_audit/07_audit_reference): Audit log format and fields
+- [Namespace Rules Details](https://docs.ontheia.ai/en/admin/memory_audit/08_namespace_rules_details): Advanced namespace configuration
+- [DB Rollback](https://docs.ontheia.ai/en/db/01_rollback): Database migration rollback procedures
+- [CSP Template](https://docs.ontheia.ai/en/security/04_csp-template): Content Security Policy configuration
+- [WebUI Navigation Reference](https://docs.ontheia.ai/en/webui_navi/01_overview): Complete UI navigation map
