@@ -3,8 +3,6 @@ title: Installation
 description: Ontheia mit Docker auf Ihrem Server installieren.
 ---
 
-import { Steps } from '@astrojs/starlight/components';
-
 Ontheia wird als Docker-Stack betrieben. Voraussetzung ist ein Linux-Server mit Docker und Docker Compose.
 
 ## Voraussetzungen
@@ -15,8 +13,6 @@ Ontheia wird als Docker-Stack betrieben. Voraussetzung ist ein Linux-Server mit 
 - 2 GB RAM Minimum, 4 GB empfohlen
 
 ## Schnellstart
-
-<Steps>
 
 1. **Repository klonen**
 
@@ -40,5 +36,3 @@ Ontheia wird als Docker-Stack betrieben. Voraussetzung ist ein Linux-Server mit 
 4. **Ontheia aufrufen**
 
    Öffnen Sie `http://localhost:5173` in Ihrem Browser.
-
-</Steps>
