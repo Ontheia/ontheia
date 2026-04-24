@@ -6,7 +6,7 @@ Willkommen bei Ontheia. Diese Dokumentation hilft dir dabei, dich in der Web-Obe
 
 ### 1. [Zugang & Sicherheit](./auth/01_access.md)
 - [Login & Registrierung](./auth/01_access.md)
-- [Passwort-Sicherheit](./benutzerkonto/02_security.md)
+- [Passwort-Sicherheit](./account/02_security.md)
 
 ### 2. [Navigation: Die Sidebars](./sidebars/01_left_navigation.md)
 - [Linke Sidebar: Projekte & Verlauf](./sidebars/01_left_navigation.md)
@@ -19,9 +19,9 @@ Willkommen bei Ontheia. Diese Dokumentation hilft dir dabei, dich in der Web-Obe
 - [Interaktionen & Token-Anzeige](./chat/04_interactions.md)
 - [Das Trace-Panel (Tiefendiagnose)](./chat/05_trace_panel.md)
 
-### 4. [Persönliche Einstellungen](./benutzerkonto/01_profile.md)
-- [Profil, Avatar & Datenschutz](./benutzerkonto/01_profile.md)
-- [Oberfläche (Sprache, Theme)](./allgemein/01_interface.md)
+### 4. [Persönliche Einstellungen](./account/01_profile.md)
+- [Profil, Avatar & Datenschutz](./account/01_profile.md)
+- [Oberfläche (Sprache, Theme)](./general/01_interface.md)
 - [Kontoaktivität & API-Token](./info/01_account_activity.md)
 
 ---

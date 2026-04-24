@@ -6,7 +6,7 @@ Welcome to Ontheia. This documentation helps you navigate the web interface and 
 
 ### 1. [Access & Security](./auth/01_access.md)
 - [Login & Registration](./auth/01_access.md)
-- [Password Security](./benutzerkonto/02_security.md)
+- [Password Security](./account/02_security.md)
 
 ### 2. [Navigation: The Sidebars](./sidebars/01_left_navigation.md)
 - [Left Sidebar: Projects & History](./sidebars/01_left_navigation.md)
@@ -19,9 +19,9 @@ Welcome to Ontheia. This documentation helps you navigate the web interface and 
 - [Interactions & Token Display](./chat/04_interactions.md)
 - [The Trace Panel (Deep Diagnostics)](./chat/05_trace_panel.md)
 
-### 4. [Personal Settings](./benutzerkonto/01_profile.md)
-- [Profile, Avatar & Privacy](./benutzerkonto/01_profile.md)
-- [Interface (Language, Theme)](./allgemein/01_interface.md)
+### 4. [Personal Settings](./account/01_profile.md)
+- [Profile, Avatar & Privacy](./account/01_profile.md)
+- [Interface (Language, Theme)](./general/01_interface.md)
 - [Account Activity & API Tokens](./info/01_account_activity.md)
 
 ### 5. [Keyboard Shortcuts](./01_keyboard_shortcuts.md)

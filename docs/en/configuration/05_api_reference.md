@@ -2,7 +2,7 @@
 
 The complete API documentation for all Ontheia endpoints is located at:
 
-**→ [docs/en/api/01_api-ref.md](../../api/01_api-ref.md)**
+**→ [docs/en/api/01_api-ref.md](../api/01_api-ref.md)**
 
 ## Most Relevant Endpoints for Admins
 
@@ -37,4 +37,4 @@ curl -s -H "Cookie: session=<TOKEN>" \
 }
 ```
 
-Full field description: [API Reference › Admin & Maintenance](../../api/01_api-ref.md#admin--maintenance)
+Full field description: [API Reference › Admin & Maintenance](../api/01_api-ref.md#admin--maintenance)

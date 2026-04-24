@@ -39,6 +39,6 @@ Ontheia runs as a Docker stack. Prerequisites are a Linux server with Docker and
 
 4. **Open Ontheia**
 
-   Visit `http://localhost:3000` in your browser.
+   Visit `http://localhost:5173` in your browser.
 
 </Steps>

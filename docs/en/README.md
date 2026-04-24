@@ -6,8 +6,8 @@ Welcome to the central Ontheia documentation. This manual is divided into two ma
 
 ## 🚀 Getting Started
 
-- **[Introduction](./getting-started/introduction.md):** What is Ontheia and what is it used for?
-- **[Installation](./getting-started/installation.md):** Set up Ontheia on your own server.
+- **[Introduction](./getting-started/01_introduction.md):** What is Ontheia and what is it used for?
+- **[Installation](./getting-started/02_installation.md):** Set up Ontheia on your own server.
 
 ---
 
@@ -21,7 +21,7 @@ Everything for the setup, monitoring, and control of the Ontheia instance.
 - **[Chains](./admin/chains/01_concept.md):** Multi-agent workflows and logic.
 - **[Memory & Audit](./admin/memory_audit/01_architecture.md):** Long-term memory and RLS monitoring.
 - **[User Management](./admin/user-management/01_roles_and_permissions.md):** Roles and permissions.
-- **[Configuration](./admin/configuration/01_environment_variables.md):** Environment variables, backup, updates, reverse proxy, multiple instances.
+- **[Configuration](./configuration/01_environment_variables.md):** Environment variables, backup, updates, reverse proxy, multiple instances.
 - **[System Info](./admin/info/01_system_status.md):** Dashboard and version status.
 
 ---

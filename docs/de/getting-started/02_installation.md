@@ -39,6 +39,6 @@ Ontheia wird als Docker-Stack betrieben. Voraussetzung ist ein Linux-Server mit 
 
 4. **Ontheia aufrufen**
 
-   Öffnen Sie `http://localhost:3000` in Ihrem Browser.
+   Öffnen Sie `http://localhost:5173` in Ihrem Browser.
 
 </Steps>

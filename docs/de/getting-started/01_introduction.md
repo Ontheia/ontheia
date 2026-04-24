@@ -54,7 +54,7 @@ Der Master-Planer ruft dabei automatisch die zuständigen Spezialisten auf — o
 ### 2. Spezialisierte Agenten im Einsatz
 
 Die folgenden Agenten zeigen exemplarisch, was mit Ontheia möglich ist. Jeder Agent hat ein klar definiertes Aufgabengebiet, optimierte Abläufe (SOPs) und direkten Zugriff auf die relevanten Tools über MCP-Server.
-(Ontheia liefert keine vorkonfigurierten Agenten und keine MCP-Server — es liefert die Plattform, um beliebige Agenten zu definieren. Jeder Agent erhält einen System-Prompt, eine Auswahl an MCP-Tools und optionale Sichtbarkeitsregeln. Was ein Agent kann, entscheide Sie.)
+**Ontheia liefert keine vorkonfigurierten Agenten und keine MCP-Server — es liefert die Plattform, um beliebige Agenten zu definieren. Jeder Agent erhält einen System-Prompt, eine Auswahl an MCP-Tools und optionale Sichtbarkeitsregeln. Was ein Agent kann, entscheide Sie.**
 
 #### E-Mail — Agent_Email
 Intelligente Verwaltung des E-Mail-Postfachs. Der Agent liest, sendet und organisiert E-Mails eigenständig. Er erkennt Spam automatisch, verschiebt offensichtliche Werbemails sofort und kennzeichnet verdächtige Nachrichten zur manuellen Prüfung. Dateianhänge können direkt mitgesendet werden.
@@ -262,7 +262,7 @@ Komplexe Planungsaufgaben werden an Agent_Strategie delegiert: Der Agent zerlegt
 
 ## Nächste Schritte
 
-- [Installation](/de/getting-started/installation) — Ontheia in unter 30 Minuten auf Ihrem Server einrichten
+- [Installation](/de/getting-started/02_installation) — Ontheia in unter 30 Minuten auf Ihrem Server einrichten
 - [Agenten konfigurieren](/de/admin/agents/05_agent_delegation) — Eigene Agenten und Delegationsregeln definieren
 - [MCP-Server anbinden](/de/admin/ai-provider/05_cli_provider) — Externe Tools integrieren
 - [Chain Designer](/de/admin/chains/03_designer) — Automatisierte Workflows visuell erstellen

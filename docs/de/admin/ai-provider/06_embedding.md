@@ -15,7 +15,7 @@ Vor der Konfiguration müssen folgende Schritte abgeschlossen sein:
 1. **Provider anlegen** (z. B. OpenAI, Ollama) unter Admin → Einstellungen → Provider.
 2. **Embedding-Modell hinzufügen** mit:
    - **Capability:** `embedding`
-   - **Metadaten:** `dimension`, `metric`, `normalize` und optional `endpoint` (siehe [03_modelle.md](./03_modelle.md))
+   - **Metadaten:** `dimension`, `metric`, `normalize` und optional `endpoint` (siehe [03_models.md](./03_models.md))
 
 ## Konfigurationsfelder
 
@@ -92,4 +92,4 @@ Modell-Metadaten:
 
 ## Dateibasierter Fallback
 
-Ist keine Embedding-Konfiguration in der Datenbank gespeichert, fällt Ontheia auf `embedding.config.json` zurück. Der Pfad kann über die Umgebungsvariable `EMBEDDING_CONFIG_PATH` überschrieben werden. Siehe [Umgebungsvariablen](../konfiguration/01_environment_variables.md).
+Ist keine Embedding-Konfiguration in der Datenbank gespeichert, fällt Ontheia auf `embedding.config.json` zurück. Der Pfad kann über die Umgebungsvariable `EMBEDDING_CONFIG_PATH` überschrieben werden. Siehe [Umgebungsvariablen](../../configuration/01_environment_variables.md).

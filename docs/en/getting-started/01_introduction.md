@@ -262,7 +262,7 @@ Complex planning tasks are delegated to Agent_Strategie: the agent decomposes th
 
 ## Next Steps
 
-- [Installation](/en/getting-started/installation) — set up Ontheia on your server in under 30 minutes
+- [Installation](/en/getting-started/02_installation) — set up Ontheia on your server in under 30 minutes
 - [Configure agents](/en/admin/agents/05_agent_delegation) — define custom agents and delegation rules
 - [Connect MCP servers](/en/admin/ai-provider/05_cli_provider) — integrate external tools
 - [Chain Designer](/en/admin/chains/03_designer) — visually create automated workflows

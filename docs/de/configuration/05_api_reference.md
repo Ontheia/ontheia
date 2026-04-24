@@ -2,7 +2,7 @@
 
 Die vollständige API-Dokumentation aller Ontheia-Endpunkte befindet sich unter:
 
-**→ [docs/de/api/01_api-ref.md](../../api/01_api-ref.md)**
+**→ [docs/de/api/01_api-ref.md](../api/01_api-ref.md)**
 
 ## Für Admins besonders relevante Endpunkte
 
@@ -37,4 +37,4 @@ curl -s -H "Cookie: session=<TOKEN>" \
 }
 ```
 
-Vollständige Feldbeschreibung: [API-Referenz › Admin & Maintenance](../../api/01_api-ref.md#admin--maintenance)
+Vollständige Feldbeschreibung: [API-Referenz › Admin & Maintenance](../api/01_api-ref.md#admin--maintenance)
