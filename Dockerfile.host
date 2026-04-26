@@ -10,21 +10,19 @@ RUN apt-get update && \
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends docker-ce-cli postgresql-client-16 && \
-    # Puppeteer/Chrome dependencies — only needed when markdown2pdf-mcp runs as subprocess.
-    # Currently disabled: markdown2pdf-mcp is tested as a containerised MCP server instead.
-    # apt-get install -y --no-install-recommends \
-    # libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-    # libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-    # libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
-    # fonts-liberation xdg-utils && \
+    # Puppeteer/Chrome dependencies — needed for markdown2pdf-mcp running as npx subprocess.
+    apt-get install -y --no-install-recommends \
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+    libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
+    fonts-liberation xdg-utils && \
     rm -rf /var/lib/apt/lists/*
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 # uv/uvx global verfügbar machen
 RUN ln -sf /root/.local/bin/uvx /usr/local/bin/uvx && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
-# markdown2pdf-mcp as subprocess — disabled, pending test as containerised MCP server.
-# RUN npm install -g markdown2pdf-mcp@latest && \
-#     sed -i 's/if (process.argv\[1\] && path.resolve(process.argv\[1\]) === __filename)/if (true)/' /usr/local/lib/node_modules/markdown2pdf-mcp/build/index.js
+RUN npm install -g markdown2pdf-mcp@latest && \
+    sed -i 's/if (process.argv\[1\] && path.resolve(process.argv\[1\]) === __filename)/if (true)/' /usr/local/lib/node_modules/markdown2pdf-mcp/build/index.js
 ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 # Source NVM from mounted host path so CLI tools (claude, gemini) are found in login shells
 RUN echo 'export NVM_DIR="/home/rock/.nvm"' >> /root/.profile && \
