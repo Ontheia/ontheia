@@ -12,7 +12,7 @@ The platform is functional and in active use. Focus: stability, onboarding, and 
 
 ---
 
-## Near-term (v0.1.6-x)
+## Near-term (v0.1.7-x)
 
 | Feature | Description |
 |---|---|
