@@ -2318,9 +2318,10 @@ function MemorySection({
             }}
           />
         </label>
-        <label className="settings-field settings-field--checkbox">
+        <label className="settings-field inline py-2">
           <input
             type="checkbox"
+            className="app-toggle"
             checked={agentPolicy?.auto_read_enabled !== false}
             onChange={(event) => {
               updatePolicyField('agent', 'auto_read_enabled', event.target.checked);
@@ -2328,21 +2329,6 @@ function MemorySection({
             }}
           />
           <span>{t('memory.autoReadEnabled')}</span>
-        </label>
-        <label className="settings-field">
-          <span>{t('memory.toolReadNamespacesLabel')}</span>
-          <textarea
-            rows={3}
-            value={(agentPolicy?.tool_read_namespaces ?? []).join('\n')}
-            onChange={(event) => {
-              const lines = event.target.value
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean);
-              updatePolicyField('agent', 'tool_read_namespaces', lines.length > 0 ? lines : null);
-              onHasChanges?.(true);
-            }}
-          />
         </label>
         <label className="settings-field">
           <span>{t('memory.writeNamespace')}</span>
@@ -2422,6 +2408,22 @@ function MemorySection({
             </label>
           </div>
           <label className="settings-field">
+            <span>{t('memory.toolReadNamespacesLabel')}</span>
+            <textarea
+              rows={3}
+              value={(agentPolicy?.tool_read_namespaces ?? []).join('\n')}
+              onChange={(event) => {
+                const lines = event.target.value
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean);
+                updatePolicyField('agent', 'tool_read_namespaces', lines.length > 0 ? lines : null);
+                onHasChanges?.(true);
+              }}
+              placeholder={t('memory.namespacePlaceholder')}
+            />
+          </label>
+          <label className="settings-field">
             <span>{t('memory.allowedWriteNamespacesTool')}</span>
             <textarea
               rows={3}
@@ -2496,32 +2498,14 @@ function MemorySection({
                 }}
               />
             </label>
-            <label className="settings-field settings-field--checkbox">
-              <input
-                type="checkbox"
-                checked={taskPolicy?.auto_read_enabled !== false}
-                onChange={(event) => {
-                  updatePolicyField('task', 'auto_read_enabled', event.target.checked);
-                  onHasChanges?.(true);
-                }}
-              />
-              <span>{t('memory.autoReadEnabled')}</span>
-            </label>
-            <label className="settings-field">
-              <span>{t('memory.toolReadNamespacesLabel')}</span>
-              <textarea
-                rows={3}
-                value={(taskPolicy?.tool_read_namespaces ?? []).join('\n')}
-                onChange={(event) => {
-                  const lines = event.target.value
-                    .split('\n')
-                    .map((line) => line.trim())
-                    .filter(Boolean);
-                  updatePolicyField('task', 'tool_read_namespaces', lines.length > 0 ? lines : null);
-                  onHasChanges?.(true);
-                }}
-              />
-            </label>
+            <TriStateSelect
+              label={t('memory.autoReadEnabled')}
+              value={taskPolicy?.auto_read_enabled ?? null}
+              onValueChange={(val) => {
+                updatePolicyField('task', 'auto_read_enabled', val);
+                onHasChanges?.(true);
+              }}
+            />
             <label className="settings-field">
               <span>{t('memory.writeNamespace')}</span>
               <Input
@@ -2587,6 +2571,22 @@ function MemorySection({
                   }}
                 />
               </div>
+              <label className="settings-field">
+                <span>{t('memory.toolReadNamespacesLabel')}</span>
+                <textarea
+                  rows={3}
+                  value={(taskPolicy?.tool_read_namespaces ?? []).join('\n')}
+                  onChange={(event) => {
+                    const lines = event.target.value
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean);
+                    updatePolicyField('task', 'tool_read_namespaces', lines.length > 0 ? lines : null);
+                    onHasChanges?.(true);
+                  }}
+                  placeholder={t('memory.namespacePlaceholder')}
+                />
+              </label>
               <label className="settings-field">
                 <span>{t('memory.allowedWriteNamespacesTool')}</span>
                 <textarea
