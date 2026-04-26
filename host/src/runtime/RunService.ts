@@ -386,9 +386,11 @@ export class RunService {
           return loadMemoryPolicy(this.db, enrichedInput.agent_id, enrichedInput.task_id, client);
         });
 
-        // Resolve namespaces: policy templates are applied (placeholders + wildcards kept as-is)
+        // Resolve namespaces: policy templates are applied (placeholders + wildcards kept as-is).
+        // auto_read_enabled=false suppresses injection without removing readNamespaces from tool access.
         let namespacesToUse = memoryConfig.namespaces;
-        if ((!namespacesToUse || namespacesToUse.length === 0) && Array.isArray(policy.readNamespaces)) {
+        const autoReadEnabled = policy.autoReadEnabled !== false;
+        if ((!namespacesToUse || namespacesToUse.length === 0) && autoReadEnabled && Array.isArray(policy.readNamespaces)) {
           namespacesToUse = policy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, templateContext));
         }
         if (!namespacesToUse || namespacesToUse.length === 0) {

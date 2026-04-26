@@ -166,6 +166,8 @@ export function stopAllServers() {
 
 export type MemoryPolicyDto = {
   read_namespaces: string[] | null;
+  tool_read_namespaces: string[] | null;
+  auto_read_enabled: boolean | null;
   write_namespace: string | null;
   allow_write: boolean | null;
   top_k: number | null;

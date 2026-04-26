@@ -28,6 +28,8 @@ export const MAX_MEMORY_TOP_K = 20;
 
 export type MemoryPolicy = {
   readNamespaces?: string[];
+  toolReadNamespaces?: string[];
+  autoReadEnabled?: boolean;
   writeNamespace?: string | null;
   allowWrite?: boolean;
   topK?: number;
@@ -38,6 +40,8 @@ export type MemoryPolicy = {
 
 export const sanitizePolicyResponse = (policy: MemoryPolicy) => ({
   read_namespaces: policy.readNamespaces ?? null,
+  tool_read_namespaces: policy.toolReadNamespaces ?? null,
+  auto_read_enabled: policy.autoReadEnabled ?? null,
   write_namespace: policy.writeNamespace ?? null,
   allow_write: policy.allowWrite !== undefined ? policy.allowWrite : null,
   top_k: policy.topK ?? null,
@@ -49,6 +53,8 @@ export const sanitizePolicyResponse = (policy: MemoryPolicy) => ({
 export const toStoredPolicy = (policy: MemoryPolicy): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
   if (policy.readNamespaces && policy.readNamespaces.length > 0) result.read_namespaces = policy.readNamespaces;
+  if (policy.toolReadNamespaces && policy.toolReadNamespaces.length > 0) result.tool_read_namespaces = policy.toolReadNamespaces;
+  if (policy.autoReadEnabled !== undefined) result.auto_read_enabled = policy.autoReadEnabled;
   if (typeof policy.writeNamespace === 'string') result.write_namespace = policy.writeNamespace;
   if (policy.allowWrite !== undefined) result.allow_write = policy.allowWrite;
   if (typeof policy.topK === 'number') result.top_k = policy.topK;
@@ -68,13 +74,17 @@ function toStringArray(input: unknown): string[] {
 export const parsePolicyPayload = (raw: unknown): MemoryPolicy => {
   if (!isPlainObject(raw)) return {};
   const readNamespaces = toStringArray((raw as any).read_namespaces ?? (raw as any).readNamespaces);
+  const toolReadNamespaces = toStringArray((raw as any).tool_read_namespaces ?? (raw as any).toolReadNamespaces);
   const allowedWriteNamespaces = toStringArray((raw as any).allowed_write_namespaces ?? (raw as any).allowedWriteNamespaces);
   const writeNamespace = (typeof (raw as any).write_namespace === 'string' ? (raw as any).write_namespace : (raw as any).writeNamespace)?.trim() || undefined;
   const allowWrite = typeof (raw as any).allow_write === 'boolean' ? (raw as any).allow_write : (raw as any).allowWrite;
+  const autoReadEnabled = typeof (raw as any).auto_read_enabled === 'boolean' ? (raw as any).auto_read_enabled : (raw as any).autoReadEnabled;
   const topK = typeof (raw as any).top_k === 'number' ? Math.max(1, Math.min(MAX_MEMORY_TOP_K, Math.floor((raw as any).top_k))) : undefined;
-  
+
   return {
     readNamespaces: readNamespaces.length > 0 ? readNamespaces : undefined,
+    toolReadNamespaces: toolReadNamespaces.length > 0 ? toolReadNamespaces : undefined,
+    autoReadEnabled,
     writeNamespace,
     allowWrite,
     topK,
@@ -87,6 +97,8 @@ export const parsePolicyPayload = (raw: unknown): MemoryPolicy => {
 export const mergePolicies = (base: MemoryPolicy, override: MemoryPolicy): MemoryPolicy => {
   return {
     readNamespaces: override.readNamespaces ?? base.readNamespaces,
+    toolReadNamespaces: override.toolReadNamespaces ?? base.toolReadNamespaces,
+    autoReadEnabled: override.autoReadEnabled ?? base.autoReadEnabled,
     writeNamespace: override.writeNamespace ?? base.writeNamespace,
     allowWrite: override.allowWrite ?? base.allowWrite,
     topK: override.topK ?? base.topK,

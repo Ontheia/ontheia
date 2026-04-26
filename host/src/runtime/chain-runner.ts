@@ -619,12 +619,13 @@ export class ChainRunner {
       // Use Task Context (System Context) if available, else fallback to Persona
       const taskContextPrompt = profile.task_context || profile.persona || 'You are a helpful assistant.';
 
-      // Load memory context for sub-agent (if policy defines readNamespaces)
+      // Load memory context for sub-agent (if policy defines readNamespaces and auto-inject is enabled)
       let subAgentMemoryContextText: string | undefined;
       try {
         const subPolicy = await loadMemoryPolicy(null, profile.id, profile.task_id ?? undefined, this.client);
+        const subAutoReadEnabled = subPolicy.autoReadEnabled !== false;
         const subUserId = userId || this.templateContext.user_id;
-        if (subUserId && Array.isArray(subPolicy.readNamespaces) && subPolicy.readNamespaces.length > 0) {
+        if (subUserId && subAutoReadEnabled && Array.isArray(subPolicy.readNamespaces) && subPolicy.readNamespaces.length > 0) {
           const subCtx = { ...this.templateContext, agent_id: profile.id, task_id: profile.task_id ?? undefined };
           const nsResolved = subPolicy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, subCtx));
           // Security filter: global namespaces pass, user/agent namespaces must carry the current user's UUID

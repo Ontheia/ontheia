@@ -1440,10 +1440,12 @@ function MemorySection({
   ) => {
     const setter = target === 'agent' ? setAgentPolicy : setTaskPolicy;
     setter((prev) => {
-      const base: MemoryPolicyDto = prev ?? { 
-        read_namespaces: null, 
-        write_namespace: null, 
-        allow_write: true, 
+      const base: MemoryPolicyDto = prev ?? {
+        read_namespaces: null,
+        tool_read_namespaces: null,
+        auto_read_enabled: null,
+        write_namespace: null,
+        allow_write: true,
         top_k: 5,
         allowed_write_namespaces: null,
         allow_tool_write: false,
@@ -1452,6 +1454,14 @@ function MemorySection({
       if (field === 'read_namespaces' && (Array.isArray(value) || value === null)) {
         setMemoryDirty(true);
         return { ...base, read_namespaces: value };
+      }
+      if (field === 'tool_read_namespaces' && (Array.isArray(value) || value === null)) {
+        setMemoryDirty(true);
+        return { ...base, tool_read_namespaces: value };
+      }
+      if (field === 'auto_read_enabled' && (typeof value === 'boolean' || value === null)) {
+        setMemoryDirty(true);
+        return { ...base, auto_read_enabled: value };
       }
       if (field === 'allowed_write_namespaces' && (Array.isArray(value) || value === null)) {
         setMemoryDirty(true);
@@ -2308,6 +2318,32 @@ function MemorySection({
             }}
           />
         </label>
+        <label className="settings-field settings-field--checkbox">
+          <input
+            type="checkbox"
+            checked={agentPolicy?.auto_read_enabled !== false}
+            onChange={(event) => {
+              updatePolicyField('agent', 'auto_read_enabled', event.target.checked);
+              onHasChanges?.(true);
+            }}
+          />
+          <span>{t('memory.autoReadEnabled')}</span>
+        </label>
+        <label className="settings-field">
+          <span>{t('memory.toolReadNamespacesLabel')}</span>
+          <textarea
+            rows={3}
+            value={(agentPolicy?.tool_read_namespaces ?? []).join('\n')}
+            onChange={(event) => {
+              const lines = event.target.value
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean);
+              updatePolicyField('agent', 'tool_read_namespaces', lines.length > 0 ? lines : null);
+              onHasChanges?.(true);
+            }}
+          />
+        </label>
         <label className="settings-field">
           <span>{t('memory.writeNamespace')}</span>
           <Input
@@ -2456,6 +2492,32 @@ function MemorySection({
                     .map((line) => line.trim())
                     .filter(Boolean);
                   updatePolicyField('task', 'read_namespaces', lines.length > 0 ? lines : null);
+                  onHasChanges?.(true);
+                }}
+              />
+            </label>
+            <label className="settings-field settings-field--checkbox">
+              <input
+                type="checkbox"
+                checked={taskPolicy?.auto_read_enabled !== false}
+                onChange={(event) => {
+                  updatePolicyField('task', 'auto_read_enabled', event.target.checked);
+                  onHasChanges?.(true);
+                }}
+              />
+              <span>{t('memory.autoReadEnabled')}</span>
+            </label>
+            <label className="settings-field">
+              <span>{t('memory.toolReadNamespacesLabel')}</span>
+              <textarea
+                rows={3}
+                value={(taskPolicy?.tool_read_namespaces ?? []).join('\n')}
+                onChange={(event) => {
+                  const lines = event.target.value
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean);
+                  updatePolicyField('task', 'tool_read_namespaces', lines.length > 0 ? lines : null);
                   onHasChanges?.(true);
                 }}
               />
@@ -7577,6 +7639,8 @@ export function SettingsView() {
         const taskNsTemplate = 'vector.user.${user_id}.task.${task_id}';
         await updateTaskMemoryPolicy(created.id, {
           read_namespaces: [taskNsTemplate],
+          tool_read_namespaces: null,
+          auto_read_enabled: null,
           write_namespace: taskNsTemplate,
           allow_write: true,
           top_k: null,

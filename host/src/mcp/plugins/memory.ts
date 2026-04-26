@@ -61,9 +61,13 @@ export async function handleMemorySearch(
 
   if (Array.isArray(args.namespaces) && args.namespaces.length > 0) {
     // Filter explicitly requested namespaces against policy access control.
-    // isNamespaceAllowed supports wildcards in the policy whitelist.
+    // tool_read_namespaces extends the searchable pool without triggering auto-injection.
+    const searchableNamespaces = [
+      ...(policy.readNamespaces || []),
+      ...(policy.toolReadNamespaces || [])
+    ];
     namespaces = args.namespaces.filter(ns =>
-      isNamespaceAllowed(ns, policy.readNamespaces || [], ctx)
+      isNamespaceAllowed(ns, searchableNamespaces, ctx)
     );
     if (namespaces.length === 0) {
       logger.warn({ namespaces: args.namespaces }, 'All requested namespaces denied by memory policy');
