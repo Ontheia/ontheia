@@ -213,7 +213,7 @@ await server.register(cors, {
         // Subdomain wildcard: "https://*.example.com" → only matches one subdomain level
         // Suffix wildcard:    "https://myapp.com*"   → matches "https://myapp.com" or with port, but NOT "https://myapp.com.evil.com"
         // * is replaced by [^./]* (zero or more chars, but no dots or slashes to prevent cross-domain matching)
-        const escaped = allowed.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace('\\*', '[^./]*(?::\\d+)?');
+        const escaped = allowed.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^./]*(?::\\d+)?');
         return new RegExp(`^${escaped}$`).test(origin);
       }
       return allowed === origin;
