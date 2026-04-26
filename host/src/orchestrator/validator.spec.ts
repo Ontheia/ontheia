@@ -179,16 +179,34 @@ test('allows wildcard image allowlist', () => {
   assert.equal(result.valid, true);
 });
 
+test('allows allowlisted URL host:port', () => {
+  const result = validateMcpServersConfig(
+    {
+      mcpServers: {
+        remote: {
+          url: 'http://localhost:8000/mcp'
+        }
+      }
+    },
+    deps
+  );
+
+  assert.equal(result.valid, true);
+});
+
 test('allows wildcard URL allowlist', () => {
   const result = validateMcpServersConfig(
     {
       mcpServers: {
         remote: {
-          url: 'http://localhost/mcp'
+          url: 'http://localhost:9090/mcp'
         }
       }
     },
-    deps
+    {
+      ...deps,
+      urlAllowlist: ['localhost*']
+    }
   );
 
   assert.equal(result.valid, true);
