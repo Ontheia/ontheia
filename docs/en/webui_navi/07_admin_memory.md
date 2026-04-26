@@ -62,6 +62,7 @@ Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]
 | --- | --- | --- |
 | Select Agent | Dropdown | Selects the agent whose memory policy is being edited. |
 | Read (Namespaces, one per line) | Textarea | List of namespaces the agent may read from. |
+| Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, these namespaces are only reachable via the LLM Memory Tool. |
 | Write (Namespace) | Text | Namespace the agent automatically writes to. |
 | Top K | Number | Maximum number of memory hits returned (1–20). |
 | Allow Writing (Auto) | Checkbox | Allows the agent to automatically save to the write namespace. |
@@ -72,6 +73,7 @@ Subsection **LLM Memory Tools:**
 | --- | --- | --- |
 | Allow Writing (Tool) | Checkbox | Allows the agent to write via tool call. |
 | Allow Deleting (Tool) | Checkbox | Allows the agent to delete via tool call. |
+| Tool-Only Read Namespaces (one per line) | Textarea | Namespaces the LLM may access for reading exclusively via tool call — independent of "Auto-inject into Context". |
 | Allowed Write Namespaces (Tool, one per line) | Textarea | Namespaces the agent may write to via tool. |
 
 Button: **[Save Agent Policy]**
@@ -82,11 +84,13 @@ Button: **[Save Agent Policy]**
 | --- | --- | --- |
 | Select Task | Dropdown | Selects the task whose memory policy is being edited. Shows tasks of the currently selected agent. |
 | Read (Namespaces, one per line) | Textarea | |
+| Auto-inject into Context (on every Run) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Write (Namespace) | Text | |
 | Top K | Number | Leave empty = inherit from agent. |
 | Allow Writing (Auto) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Allow Writing (Tool) | Tri-state Dropdown | |
 | Allow Deleting (Tool) | Tri-state Dropdown | |
+| Tool-Only Read Namespaces (one per line) | Textarea | Leave empty = inherit from agent. |
 | Allowed Write Namespaces (Tool, one per line) | Textarea | |
 
 Button: **[Save Task Policy]**

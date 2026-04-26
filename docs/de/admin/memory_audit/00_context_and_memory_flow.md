@@ -93,6 +93,22 @@ Bevor das LLM die erste Antwort generiert, durchläuft Ontheia folgende Schritte
 
 **Praktische Konsequenz:** Je präziser die Nutzer-Anfrage oder der Delegations-Input, desto besser passen die Memory-Treffer. Ein spezifischer Input ("Analysiere die Marketingstrategie von Q1") liefert zielgenauere Treffer als ein allgemeiner ("Was gibt es Neues?").
 
+### Namespace-Modell: automatisch vs. Tool-Zugriff
+
+Für den Lese-Zugriff auf Memory unterscheidet Ontheia drei Modi, die pro Agent (und per Task-Override) konfigurierbar sind:
+
+| Modus | Konfiguration | Verhalten |
+|---|---|---|
+| **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch als System-Block 4 in den Kontext eingefügt. |
+| **Tool-Zugriff (aus `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | Die eingetragenen Namespaces sind für das LLM über das Memory-Suche-Tool erreichbar, werden aber **nicht** automatisch injiziert. |
+| **Tool-Zugriff (dediziert)** | `tool_read_namespaces` | Namespaces, die **ausschließlich** per Tool-Aufruf lesbar sind — unabhängig von `auto_read_enabled`. Nützlich für Wissensdatenbanken, die das LLM gezielt abfragen soll. |
+
+**Typische Anwendungsfälle:**
+
+- `auto_read_enabled = true` — Agents mit persistentem Nutzergedächtnis (z. B. persönlicher Assistent, der Vorlieben kennen soll)
+- `auto_read_enabled = false` — Agents, die gezielt nach Wissen suchen sollen, ohne bei jedem Run automatisch Kontext zu laden
+- `tool_read_namespaces` — Globale Wissensdatenbanken oder Projektwissen, auf das das LLM bei Bedarf zugreift, ohne den Kontext zu befrachten
+
 ### Automatisches Speichern nach dem Run
 
 Wenn `allowWrite = true`, speichert das System nach jedem erfolgreichen Run automatisch:

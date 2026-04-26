@@ -62,6 +62,7 @@ Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeit
 | --- | --- | --- |
 | Agent auswählen | Dropdown | Wählt den Agent, dessen Memory-Policy bearbeitet wird. |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | Liste der Namespaces, aus denen der Agent lesen darf. |
+| Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, sind diese Namespaces nur per LLM Memory Tool erreichbar. |
 | Schreiben (Namespace) | Text | Namespace, in den der Agent automatisch schreibt. |
 | Top K | Zahl | Maximale Anzahl zurückgegebener Memory-Treffer (1–20). |
 | Schreiben erlauben (Auto) | Checkbox | Erlaubt dem Agent, automatisch in den Schreib-Namespace zu speichern. |
@@ -72,6 +73,7 @@ Unterabschnitt **LLM Memory Tools:**
 | --- | --- | --- |
 | Schreiben erlauben (Tool) | Checkbox | Erlaubt dem Agent, via Tool-Aufruf zu schreiben. |
 | Löschen erlauben (Tool) | Checkbox | Erlaubt dem Agent, via Tool-Aufruf zu löschen. |
+| Nur Tool-Zugriff (Namespaces, einer pro Zeile) | Textarea | Namespaces, auf die das LLM ausschließlich per Tool-Aufruf lesend zugreifen darf — unabhängig von „Automatisch in Kontext injizieren". |
 | Erlaubte Schreib-Namespaces (Tool, einer pro Zeile) | Textarea | Namespaces, in die der Agent per Tool schreiben darf. |
 
 Button: **[Agent-Policy speichern]**
@@ -82,11 +84,13 @@ Button: **[Agent-Policy speichern]**
 | --- | --- | --- |
 | Task wählen | Dropdown | Wählt den Task, dessen Memory-Policy bearbeitet wird. Zeigt Tasks des aktuell gewählten Agents. |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | |
+| Automatisch in Kontext injizieren (bei jedem Run) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Schreiben (Namespace) | Text | |
 | Top K | Zahl | Leer lassen = vom Agent erben. |
 | Schreiben erlauben (Auto) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Schreiben erlauben (Tool) | Tri-State-Dropdown | |
 | Löschen erlauben (Tool) | Tri-State-Dropdown | |
+| Nur Tool-Zugriff (Namespaces, einer pro Zeile) | Textarea | Leer lassen = vom Agent erben. |
 | Erlaubte Schreib-Namespaces (Tool, einer pro Zeile) | Textarea | |
 
 Button: **[Task-Policy speichern]**

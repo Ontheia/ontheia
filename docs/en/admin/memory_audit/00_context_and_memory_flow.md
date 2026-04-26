@@ -93,6 +93,22 @@ Before the LLM generates its first response, Ontheia runs through the following 
 
 **Practical implication:** The more precise the user request or delegation input, the better the memory hits. A specific input ("Analyze the Q1 marketing strategy") yields more targeted hits than a general one ("What's new?").
 
+### Namespace Model: Automatic vs. Tool Access
+
+Ontheia distinguishes three modes for read access to memory, configurable per agent (and overridable per task):
+
+| Mode | Configuration | Behavior |
+|---|---|---|
+| **Automatically injected** | `read_namespaces` + `auto_read_enabled = true` | Top-K hits are automatically inserted into the context as system block 4 before each run. |
+| **Tool access (from `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | The listed namespaces are searchable by the LLM via the memory search tool but are **not** automatically injected. |
+| **Tool access (dedicated)** | `tool_read_namespaces` | Namespaces that are readable **only** via tool call — independent of `auto_read_enabled`. Useful for knowledge bases the LLM should query on demand. |
+
+**Typical use cases:**
+
+- `auto_read_enabled = true` — Agents with persistent user memory (e.g., a personal assistant that should know user preferences)
+- `auto_read_enabled = false` — Agents that should search for knowledge on demand, without loading context automatically on every run
+- `tool_read_namespaces` — Global knowledge bases or project knowledge the LLM accesses when needed, without burdening the context
+
 ### Automatic Saving After a Run
 
 If `allowWrite = true`, the system automatically saves after each successful run:
