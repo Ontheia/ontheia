@@ -79,7 +79,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Full installation guide: [docs.ontheia.ai/en/getting-started/installation](https://docs.ontheia.ai/en/getting-started/installation)
+Full installation guide: [docs.ontheia.ai/en/getting-started/02_installation](https://docs.ontheia.ai/en/getting-started/02_installation)
 
 ---
 
@@ -89,8 +89,8 @@ Full documentation at **[docs.ontheia.ai](https://docs.ontheia.ai)**
 
 | Topic | EN | DE |
 |---|---|---|
-| Introduction | [EN](https://docs.ontheia.ai/en/getting-started/introduction) | [DE](https://docs.ontheia.ai/de/getting-started/introduction) |
-| Installation | [EN](https://docs.ontheia.ai/en/getting-started/installation) | [DE](https://docs.ontheia.ai/de/getting-started/installation) |
+| Introduction | [EN](https://docs.ontheia.ai/en/getting-started/01_introduction) | [DE](https://docs.ontheia.ai/de/getting-started/01_introduction) |
+| Installation | [EN](https://docs.ontheia.ai/en/getting-started/02_installation) | [DE](https://docs.ontheia.ai/de/getting-started/02_installation) |
 | Environment variables | [EN](https://docs.ontheia.ai/en/configuration/01_environment_variables) | [DE](https://docs.ontheia.ai/de/configuration/01_environment_variables) |
 | Agents | [EN](https://docs.ontheia.ai/en/admin/agents/01_concept) | [DE](https://docs.ontheia.ai/de/admin/agents/01_concept) |
 | Chain Engine | [EN](https://docs.ontheia.ai/en/admin/chains/01_concept) | [DE](https://docs.ontheia.ai/de/admin/chains/01_concept) |
