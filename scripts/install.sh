@@ -638,6 +638,35 @@ echo "────────────────────────�
 docker compose build host webui
 
 # ─── 8. DB + Migrations ───────────────────────────────────────────────────────
+# Detect existing DB volume: PostgreSQL only applies POSTGRES_PASSWORD on first
+# init (empty data dir). A stale volume causes Flyway auth failure with a newly
+# generated FLYWAY_PASSWORD. Warn and abort early.
+PROJECT_NAME=$(basename "$(pwd)")
+DB_VOLUME="${PROJECT_NAME}_ontheia-db-data"
+if docker volume inspect "$DB_VOLUME" > /dev/null 2>&1; then
+    echo ""
+    echo -e "${RED}────────────────────────────────────────────────────${NC}"
+    if [ "$LANG_CHOICE" = "2" ]; then
+        echo -e "${RED}  Fehler: Bestehendes Datenbank-Volume gefunden: ${DB_VOLUME}${NC}"
+        echo -e "${RED}  Das Datenbankpasswort kann nicht geändert werden,${NC}"
+        echo -e "${RED}  da das Volume bereits initialisiert ist.${NC}"
+        echo ""
+        echo "  Für eine Neu-Installation bitte zuerst ausführen:"
+        echo "    docker compose down -v"
+        echo "  Danach dieses Script erneut starten."
+    else
+        echo -e "${RED}  Error: Existing database volume found: ${DB_VOLUME}${NC}"
+        echo -e "${RED}  The database password cannot be changed because${NC}"
+        echo -e "${RED}  the volume is already initialized.${NC}"
+        echo ""
+        echo "  For a fresh install, first run:"
+        echo "    docker compose down -v"
+        echo "  Then restart this script."
+    fi
+    echo -e "${RED}────────────────────────────────────────────────────${NC}"
+    exit 1
+fi
+
 echo ""
 echo "────────────────────────────────────────────────────"
 echo "  $MSG_START_DB"
