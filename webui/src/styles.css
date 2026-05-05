@@ -4234,6 +4234,13 @@
   overflow: clip !important;
 }
 
+@media (hover: none) {
+  .sidebar-history-button,
+  .sidebar-history-button-inner {
+    touch-action: manipulation !important;
+  }
+}
+
 /* Scrollable sidebar content container */
 [data-sidebar="content"] {
   touch-action: pan-y !important;
@@ -4308,6 +4315,12 @@
   .sidebar-menu-action-ghost:hover {
     background-color: #13364E !important;
     color: hsl(var(--sidebar-foreground)) !important;
+  }
+}
+
+@media (hover: none) {
+  .sidebar-menu-action-ghost {
+    touch-action: manipulation;
   }
 }
 

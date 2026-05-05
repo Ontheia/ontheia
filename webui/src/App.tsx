@@ -376,7 +376,7 @@ function AuthenticatedApp() {
                 )}
                 <div className="main-scroll">
                   <Routes>
-                    <Route path="/chat/:id" element={chatRouteElement} />
+                    <Route path="/chat/:id?" element={chatRouteElement} />
                     <Route
                       path="/admin"
                       element={isAdmin ? <AdminConsoleView /> : <Navigate to="/chat" replace />}
@@ -385,7 +385,6 @@ function AuthenticatedApp() {
                       path="/servers"
                       element={isAdmin ? <AdminConsoleView /> : <Navigate to="/chat" replace />}
                     />
-                    <Route path="/chat" element={chatRouteElement} />
                     <Route path="/automation" element={<AutomationView />} />
                     <Route path="/user-settings" element={<UserSettingsView />} />
                     <Route path="/settings" element={<Navigate to="/user-settings" replace />} />

@@ -285,6 +285,7 @@ export function ChatView({
   const sidebarCtx = useSidebar();
   const { id: chatId } = useParams<{ id: string }>();
   const activeChatId = chatId ?? null;
+  const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1171,7 +1172,7 @@ export function ChatView({
           secondary, 
           toolApproval: approvalMode 
         });
-        window.history.replaceState(null, '', `/chat/${effectiveChatId}`);
+        navigate(`/chat/${effectiveChatId}`, { replace: true });
       }
 
       const metadata: Record<string, unknown> = {
