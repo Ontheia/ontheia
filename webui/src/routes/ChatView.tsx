@@ -299,6 +299,7 @@ export function ChatView({
   const [messageSearch, setMessageSearch] = useState('');
   const streamCancelRef = useRef<(() => void) | null>(null);
   const streamingMessageRef = useRef<{ id: string; content: string } | null>(null);
+  const lastScrollRef = useRef<{ targetId: string; reason: string } | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const serverRunIdRef = useRef<string | null>(null);
   const finishRunRef = useRef<((status: 'success' | 'error', detail?: string) => void) | null>(null);
@@ -343,29 +344,20 @@ export function ChatView({
     setMessageSearch('');
   }, [activeChatId]);
 
-  // Scroll to the user message on submit and when the LLM response arrives
+  // Scroll to the user message when submitted; no scroll on agent-complete
+  // (scrolling back up after streaming ends is disruptive)
   useEffect(() => {
-    console.debug('Messages state changed', { messagesLength: messages.length, lastMessage: messages[messages.length - 1] });
     const lastMessage = messages[messages.length - 1];
-    let targetId: string | undefined;
-    if (lastMessage?.role === 'user') {
-      // User just submitted — scroll to their message
-      targetId = lastMessage.id;
-    } else if (lastMessage?.role === 'agent' && !streamingMessageRef.current) {
-      // LLM response complete (not mid-stream) — scroll to the preceding user
-      // message so the question is visible at the top and the answer flows below
-      const prevUser = [...messages].reverse().find(m => m.role === 'user');
-      targetId = prevUser?.id;
-    }
-    if (targetId) {
-      const id = targetId;
-      requestAnimationFrame(() => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    }
+    if (lastMessage?.role !== 'user') return;
+
+    const id = lastMessage.id;
+    const prev = lastScrollRef.current;
+    if (prev?.targetId === id) return;
+
+    lastScrollRef.current = { targetId: id, reason: 'user-message' };
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }, [messages]);
 
   const {
@@ -2003,11 +1995,6 @@ export function ChatView({
             messages
               .filter((msg) => msg.role !== 'tool' && msg.role !== 'system')
               .map((msg) => {
-                console.debug('Rendering message', {
-                  id: msg.id,
-                  role: msg.role,
-                  contentLength: msg.content.length
-                });
               const isStreamingAgent =
                 msg.role === 'agent' && streamingMessageRef.current && msg.id === streamingMessageRef.current.id;
               const renderedContent = isStreamingAgent && streamingText ? streamingText : msg.content;
