@@ -2044,32 +2044,32 @@ export function ChatView({
           )}
         </div>
       </div>
-      {(toastWarnings.length > 0 || error || optimizeError) && (
-        <div className="chat-notice-stack">
-          {toastWarnings.map((warning) => (
-            <div key={warning.toastId} className="composer-warning-toast">
-              <div className="composer-warning-icon">
-                <AlertTriangle aria-hidden="true" />
-              </div>
-              <div className="composer-warning-text">
-                <strong>{warning.message}</strong>
-                {warning.code && <span>Code: {warning.code}</span>}
-              </div>
-              <button
-                type="button"
-                className="composer-warning-dismiss"
-                onClick={() => dismissToast(warning.toastId)}
-                aria-label={t('closeWarning', { ns: 'common' })}
-              >
-                <X aria-hidden="true" width={14} height={14} />
-              </button>
-            </div>
-          ))}
-          {error && <div className="error-box">{error}</div>}
-          {optimizeError && <div className="error-box">{optimizeError}</div>}
-        </div>
-      )}
       <footer className="chat-composer">
+        {(toastWarnings.length > 0 || error || optimizeError) && (
+          <div className="chat-notice-stack">
+            {toastWarnings.map((warning) => (
+              <div key={warning.toastId} className="composer-warning-toast">
+                <div className="composer-warning-icon">
+                  <AlertTriangle aria-hidden="true" />
+                </div>
+                <div className="composer-warning-text">
+                  <strong>{warning.message}</strong>
+                  {warning.code && <span>Code: {warning.code}</span>}
+                </div>
+                <button
+                  type="button"
+                  className="composer-warning-dismiss"
+                  onClick={() => dismissToast(warning.toastId)}
+                  aria-label={t('closeWarning', { ns: 'common' })}
+                >
+                  <X aria-hidden="true" width={14} height={14} />
+                </button>
+              </div>
+            ))}
+            {error && <div className="error-box">{error}</div>}
+            {optimizeError && <div className="error-box">{optimizeError}</div>}
+          </div>
+        )}
         <div className="chat-composer-inner">
           {primary.type === 'agent' && showApprovalPrompt && currentPendingApproval && (
             <div className="composer-approval-banner top animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -1078,7 +1078,8 @@
   margin-top: 0;
   padding: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   position: sticky;
   bottom: 0;
   z-index: 210;
@@ -1086,15 +1087,12 @@
   /*padding-top: 0.5rem;*/
 }
 
-.chat-notice-stack {  
+.chat-notice-stack {
   width: 100%;
-  padding: 0;
+  padding: 0 1rem 0.25rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  position: sticky;
-  top: 0.5rem;
-  z-index: 205;
 }
 
 .chat-composer-inner {
