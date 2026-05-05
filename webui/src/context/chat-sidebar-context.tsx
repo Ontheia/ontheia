@@ -887,8 +887,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
 
     const fetchAllData = async () => {
       try {
-        console.debug('[ChatSidebarContext] Starting combined initial load...');
-        
         // Execute independent metadata fetches in parallel
         const [agentsResponse, settingsResponse, runsResponse] = await Promise.all([
           listAgents({ expand: ['tasks', 'chains'] }),
@@ -896,13 +894,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
           listRecentRuns(limits.messages),
           loadChats(limits.messages) // This one updates state internally
         ]);
-
-        console.debug('[ChatSidebarContext] API responses received:', {
-          agentsCount: Array.isArray(agentsResponse) ? agentsResponse.length : 'not an array',
-          hasSettings: !!settingsResponse,
-          pickerDefaults: settingsResponse?.pickerDefaults,
-          runsCount: Array.isArray(runsResponse) ? runsResponse.length : 'not an array'
-        });
 
         if (cancelled) return;
 
@@ -912,7 +903,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
             agentsResponse,
             prev.length > 0 ? prev : cloneAgents(agentsSeed as AgentDefinition[])
           );
-          console.debug('[ChatSidebarContext] Agents processed, count:', next.length);
           return next;
         });
 
@@ -1060,7 +1050,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        console.debug('[ChatSidebarContext] Initial load complete.');
         setIsInitialLoadComplete(true);
       } catch (error) {
         console.error('[ChatSidebarContext] Failed to load initial data', error);

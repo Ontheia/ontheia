@@ -690,7 +690,6 @@ export function runAgentStream(
   let currentRunId: string | null = null;
 
   const parseChunk = (chunk: string) => {
-    console.debug('[runs] parseChunk called', { chunkLength: chunk.length, preview: chunk.slice(0, 100) });
     const lines = chunk.split(/\r?\n/);
     let eventName: string | null = null;
     let dataBuffer = '';
@@ -704,20 +703,16 @@ export function runAgentStream(
       }
     }
 
-    console.debug('[runs] parsed lines', { eventName, dataBufferLength: dataBuffer.length, dataPreview: dataBuffer.slice(0, 100) });
-
     if (!eventName || dataBuffer.length === 0) {
       return;
     }
 
     try {
       const parsed = JSON.parse(dataBuffer) as Record<string, unknown>;
-      console.debug('[runs] parsed event', { eventName, parsedType: parsed.type, hasRunId: Boolean(parsed.run_id) });
-      
+
       // Auto-extract run_id from ANY event if we don't have it yet
       if (!currentRunId && typeof parsed.run_id === 'string') {
         currentRunId = parsed.run_id;
-        console.debug('[runs] lazy-loaded run_id from event', { eventName, runId: currentRunId });
         handlers.onStarted?.(currentRunId);
       }
 
@@ -730,7 +725,6 @@ export function runAgentStream(
         return;
       }
       if (eventName === 'run_event') {
-        console.debug('[runs] calling onEvent', parsed);
         handlers.onEvent?.(parsed);
         return;
       }
@@ -741,7 +735,6 @@ export function runAgentStream(
         return;
       }
     } catch (error) {
-      console.debug('[runs] parse error', error);
       handlers.onError?.(error as Error);
     }
   };
@@ -798,32 +791,20 @@ export function runAgentStream(
 
       // Immediate extraction from header
       const headerRunId = response.headers.get('X-Run-Id');
-      console.debug('[runs] response received', { status: response.status, headerRunId });
-
       if (headerRunId && !currentRunId) {
         currentRunId = headerRunId;
-        console.debug('[runs] extracted run_id from header', { runId: currentRunId });
         handlers.onStarted?.(currentRunId);
       }
 
-      console.debug('[runs] stream started', { status: response.status });
-     const reader = response.body.getReader();
-
+      const reader = response.body.getReader();
       while (true) {
         const { value, done } = await reader.read();
-        console.debug('[runs] read', { done, valueLength: value?.length ?? 0 });
         if (done) break;
-        const chunkText = decoder.decode(value, { stream: true });
-        console.debug('[runs] chunk', {
-          length: value?.length ?? 0,
-          preview: chunkText.slice(0, 200)
-        });
-        buffer += chunkText;
+        buffer += decoder.decode(value, { stream: true });
         flushBuffer();
       }
 
       buffer += decoder.decode();
-      console.debug('[runs] final flush', { bufferLength: buffer.length });
       flushBuffer();
     } catch (error) {
       if (controller.signal.aborted) {

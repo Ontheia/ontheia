@@ -108,10 +108,7 @@ function mapResponseToEntry(response: ProviderResponse): ProviderEntry {
     }))
   });
 
-  console.debug(`[ProviderContext] Mapped response for ${response.id}:`, {
-    show_in_composer: response.show_in_composer,
-    mapped_showInComposer: mapped.showInComposer
-  });
+
 
   return mapped;
 }

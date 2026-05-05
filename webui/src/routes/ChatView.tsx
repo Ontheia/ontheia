@@ -344,20 +344,30 @@ export function ChatView({
     setMessageSearch('');
   }, [activeChatId]);
 
-  // Scroll to the user message when submitted; no scroll on agent-complete
-  // (scrolling back up after streaming ends is disruptive)
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role !== 'user') return;
+    const isStreaming = !!streamingMessageRef.current;
+    let targetId: string | undefined;
+    let scrollReason: string | undefined;
 
-    const id = lastMessage.id;
-    const prev = lastScrollRef.current;
-    if (prev?.targetId === id) return;
+    if (lastMessage?.role === 'user') {
+      targetId = lastMessage.id;
+      scrollReason = 'user-message';
+    } else if (lastMessage?.role === 'agent' && !isStreaming) {
+      const prevUser = [...messages].reverse().find(m => m.role === 'user');
+      targetId = prevUser?.id;
+      scrollReason = 'agent-response-complete';
+    }
 
-    lastScrollRef.current = { targetId: id, reason: 'user-message' };
-    requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    if (targetId && scrollReason) {
+      const prev = lastScrollRef.current;
+      if (prev?.targetId === targetId && prev?.reason === scrollReason) return;
+      lastScrollRef.current = { targetId, reason: scrollReason };
+      const id = targetId;
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   }, [messages]);
 
   const {
