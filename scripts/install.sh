@@ -3,6 +3,13 @@ set -e
 
 trap 'stty echo 2>/dev/null' EXIT INT TERM
 
+# When run as a file (not piped), cd to the repo root (parent of scripts/).
+# This ensures relative paths (.env.example, migrations/, etc.) resolve correctly
+# regardless of the caller's working directory.
+if [[ "$0" == *"install.sh" ]]; then
+    cd "$(dirname "$0")/.."
+fi
+
 # ─── Colors ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
