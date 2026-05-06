@@ -41,7 +41,7 @@ echo "Select Language / Sprache wählen:"
 echo "1) English"
 echo "2) Deutsch"
 echo -n "Selection / Auswahl [1]: "
-read LANG_CHOICE
+read LANG_CHOICE </dev/tty
 LANG_CHOICE=${LANG_CHOICE:-1}
 
 # ─── License ──────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ if [ "$LANG_CHOICE" = "2" ]; then
     echo "  • Website:      https://ontheia.ai"
     echo ""
     echo -n "  Akzeptierst du die Lizenzbedingungen? [j/N]: "
-    read TOS_ACCEPT
+    read TOS_ACCEPT </dev/tty
     TOS_ACCEPT=$(echo "$TOS_ACCEPT" | tr '[:upper:]' '[:lower:]')
     if [ "$TOS_ACCEPT" != "j" ] && [ "$TOS_ACCEPT" != "y" ]; then
         echo ""
@@ -94,7 +94,7 @@ else
     echo "  • Website:      https://ontheia.ai"
     echo ""
     echo -n "  Do you accept the license terms? [y/N]: "
-    read TOS_ACCEPT
+    read TOS_ACCEPT </dev/tty
     TOS_ACCEPT=$(echo "$TOS_ACCEPT" | tr '[:upper:]' '[:lower:]')
     if [ "$TOS_ACCEPT" != "y" ] && [ "$TOS_ACCEPT" != "j" ]; then
         echo ""
@@ -343,7 +343,7 @@ if [ -d "$NVM_CANDIDATE" ]; then
     NVM_DIR_VAL="$NVM_CANDIDATE"
 else
     echo -n "$MSG_NVM_MANUAL"
-    read NVM_DIR_INPUT
+    read NVM_DIR_INPUT </dev/tty
     if [ -n "$NVM_DIR_INPUT" ]; then
         # Expand ~ if user typed it
         NVM_DIR_VAL="${NVM_DIR_INPUT/#\~/$HOME}"
@@ -384,23 +384,23 @@ echo "  $MSG_INTERACTIVE"
 echo "────────────────────────────────────────────────────"
 
 echo -n "$MSG_PROMPT_FNAME: "
-read ADMIN_FNAME
+read ADMIN_FNAME </dev/tty
 
 echo -n "$MSG_PROMPT_EMAIL [admin@ontheia.local]: "
-read ADMIN_EMAIL
+read ADMIN_EMAIL </dev/tty
 ADMIN_EMAIL=${ADMIN_EMAIL:-admin@ontheia.local}
 sed -i "s|ADMIN_EMAIL=.*|ADMIN_EMAIL=$ADMIN_EMAIL|" .env
 
 while true; do
     echo -n "$MSG_PROMPT_PASS $MSG_PROMPT_PASS_HINT: "
-    read -s ADMIN_PASSWORD
+    read -s ADMIN_PASSWORD </dev/tty
     echo ""
     if [ ${#ADMIN_PASSWORD} -lt 8 ]; then
         echo -e "${YELLOW}$MSG_PASS_WEAK${NC}"
         continue
     fi
     echo -n "$MSG_PROMPT_PASS_CONFIRM $MSG_PROMPT_PASS_HINT: "
-    read -s ADMIN_PASSWORD_CONFIRM
+    read -s ADMIN_PASSWORD_CONFIRM </dev/tty
     echo ""
     if [ "$ADMIN_PASSWORD" = "$ADMIN_PASSWORD_CONFIRM" ]; then
         break
@@ -412,7 +412,7 @@ done
 LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
 echo -e "${YELLOW}$MSG_HELP_IP${NC}"
 echo -n "$MSG_PROMPT_HOST [http://$LOCAL_IP]: "
-read HOST_INPUT
+read HOST_INPUT </dev/tty
 HOST_URL="${HOST_INPUT:-http://$LOCAL_IP}"
 # Strip trailing slash
 HOST_URL="${HOST_URL%/}"
@@ -421,7 +421,7 @@ HOST_URL="${HOST_URL%/}"
 API_PORT=8080
 while true; do
     echo -n "$MSG_PORT_API [8080]: "
-    read API_PORT_INPUT
+    read API_PORT_INPUT </dev/tty
     API_PORT=${API_PORT_INPUT:-8080}
     if check_port "$API_PORT"; then
         printf "${YELLOW}$MSG_PORT_IN_USE${NC}\n" "$API_PORT"
@@ -436,7 +436,7 @@ done
 WEB_PORT=5173
 while true; do
     echo -n "$MSG_PORT_WEB [5173]: "
-    read WEB_PORT_INPUT
+    read WEB_PORT_INPUT </dev/tty
     WEB_PORT=${WEB_PORT_INPUT:-5173}
     if check_port "$WEB_PORT"; then
         printf "${YELLOW}$MSG_PORT_IN_USE${NC}\n" "$WEB_PORT"
@@ -459,7 +459,7 @@ fi
 # API Keys
 echo ""
 echo -n "$MSG_PROMPT_OPENAI: "
-read OPENAI_KEY
+read OPENAI_KEY </dev/tty
 if [ -n "$OPENAI_KEY" ]; then
     if grep -q "^#*OPENAI_API_KEY" .env; then
         sed -i "s|^#*OPENAI_API_KEY=.*|OPENAI_API_KEY=$OPENAI_KEY|" .env
@@ -469,7 +469,7 @@ if [ -n "$OPENAI_KEY" ]; then
 fi
 
 echo -n "$MSG_PROMPT_ANTHROPIC: "
-read ANTHROPIC_KEY
+read ANTHROPIC_KEY </dev/tty
 if [ -n "$ANTHROPIC_KEY" ]; then
     if grep -q "^#*ANTHROPIC_API_KEY" .env; then
         sed -i "s|^#*ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$ANTHROPIC_KEY|" .env
@@ -479,7 +479,7 @@ if [ -n "$ANTHROPIC_KEY" ]; then
 fi
 
 echo -n "$MSG_PROMPT_XAI: "
-read XAI_KEY
+read XAI_KEY </dev/tty
 if [ -n "$XAI_KEY" ]; then
     if grep -q "^#*XAI_API_KEY" .env; then
         sed -i "s|^#*XAI_API_KEY=.*|XAI_API_KEY=$XAI_KEY|" .env
@@ -489,7 +489,7 @@ if [ -n "$XAI_KEY" ]; then
 fi
 
 echo -n "$MSG_PROMPT_GOOGLE: "
-read GOOGLE_KEY
+read GOOGLE_KEY </dev/tty
 if [ -n "$GOOGLE_KEY" ]; then
     if grep -q "^#*GOOGLE_API_KEY" .env; then
         sed -i "s|^#*GOOGLE_API_KEY=.*|GOOGLE_API_KEY=$GOOGLE_KEY|" .env
@@ -506,10 +506,10 @@ if curl -s --connect-timeout 2 http://localhost:11434/api/tags > /dev/null 2>&1;
     OLLAMA_FOUND=true
 else
     echo -n "$MSG_OLLAMA_MANUAL"
-    read DO_OLLAMA_MANUAL
+    read DO_OLLAMA_MANUAL </dev/tty
     if [[ "$DO_OLLAMA_MANUAL" =~ ^[YyJj]$ ]]; then
         echo -n "$MSG_PROMPT_OLLAMA_URL [$OLLAMA_URL]: "
-        read USER_OLLAMA_URL
+        read USER_OLLAMA_URL </dev/tty
         OLLAMA_URL="${USER_OLLAMA_URL:-$OLLAMA_URL}"
         OLLAMA_FOUND=true
     fi
@@ -529,7 +529,7 @@ if [ "$OLLAMA_FOUND" = true ]; then
             echo "$OLLAMA_ALL_MODELS" | sed 's/^/    /'
         fi
         echo -n "  $MSG_OLLAMA_CHAT_MODEL: "
-        read OLLAMA_CHAT_MODEL_INPUT
+        read OLLAMA_CHAT_MODEL_INPUT </dev/tty
         OLLAMA_CHAT_MODEL_RAW="${OLLAMA_CHAT_MODEL_INPUT:-}"
         # Resolve exact name (prefix match with tag)
         if [ -n "$OLLAMA_CHAT_MODEL_RAW" ] && [ -n "$OLLAMA_ALL_MODELS" ]; then
@@ -573,7 +573,7 @@ EMBED_OPTIONS[$EMBED_OPTION_NUM]="disabled"
 # fall back to the disabled option only when no provider is available.
 EMBED_DEFAULT=$( [ "$EMBED_OPTION_NUM" -gt 1 ] && echo 1 || echo "$EMBED_OPTION_NUM" )
 echo -n "Selection [${EMBED_DEFAULT}]: "
-read EMBED_SEL
+read EMBED_SEL </dev/tty
 EMBED_SEL=${EMBED_SEL:-$EMBED_DEFAULT}
 EMBED_MODE="${EMBED_OPTIONS[$EMBED_SEL]:-disabled}"
 EMBED_PROVIDER="${EMBED_OPTION_KEYS[$EMBED_SEL]:-}"
@@ -592,7 +592,7 @@ if [ "$EMBED_PROVIDER" = "ollama" ]; then
     fi
     echo "  $MSG_EMBED_OLLAMA_DIM_HINT"
     echo -n "  $MSG_EMBED_OLLAMA_MODEL [$MSG_EMBED_OLLAMA_DEFAULT]: "
-    read OLLAMA_EMBED_MODEL_INPUT
+    read OLLAMA_EMBED_MODEL_INPUT </dev/tty
     OLLAMA_EMBED_MODEL_RAW="${OLLAMA_EMBED_MODEL_INPUT:-$MSG_EMBED_OLLAMA_DEFAULT}"
 
     # Resolve exact model name: if entered name matches a listed model without tag,
