@@ -36,6 +36,7 @@ Ontheia keeps AI powerful — and keeps your data yours.
 | Chat & Agents | MCP Tools in Action |
 |---|---|
 |![Chat](https://ontheia.ai/screenshots/ontheia_chat_en.png) | ![MCP](https://ontheia.ai/screenshots/ontheia_exa_en.png) |
+| *What can I use Ontheia for?* | *Exa search → PDF summary → email — in one step.* |
 
 ---
 
@@ -78,6 +79,10 @@ cp .env.example .env
 # Edit .env — set FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, SESSION_SECRET, ADMIN_EMAIL
 docker compose up -d
 ```
+
+**Open Ontheia**
+
+Visit [http://localhost:5173](http://localhost:5173) in your browser.
 
 Full installation guide: [docs.ontheia.ai/en/getting-started/02_installation](https://docs.ontheia.ai/en/getting-started/02_installation)
 
