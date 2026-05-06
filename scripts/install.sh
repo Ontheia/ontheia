@@ -11,6 +11,30 @@ BLUE='\033[1;34m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# ─── Self-bootstrap when run via curl ────────────────────────────────────────
+# When piped through curl, only this script exists — the repo files are missing.
+# Clone (or download) the full repo, cd into it, and re-exec from the file.
+if [ ! -f ".env.example" ]; then
+    INSTALL_DIR="${HOME}/ontheia"
+    echo ""
+    if [ -d "$INSTALL_DIR" ]; then
+        echo -e "${YELLOW}Directory ${INSTALL_DIR} already exists.${NC}"
+        echo "Please run the installer from inside it:"
+        echo "  cd ${INSTALL_DIR} && bash scripts/install.sh"
+        exit 1
+    fi
+    echo -e "${BLUE}Downloading Ontheia to ${INSTALL_DIR}...${NC}"
+    if command -v git &>/dev/null; then
+        git clone https://github.com/Ontheia/ontheia.git "$INSTALL_DIR"
+    else
+        mkdir -p "$INSTALL_DIR"
+        curl -fsSL https://github.com/Ontheia/ontheia/archive/refs/heads/main.tar.gz \
+            | tar -xz --strip-components=1 -C "$INSTALL_DIR"
+    fi
+    cd "$INSTALL_DIR"
+    exec bash scripts/install.sh "$@"
+fi
+
 # ─── Utility: Port check ──────────────────────────────────────────────────────
 check_port() {
     if command -v ss &> /dev/null; then
