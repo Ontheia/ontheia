@@ -4,7 +4,7 @@ Each provider must have at least one registered model to be used by agents.
 
 ## 1. Model ID
 This is the exact identifier sent to the provider API.
-- **OpenAI Example:** `gpt-4o-2024-05-13`
+- **OpenAI Example:** `gpt-5.4-2024-05-13`
 - **Anthropic Example:** `claude-3-5-sonnet-20240620`
 
 ## 2. Model Label

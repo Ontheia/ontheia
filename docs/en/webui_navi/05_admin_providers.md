@@ -22,7 +22,7 @@ Form for creating or editing an AI provider.
 | API Key / Secret | Text | HTTP only | API key or reference to a server-side secret (`secret:KEY_NAME`). |
 | Header Name | Text | Auth = Custom Header | Name of the HTTP header (e.g. `X-API-Key`). |
 | Parameter Name | Text | Auth = Query Parameter | Name of the URL query parameter (e.g. `api_key`). |
-| Test Model ID | Text | HTTP only | Model ID for POST connection tests (e.g. `gpt-4o`). |
+| Test Model ID | Text | HTTP only | Model ID for POST connection tests (e.g. `gpt-5.4`). |
 | OpenAI-compatible API | Checkbox | HTTP only | Marks the provider as OpenAI-compatible for model discovery. |
 | CLI Command | Text | CLI only | Program to execute (e.g. `gemini`). |
 | CLI Format | Dropdown | CLI only | `Gemini`, `Claude`, or `Generic` — determines output interpretation. |
@@ -44,7 +44,7 @@ Form for manually adding a model to an existing provider.
 | Field | Type | Description |
 | --- | --- | --- |
 | Select Provider | Dropdown | The provider to which the model is assigned. |
-| Model ID | Text | Exact model identifier as used by the API (e.g. `gpt-4o`). |
+| Model ID | Text | Exact model identifier as used by the API (e.g. `gpt-5.4`). |
 | Model Label | Text | Human-readable name displayed in the interface. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text`, or `Image`. |
 | Metadata (JSON) | Textarea | Optional JSON for model-specific settings (e.g. `{"dimension": 1536}` for embedding models). |

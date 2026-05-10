@@ -195,7 +195,7 @@ Ontheia is designed from the ground up for multi-user operation:
 - **Agent visibility**: Agents can be public, visible to specific users, or private to the creator.
 - **Audit logging**: Every action — chat message, tool call, memory access — is logged in a tamper-proof manner.
 - **Row Level Security**: Data separation directly in the database. Backend programming errors cannot cause data leaks, as the database itself denies access.
-- **Multiple AI providers**: Different teams can use different LLMs (Claude, GPT-4, local models) — all through the same platform.
+- **Multiple AI providers**: Different teams can use different LLMs (Claude, gpt-5.4, local models) — all through the same platform.
 
 ---
 
@@ -262,7 +262,7 @@ Complex planning tasks are delegated to Agent_Strategie: the agent decomposes th
 
 ## Next Steps
 
-- [Installation](./02_installation.md) — set up Ontheia on your server in under 30 minutes
-- [Configure agents](../admin/agents/05_agent_delegation.md) — define custom agents and delegation rules
-- [Connect MCP servers](../admin/ai-provider/05_cli_provider.md) — integrate external tools
-- [Chain Designer](../admin/chains/03_designer.md) — visually create automated workflows
+- [Installation](/en/getting-started/02_installation/) — set up Ontheia on your server in under 30 minutes
+- [Configure agents](/en/admin/agents/05_agent_delegation/) — define custom agents and delegation rules
+- [Connect MCP servers](/en/admin/ai-provider/05_cli_provider/) — integrate external tools
+- [Chain Designer](/en/admin/chains/03_designer/) — visually create automated workflows

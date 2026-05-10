@@ -13,4 +13,4 @@ Although these are global settings, they are technically stored in the `app.user
 ### Persistence Details:
 - **Table:** `app.user_settings`
 - **Column:** `settings` (JSONB)
-- **Fields:** `runtime`, `uiFlags`, `promptOptimizer`, `builder`.
+- **Fields:** `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`.

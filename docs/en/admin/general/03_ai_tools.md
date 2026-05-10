@@ -7,6 +7,13 @@ The Prompt Optimizer automatically improves user requests before they are sent t
 - **Configuration:** Selection of provider (e.g., OpenAI) and model (e.g., GPT-5).
 - **Requirement:** Since this step serves quality assurance, a powerful model should be chosen here.
 
+## 2. Context Compression (Rolling Summary)
+The Summarizer automatically compresses older chat history once the context exceeds a configurable token threshold. This keeps conversations running smoothly even over very long sessions.
+- **Configuration:** Selection of provider, model, token threshold (default: 32,000) and minimum plaintext window (default: 20).
+- **Recommendation:** A capable model improves summary quality; a fast and cost-efficient model reduces latency during compression.
+
+Full description: [Context Compression](04_rolling_summary.md)
+
 ---
 
 ### Note on Selection

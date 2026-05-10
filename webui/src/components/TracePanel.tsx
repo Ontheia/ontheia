@@ -45,6 +45,8 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
   const [expandedMemory, setExpandedMemory] = useState<Set<number>>(new Set());
 
   const memoryWrites = events.filter((e: any) => e.type === 'memory_write');
+  const rollingSummaryEvent = [...events].reverse().find((e: any) => e.type === 'info' && e.code === 'rolling_summary');
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const toggleMemoryExpand = (index: number) => {
@@ -70,7 +72,7 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
   };
 
   const tabs = [
-    { id: 'memory', label: t('memory'), icon: Database, count: memoryHits.length + memoryWrites.length },
+    { id: 'memory', label: t('memory'), icon: Database, count: memoryHits.length + memoryWrites.length + (rollingSummaryEvent ? 1 : 0) },
     { id: 'tools', label: t('tools'), icon: Wrench, count: toolCalls.length },
     { id: 'events', label: t('events'), icon: Activity, count: events.length },
   ] as const;
@@ -111,7 +113,7 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
       <div className="trace-panel-content">
         {activeTab === 'memory' && (
           <div className="trace-list">
-            {memoryHits.length === 0 && memoryWrites.length === 0 ? (
+            {memoryHits.length === 0 && memoryWrites.length === 0 && !rollingSummaryEvent ? (
               <p className="trace-empty">{t('noMemoryHits')}</p>
             ) : (
               <>
@@ -157,6 +159,36 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
                         </div>
                       </div>
                     ))}
+                  </>
+                )}
+                {rollingSummaryEvent && (
+                  <>
+                    <p className="trace-section-label">{t('contextSummaryLabel')}</p>
+                    <div className="trace-item-modern">
+                      <div className="trace-item-header">
+                        <span className="trace-item-title">
+                          {t('contextSummaryMeta', {
+                            compressed: rollingSummaryEvent.metadata?.compressedCount ?? '?',
+                            recent: rollingSummaryEvent.metadata?.recentCount ?? '?'
+                          })}
+                        </span>
+                      </div>
+                      {rollingSummaryEvent.metadata?.summary && (
+                        <>
+                          <button
+                            onClick={() => setSummaryExpanded((v) => !v)}
+                            className="trace-expand-btn"
+                          >
+                            {summaryExpanded ? t('contextSummaryHide') : t('contextSummaryShow')}
+                          </button>
+                          {summaryExpanded && (
+                            <div className="trace-item-body snippet" style={{ whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>
+                              {rollingSummaryEvent.metadata.summary}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
               </>

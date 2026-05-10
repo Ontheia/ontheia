@@ -4,8 +4,8 @@ Jeder Provider muss mindestens ein registriertes Modell besitzen, um von Agenten
 
 ## 1. Modell-ID
 Dies ist die exakte Kennung, die an die Provider-API gesendet wird.
-- **Beispiel OpenAI:** `gpt-4o-2024-05-13`
-- **Beispiel Anthropic:** `claude-3-5-sonnet-20240620`
+- **Beispiel OpenAI:** `gpt-5.5-2026-04-23`
+- **Beispiel Anthropic:** `claude-sonnet-4-6`
 
 ## 2. Modell-Label
 Ein benutzerfreundlicher Name für das Dropdown-Menü in der Agenten-Konfiguration.

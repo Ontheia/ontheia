@@ -27,6 +27,19 @@
 
 ---
 
+## Abschnitt: Summarizer
+
+| Feld | Typ | Beschreibung |
+| --- | --- | --- |
+| Provider | Dropdown | KI-Provider für den Summarizer-LLM-Aufruf. |
+| Modell | Dropdown | Modell innerhalb des gewählten Providers. Erst verfügbar, wenn ein Provider ausgewählt ist. |
+| Token-Schwellenwert | Zahl | Gesamttokens aller Chat-Nachrichten, ab dem komprimiert wird. Standard: 32 000. |
+| Mindest-Klartextfenster | Zahl | Anzahl der letzten Nachrichten, die immer im Volltext erhalten bleiben. Standard: 20. |
+
+> Speichern über **[Übernehmen]**. Ohne Provider und Modell bleibt die Komprimierung inaktiv. Weitere Informationen: [Kontext-Komprimierung](../admin/general/04_rolling_summary.md).
+
+---
+
 ## Abschnitt: Nachricht des Tages
 
 | Feld | Typ | Beschreibung |

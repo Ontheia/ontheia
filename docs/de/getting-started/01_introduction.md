@@ -195,7 +195,7 @@ Ontheia ist von Grund auf für den Mehrbenutzerbetrieb ausgelegt:
 - **Agenten-Sichtbarkeit**: Agenten können öffentlich, für bestimmte Nutzer oder nur für den Ersteller sichtbar sein.
 - **Audit-Logging**: Jede Aktion — Chat-Nachricht, Tool-Aufruf, Speicherzugriff — wird revisionssicher protokolliert.
 - **Row Level Security**: Datentrennung direkt in der Datenbank. Programmierfehler im Backend können keine Datenlecks verursachen, da die Datenbank selbst den Zugriff verweigert.
-- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, GPT-4, lokale Modelle) nutzen — alle über dieselbe Plattform.
+- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, gpt-5.4, lokale Modelle) nutzen — alle über dieselbe Plattform.
 
 ---
 
@@ -262,7 +262,7 @@ Komplexe Planungsaufgaben werden an Agent_Strategie delegiert: Der Agent zerlegt
 
 ## Nächste Schritte
 
-- [Installation](./02_installation.md) — Ontheia in unter 30 Minuten auf Ihrem Server einrichten
-- [Agenten konfigurieren](../admin/agents/05_agent_delegation.md) — Eigene Agenten und Delegationsregeln definieren
-- [MCP-Server anbinden](../admin/ai-provider/05_cli_provider.md) — Externe Tools integrieren
-- [Chain Designer](../admin/chains/03_designer.md) — Automatisierte Workflows visuell erstellen
+- [Installation](/de/getting-started/02_installation/) — Ontheia in unter 30 Minuten auf Ihrem Server einrichten
+- [Agenten konfigurieren](/de/admin/agents/05_agent_delegation/) — Eigene Agenten und Delegationsregeln definieren
+- [MCP-Server anbinden](/de/admin/ai-provider/05_cli_provider/) — Externe Tools integrieren
+- [Chain Designer](/de/admin/chains/03_designer/) — Automatisierte Workflows visuell erstellen

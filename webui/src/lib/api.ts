@@ -1293,6 +1293,13 @@ export type BuilderDefaultsPayload = {
   modelId: string | null;
 };
 
+export type RollingSummaryPayload = {
+  providerId: string | null;
+  modelId: string | null;
+  thresholdTokens: number;
+  minRecent: number;
+};
+
 export type McpToolDefinitionDto = {
   name: string;
   call_name?: string;
@@ -1323,6 +1330,7 @@ export type UserSettingsPayload = {
   uiFlags?: UserUiFlagsPayload;
   promptOptimizer?: PromptOptimizerDefaultsPayload;
   builder?: BuilderDefaultsPayload;
+  rollingSummary?: RollingSummaryPayload;
 };
 
 export function fetchMcpTools(serverNames?: string[], options?: { refresh?: boolean }) {
@@ -1352,6 +1360,7 @@ export function getUserSettingsApi() {
     uiFlags?: UserUiFlagsPayload;
     promptOptimizer?: PromptOptimizerDefaultsPayload;
     builder?: BuilderDefaultsPayload;
+    rollingSummary?: RollingSummaryPayload;
     updatedAt?: string;
   }>;
 }
@@ -1372,6 +1381,7 @@ export function updateUserSettingsApi(payload: UserSettingsPayload) {
     uiFlags?: UserUiFlagsPayload;
     promptOptimizer?: PromptOptimizerDefaultsPayload;
     builder?: BuilderDefaultsPayload;
+    rollingSummary?: RollingSummaryPayload;
     updatedAt: string;
   }>;
 }

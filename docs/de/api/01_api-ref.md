@@ -36,8 +36,8 @@ Alle Endpunkte (außer `/auth/login` und `/auth/signup`) erfordern ein gültiges
 | `GET` | `/auth/me/export` | **Art. 20 DSGVO** – Exportiert alle persönlichen Daten als `ontheia-export.json` (Profil, Chats, Run-Logs, Memory-Einträge). |
 | `PUT` | `/auth/profile` | Aktualisiert das Benutzerprofil. Erlaubt die Steuerung des Admin-Memory-Zugriffs via `allow_admin_memory`. |
 | `POST` | `/auth/change-password` | Ändert das Passwort des Benutzers. |
-| `GET` | `/user/settings` | Ruft Benutzereinstellungen ab. |
-| `PUT` | `/user/settings` | Speichert Benutzereinstellungen. |
+| `GET` | `/user/settings` | Ruft Benutzereinstellungen ab. Enthält u. a. `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`. |
+| `PUT` | `/user/settings` | Speichert Benutzereinstellungen. Admins können globale Felder (z. B. `rollingSummary`) systemweit persistieren. Beispiel-Payload: `{ "rollingSummary": { "providerId": "openai", "modelId": "gpt-5.4-mini", "thresholdTokens": 32000, "minRecent": 20 } }`. |
 | `GET` | `/user/audit` | Liefert Audit-Logs für den Benutzer (Sitzungen, Runs). |
 
 ### Benutzer-Status
@@ -476,7 +476,7 @@ Beispiel Step (LLM):
   "id": "step1",
   "type": "llm",
   "prompt": "Hello ${input.text}",
-  "model": "gpt-4o",
+  "model": "gpt-5.4",
   "provider": "openai"
 }
 ```

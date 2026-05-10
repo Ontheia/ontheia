@@ -33,8 +33,8 @@ All endpoints (except `/auth/login` and `/auth/signup`) require a valid Bearer t
 | `GET` | `/auth/me/export` | **Art. 20 GDPR** – Exports all personal data as `ontheia-export.json` (profile, chats, run logs, memory entries). |
 | `PUT` | `/auth/profile` | Updates the user profile. Allows controlling admin memory access via `allow_admin_memory`. |
 | `POST` | `/auth/change-password` | Changes the user's password. |
-| `GET` | `/user/settings` | Retrieves user settings. |
-| `PUT` | `/user/settings` | Saves user settings. |
+| `GET` | `/user/settings` | Retrieves user settings, including `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`. |
+| `PUT` | `/user/settings` | Saves user settings. Admins can persist global fields (e.g. `rollingSummary`) system-wide. Example payload: `{ "rollingSummary": { "providerId": "openai", "modelId": "gpt-5.4-mini", "thresholdTokens": 32000, "minRecent": 20 } }`. |
 | `GET` | `/user/audit` | Returns audit logs for the user (sessions, runs). |
 
 ### User Status
@@ -474,7 +474,7 @@ Example Step (LLM):
   "id": "step1",
   "type": "llm",
   "prompt": "Hello ${input.text}",
-  "model": "gpt-4o",
+  "model": "gpt-5.4",
   "provider": "openai"
 }
 ```

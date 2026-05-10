@@ -22,7 +22,7 @@ Formular zum Anlegen oder Bearbeiten eines AI-Providers.
 | API Key / Secret | Text | nur HTTP | API-Schlüssel oder Verweis auf ein serverseitiges Secret (`secret:KEY_NAME`). |
 | Header-Name | Text | Auth = Custom Header | Name des HTTP-Headers (z. B. `X-API-Key`). |
 | Parameter-Name | Text | Auth = Query Parameter | Name des URL-Query-Parameters (z. B. `api_key`). |
-| Test-Modell-ID | Text | nur HTTP | Modell-ID für POST-Verbindungstests (z. B. `gpt-4o`). |
+| Test-Modell-ID | Text | nur HTTP | Modell-ID für POST-Verbindungstests (z. B. `gpt-5.4`). |
 | OpenAI-kompatible API | Checkbox | nur HTTP | Markiert den Provider als OpenAI-kompatibel für die Modellabfrage. |
 | CLI-Befehl | Text | nur CLI | Auszuführendes Programm (z. B. `gemini`). |
 | CLI-Format | Dropdown | nur CLI | `Gemini`, `Claude` oder `Generic` — bestimmt die Ausgabe-Interpretation. |
@@ -44,7 +44,7 @@ Formular zum manuellen Hinzufügen eines Modells zu einem bestehenden Provider.
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Provider wählen | Dropdown | Der Provider, dem das Modell zugeordnet wird. |
-| Modell-ID | Text | Exakte Modell-Kennung wie von der API verwendet (z. B. `gpt-4o`). |
+| Modell-ID | Text | Exakte Modell-Kennung wie von der API verwendet (z. B. `gpt-5.4`). |
 | Modell-Label | Text | Lesbarer Name, der in der Oberfläche angezeigt wird. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text` oder `Image`. |
 | Metadaten (JSON) | Textarea | Optionales JSON für modellspezifische Einstellungen (z. B. `{"dimension": 1536}` für Embedding-Modelle). |

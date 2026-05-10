@@ -52,6 +52,7 @@ import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countM
 import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
+import { RollingSummaryService } from './RollingSummaryService.js';
 
 export type RunContext = {
   userId: string;
@@ -299,6 +300,41 @@ export class RunService {
             await insertChatMessage(this.db, client, { chatId: activeChatId, runId, role: 'user', content: userText });
           }
         });
+      }
+
+      // 2b. Rolling Summary — compress context if threshold exceeded
+      if (chatId) {
+        const rsConfig = userSettings.rollingSummary ?? {};
+        if (rsConfig.providerId && rsConfig.modelId) {
+          const rollingSummaryService = new RollingSummaryService(this.db, this.orchestrator);
+          const summaryResult = await rollingSummaryService.maybeApplySummary(
+            chatId,
+            enrichedInput.messages,
+            {
+              providerId: rsConfig.providerId,
+              modelId: rsConfig.modelId,
+              thresholdTokens: rsConfig.thresholdTokens ?? 32000,
+              minRecent: rsConfig.minRecent ?? 20
+            },
+            userId,
+            role,
+            logger
+          );
+          enrichedInput.messages = summaryResult.messages;
+          if (summaryResult.applied && !summaryResult.reused) {
+            emitRunEvent({
+              type: 'info',
+              code: 'rolling_summary',
+              message: `Context compressed: ${summaryResult.compressedCount} messages → summary, ${summaryResult.recentCount} kept as plaintext`,
+              metadata: {
+                compressedCount: summaryResult.compressedCount,
+                recentCount: summaryResult.recentCount,
+                summary: summaryResult.summary
+              },
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
       }
 
       // 3. Prompt Construction & MCP Tools Setup

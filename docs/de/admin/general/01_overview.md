@@ -13,4 +13,4 @@ Obwohl es sich um globale Einstellungen handelt, werden sie technisch in der Tab
 ### Persistenz-Details:
 - **Tabelle:** `app.user_settings`
 - **Spalte:** `settings` (JSONB)
-- **Felder:** `runtime`, `uiFlags`, `promptOptimizer`, `builder`.
+- **Felder:** `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`.

@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, ChevronDown, Copy, Loader2, Server, Clock, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -82,6 +82,36 @@ function SidebarSection({
       </div>
       {isOpen && <div className="px-4 animate-in fade-in duration-300">{children}</div>}
     </div>
+  );
+}
+
+function ChainConsoleSection({ chainConsole }: { chainConsole: string[] | null | undefined }) {
+  const { t } = useTranslation(['chat']);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chainConsole]);
+
+  if (!chainConsole || chainConsole.length === 0) {
+    return (
+      <SidebarSection title={t('chainConsole')}>
+        <p className="text-xs text-muted-foreground italic">{t('readyForExecution')}</p>
+      </SidebarSection>
+    );
+  }
+
+  return (
+    <SidebarSection title={t('chainConsole')}>
+      <div className="rounded-xl bg-black/40 p-2 font-mono text-[0.65rem] leading-relaxed text-cyan-400/90 max-h-48 overflow-y-auto scrollbar-thin">
+        {chainConsole.map((line, i) => (
+          <div key={i} className="border-b border-white/5 py-1 last:border-0">
+            {line}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+    </SidebarSection>
   );
 }
 
@@ -183,19 +213,8 @@ export function SidebarRight({ className }: { className?: string }) {
           )}
         </SidebarSection>
 
-        <SidebarSection title={t('chainConsole')}>
-          {chainConsole && chainConsole.length > 0 ? (
-            <div className="rounded-xl bg-black/40 p-2 font-mono text-[0.65rem] leading-relaxed text-cyan-400/90 max-h-48 overflow-y-auto scrollbar-thin">
-              {chainConsole.map((line, i) => (
-                <div key={i} className="border-b border-white/5 py-1 last:border-0">
-                  {line}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground italic">{t('readyForExecution')}</p>
-          )}
-        </SidebarSection>
+        <ChainConsoleSection chainConsole={chainConsole} />
+
 
         <SidebarSection
           title={t('warnings')}

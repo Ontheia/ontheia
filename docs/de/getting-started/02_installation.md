@@ -3,36 +3,44 @@ title: Installation
 description: Ontheia mit Docker auf Ihrem Server installieren.
 ---
 
-Ontheia wird als Docker-Stack betrieben. Voraussetzung ist ein Linux-Server mit Docker und Docker Compose.
+Ontheia wird als Docker-Stack betrieben.
 
 ## Voraussetzungen
 
-- Docker ≥ 24
-- Docker Compose ≥ 2.20
-- PostgreSQL (wird im Stack mitgeliefert)
-- 2 GB RAM Minimum, 4 GB empfohlen
+| Anforderung | Minimum | Hinweis |
+|---|---|---|
+| **Betriebssystem** | Linux / macOS | Windows via WSL2 |
+| **Docker** | 24+ | Rootless-Modus empfohlen |
+| **Docker Compose** | v2 (Plugin) | `docker compose` (nicht `docker-compose`) |
+| **RAM** | 2 GB | 4 GB empfohlen |
+| **Speicherplatz** | 5 GB frei | 10 GB empfohlen |
+| **Ports** | 8080, 5173 | Konfigurierbar |
+| **openssl** | beliebig | Für Secret-Generierung (`apt install openssl`) |
+| **curl** | beliebig | Für Health Checks |
+| **jq** | beliebig | Für JSON-Verarbeitung (`apt install jq`) |
 
-## Schnellstart
+Mindestens ein API-Key eines KI-Anbieters ist erforderlich (z. B. Anthropic, OpenAI oder eine lokale Ollama-Instanz).
 
-1. **Repository klonen**
+## Schnellstart (empfohlen)
 
-   ```bash
-   git clone https://github.com/Ontheia/ontheia.git
-   cd ontheia
-   ```
+Das Installationsskript übernimmt `.env`-Erstellung, Secret-Generierung, Docker-Builds, Datenbank-Migrationen und die Einrichtung des ersten Admin-Accounts:
 
-2. **Konfiguration anlegen**
+```bash
+git clone https://github.com/Ontheia/ontheia.git
+cd ontheia
+bash scripts/install.sh
+```
 
-   ```bash
-   cp .env.example .env
-   ```
+## Manuelle Installation
 
-3. **Stack starten**
+```bash
+git clone https://github.com/Ontheia/ontheia.git
+cd ontheia
+cp .env.example .env
+# .env bearbeiten — FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, SESSION_SECRET, ADMIN_EMAIL setzen
+docker compose up -d
+```
 
-   ```bash
-   docker compose up -d
-   ```
+## Ontheia aufrufen
 
-4. **Ontheia aufrufen**
-
-   Öffnen Sie `http://localhost:5173` in Ihrem Browser.
+Öffnen Sie [http://localhost:5173](http://localhost:5173) in Ihrem Browser.

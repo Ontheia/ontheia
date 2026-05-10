@@ -459,6 +459,9 @@ export function ChatView({
         }
       } else if (evt.type === 'tool_call') {
         consoleLines.push(`tool_call: ${evt.server ?? ''}/${evt.tool} -> ${evt.status}`);
+      } else if (evt.type === 'info' && (evt as any).code === 'rolling_summary') {
+        const meta = (evt as any).metadata ?? {};
+        consoleLines.push(`rolling_summary: ${meta.compressedCount ?? '?'} compressed → summary, ${meta.recentCount ?? '?'} plaintext`);
       } else if (evt.type === 'complete' && evt.status === 'success') {
         consoleLines.push('chain complete');
       }

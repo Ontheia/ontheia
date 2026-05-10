@@ -767,10 +767,12 @@ function GeneralSection({
   providers,
   promptOptimizer,
   builderDefaults,
+  rollingSummary,
   onRuntimeChange,
   onUiFlagsChange,
   onPromptOptimizerChange,
   onBuilderDefaultsChange,
+  onRollingSummaryChange,
   onHasChanges
 }: {
   runtimeSettings: { toolLoopTimeoutMs: number; requestRateLimitPerMinute: number; timezone?: string };
@@ -778,10 +780,12 @@ function GeneralSection({
   providers: ProviderEntry[];
   promptOptimizer: { providerId: string | null; modelId: string | null };
   builderDefaults: { providerId: string | null; modelId: string | null };
+  rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number };
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onUiFlagsChange: (patch: Partial<typeof uiFlags>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onBuilderDefaultsChange: (value: { providerId: string | null; modelId: string | null }) => void;
+  onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number }) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
@@ -816,6 +820,8 @@ function GeneralSection({
   const modelOptions = activeProvider?.models ?? [];
   const builderActiveProvider = providers.find((provider) => provider.id === builderDefaults.providerId);
   const builderModelOptions = builderActiveProvider?.models ?? [];
+  const rsActiveProvider = providers.find((provider) => provider.id === rollingSummary.providerId);
+  const rsModelOptions = rsActiveProvider?.models ?? [];
 
   return (
     <>
@@ -930,6 +936,84 @@ function GeneralSection({
               placeholder={t('general.selectModel')}
               disabled={!promptOptimizer.providerId}
             />
+          </label>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('general.rollingSummary')}</h3>
+        <p className="settings-preamble">{t('general.rollingSummaryDesc')}</p>
+        <div className="settings-grid">
+          <label className="settings-field">
+            <span>{t('general.provider')}</span>
+            <AppSelect
+              value={rollingSummary.providerId ?? APP_SELECT_EMPTY_VALUE}
+              onValueChange={(next) => {
+                const nextProvider = next === APP_SELECT_EMPTY_VALUE ? null : next;
+                const selectedProvider = providers.find((provider) => provider.id === nextProvider);
+                const fallbackModel =
+                  selectedProvider?.models.find((model) => model.id === rollingSummary.modelId)?.id ??
+                  selectedProvider?.models[0]?.id ??
+                  null;
+                onRollingSummaryChange({
+                  ...rollingSummary,
+                  providerId: nextProvider,
+                  modelId: nextProvider ? fallbackModel : null
+                });
+                onHasChanges(true);
+              }}
+              options={[{ value: APP_SELECT_EMPTY_VALUE, label: t('notSet', { ns: 'common' }) }, ...providerOptions]}
+              placeholder={t('general.selectProvider')}
+            />
+          </label>
+          <label className="settings-field">
+            <span>{t('general.model')}</span>
+            <AppSelect
+              value={rollingSummary.modelId ?? APP_SELECT_EMPTY_VALUE}
+              onValueChange={(next) => {
+                const nextModel = next === APP_SELECT_EMPTY_VALUE ? null : next;
+                onRollingSummaryChange({ ...rollingSummary, modelId: nextModel });
+                onHasChanges(true);
+              }}
+              options={[
+                { value: APP_SELECT_EMPTY_VALUE, label: rsActiveProvider ? t('notSet', { ns: 'common' }) : t('noneSelected', { ns: 'common' }) },
+                ...rsModelOptions.map((model) => ({ value: model.id, label: model.label }))
+              ]}
+              placeholder={t('general.selectModel')}
+              disabled={!rollingSummary.providerId}
+            />
+          </label>
+          <label className="settings-field">
+            <span>{t('general.rollingSummaryThreshold')}</span>
+            <Input
+              type="number"
+              min={1000}
+              max={200000}
+              value={rollingSummary.thresholdTokens}
+              onChange={(e) => {
+                const raw = Number.parseInt(e.target.value, 10);
+                if (!Number.isFinite(raw)) return;
+                onRollingSummaryChange({ ...rollingSummary, thresholdTokens: Math.max(1000, raw) });
+                onHasChanges(true);
+              }}
+            />
+            <p className="settings-hint">{t('general.rollingSummaryThresholdHint')}</p>
+          </label>
+          <label className="settings-field">
+            <span>{t('general.rollingSummaryMinRecent')}</span>
+            <Input
+              type="number"
+              min={5}
+              max={100}
+              value={rollingSummary.minRecent}
+              onChange={(e) => {
+                const raw = Number.parseInt(e.target.value, 10);
+                if (!Number.isFinite(raw)) return;
+                onRollingSummaryChange({ ...rollingSummary, minRecent: Math.max(5, Math.min(100, raw)) });
+                onHasChanges(true);
+              }}
+            />
+            <p className="settings-hint">{t('general.rollingSummaryMinRecentHint')}</p>
           </label>
         </div>
       </div>
@@ -6874,7 +6958,7 @@ function ProvidersSection({
               <label className="settings-field">
                 <span>{t('providers.testModelId')}</span>
                 <Input
-                  placeholder="gpt-4o"
+                  placeholder="gpt-5.4"
                   value={draft.modelId}
                   onChange={handleDraftChange('modelId')}
                 />
@@ -7432,6 +7516,8 @@ export function SettingsView() {
     setPromptOptimizer,
     builderDefaults,
     setBuilderDefaults,
+    rollingSummary,
+    setRollingSummary,
     uiFlags,
     setUiFlags
   } = useChatSidebar();
@@ -7505,6 +7591,25 @@ export function SettingsView() {
       }
     })();
   }, [promptOptimizer]);
+
+  const rollingSummaryInitialRef = useRef(true);
+  useEffect(() => {
+    if (rollingSummaryInitialRef.current) {
+      rollingSummaryInitialRef.current = false;
+      return;
+    }
+    const hasSelection =
+      typeof rollingSummary.providerId === 'string' && rollingSummary.providerId.trim().length > 0 &&
+      typeof rollingSummary.modelId === 'string' && rollingSummary.modelId.trim().length > 0;
+    if (!hasSelection) return;
+    (async () => {
+      try {
+        await updateUserSettingsApi({ rollingSummary });
+      } catch (error) {
+        console.error(t('general.rollingSummarySaveError'), error);
+      }
+    })();
+  }, [rollingSummary]);
 
   const builderInitialRef = useRef(true);
   useEffect(() => {
@@ -7591,7 +7696,8 @@ export function SettingsView() {
         runtime: runtimeSettings,
         uiFlags,
         promptOptimizer,
-        builder: builderDefaults
+        builder: builderDefaults,
+        rollingSummary
       });
       setHasChanges(false);
     } catch (error) {
@@ -7604,6 +7710,7 @@ export function SettingsView() {
     chainSteps,
     mcpConfigDraft,
     promptOptimizer,
+    rollingSummary,
     runtimeSettings,
     uiFlags
   ]);
@@ -7753,10 +7860,12 @@ export function SettingsView() {
             providers={providerContext.providers}
             promptOptimizer={promptOptimizer}
             builderDefaults={builderDefaults}
+            rollingSummary={rollingSummary}
             onRuntimeChange={(patch) => configureRuntimeSettings(patch)}
             onUiFlagsChange={(patch) => setUiFlags(patch)}
             onPromptOptimizerChange={setPromptOptimizer}
             onBuilderDefaultsChange={setBuilderDefaults}
+            onRollingSummaryChange={setRollingSummary}
             onHasChanges={setHasChanges}
           />
         );

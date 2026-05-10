@@ -102,6 +102,13 @@ type BuilderDefaults = {
   modelId: string | null;
 };
 
+type RollingSummarySettings = {
+  providerId: string | null;
+  modelId: string | null;
+  thresholdTokens: number;
+  minRecent: number;
+};
+
 export type McpStatusEntry = {
   name: string;
   status: string;
@@ -158,6 +165,8 @@ type ChatSidebarContextValue = {
   setPromptOptimizer: (value: PromptOptimizerSettings) => void;
   builderDefaults: BuilderDefaults;
   setBuilderDefaults: (value: BuilderDefaults) => void;
+  rollingSummary: RollingSummarySettings;
+  setRollingSummary: (value: RollingSummarySettings) => void;
   getChatPreferences: (chatId: string) => ChatPreferences | null;
   updateChatPreferences: (chatId: string, patch: Partial<ChatPreferences>, options?: { skipPersist?: boolean }) => void;
   clearChatPreferences: (chatId: string) => void;
@@ -227,6 +236,13 @@ const DEFAULT_PROMPT_OPTIMIZER: PromptOptimizerSettings = {
 const DEFAULT_BUILDER_DEFAULTS: BuilderDefaults = {
   providerId: null,
   modelId: null
+};
+
+const DEFAULT_ROLLING_SUMMARY: RollingSummarySettings = {
+  providerId: null,
+  modelId: null,
+  thresholdTokens: 8000,
+  minRecent: 20
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -563,6 +579,8 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
     useState<PromptOptimizerSettings>(DEFAULT_PROMPT_OPTIMIZER);
   const [builderDefaults, setBuilderDefaultsState] =
     useState<BuilderDefaults>(DEFAULT_BUILDER_DEFAULTS);
+  const [rollingSummary, setRollingSummaryState] =
+    useState<RollingSummarySettings>(DEFAULT_ROLLING_SUMMARY);
   const [uiFlags, setUiFlagsState] = useState<UiFlags>(DEFAULT_UI_FLAGS);
   const [preferences, setPreferencesState] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [avatar, setAvatarState] = useState<AvatarData>(DEFAULT_AVATAR);
@@ -730,6 +748,15 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setRollingSummary = useCallback((value: RollingSummarySettings) => {
+    setRollingSummaryState({
+      providerId: value.providerId && value.providerId.trim().length > 0 ? value.providerId.trim() : null,
+      modelId: value.modelId && value.modelId.trim().length > 0 ? value.modelId.trim() : null,
+      thresholdTokens: value.thresholdTokens > 0 ? value.thresholdTokens : DEFAULT_ROLLING_SUMMARY.thresholdTokens,
+      minRecent: value.minRecent >= 0 ? value.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent
+    });
+  }, []);
+
   const getChatPreferences = useCallback(
     (chatId: string): ChatPreferences | null => {
       return chatPreferences[chatId] ?? null;
@@ -879,6 +906,7 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setMcpStatusesState([]);
       setBuilderDefaultsState(DEFAULT_BUILDER_DEFAULTS);
       setPromptOptimizerState(DEFAULT_PROMPT_OPTIMIZER);
+      setRollingSummaryState(DEFAULT_ROLLING_SUMMARY);
       setIsInitialLoadComplete(false);
       return;
     }
@@ -998,6 +1026,16 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
           if (nextB.providerId !== builderDefaults.providerId || nextB.modelId !== builderDefaults.modelId) {
             setBuilderDefaultsState(nextB);
           }
+        }
+
+        if (settings.rollingSummary) {
+          const nextRS: RollingSummarySettings = {
+            providerId: settings.rollingSummary.providerId?.trim() || null,
+            modelId: settings.rollingSummary.modelId?.trim() || null,
+            thresholdTokens: typeof settings.rollingSummary.thresholdTokens === 'number' ? settings.rollingSummary.thresholdTokens : DEFAULT_ROLLING_SUMMARY.thresholdTokens,
+            minRecent: typeof settings.rollingSummary.minRecent === 'number' ? settings.rollingSummary.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent
+          };
+          setRollingSummaryState(nextRS);
         }
 
         if (settings.uiFlags) {
@@ -1183,6 +1221,8 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setPromptOptimizer: setPromptOptimizerState,
       builderDefaults,
       setBuilderDefaults: setBuilderDefaultsState,
+      rollingSummary,
+      setRollingSummary,
       getChatPreferences,
       updateChatPreferences,
       clearChatPreferences,
@@ -1221,6 +1261,8 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setPromptOptimizerState,
       builderDefaults,
       setBuilderDefaultsState,
+      rollingSummary,
+      setRollingSummary,
       uiFlags,
       setUiFlags,
       preferences,

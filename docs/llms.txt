@@ -12,7 +12,7 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Introduction](https://docs.ontheia.ai/en/getting-started/01_introduction): What is Ontheia, core principles, use cases, architecture overview
 - [Installation](https://docs.ontheia.ai/en/getting-started/02_installation): Server setup in under 30 minutes
 - [Compatible MCP Servers](https://docs.ontheia.ai/en/getting-started/03_compatible-mcp-servers): Supported MCP servers and integration patterns
-- [Compatible AI Providers](https://docs.ontheia.ai/en/getting-started/04_compatible-providers): Supported LLM providers (Claude, GPT-4, Gemini, Ollama, Mistral, ...)
+- [Compatible AI Providers](https://docs.ontheia.ai/en/getting-started/04_compatible-providers): Supported LLM providers (Claude, gpt-5.4, Gemini, Ollama, Mistral, ...)
 
 ## Admin: MCP Servers
 - [Basics](https://docs.ontheia.ai/en/admin/mcp-server/01_basics): What MCP servers are and how Ontheia uses them
