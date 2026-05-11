@@ -534,14 +534,17 @@ export class ChainRunner {
         // Inject Internal Memory Tools if 'memory' is in mcpServers
         if (mcpServers.includes('memory')) {
           const memoryTools = allInternalTools.filter(t => t.server === 'memory');
-          if (defaultTools.length > 0 && defaultTools.some((dt: DefaultToolEntry) => dt.server === 'memory')) {
-            // Filter: Only add memory tools that are explicitly in default_tools
-            const filtered = memoryTools.filter(mt =>
-              defaultTools.some((dt: DefaultToolEntry) => (dt.server === 'memory' || dt.server === undefined) && (dt.tool === mt.name || dt.name === mt.name))
-            );
-            resolvedToolset.push(...filtered);
+          if (defaultTools.length > 0) {
+            // Explicit toolset: only add memory tools if memory is listed
+            if (defaultTools.some((dt: DefaultToolEntry) => dt.server === 'memory')) {
+              const filtered = memoryTools.filter(mt =>
+                defaultTools.some((dt: DefaultToolEntry) => (dt.server === 'memory' || dt.server === undefined) && (dt.tool === mt.name || dt.name === mt.name))
+              );
+              resolvedToolset.push(...filtered);
+            }
+            // else: explicit toolset without memory entry → no memory tools
           } else {
-            // If no specific memory tools are filtered, add all search/write tools
+            // No toolset restriction → add all memory tools
             resolvedToolset.push(...memoryTools);
           }
         }
@@ -549,12 +552,17 @@ export class ChainRunner {
         // Inject Internal Delegation Tools if 'delegation' is in mcpServers
         if (mcpServers.includes('delegation')) {
           const delegationTools = allInternalTools.filter(t => t.server === 'delegation');
-          if (defaultTools.length > 0 && defaultTools.some((dt: DefaultToolEntry) => dt.server === 'delegation')) {
-            const filtered = delegationTools.filter(mt =>
-              defaultTools.some((dt: DefaultToolEntry) => (dt.server === 'delegation' || dt.server === undefined) && (dt.tool === mt.name || dt.name === mt.name))
-            );
-            resolvedToolset.push(...filtered);
+          if (defaultTools.length > 0) {
+            // Explicit toolset: only add delegation tools if delegation is listed
+            if (defaultTools.some((dt: DefaultToolEntry) => dt.server === 'delegation')) {
+              const filtered = delegationTools.filter(mt =>
+                defaultTools.some((dt: DefaultToolEntry) => (dt.server === 'delegation' || dt.server === undefined) && (dt.tool === mt.name || dt.name === mt.name))
+              );
+              resolvedToolset.push(...filtered);
+            }
+            // else: explicit toolset without delegation entry → no delegation tools
           } else {
+            // No toolset restriction → add all delegation tools
             resolvedToolset.push(...delegationTools);
           }
         }
