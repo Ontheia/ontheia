@@ -26,7 +26,7 @@ RUN uv python install 3.13
 # nextcloud-mcp-server@0.85.1 hat harte Dep auf mistralai>=2.4.5 (nicht auf PyPI, Stand 2026-05).
 # Stub befriedigt die Dep bis das Paket offiziell veröffentlicht wird.
 RUN mkdir -p /tmp/mistralai-stub/mistralai/client && \
-    printf '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.backends.legacy:build"\n[project]\nname = "mistralai"\nversion = "2.4.5"\n' \
+    printf '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.build_meta"\n[project]\nname = "mistralai"\nversion = "2.4.5"\n' \
         > /tmp/mistralai-stub/pyproject.toml && \
     printf '__version__ = "2.4.5"\n' \
         > /tmp/mistralai-stub/mistralai/__init__.py && \
