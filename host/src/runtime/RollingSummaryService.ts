@@ -103,7 +103,7 @@ Rules:
 function buildSummaryMessages(summary: string): ChatMessage[] {
   return [
     { role: 'user', content: `[Context Summary — compressed history of this conversation]\n\n${summary}` },
-    { role: 'assistant', content: 'Understood. I will use this summary as context for our conversation.' }
+    { role: 'assistant', content: '[Context loaded]' }
   ];
 }
 
