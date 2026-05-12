@@ -711,7 +711,7 @@ export class OrchestratorService {
   }
 
   private isStdioCommand(command: string) {
-    return command === 'npx' || command === 'npm' || command === 'uvx' || command === 'bun' || command === 'bunx' || command === 'python' || command === 'python3' || command === 'docker';
+    return command === 'npx' || command === 'npm' || command === 'uvx' || command === 'bun' || command === 'bunx' || command === 'python' || command === 'python3' || command === 'docker' || command.startsWith('/');
   }
 
   private async recordStatus(name: string, update: Omit<ServerStatusUpdateParams, 'name'>) {
