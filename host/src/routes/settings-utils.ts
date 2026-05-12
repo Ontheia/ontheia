@@ -84,7 +84,8 @@ export const DEFAULT_USER_SETTINGS = {
     providerId: null as string | null,
     modelId: null as string | null,
     thresholdTokens: 8000,
-    minRecent: 20
+    minRecent: 20,
+    maxMessages: 40
   }
 };
 
@@ -216,6 +217,7 @@ export const normalizeRollingSummary = (input: any, base = DEFAULT_USER_SETTINGS
   next.modelId = input.modelId || input.model_id || null;
   if (typeof input.thresholdTokens === 'number' && input.thresholdTokens > 0) next.thresholdTokens = input.thresholdTokens;
   if (typeof input.minRecent === 'number' && input.minRecent >= 0) next.minRecent = input.minRecent;
+  if (typeof input.maxMessages === 'number' && input.maxMessages >= 0) next.maxMessages = input.maxMessages;
   return next;
 };
 

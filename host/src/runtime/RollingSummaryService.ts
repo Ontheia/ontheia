@@ -31,6 +31,7 @@ export type RollingSummaryConfig = {
   modelId: string | null;
   thresholdTokens: number;
   minRecent: number;
+  maxMessages: number;
 };
 
 const SUMMARY_HARD_CAP_CHARS = 8000;
@@ -125,15 +126,25 @@ export class RollingSummaryService {
     const W = (msg: string, data?: object) => { if (logger) logger.warn({ chatId, ...data }, `RS: ${msg}`); };
 
     const totalTokens = estimateTokens(messages);
-    L('entry', { msgCount: messages.length, estTokens: totalTokens, threshold: config.thresholdTokens, minRecent: config.minRecent, provider: config.providerId, model: config.modelId });
+    const maxMessages = config.maxMessages > 0 ? config.maxMessages : Infinity;
+    L('entry', { msgCount: messages.length, estTokens: totalTokens, threshold: config.thresholdTokens, maxMessages: config.maxMessages, minRecent: config.minRecent, provider: config.providerId, model: config.modelId });
 
     if (!config.providerId || !config.modelId) { L('skip — no provider/model'); return { messages, applied: false }; }
-    if (totalTokens <= config.thresholdTokens) { L('skip — below threshold'); return { messages, applied: false }; }
+    const overTokens = totalTokens > config.thresholdTokens;
+    const overMessages = messages.length > maxMessages;
+    if (!overTokens && !overMessages) { L('skip — below threshold'); return { messages, applied: false }; }
+    if (overMessages && !overTokens) L('trigger — maxMessages exceeded');
 
     const minRecent = Math.max(1, config.minRecent);
-    if (messages.length <= minRecent) { L('skip — too few messages'); return { messages, applied: false }; }
 
-    const recent = messages.slice(messages.length - minRecent);
+    // maxMessages-only trigger: force fresh COMPRESS + tight window to break narration contamination cycles
+    const forceCompress = overMessages && !overTokens;
+    const effectiveMinRecent = forceCompress ? Math.min(minRecent, 4) : minRecent;
+    if (forceCompress) L('maxMessages trigger → force COMPRESS, effectiveMinRecent', { effectiveMinRecent });
+
+    if (messages.length <= effectiveMinRecent) { L('skip — too few messages'); return { messages, applied: false }; }
+
+    const recent = messages.slice(messages.length - effectiveMinRecent);
 
     // Load existing summary
     let existingSummary: string | null = null;
@@ -150,8 +161,8 @@ export class RollingSummaryService {
     L('db state', { hasSummary: !!existingSummary, coversUntil: existingCoversUntil });
 
     // toCompress = messages before the recent window
-    const toCompress = messages.slice(0, messages.length - minRecent);
-    L('window', { total: messages.length, toCompressCount: toCompress.length, recentCount: recent.length });
+    const toCompress = messages.slice(0, messages.length - effectiveMinRecent);
+    L('window', { total: messages.length, toCompressCount: toCompress.length, recentCount: recent.length, effectiveMinRecent });
 
     // covers_until stores the compressed count as a string — ID-independent and reload-safe
     const coversCount = existingSummary && existingCoversUntil
@@ -162,7 +173,7 @@ export class RollingSummaryService {
       : -1;
     L('covered', { coversCount: isNaN(coversCount) ? null : coversCount, coveredIdx, toCompressCount: toCompress.length });
 
-    if (existingSummary && coveredIdx >= 0) {
+    if (existingSummary && coveredIdx >= 0 && !forceCompress) {
       const gap = toCompress.slice(coveredIdx + 1);
       const gapFits = gap.length <= minRecent;
       L('reuse check', { gap: gap.length, maxGap: minRecent, gapFits });

@@ -314,7 +314,8 @@ export class RunService {
               providerId: rsConfig.providerId,
               modelId: rsConfig.modelId,
               thresholdTokens: rsConfig.thresholdTokens ?? 32000,
-              minRecent: rsConfig.minRecent ?? 20
+              minRecent: rsConfig.minRecent ?? 20,
+              maxMessages: rsConfig.maxMessages ?? 40
             },
             userId,
             role,

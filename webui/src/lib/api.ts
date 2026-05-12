@@ -1298,6 +1298,7 @@ export type RollingSummaryPayload = {
   modelId: string | null;
   thresholdTokens: number;
   minRecent: number;
+  maxMessages: number;
 };
 
 export type McpToolDefinitionDto = {

@@ -107,6 +107,7 @@ type RollingSummarySettings = {
   modelId: string | null;
   thresholdTokens: number;
   minRecent: number;
+  maxMessages: number;
 };
 
 export type McpStatusEntry = {
@@ -242,7 +243,8 @@ const DEFAULT_ROLLING_SUMMARY: RollingSummarySettings = {
   providerId: null,
   modelId: null,
   thresholdTokens: 8000,
-  minRecent: 20
+  minRecent: 20,
+  maxMessages: 40
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -753,7 +755,8 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       providerId: value.providerId && value.providerId.trim().length > 0 ? value.providerId.trim() : null,
       modelId: value.modelId && value.modelId.trim().length > 0 ? value.modelId.trim() : null,
       thresholdTokens: value.thresholdTokens > 0 ? value.thresholdTokens : DEFAULT_ROLLING_SUMMARY.thresholdTokens,
-      minRecent: value.minRecent >= 0 ? value.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent
+      minRecent: value.minRecent >= 0 ? value.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent,
+      maxMessages: value.maxMessages >= 0 ? value.maxMessages : DEFAULT_ROLLING_SUMMARY.maxMessages
     });
   }, []);
 
@@ -1033,7 +1036,8 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
             providerId: settings.rollingSummary.providerId?.trim() || null,
             modelId: settings.rollingSummary.modelId?.trim() || null,
             thresholdTokens: typeof settings.rollingSummary.thresholdTokens === 'number' ? settings.rollingSummary.thresholdTokens : DEFAULT_ROLLING_SUMMARY.thresholdTokens,
-            minRecent: typeof settings.rollingSummary.minRecent === 'number' ? settings.rollingSummary.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent
+            minRecent: typeof settings.rollingSummary.minRecent === 'number' ? settings.rollingSummary.minRecent : DEFAULT_ROLLING_SUMMARY.minRecent,
+            maxMessages: typeof settings.rollingSummary.maxMessages === 'number' ? settings.rollingSummary.maxMessages : DEFAULT_ROLLING_SUMMARY.maxMessages
           };
           setRollingSummaryState(nextRS);
         }

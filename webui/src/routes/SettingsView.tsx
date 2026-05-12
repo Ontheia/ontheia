@@ -780,12 +780,12 @@ function GeneralSection({
   providers: ProviderEntry[];
   promptOptimizer: { providerId: string | null; modelId: string | null };
   builderDefaults: { providerId: string | null; modelId: string | null };
-  rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number };
+  rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number; maxMessages: number };
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onUiFlagsChange: (patch: Partial<typeof uiFlags>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onBuilderDefaultsChange: (value: { providerId: string | null; modelId: string | null }) => void;
-  onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number }) => void;
+  onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number; maxMessages: number }) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
@@ -1014,6 +1014,22 @@ function GeneralSection({
               }}
             />
             <p className="settings-hint">{t('general.rollingSummaryMinRecentHint')}</p>
+          </label>
+          <label className="settings-field">
+            <span>{t('general.rollingSummaryMaxMessages')}</span>
+            <Input
+              type="number"
+              min={10}
+              max={500}
+              value={rollingSummary.maxMessages}
+              onChange={(e) => {
+                const raw = Number.parseInt(e.target.value, 10);
+                if (!Number.isFinite(raw)) return;
+                onRollingSummaryChange({ ...rollingSummary, maxMessages: Math.max(10, Math.min(500, raw)) });
+                onHasChanges(true);
+              }}
+            />
+            <p className="settings-hint">{t('general.rollingSummaryMaxMessagesHint')}</p>
           </label>
         </div>
       </div>
