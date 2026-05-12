@@ -780,12 +780,12 @@ function GeneralSection({
   providers: ProviderEntry[];
   promptOptimizer: { providerId: string | null; modelId: string | null };
   builderDefaults: { providerId: string | null; modelId: string | null };
-  rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number; maxMessages: number };
+  rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number };
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onUiFlagsChange: (patch: Partial<typeof uiFlags>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onBuilderDefaultsChange: (value: { providerId: string | null; modelId: string | null }) => void;
-  onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; minRecent: number; maxMessages: number }) => void;
+  onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number }) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
@@ -998,22 +998,6 @@ function GeneralSection({
               }}
             />
             <p className="settings-hint">{t('general.rollingSummaryThresholdHint')}</p>
-          </label>
-          <label className="settings-field">
-            <span>{t('general.rollingSummaryMinRecent')}</span>
-            <Input
-              type="number"
-              min={5}
-              max={100}
-              value={rollingSummary.minRecent}
-              onChange={(e) => {
-                const raw = Number.parseInt(e.target.value, 10);
-                if (!Number.isFinite(raw)) return;
-                onRollingSummaryChange({ ...rollingSummary, minRecent: Math.max(5, Math.min(100, raw)) });
-                onHasChanges(true);
-              }}
-            />
-            <p className="settings-hint">{t('general.rollingSummaryMinRecentHint')}</p>
           </label>
           <label className="settings-field">
             <span>{t('general.rollingSummaryMaxMessages')}</span>

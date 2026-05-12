@@ -30,7 +30,6 @@ export type RollingSummaryConfig = {
   providerId: string | null;
   modelId: string | null;
   thresholdTokens: number;
-  minRecent: number;
   maxMessages: number;
 };
 
@@ -97,14 +96,14 @@ Compressed: [N] messages
 Rules:
 - The Topic Horizon defines what is relevant — anything outside it is omitted
 - Tool calls are compressed to a single line: [Tool: name(args) → result]; never reproduce the full payload
-- Derive Last completed / Current task / Next steps from the most recent messages in "Messages to compress"
+- Derive Last completed / Current task / Next steps from the most recent messages
+- If an existing summary is provided, integrate it but weight the new messages more heavily — they reflect the current state of the conversation
 - No prose introductions, no padding, stay within 600 words`;
 
-function buildSummaryMessages(summary: string, recent: ChatMessage[]): ChatMessage[] {
+function buildSummaryMessages(summary: string): ChatMessage[] {
   return [
     { role: 'user', content: `[Context Summary — compressed history of this conversation]\n\n${summary}` },
-    { role: 'assistant', content: 'Understood. I will use this summary as context for our conversation.' },
-    ...recent
+    { role: 'assistant', content: 'Understood. I will use this summary as context for our conversation.' }
   ];
 }
 
@@ -125,87 +124,55 @@ export class RollingSummaryService {
     const L = (msg: string, data?: object) => { if (logger) logger.info({ chatId, ...data }, `RS: ${msg}`); };
     const W = (msg: string, data?: object) => { if (logger) logger.warn({ chatId, ...data }, `RS: ${msg}`); };
 
-    const totalTokens = estimateTokens(messages);
-    const maxMessages = config.maxMessages > 0 ? config.maxMessages : Infinity;
-    L('entry', { msgCount: messages.length, estTokens: totalTokens, threshold: config.thresholdTokens, maxMessages: config.maxMessages, minRecent: config.minRecent, provider: config.providerId, model: config.modelId });
-
     if (!config.providerId || !config.modelId) { L('skip — no provider/model'); return { messages, applied: false }; }
-    const overTokens = totalTokens > config.thresholdTokens;
-    const overMessages = messages.length > maxMessages;
-    if (!overTokens && !overMessages) { L('skip — below threshold'); return { messages, applied: false }; }
-    if (overMessages && !overTokens) L('trigger — maxMessages exceeded');
 
-    const minRecent = Math.max(1, config.minRecent);
-
-    // maxMessages-only trigger: force fresh COMPRESS + tight window to break narration contamination cycles
-    const forceCompress = overMessages && !overTokens;
-    const effectiveMinRecent = forceCompress ? Math.min(minRecent, 4) : minRecent;
-    if (forceCompress) L('maxMessages trigger → force COMPRESS, effectiveMinRecent', { effectiveMinRecent });
-
-    if (messages.length <= effectiveMinRecent) { L('skip — too few messages'); return { messages, applied: false }; }
-
-    const recent = messages.slice(messages.length - effectiveMinRecent);
-
-    // Load existing summary
+    // Load existing summary and compression position from DB
     let existingSummary: string | null = null;
-    let existingCoversUntil: string | null = null;
+    let coversUntil = 0;
     try {
       const chatRow = await withRls(this.db, userId, role, (client) =>
         client.query(`SELECT rolling_summary, rolling_summary_covers_until FROM app.chats WHERE id = $1`, [chatId])
       );
       existingSummary = chatRow.rows[0]?.rolling_summary ?? null;
-      existingCoversUntil = chatRow.rows[0]?.rolling_summary_covers_until ?? null;
+      const raw = chatRow.rows[0]?.rolling_summary_covers_until;
+      const parsed = raw != null ? parseInt(raw, 10) : NaN;
+      coversUntil = (!isNaN(parsed) && parsed > 0) ? Math.min(parsed, messages.length) : 0;
     } catch (err) {
       W('db load failed', { err });
     }
-    L('db state', { hasSummary: !!existingSummary, coversUntil: existingCoversUntil });
 
-    // toCompress = messages before the recent window
-    const toCompress = messages.slice(0, messages.length - effectiveMinRecent);
-    L('window', { total: messages.length, toCompressCount: toCompress.length, recentCount: recent.length, effectiveMinRecent });
+    // Trigger is based on uncompressed messages only (since last compression)
+    const uncompressed = messages.slice(coversUntil);
+    const uncompressedTokens = estimateTokens(uncompressed);
+    const maxMsgs = config.maxMessages > 0 ? config.maxMessages : Infinity;
+    L('entry', { total: messages.length, coversUntil, uncompressed: uncompressed.length, estTokens: uncompressedTokens, maxMessages: config.maxMessages, threshold: config.thresholdTokens });
 
-    // covers_until stores the compressed count as a string — ID-independent and reload-safe
-    const coversCount = existingSummary && existingCoversUntil
-      ? parseInt(existingCoversUntil, 10)
-      : NaN;
-    const coveredIdx = (!isNaN(coversCount) && coversCount > 0 && coversCount <= toCompress.length)
-      ? coversCount - 1
-      : -1;
-    L('covered', { coversCount: isNaN(coversCount) ? null : coversCount, coveredIdx, toCompressCount: toCompress.length });
+    const overMessages = uncompressed.length > maxMsgs;
+    const overTokens = uncompressedTokens > config.thresholdTokens;
 
-    if (existingSummary && coveredIdx >= 0 && !forceCompress) {
-      const gap = toCompress.slice(coveredIdx + 1);
-      const gapFits = gap.length <= minRecent;
-      L('reuse check', { gap: gap.length, maxGap: minRecent, gapFits });
-
-      if (gapFits) {
-        const plaintext = gap.length > 0 ? [...gap, ...recent] : recent;
-        const candidate = buildSummaryMessages(existingSummary, plaintext);
-        const candTokens = estimateTokens(candidate);
-        L('reuse token check', { estCandidate: candTokens, threshold: config.thresholdTokens, fits: candTokens <= config.thresholdTokens });
-
-        if (candTokens <= config.thresholdTokens) {
-          L('REUSE — returning existing summary', { gap: gap.length, plaintext: plaintext.length });
-          return {
-            messages: candidate,
-            applied: true,
-            reused: true,
-            compressedCount: coveredIdx + 1,
-            recentCount: plaintext.length,
-            summary: existingSummary
-          };
-        }
-        L('reuse rejected — candidate too large, recompressing');
-      } else {
-        L('reuse rejected — gap too large, recompressing');
+    if (!overMessages && !overTokens) {
+      if (existingSummary && coversUntil > 0) {
+        // Apply existing summary + uncompressed tail — no summarizer call needed
+        L('apply — summary + uncompressed tail', { coversUntil, uncompressedCount: uncompressed.length });
+        return {
+          messages: [...buildSummaryMessages(existingSummary), ...uncompressed],
+          applied: true,
+          reused: true,
+          compressedCount: coversUntil,
+          recentCount: uncompressed.length,
+          summary: existingSummary
+        };
       }
-    } else {
-      L(existingSummary ? 'no valid coveredIdx — first compression or count mismatch' : 'no existing summary — first compression');
+      L('skip — below threshold');
+      return { messages, applied: false };
     }
 
-    // New compression
-    L('COMPRESS START', { toCompressCount: toCompress.length });
-    const newSummary = await this.runSummarizer(existingSummary, toCompress, config, logger);
+    if (overMessages) L('trigger — uncompressed messages exceeded maxMessages');
+    if (overTokens) L('trigger — uncompressed tokens exceeded threshold');
+
+    // COMPRESS: summarise all messages (including previously uncompressed)
+    L('COMPRESS START', { total: messages.length });
+    const newSummary = await this.runSummarizer(existingSummary, messages, config, logger);
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
     L('COMPRESS DONE', { summaryLen: newSummary.length });
 
@@ -216,28 +183,28 @@ export class RollingSummaryService {
               SET rolling_summary = $1,
                   rolling_summary_covers_until = $2
             WHERE id = $3`,
-          [newSummary, String(toCompress.length), chatId]
+          [newSummary, String(messages.length), chatId]
         )
       );
-      L('db stored', { coversCount: toCompress.length });
+      L('db stored', { coversUntil: messages.length });
     } catch (err) {
       W('db store failed', { err });
       return { messages, applied: false };
     }
 
     return {
-      messages: buildSummaryMessages(newSummary, recent),
+      messages: buildSummaryMessages(newSummary),
       applied: true,
       reused: false,
-      compressedCount: toCompress.length,
-      recentCount: recent.length,
+      compressedCount: messages.length,
+      recentCount: 0,
       summary: newSummary
     };
   }
 
   private async runSummarizer(
     existingSummary: string | null,
-    toCompress: ChatMessage[],
+    messages: ChatMessage[],
     config: RollingSummaryConfig,
     logger?: any
   ): Promise<string | null> {
@@ -245,7 +212,7 @@ export class RollingSummaryService {
     if (existingSummary) {
       parts.push(`## Existing Summary (to be updated)\n${existingSummary}`);
     }
-    parts.push(`## Messages to compress (${toCompress.length})\n${serializeForSummarizer(toCompress)}`);
+    parts.push(`## Messages to compress (${messages.length})\n${serializeForSummarizer(messages)}`);
 
     try {
       const events = await runProviderCompletion(this.db, this.orchestrator, {

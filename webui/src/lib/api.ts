@@ -1297,7 +1297,6 @@ export type RollingSummaryPayload = {
   providerId: string | null;
   modelId: string | null;
   thresholdTokens: number;
-  minRecent: number;
   maxMessages: number;
 };
 
