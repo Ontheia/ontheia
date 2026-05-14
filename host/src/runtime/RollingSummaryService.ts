@@ -81,9 +81,6 @@ Compressed: [N] messages
 **Current task:** [what is being worked on right now]
 **Next steps:** [what will likely come next]
 
-### Recent Messages
-[last few message pairs — verbatim, added by the system after this summary is generated]
-
 ### Main Topics
 - ...
 
@@ -101,7 +98,6 @@ Rules:
 - Tool calls are compressed to a single line: [Tool: name(args) → result]; never reproduce the full payload
 - Derive Last completed / Current task / Next steps from the most recent messages
 - If an existing summary is provided, integrate it but weight the new messages more heavily — they reflect the current state of the conversation
-- The ### Recent Messages section is injected by the system after your output — do not generate it yourself
 - No prose introductions, no padding, stay within 600 words`;
 
 function buildSummaryMessages(summary: string): ChatMessage[] {
@@ -187,9 +183,11 @@ export class RollingSummaryService {
     const firstUserIdx = recentMessages.findIndex((m) => m.role === 'user');
     if (firstUserIdx > 0) recentMessages = recentMessages.slice(firstUserIdx);
     const recentSection = `### Recent Messages\n${serializeForSummarizer(recentMessages)}`;
-    const finalSummary = newSummary.includes('### Main Topics')
-      ? newSummary.replace('### Main Topics', recentSection + '\n\n### Main Topics')
-      : newSummary + '\n\n' + recentSection;
+    // Strip any LLM-generated ### Recent Messages block before inserting ours
+    const strippedSummary = newSummary.replace(/### Recent Messages[\s\S]*?(?=###|\z)/g, '').trimEnd();
+    const finalSummary = strippedSummary.includes('### Main Topics')
+      ? strippedSummary.replace('### Main Topics', recentSection + '\n\n### Main Topics')
+      : strippedSummary + '\n\n' + recentSection;
 
     try {
       await withRls(this.db, userId, role, (client) =>
