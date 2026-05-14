@@ -81,6 +81,9 @@ Compressed: [N] messages
 **Current task:** [what is being worked on right now]
 **Next steps:** [what will likely come next]
 
+### Recent Messages
+[last few message pairs — verbatim, added by the system after this summary is generated]
+
 ### Main Topics
 - ...
 
@@ -98,6 +101,7 @@ Rules:
 - Tool calls are compressed to a single line: [Tool: name(args) → result]; never reproduce the full payload
 - Derive Last completed / Current task / Next steps from the most recent messages
 - If an existing summary is provided, integrate it but weight the new messages more heavily — they reflect the current state of the conversation
+- The ### Recent Messages section is injected by the system after your output — do not generate it yourself
 - No prose introductions, no padding, stay within 600 words`;
 
 function buildSummaryMessages(summary: string): ChatMessage[] {
@@ -176,6 +180,14 @@ export class RollingSummaryService {
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
     L('COMPRESS DONE', { summaryLen: newSummary.length });
 
+    // Append last RECENT_PAIRS message pairs verbatim before ### Main Topics
+    const RECENT_PAIRS = 4;
+    const recentMessages = messages.slice(-(RECENT_PAIRS * 2));
+    const recentSection = `### Recent Messages\n${serializeForSummarizer(recentMessages)}`;
+    const finalSummary = newSummary.includes('### Main Topics')
+      ? newSummary.replace('### Main Topics', recentSection + '\n\n### Main Topics')
+      : newSummary + '\n\n' + recentSection;
+
     try {
       await withRls(this.db, userId, role, (client) =>
         client.query(
@@ -183,7 +195,7 @@ export class RollingSummaryService {
               SET rolling_summary = $1,
                   rolling_summary_covers_until = $2
             WHERE id = $3`,
-          [newSummary, String(messages.length), chatId]
+          [finalSummary, String(messages.length), chatId]
         )
       );
       L('db stored', { coversUntil: messages.length });
@@ -193,12 +205,12 @@ export class RollingSummaryService {
     }
 
     return {
-      messages: buildSummaryMessages(newSummary),
+      messages: buildSummaryMessages(finalSummary),
       applied: true,
       reused: false,
       compressedCount: messages.length,
       recentCount: 0,
-      summary: newSummary
+      summary: finalSummary
     };
   }
 
