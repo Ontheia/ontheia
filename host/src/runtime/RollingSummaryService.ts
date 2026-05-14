@@ -174,9 +174,9 @@ export class RollingSummaryService {
     if (overMessages) L('trigger — uncompressed messages exceeded maxMessages');
     if (overTokens) L('trigger — uncompressed tokens exceeded threshold');
 
-    // COMPRESS: summarise all messages (including previously uncompressed)
-    L('COMPRESS START', { total: messages.length });
-    const newSummary = await this.runSummarizer(existingSummary, messages, config, logger);
+    // COMPRESS: summarise only uncompressed messages; existing summary covers the rest
+    L('COMPRESS START', { total: messages.length, newMessages: uncompressed.length });
+    const newSummary = await this.runSummarizer(existingSummary, uncompressed, config, logger);
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
     L('COMPRESS DONE', { summaryLen: newSummary.length });
 
