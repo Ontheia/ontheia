@@ -182,7 +182,10 @@ export class RollingSummaryService {
 
     // Append last RECENT_PAIRS message pairs verbatim before ### Main Topics
     const RECENT_PAIRS = 4;
-    const recentMessages = messages.slice(-(RECENT_PAIRS * 2));
+    let recentMessages = messages.slice(-(RECENT_PAIRS * 2));
+    // Align to start with a user message so pairs read User → Assistant
+    const firstUserIdx = recentMessages.findIndex((m) => m.role === 'user');
+    if (firstUserIdx > 0) recentMessages = recentMessages.slice(firstUserIdx);
     const recentSection = `### Recent Messages\n${serializeForSummarizer(recentMessages)}`;
     const finalSummary = newSummary.includes('### Main Topics')
       ? newSummary.replace('### Main Topics', recentSection + '\n\n### Main Topics')
