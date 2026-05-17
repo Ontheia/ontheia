@@ -42,6 +42,7 @@ services:
   host:
     container_name: ontheia-host
     image: ontheia-host
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile.host
@@ -63,6 +64,7 @@ services:
       - ./config:/app/config:ro
       - ./migrations:/app/migrations:ro
       - ${NVM_DIR:-/tmp/nvm-placeholder}:${NVM_DIR:-/tmp/nvm-placeholder}:ro
+      - ${CLAUDE_SHARE_DIR:-/tmp}:/opt/claude-share:ro
       - ${DOCKER_SOCKET_PATH:-/run/user/1000/docker.sock}:/run/user/1000/docker.sock:ro
       - ontheia-host-uv-cache:/root/.cache/uv
       - ontheia-host-npm-cache:/root/.npm
@@ -87,6 +89,7 @@ services:
   webui:
     container_name: ontheia-webui
     image: ontheia-webui
+    restart: unless-stopped
     build:
       context: webui
       dockerfile: Dockerfile.webui

@@ -41,6 +41,9 @@ ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 # Source NVM from mounted host path so CLI tools (claude, gemini) are found in login shells
 RUN echo 'export NVM_DIR="/home/rock/.nvm"' >> /root/.profile && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.profile
+# Claude Code CLI wrapper — resolves latest version from host-mounted share dir (/opt/claude-share)
+RUN printf '#!/bin/sh\n_v=$(ls /opt/claude-share/versions 2>/dev/null | sort -rV | head -1)\n[ -z "$_v" ] && { echo "claude: not available (CLAUDE_SHARE_DIR not mounted)" >&2; exit 127; }\nexec "/opt/claude-share/versions/$_v" "$@"\n' \
+    > /usr/local/bin/claude && chmod +x /usr/local/bin/claude
 WORKDIR /app
 
 FROM base AS deps
