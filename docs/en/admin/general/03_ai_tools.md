@@ -12,7 +12,7 @@ The Summarizer automatically compresses older chat history once the context exce
 - **Configuration:** Selection of provider, model, token threshold (default: 32,000) and minimum plaintext window (default: 20).
 - **Recommendation:** A capable model improves summary quality; a fast and cost-efficient model reduces latency during compression.
 
-Full description: [Context Compression](04_rolling_summary.md)
+Full description: [Context Compression](/en/admin/general/04_rolling_summary/)
 
 ---
 

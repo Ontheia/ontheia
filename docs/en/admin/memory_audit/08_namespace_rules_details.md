@@ -20,4 +20,4 @@ Rules are defined via wildcards (e.g., `vector.agent.*`). This allows rules to b
 ## 🛠️ Technical Background
 For a detailed mathematical explanation of the search and ranking algorithm (including Cosine Similarity, Recency Decay, and static priorities), please consult the:
 
-👉 **[Technical Reference: Memory Ranking & Search Algorithm](./10_ranking_algorithm.md)**
+👉 **[Technical Reference: Memory Ranking & Search Algorithm](/en/admin/memory_audit/10_ranking_algorithm/)**

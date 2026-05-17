@@ -90,4 +90,4 @@ Not all information in the namespaces is equally important. Ontheia uses a multi
 2.  **Recency:** Newer information receives an automatic bonus.
 3.  **Namespace Bonuses:** Certain categories (like `howto` or `preferences`) can be globally prioritized.
 
-Details on the mathematical calculation can be found in the **[Reference: Ranking & Search Algorithm](./10_ranking_algorithm.md)**.
+Details on the mathematical calculation can be found in the **[Reference: Ranking & Search Algorithm](/en/admin/memory_audit/10_ranking_algorithm/)**.

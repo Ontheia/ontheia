@@ -28,9 +28,9 @@ User menu*           │ [Composer]             │
 > **Note:** Administration, Settings, and Automation are accessed via the **Avatar dropdown** at the bottom of the left sidebar — they are not directly visible in the sidebar.
 
 Detailed documentation:
-- [Left Sidebar](12_sidebar_left.md)
-- [Right Sidebar](13_sidebar_right.md)
-- [Composer](11_composer.md)
+- [Left Sidebar](/en/webui_navi/12_sidebar_left/)
+- [Right Sidebar](/en/webui_navi/13_sidebar_right/)
+- [Composer](/en/webui_navi/11_composer/)
 
 ---
 

@@ -36,7 +36,7 @@
 | Token-Schwellenwert | Zahl | Gesamttokens aller Chat-Nachrichten, ab dem komprimiert wird. Standard: 32 000. |
 | Mindest-Klartextfenster | Zahl | Anzahl der letzten Nachrichten, die immer im Volltext erhalten bleiben. Standard: 20. |
 
-> Speichern über **[Übernehmen]**. Ohne Provider und Modell bleibt die Komprimierung inaktiv. Weitere Informationen: [Kontext-Komprimierung](../admin/general/04_rolling_summary.md).
+> Speichern über **[Übernehmen]**. Ohne Provider und Modell bleibt die Komprimierung inaktiv. Weitere Informationen: [Kontext-Komprimierung](/de/admin/general/04_rolling_summary/).
 
 ---
 

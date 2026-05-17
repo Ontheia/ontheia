@@ -28,9 +28,9 @@ Benutzermenü*        │ [Composer]            │
 > **Hinweis:** Administration, Einstellungen und Automatisierung werden über das **Avatar-Dropdown** am unteren Rand der linken Sidebar aufgerufen — sie sind nicht direkt in der Sidebar sichtbar.
 
 Detaildokumentation:
-- [Linke Sidebar](12_sidebar_left.md)
-- [Rechte Sidebar](13_sidebar_right.md)
-- [Composer](11_composer.md)
+- [Linke Sidebar](/de/webui_navi/12_sidebar_left/)
+- [Rechte Sidebar](/de/webui_navi/13_sidebar_right/)
+- [Composer](/de/webui_navi/11_composer/)
 
 ---
 

@@ -49,7 +49,7 @@ Jede Instanz läuft in einem eigenen Docker-Compose-Stack mit eigener Datenbank,
    WEBUI_PORT=5174
    ```
 
-4. Reverse Proxy einrichten, damit jede Instanz unter ihrer eigenen Domain erreichbar ist → siehe [Reverse Proxy](./04_reverse_proxy.md).
+4. Reverse Proxy einrichten, damit jede Instanz unter ihrer eigenen Domain erreichbar ist → siehe [Reverse Proxy](/de/configuration/04_reverse_proxy/).
 
 ## Ressourcen
 

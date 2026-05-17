@@ -12,7 +12,7 @@ Der Summarizer komprimiert ältere Chat-Verläufe automatisch, sobald der Kontex
 - **Konfiguration:** Auswahl von Provider, Modell, Token-Schwellenwert (Standard: 32 000) und Mindest-Klartextfenster (Standard: 20).
 - **Anforderung:** Ein leistungsfähiges Modell verbessert die Summary-Qualität; ein schnelles und günstiges Modell reduziert die Latenz bei Komprimierungen.
 
-Vollständige Beschreibung: [Kontext-Komprimierung](04_rolling_summary.md)
+Vollständige Beschreibung: [Kontext-Komprimierung](/de/admin/general/04_rolling_summary/)
 
 ---
 

@@ -20,4 +20,4 @@ Regeln werden über Wildcards definiert (z.B. `vector.agent.*`). So lassen sich 
 ## 🛠️ Technischer Hintergrund
 Für eine detaillierte mathematische Erklärung des Such- und Ranking-Algorithmus (inkl. Cosine Similarity, Recency Decay und statischen Prioritäten), konsultieren Sie bitte die:
 
-👉 **[Technische Referenz: Memory Ranking & Suchalgorithmus](./10_ranking_algorithm.md)**
+👉 **[Technische Referenz: Memory Ranking & Suchalgorithmus](/de/admin/memory_audit/10_ranking_algorithm/)**

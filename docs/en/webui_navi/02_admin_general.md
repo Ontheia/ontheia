@@ -36,7 +36,7 @@
 | Token Threshold | Number | Total tokens of all chat messages above which compression triggers. Default: 32,000. |
 | Minimum Plaintext Window | Number | Number of most recent messages always kept as full text. Default: 20. |
 
-> Save via **[Apply]**. Without provider and model configured, compression remains inactive. See [Context Compression](../admin/general/04_rolling_summary.md) for details.
+> Save via **[Apply]**. Without provider and model configured, compression remains inactive. See [Context Compression](/en/admin/general/04_rolling_summary/) for details.
 
 ---
 

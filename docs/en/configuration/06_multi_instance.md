@@ -49,7 +49,7 @@ Each instance runs in its own Docker Compose stack with its own database, its ow
    WEBUI_PORT=5174
    ```
 
-4. Set up a reverse proxy so each instance is reachable under its own domain → see [Reverse Proxy](./04_reverse_proxy.md).
+4. Set up a reverse proxy so each instance is reachable under its own domain → see [Reverse Proxy](/en/configuration/04_reverse_proxy/).
 
 ## Resources
 

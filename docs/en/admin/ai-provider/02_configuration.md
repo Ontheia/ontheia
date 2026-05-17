@@ -9,7 +9,7 @@ Ontheia supports two provider types:
 - **HTTP API:** Standard REST API with API key (OpenAI, Anthropic, Ollama, etc.).
 - **CLI:** Local command-line tool without API key (Gemini CLI, Claude CLI).
 
-For the complete CLI provider configuration, see [05_cli_provider.md](./05_cli_provider.md).
+For the complete CLI provider configuration, see [CLI Provider](/en/admin/ai-provider/05_cli_provider/).
 
 ## 2. Basic Parameters (HTTP API)
 - **Provider ID (Slug):** A unique technical identifier (e.g., `openai-prod`).

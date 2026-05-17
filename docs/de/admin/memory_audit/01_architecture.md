@@ -90,4 +90,4 @@ Nicht alle Informationen in den Namespaces sind gleich wichtig. Ontheia nutzt ei
 2.  **Aktualität (Recency):** Neuere Informationen erhalten einen automatischen Bonus.
 3.  **Namespace-Boni:** Bestimmte Kategorien (wie `howto` oder `preferences`) können global bevorzugt werden.
 
-Details zur mathematischen Berechnung finden Sie in der **[Referenz: Ranking & Suchalgorithmus](./10_ranking_algorithm.md)**.
+Details zur mathematischen Berechnung finden Sie in der **[Referenz: Ranking & Suchalgorithmus](/de/admin/memory_audit/10_ranking_algorithm/)**.

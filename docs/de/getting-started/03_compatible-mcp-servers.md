@@ -18,6 +18,9 @@ Die folgenden MCP-Server wurden mit Ontheia getestet und funktionieren out-of-th
 | **mcp_pdf_reader** | PDF-Dateien lesen und analysieren | [github.com/karateboss/mcp_pdf_reader](https://github.com/karateboss/mcp_pdf_reader) |
 | **pdf-reader-mcp** | PDF-Dateien lesen und analysieren (Node ≥ 20) | [github.com/SylphxAI/pdf-reader-mcp](https://github.com/SylphxAI/pdf-reader-mcp) |
 | **filesystem** | Lokales Dateisystem lesen und schreiben | [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) |
+| **mcp-server-whisper** | Audio-Transkription via OpenAI Whisper | [github.com/arcaputo3/mcp-server-whisper](https://github.com/arcaputo3/mcp-server-whisper) |
+| **Markdownify MCP Server** | Webseiten, PDFs und Dokumente zu Markdown konvertieren | [github.com/zcaceres/markdownify-mcp](https://github.com/zcaceres/markdownify-mcp) |
+| **mcpvault** | Obsidian-Vault (Markdown-Notizen) lesen und durchsuchen | [github.com/bitbonsai/mcpvault](https://github.com/bitbonsai/mcpvault) |
 
 <details>
 <summary>⚙ excel-mcp-server — Konfiguration</summary>
@@ -155,6 +158,85 @@ M2P_OUTPUT_DIR=/pfad/zum/ausgabeverzeichnis
 
 </details>
 
+<details>
+<summary>⚙ mcp-server-whisper — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "whisper": {
+      "command": "uvx",
+      "args": ["mcp-server-whisper"],
+      "env": {
+        "OPENAI_API_KEY": "secret:OPENAI_API_KEY",
+        "AUDIO_FILES_PATH": "/path/to/audio/files"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.pypi`): `mcp-server-whisper`
+
+**`.env`:**
+```
+OPENAI_API_KEY=sk-...
+AUDIO_FILES_PATH=/path/to/audio/files
+```
+
+> Der Server nutzt die OpenAI Whisper API zur Transkription von Audiodateien. Ein OpenAI-API-Key ist erforderlich.
+
+</details>
+
+<details>
+<summary>⚙ mcpvault — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "mcpvault": {
+      "command": "npx",
+      "args": ["@bitbonsai/mcpvault@latest", "/path/to/vault"]
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@bitbonsai/mcpvault`
+
+> Kein API-Key erforderlich. Der Pfad zeigt auf das Vault-Verzeichnis (Ordner mit Markdown-Dateien). Funktioniert auch ohne laufende Obsidian-App.
+
+</details>
+
+<details>
+<summary>⚙ Markdownify MCP Server — Konfiguration</summary>
+
+Das Paket wird lokal geklont und gebaut:
+
+```bash
+git clone https://github.com/zcaceres/markdownify-mcp
+cd markdownify-mcp
+bun install && bun run build
+```
+
+```json
+{
+  "mcpServers": {
+    "markdownify": {
+      "command": "bun",
+      "args": ["/path/to/markdownify-mcp/dist/index.js"],
+      "env": {
+        "MARKITDOWN_PATH": "/path/to/markdownify-mcp/markitdown-uvx.sh"
+      }
+    }
+  }
+}
+```
+
+> Pfade anpassen auf das Verzeichnis, in das du das Repository geklont hast. Voraussetzung: [Bun](https://bun.sh) ist installiert.
+
+</details>
+
 ---
 
 ## Produktivität & Aufgaben
@@ -163,6 +245,7 @@ M2P_OUTPUT_DIR=/pfad/zum/ausgabeverzeichnis
 |---|---|---|
 | **mcp-tasks** | Aufgabenverwaltung | [github.com/flesler/mcp-tasks](https://github.com/flesler/mcp-tasks) |
 | **mcp-taskmanager** | Erweitertes Aufgabenmanagement | [github.com/kazuph/mcp-taskmanager](https://github.com/kazuph/mcp-taskmanager) |
+| **notion-mcp-server** | Notion-Seiten und -Datenbanken lesen und bearbeiten | [github.com/makenotion/notion-mcp-server](https://github.com/makenotion/notion-mcp-server) |
 | **caldav-mcp** | Kalender via CalDAV (z.B. Nextcloud Kalender) | [github.com/dominik1001/caldav-mcp](https://github.com/dominik1001/caldav-mcp) |
 | **time** | Aktuelle Uhrzeit und Zeitzonenumrechnung | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/time) |
 
@@ -215,6 +298,34 @@ M2P_OUTPUT_DIR=/pfad/zum/ausgabeverzeichnis
 **Allowlist** (`config/allowlist.packages.npm`): `@kazuph/mcp-taskmanager`
 
 > `TASK_MANAGER_FILE_PATH` legt fest, wo die Aufgabendatei gespeichert wird. `/app/logs/` ist ein persistentes Verzeichnis innerhalb des Ontheia-Containers.
+
+</details>
+
+<details>
+<summary>⚙ notion-mcp-server — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_API_KEY": "secret:NOTION_API_KEY"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@notionhq/notion-mcp-server`
+
+**`.env`:**
+```
+NOTION_API_KEY=ntn_...
+```
+
+> Den Integration-Token unter [notion.so/my-integrations](https://www.notion.so/my-integrations) erstellen. Jede Notion-Seite, auf die der Agent zugreifen soll, muss der Integration explizit freigegeben werden: Seite öffnen → „..." → „Verbindungen" → Integration auswählen.
 
 </details>
 
@@ -279,6 +390,8 @@ CALDAV_PASSWORD=passwort
 | **mcp-email-server** | E-Mails senden und empfangen | [github.com/ai-zerolab/mcp-email-server](https://github.com/ai-zerolab/mcp-email-server) |
 | **ntfy-me-mcp** | Push-Benachrichtigungen via ntfy senden | [github.com/gitmotion/ntfy-me-mcp](https://github.com/gitmotion/ntfy-me-mcp) |
 | **Bluesky Context Server** | Bluesky-Posts lesen und erstellen | [github.com/brianellin/bsky-mcp-server](https://github.com/brianellin/bsky-mcp-server) |
+| **slack-mcp-server** (korotovsky) | Slack-Nachrichten und -Kanäle lesen und schreiben | [github.com/korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) |
+| **slack-mcp-server** (zencoderai) | Slack-Nachrichten und -Kanäle lesen und schreiben | [github.com/zencoderai/slack-mcp-server](https://github.com/zencoderai/slack-mcp-server) |
 
 <details>
 <summary>⚙ mcp-email-server — Konfiguration</summary>
@@ -390,6 +503,60 @@ BLUESKY_SERVICE_URL=https://bsky.social
 ```
 
 > Das Image `bsky-mcp-server:latest` muss lokal gegen den rootless Docker-Daemon gebaut sein. Das App-Passwort unter Bluesky → Einstellungen → App-Passwörter erstellen.
+
+</details>
+
+<details>
+<summary>⚙ slack-mcp-server (korotovsky) — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server", "--transport", "stdio"],
+      "env": {
+        "SLACK_MCP_XOXB_TOKEN": "secret:SLACK_MCP_XOXB_TOKEN"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `slack-mcp-server`
+
+**`.env`:**
+```
+SLACK_MCP_XOXB_TOKEN=xoxb-...
+```
+
+> Benötigte Bot-Token-Scopes: `channels:read`, `groups:read`, `im:read`, `mpim:read`, `channels:history`, `users:read`. `SLACK_MCP_XOXP_TOKEN` darf nicht gesetzt sein — sonst bevorzugt der Server den User-Token und ignoriert den Bot-Token.
+
+</details>
+
+<details>
+<summary>⚙ slack-mcp-server (zencoderai) — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@zencoderai/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "secret:SLACK_BOT_TOKEN"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@zencoderai/slack-mcp-server`
+
+**`.env`:**
+```
+SLACK_BOT_TOKEN=xoxb-...
+```
 
 </details>
 
@@ -616,6 +783,88 @@ GITHUB_TOKEN=ghp_...
 | Server | Beschreibung | Repository |
 |---|---|---|
 | **postgres-mcp** | PostgreSQL-Datenbanken abfragen und verwalten | [github.com/crystaldba/postgres-mcp](https://github.com/crystaldba/postgres-mcp) |
+| **mcp-server-sqlite** | SQLite-Datenbanken abfragen und verwalten | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite) |
+| **mcp-server-mysql** | MySQL-Datenbanken abfragen und verwalten | [github.com/benborla/mcp-server-mysql](https://github.com/benborla/mcp-server-mysql) |
+| **mcp-sqlite** | SQLite-Datenbanken abfragen und verwalten | [github.com/panasenco/mcp-sqlite](https://github.com/panasenco/mcp-sqlite) |
+
+<details>
+<summary>⚙ mcp-server-sqlite — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "/path/to/database.db"
+      ]
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.pypi`): `mcp-server-sqlite`
+
+> Pfad zur SQLite-Datenbankdatei in `--db-path` anpassen. Die Datei wird angelegt, falls sie noch nicht existiert.
+
+</details>
+
+<details>
+<summary>⚙ mcp-sqlite — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-sqlite",
+        "/path/to/database.db"
+      ]
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.pypi`): `mcp-sqlite`
+
+</details>
+
+<details>
+<summary>⚙ mcp-server-mysql — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "npx",
+      "args": ["-y", "@benborla29/mcp-server-mysql@latest"],
+      "env": {
+        "MYSQL_HOST": "secret:MYSQL_HOST",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "secret:MYSQL_USER",
+        "MYSQL_PASS": "secret:MYSQL_PASS",
+        "MYSQL_DB": "secret:MYSQL_DB"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@benborla29/mcp-server-mysql`
+
+**`.env`:**
+```
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=username
+MYSQL_PASS=password
+MYSQL_DB=database_name
+```
+
+</details>
 
 <details>
 <summary>⚙ postgres-mcp — Konfiguration</summary>
