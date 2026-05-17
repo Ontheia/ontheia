@@ -23,18 +23,7 @@ RUN ln -sf /root/.local/bin/uvx /usr/local/bin/uvx && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
 # Python 3.13 für postgres-mcp (erfordert >=3.12, Basis-Image hat nur 3.11)
 RUN uv python install 3.13
-# nextcloud-mcp-server@0.85.1 hat harte Dep auf mistralai>=2.4.5 (nicht auf PyPI, Stand 2026-05).
-# Stub befriedigt die Dep bis das Paket offiziell veröffentlicht wird.
-RUN mkdir -p /tmp/mistralai-stub/mistralai/client && \
-    printf '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.build_meta"\n[project]\nname = "mistralai"\nversion = "2.4.5"\n' \
-        > /tmp/mistralai-stub/pyproject.toml && \
-    printf '__version__ = "2.4.5"\n' \
-        > /tmp/mistralai-stub/mistralai/__init__.py && \
-    printf 'from mistralai.client.errors import SDKError\n\nclass Mistral:\n    def __init__(self, **kw): pass\n' \
-        > /tmp/mistralai-stub/mistralai/client/__init__.py && \
-    printf 'class SDKError(Exception): pass\n' \
-        > /tmp/mistralai-stub/mistralai/client/errors.py && \
-    uv tool install nextcloud-mcp-server@0.85.1 --with /tmp/mistralai-stub
+RUN uv tool install nextcloud-mcp-server@0.85.1
 RUN npm install -g markdown2pdf-mcp@latest && \
     sed -i 's/if (process.argv\[1\] && path.resolve(process.argv\[1\]) === __filename)/if (true)/' /usr/local/lib/node_modules/markdown2pdf-mcp/build/index.js
 ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
