@@ -31,7 +31,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { listChats, listRecentRuns, getUserSettingsApi, listProcesses, listAgents, updateChat } from '../lib/api';
+import { listChats, listRecentRuns, getUserSettingsApi, listProcesses, listAgents, updateChat, API_BASE, getStoredToken } from '../lib/api';
 import { useAuth } from './auth-context';
 import type { AgentDefinition, ToolApprovalMode } from '../types/agents';
 export type { ToolApprovalMode };
@@ -1176,6 +1176,79 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => void loadProcesses(true), 5000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [isAuthenticated]);
+
+  // Per-user notification SSE channel — receives cron_complete events
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let aborted = false;
+    const ctrl = new AbortController();
+    let retryDelay = 2000;
+
+    const connect = async () => {
+      while (!aborted) {
+        try {
+          const token = getStoredToken();
+          const res = await fetch(`${API_BASE}/api/events`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            signal: ctrl.signal
+          });
+          if (!res.ok || !res.body) {
+            await new Promise(r => setTimeout(r, retryDelay));
+            retryDelay = Math.min(retryDelay * 2, 30000);
+            continue;
+          }
+          retryDelay = 2000;
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = '';
+          while (!aborted) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop() ?? '';
+            let eventType = '';
+            for (const line of lines) {
+              if (line.startsWith('event:')) {
+                eventType = line.slice(6).trim();
+              } else if (line.startsWith('data:') && eventType === 'notification') {
+                try {
+                  const payload = JSON.parse(line.slice(5).trim());
+                  if (payload?.type === 'cron_complete') {
+                    window.dispatchEvent(new CustomEvent('ontheia:cron_complete', { detail: payload }));
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                      const title = payload.success
+                        ? i18n.t('automation:cronCompleteTitle', { name: payload.job_name })
+                        : i18n.t('automation:cronCompleteErrorTitle', { name: payload.job_name });
+                      const n = new Notification(title, {
+                        body: payload.chat_id ? i18n.t('automation:cronCompleteBody') : undefined,
+                        tag: `cron-${payload.job_id}`
+                      });
+                      if (payload.chat_id) {
+                        n.onclick = () => { window.focus(); window.location.hash = `/chat/${payload.chat_id}`; };
+                      }
+                    }
+                  }
+                } catch {}
+                eventType = '';
+              }
+            }
+          }
+        } catch (err: any) {
+          if (err?.name === 'AbortError') break;
+          console.warn('[notifications] SSE disconnected, retrying in', retryDelay, err);
+          await new Promise(r => setTimeout(r, retryDelay));
+          retryDelay = Math.min(retryDelay * 2, 30000);
+        }
+      }
+    };
+
+    void connect();
+    return () => {
+      aborted = true;
+      ctrl.abort();
+    };
+  }, [isAuthenticated, i18n]);
 
   // Apply language preference changes to i18n instance
   useEffect(() => {

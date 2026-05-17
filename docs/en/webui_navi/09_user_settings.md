@@ -14,7 +14,7 @@ Tab bar: **General** · **Account** · **Info**
 | --- | --- | --- | --- |
 | Language | Dropdown | `German`, `English` | Language of the interface and feedback messages. |
 | Theme | Dropdown | `Light`, `Dark` | Appearance of the application. |
-| Desktop Notifications | Toggle | — | When active, notifies you about new replies and run events. |
+| Desktop Notifications | Toggle | — | When active, notifies you about new replies, run events, and completions of automated cron jobs. |
 
 ### Sidebar Startup State
 

@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import { FastifyInstance } from 'fastify';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { OrchestratorService } from './orchestrator/service.js';
 import { MemoryAdapter } from './memory/adapter.js';
 import { registerAuthRoutes } from './routes/auth.js';
@@ -36,6 +36,8 @@ import { RouteContext } from './routes/types.js';
 import { RunService } from './runtime/RunService.js';
 import { CronService } from './runtime/CronService.js';
 import { ServiceConfig } from './config.js';
+import { withRls } from './routes/utils.js';
+import { handleCreateSchedule, handleCancelSchedule, handleListSchedules } from './mcp/plugins/scheduler.js';
 
 export async function registerRoutes(
   server: FastifyInstance, 
@@ -67,4 +69,20 @@ export async function registerRoutes(
   registerRunRoutes(server, context);
   registerCronRoutes(server, { ...context, cronService });
   registerPromptRoutes(server, context);
+
+  orchestrator.registerInternalToolHandler('scheduler', async (name, args, ctx) => {
+    const userId = ctx?.userId;
+    const role = ctx?.role || 'user';
+    if (!userId) throw new Error('User context required for scheduler tools.');
+
+    const operation = async (client: PoolClient) => {
+      const augCtx = { ...ctx, db: client };
+      if (name === 'create_schedule') return handleCreateSchedule(client, args, augCtx, cronService);
+      if (name === 'cancel_schedule') return handleCancelSchedule(client, args, augCtx);
+      if (name === 'list_schedules') return handleListSchedules(client, args, augCtx);
+      throw new Error(`Tool ${name} not found on server scheduler`);
+    };
+
+    return withRls(db, userId, role, operation);
+  });
 }

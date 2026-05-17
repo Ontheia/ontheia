@@ -101,7 +101,7 @@ Chains sind komplexe Workflows, die aus mehreren Schritten bestehen können.
 
 ## Automatisierung (Cron-Jobs)
 
-Geplante Agenten-Interaktionen basierend auf Zeitintervallen.
+Geplante Agenten-Interaktionen basierend auf Zeitintervallen oder Einmalzeitpunkten.
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
@@ -111,6 +111,30 @@ Geplante Agenten-Interaktionen basierend auf Zeitintervallen.
 | `DELETE` | `/api/cron/:id` | Löscht einen Cron-Job dauerhaft. |
 | `POST` | `/api/cron/:id/run` | Triggert einen Cron-Job sofort manuell. |
 | `GET` | `/api/cron/:id/runs` | Liefert den Ausführungsverlauf (letzte 20 Runs) für diesen spezifischen Job. |
+
+**Felder POST/PATCH `/api/cron`:**
+
+| Feld | Typ | Beschreibung |
+| --- | --- | --- |
+| `name` | string | Anzeigename des Jobs. |
+| `schedule` | string \| null | Cron-Ausdruck für wiederkehrende Jobs. Gegenseitig ausschließend mit `run_at`. |
+| `run_at` | ISO 8601 \| null | Einmaliger Ausführungszeitpunkt. Gegenseitig ausschließend mit `schedule`. |
+| `agent_id` | uuid | Zugeordneter Agent. |
+| `task_id` | uuid \| null | Optionaler Task. |
+| `chain_id` | uuid \| null | Optionale Chain. |
+| `prompt_template_id` | uuid \| null | Optionale Prompt-Vorlage als Benutzernachricht. |
+| `prompt_text` | string \| null | Direkte Texteingabe als Benutzernachricht (Alternative zu `prompt_template_id`). |
+| `chat_id` | string \| null | Bestehender Chat, in dem der Job fortgesetzt wird. |
+| `chat_title_template` | string \| null | Titelvorlage mit `{{name}}` und `{{timestamp}}`. |
+| `notify` | boolean | Desktop-Benachrichtigung nach Abschluss senden. |
+| `prevent_overlap` | boolean | Überlappende Ausführungen verhindern. |
+| `active` | boolean | Job aktiv/inaktiv schalten. |
+
+**Echtzeit-Benachrichtigungen (SSE):**
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `GET` | `/api/events` | SSE-Stream für Echtzeit-Push-Events (z. B. `cron_complete`). Authentifizierung via Bearer-Token. Event-Typ: `notification`, Payload enthält `type`, `job_id`, `job_name`, `chat_id`, `success`. |
 
 ---
 

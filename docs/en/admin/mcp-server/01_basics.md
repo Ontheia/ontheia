@@ -15,4 +15,4 @@ In the Ontheia architecture, the **Host Service** acts as an MCP client (or host
 Ontheia distinguishes between three types of servers:
 1. **Stored Servers:** Permanently configured servers stored in the database.
 2. **Temporary Servers:** Short-term started servers (e.g., via dry run) that are not persistently stored.
-3. **Internal Servers:** System servers (e.g., `memory`) that are firmly integrated into the host code and do not require manual process configuration.
+3. **Internal Servers:** System servers firmly integrated into the host code that do not require manual process configuration. Examples: `memory` (long-term memory), `scheduler` (schedule creation by agents), `delegation` (agent delegation).

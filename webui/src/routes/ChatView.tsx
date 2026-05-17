@@ -289,6 +289,7 @@ export function ChatView({
   const [message, setMessage] = useState('');
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [cronReloadKey, setCronReloadKey] = useState(0);
   const [motd, setMotd] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -1893,7 +1894,18 @@ export function ChatView({
     return () => {
       cancelled = true;
     };
-  }, [activeChatId, messageSearch, resumeActiveRun, updateChatPreferences, setActiveRunForChat]);
+  }, [activeChatId, messageSearch, resumeActiveRun, updateChatPreferences, setActiveRunForChat, cronReloadKey]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.chat_id && detail.chat_id === activeChatId) {
+        setCronReloadKey(k => k + 1);
+      }
+    };
+    window.addEventListener('ontheia:cron_complete', handler);
+    return () => window.removeEventListener('ontheia:cron_complete', handler);
+  }, [activeChatId]);
 
   return (
     <section className="chat-view">

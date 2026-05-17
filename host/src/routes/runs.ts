@@ -42,7 +42,7 @@ import {
   RunRequest 
 } from '../runtime/types.js';
 import { RunService } from '../runtime/RunService.js';
-import { activeRunControllers, runStreamStates, pendingToolApprovals, getActiveRunIdForChat } from './runs-state.js';
+import { activeRunControllers, runStreamStates, pendingToolApprovals, getActiveRunIdForChat, userNotificationStreams, type NotificationPusher } from './runs-state.js';
 import { deleteVectorNamespacesSafe } from './agents.js';
 import { slugifySegment } from '../memory/namespaces.js';
 import { parseRunRequest, extractRunMetadata } from './run-utils.js';
@@ -634,6 +634,33 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       }
     });
     return { ok: true };
+  });
+
+  // Per-user SSE notification channel — receives cron_complete and other push events
+  server.get('/api/events', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const userId = auth.session.userId;
+
+    const stream = pushable<EventMessage>();
+    const entry: NotificationPusher = {
+      push: (msg) => { try { stream.push(msg); } catch {} }
+    };
+
+    if (!userNotificationStreams.has(userId)) userNotificationStreams.set(userId, new Set());
+    userNotificationStreams.get(userId)!.add(entry);
+
+    request.raw.on('close', () => {
+      const s = userNotificationStreams.get(userId);
+      if (s) {
+        s.delete(entry);
+        if (s.size === 0) userNotificationStreams.delete(userId);
+      }
+      try { stream.end(); } catch {}
+    });
+
+    reply.header('cache-control', 'no-store');
+    reply.sse(stream as any);
   });
 }
 

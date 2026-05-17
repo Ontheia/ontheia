@@ -14,7 +14,7 @@ Tab-Leiste: **Allgemein** · **Benutzerkonto** · **Info**
 | --- | --- | --- | --- |
 | Sprache | Dropdown | `Deutsch`, `Englisch` | Sprache der Oberfläche und Rückmeldungen. |
 | Theme | Dropdown | `Hell`, `Dunkel` | Erscheinungsbild der Anwendung. |
-| Desktop-Benachrichtigungen | Toggle | — | Bei aktiven Benachrichtigungen werden neue Antworten und Run-Events angezeigt. |
+| Desktop-Benachrichtigungen | Toggle | — | Bei aktiven Benachrichtigungen werden neue Antworten, Run-Events und Abschlüsse von automatisierten Cron-Jobs angezeigt. |
 
 ### Sidebar Startzustand
 

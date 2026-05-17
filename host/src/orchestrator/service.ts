@@ -493,7 +493,14 @@ export class OrchestratorService {
       status: 'running' as const,
       startedAt: this.startTime.toISOString()
     };
-    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess];
+    const schedulerProcess = {
+      name: 'scheduler',
+      command: 'internal',
+      args: [],
+      status: 'running' as const,
+      startedAt: this.startTime.toISOString()
+    };
+    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess, schedulerProcess];
   }
 
   async stop(name: string) {
@@ -523,7 +530,7 @@ export class OrchestratorService {
   }
 
   listClientNames() {
-    return Array.from(this.clients.keys()).concat(['memory', 'delegation']);
+    return Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler']);
   }
 
   /**
@@ -610,6 +617,45 @@ export class OrchestratorService {
       ];
     }
 
+    if (serverName === 'scheduler') {
+      return [
+        {
+          name: 'create_schedule',
+          description: 'Creates a new scheduled job that will run this agent at a future point in time. Use for reminders, follow-ups, or recurring tasks the user has requested.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Short descriptive name (e.g. "Reminder: meeting 15:00")' },
+              input: { type: 'string', description: 'Prompt text sent to the agent when the schedule fires' },
+              schedule: { type: 'string', description: 'Cron expression for recurring jobs (e.g. "0 9 * * 1-5"). Mutually exclusive with run_at.' },
+              run_at: { type: 'string', description: 'ISO 8601 datetime for a one-time job (e.g. "2026-05-18T15:00:00"). Mutually exclusive with schedule.' },
+              chat_id: { type: 'string', description: 'Optional: if set, the response is appended to this existing chat. Omit to create a new chat.' }
+            },
+            required: ['name', 'input']
+          }
+        },
+        {
+          name: 'cancel_schedule',
+          description: 'Cancels a schedule previously created by this agent. Only jobs created by the calling agent can be cancelled.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              schedule_id: { type: 'string', description: 'The schedule_id returned by create_schedule.' }
+            },
+            required: ['schedule_id']
+          }
+        },
+        {
+          name: 'list_schedules',
+          description: 'Lists all active scheduled jobs created by this agent for the current user.',
+          inputSchema: {
+            type: 'object',
+            properties: {}
+          }
+        }
+      ];
+    }
+
     const client = this.clients.get(serverName);
     if (!client) {
       throw new Error(`MCP server ${serverName} is not running`);
@@ -671,7 +717,7 @@ export class OrchestratorService {
     }
     const client = this.clients.get(serverName);
     if (!client) {
-      const available = Array.from(this.clients.keys()).concat(['memory', 'delegation']);
+      const available = Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler']);
       throw new Error(`MCP server "${serverName}" is not running. Available: ${available.join(', ')}`);
     }
     try {

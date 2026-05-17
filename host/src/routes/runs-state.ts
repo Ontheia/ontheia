@@ -32,6 +32,18 @@ export const runAgentSnapshots = new Map<
   { chatId: string; text: string; metadata: Record<string, unknown> | undefined }
 >();
 
+export type NotificationPusher = { push: (msg: EventMessage) => void };
+export const userNotificationStreams = new Map<string, Set<NotificationPusher>>();
+
+export function pushUserNotification(userId: string, data: Record<string, unknown>): void {
+  const streams = userNotificationStreams.get(userId);
+  if (!streams || streams.size === 0) return;
+  const msg: EventMessage = { event: 'notification', data: JSON.stringify(data) };
+  for (const s of streams) {
+    try { s.push(msg); } catch {}
+  }
+}
+
 /** Returns the runId of the first active (not finished) run for the given chatId + userId. */
 export function getActiveRunIdForChat(chatId: string, userId: string): string | null {
   for (const [runId, state] of runStreamStates) {

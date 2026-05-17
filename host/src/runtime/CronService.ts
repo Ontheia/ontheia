@@ -28,10 +28,12 @@ import { CronExpressionParser } from 'cron-parser';
 import { RunService } from './RunService.js';
 import { withRls, isUuid, withTransaction } from '../routes/utils.js';
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
+import { pushUserNotification } from '../routes/runs-state.js';
 
 export class CronService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
   private activeJobRuns: Set<string> = new Set();
+  private runAtInterval: ReturnType<typeof setInterval> | null = null;
   private log: FastifyBaseLogger;
 
   constructor(
@@ -45,6 +47,8 @@ export class CronService {
   async start() {
     this.log.info('Starting CronService...');
     await this.rescheduleAll();
+    // Poll for run_at one-time jobs every 30 seconds
+    this.runAtInterval = setInterval(() => void this.checkRunAtJobs(), 30_000);
   }
 
   async rescheduleAll() {
@@ -92,7 +96,7 @@ export class CronService {
       throw new Error(`Invalid user_id: "${user_id}"`);
     }
 
-    const { role, messageContent, userLanguage } = await withTransaction(this.db, async (client) => {
+    const { role, messageContent, userLanguage, desktopNotificationsEnabled } = await withTransaction(this.db, async (client) => {
       await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
       await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
 
@@ -102,27 +106,66 @@ export class CronService {
       }
       const resolvedRole = userRes.rows[0].role;
 
-      const settingsRes = await client.query(`SELECT settings->'preferences'->>'language' AS lang FROM app.user_settings WHERE user_id = $1`, [user_id]);
+      const settingsRes = await client.query(
+        `SELECT settings->'preferences'->>'language' AS lang,
+                settings->'preferences'->>'desktopNotifications' AS desktop_notifications
+         FROM app.user_settings WHERE user_id = $1`,
+        [user_id]
+      );
       const lang = settingsRes.rows[0]?.lang;
       const resolvedLanguage: 'de' | 'en' = lang === 'de' || lang === 'en' ? lang : 'en';
+      const desktopNotifications = settingsRes.rows[0]?.desktop_notifications === 'true';
 
       let resolvedMessage = runId ? 'Manually triggered cron job' : 'Auto-triggered by cron';
-      if (jobData.prompt_template_id) {
+      if (jobData.prompt_text) {
+        resolvedMessage = jobData.prompt_text;
+      } else if (jobData.prompt_template_id) {
         const tplRes = await client.query('SELECT content FROM app.prompt_templates WHERE id = $1', [jobData.prompt_template_id]);
         if (tplRes.rowCount && tplRes.rowCount > 0) {
           resolvedMessage = tplRes.rows[0].content;
         }
       }
-      return { role: resolvedRole, messageContent: resolvedMessage, userLanguage: resolvedLanguage };
+      return { role: resolvedRole, messageContent: resolvedMessage, userLanguage: resolvedLanguage, desktopNotificationsEnabled: desktopNotifications };
     });
 
     this.log.info({ jobId: id, name, role }, 'Executing job');
+
+    // Determine chat: use existing chat_id or create a new one
+    let chatId: string;
+    let historyMessages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [];
+
+    if (jobData.chat_id) {
+      chatId = jobData.chat_id;
+      try {
+        const histRes = await withTransaction(this.db, async (client) => {
+          await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
+          await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
+          return client.query(
+            `SELECT role, content FROM app.chat_messages
+             WHERE chat_id = $1 AND deleted_at IS NULL
+             ORDER BY created_at ASC`,
+            [chatId]
+          );
+        });
+        historyMessages = histRes.rows
+          .filter((r: any) => ['user', 'assistant', 'system', 'tool'].includes(r.role))
+          .map((r: any) => ({ role: r.role as 'user' | 'assistant' | 'system' | 'tool', content: r.content }));
+      } catch (err) {
+        this.log.warn({ err, jobId: id, chatId }, 'Failed to load chat history — proceeding without history');
+      }
+    } else {
+      chatId = randomUUID();
+    }
 
     const runTimestamp = new Date().toLocaleString(userLanguage === 'de' ? 'de-DE' : 'en-US', { timeZone: timezone });
     const chatTitle = (chat_title_template || 'Auto-Run: {{name}} [{{timestamp}}]')
       .replace('{{name}}', name)
       .replace('{{timestamp}}', runTimestamp);
-    const chatId = randomUUID();
+
+    const messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [
+      ...historyMessages,
+      { role: 'user', content: messageContent }
+    ];
 
     const events = await this.runService.executeRun({
       provider_id: '',
@@ -130,7 +173,7 @@ export class CronService {
       agent_id: jobData.agent_id,
       task_id: jobData.task_id,
       chain_id: jobData.chain_id,
-      messages: [{ role: 'user', content: messageContent }],
+      messages,
       memory: { enabled: true },
       tool_approval: 'granted'
     }, {
@@ -139,6 +182,7 @@ export class CronService {
       runId,
       chatId,
       cronJobId: id,
+      scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
       title: chatTitle,
       onEvent: (_event) => {
         // Background logging of events if needed
@@ -162,10 +206,55 @@ export class CronService {
     } catch (updateErr) {
       this.log.error({ err: updateErr, jobId: id }, 'Failed to update job status');
     }
+
+    if (jobData.notify) {
+      pushUserNotification(user_id, {
+        type: 'cron_complete',
+        job_id: id,
+        job_name: name,
+        chat_id: chatId,
+        success: !hasError
+      });
+    }
+  }
+
+  private async checkRunAtJobs() {
+    const client = await this.db.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
+      await client.query(`SELECT set_config('app.current_user_id', '00000000-0000-0000-0000-000000000000', true)`);
+
+      const globalRuntime = await loadGlobalRuntime(this.db, client);
+      const timezone = globalRuntime.timezone || process.env.APP_TIMEZONE || 'Europe/Berlin';
+
+      // Claim due run_at jobs atomically — set active=false to prevent double-execution
+      const result = await client.query(
+        `UPDATE app.cron_jobs SET active = false
+         WHERE active = true AND run_at IS NOT NULL AND run_at <= now()
+         RETURNING *`
+      );
+      await client.query('COMMIT');
+
+      for (const row of result.rows) {
+        this.log.info({ jobId: row.id, runAt: row.run_at }, 'Executing run_at job');
+        void this._executeJob(row, timezone).catch(err => {
+          this.log.error({ err, jobId: row.id }, 'run_at job failed');
+        });
+      }
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      this.log.error({ err }, 'checkRunAtJobs failed');
+    } finally {
+      client.release();
+    }
   }
 
   private scheduleJob(jobData: any, timezone: string) {
     const { id, name, schedule, user_id } = jobData;
+
+    // run_at jobs (schedule === null) are handled separately
+    if (!schedule) return;
 
     if (!cron.validate(schedule)) {
       this.log.warn({ jobId: id, schedule }, 'Invalid cron schedule — job not scheduled');

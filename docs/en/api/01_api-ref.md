@@ -98,7 +98,7 @@ Chains are complex workflows that can consist of multiple steps.
 
 ## Automation (Cron Jobs)
 
-Scheduled agent interactions based on time intervals.
+Scheduled agent interactions based on time intervals or one-time timestamps.
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -108,6 +108,30 @@ Scheduled agent interactions based on time intervals.
 | `DELETE` | `/api/cron/:id` | Permanently deletes a cron job. |
 | `POST` | `/api/cron/:id/run` | Triggers a cron job manually immediately. |
 | `GET` | `/api/cron/:id/runs` | Returns the execution history (last 20 runs) for this specific job. |
+
+**Fields POST/PATCH `/api/cron`:**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | string | Display name of the job. |
+| `schedule` | string \| null | Cron expression for recurring jobs. Mutually exclusive with `run_at`. |
+| `run_at` | ISO 8601 \| null | One-time execution timestamp. Mutually exclusive with `schedule`. |
+| `agent_id` | uuid | Assigned agent. |
+| `task_id` | uuid \| null | Optional task. |
+| `chain_id` | uuid \| null | Optional chain. |
+| `prompt_template_id` | uuid \| null | Optional prompt template sent as a user message. |
+| `prompt_text` | string \| null | Direct text input as user message (alternative to `prompt_template_id`). |
+| `chat_id` | string \| null | Existing chat to continue the job in. |
+| `chat_title_template` | string \| null | Title template with `{{name}}` and `{{timestamp}}`. |
+| `notify` | boolean | Send desktop notification on completion. |
+| `prevent_overlap` | boolean | Prevent overlapping executions. |
+| `active` | boolean | Enable/disable the job. |
+
+**Real-time Notifications (SSE):**
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/events` | SSE stream for real-time push events (e.g., `cron_complete`). Authentication via Bearer token. Event type: `notification`, payload contains `type`, `job_id`, `job_name`, `chat_id`, `success`. |
 
 ---
 

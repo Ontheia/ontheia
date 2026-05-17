@@ -15,4 +15,4 @@ In der Ontheia-Architektur fungiert der **Host-Service** als MCP-Client (oder Ho
 Ontheia unterscheidet zwischen drei Typen von Servern:
 1. **Gespeicherte Server:** Dauerhaft konfigurierte Server, die in der Datenbank hinterlegt sind.
 2. **Temporäre Server:** Kurzzeitig gestartete Server (z. B. via Dry-Run), die nicht persistent gespeichert sind.
-3. **Interne Server:** System-Server (z. B. `memory`), die fest im Host-Code integriert sind und keine manuelle Prozess-Konfiguration benötigen.
+3. **Interne Server:** System-Server, die fest im Host-Code integriert sind und keine manuelle Prozess-Konfiguration benötigen. Beispiele: `memory` (Langzeitgedächtnis), `scheduler` (Zeitplan-Erstellung durch Agenten), `delegation` (Agenten-Delegation).

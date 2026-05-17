@@ -60,6 +60,7 @@ export type RunContext = {
   runId?: string;
   chatId?: string;
   cronJobId?: string;
+  scheduleDepth?: number;
   title?: string;
   projectId?: string;
   onEvent: (event: RunEvent) => Promise<void> | void;
@@ -245,7 +246,9 @@ export class RunService {
       meta.user_id = userId;
       if (chatId) meta.chat_id = chatId;
       if (projectId) meta.project_id = projectId;
-      
+      const scheduleDepth = context.scheduleDepth ?? (typeof meta.schedule_depth === 'number' ? meta.schedule_depth : 0);
+      meta.schedule_depth = scheduleDepth;
+
       // Explicitly propagate tool_approval to metadata so sub-agents (delegation) can see it
       meta.tool_approval = toolApprovalMode;
       enrichedInput.tool_approval = toolApprovalMode;
@@ -400,6 +403,9 @@ export class RunService {
       if (enrichedInput.memory?.enabled !== false) {
         if (!activeMcpServers.includes('memory')) activeMcpServers.push('memory');
         if (!activeMcpServers.includes('delegation')) activeMcpServers.push('delegation');
+        if (scheduleDepth === 0 && !activeMcpServers.includes('scheduler')) {
+          activeMcpServers.push('scheduler');
+        }
       }
 
       if (activeMcpServers.length > 0) {

@@ -40,7 +40,7 @@ type ApiAuthUser = {
   };
 };
 
-function getStoredToken(): string | null {
+export function getStoredToken(): string | null {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -1553,12 +1553,18 @@ export async function getSystemStatus(): Promise<SystemStatus> {
 export type CronJobEntry = {
   id: string;
   name: string;
-  schedule: string;
+  schedule: string | null;
+  run_at: string | null;
   chat_title_template: string;
   agent_id: string | null;
   task_id: string | null;
   chain_id: string | null;
   prompt_template_id: string | null;
+  prompt_text: string | null;
+  chat_id: string | null;
+  created_by_agent_id: string | null;
+  schedule_depth: number;
+  notify: boolean;
   prevent_overlap: boolean;
   active: boolean;
   last_run_at: string | null;
@@ -1580,11 +1586,17 @@ export function listCronJobs() {
 
 export function createCronJob(payload: {
   name: string;
-  schedule: string;
+  schedule?: string | null;
+  run_at?: string | null;
+  chat_title_template?: string;
   agent_id?: string | null;
   task_id?: string | null;
   chain_id?: string | null;
   prompt_template_id?: string | null;
+  prompt_text?: string | null;
+  chat_id?: string | null;
+  notify?: boolean;
+  prevent_overlap?: boolean;
   active?: boolean;
 }) {
   return request('/api/cron', {
@@ -1595,7 +1607,17 @@ export function createCronJob(payload: {
 
 export function updateCronJob(id: string, payload: {
   name?: string;
-  schedule?: string;
+  schedule?: string | null;
+  run_at?: string | null;
+  chat_title_template?: string;
+  prevent_overlap?: boolean;
+  agent_id?: string | null;
+  task_id?: string | null;
+  chain_id?: string | null;
+  prompt_template_id?: string | null;
+  prompt_text?: string | null;
+  chat_id?: string | null;
+  notify?: boolean;
   active?: boolean;
 }) {
   return request(`/api/cron/${encodeURIComponent(id)}`, {

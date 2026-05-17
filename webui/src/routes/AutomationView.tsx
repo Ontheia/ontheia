@@ -21,13 +21,14 @@
  * or contact https://ontheia.ai
  */
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  listCronJobs, 
-  createCronJob, 
-  updateCronJob, 
-  deleteCronJob, 
-  runCronJobManually, 
+import {
+  listCronJobs,
+  createCronJob,
+  updateCronJob,
+  deleteCronJob,
+  runCronJobManually,
   listCronJobRuns,
+  listChats,
   type CronJobEntry,
   type CronJobRunEntry,
   listAgents,
@@ -40,14 +41,15 @@ import { AppSelect } from '../components/AppSelect';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import type { PromptTemplate } from '../types/prompt-templates';
-import { 
-  Play, 
-  Trash2, 
-  Plus, 
-  CalendarClock, 
+import {
+  Play,
+  Trash2,
+  Plus,
+  CalendarClock,
   AlertCircle,
   CheckCircle2,
   Clock,
+  Bot,
   Pencil,
   FileText,
   HelpCircle,
@@ -254,10 +256,18 @@ export function AutomationView() {
                 <div key={job.id} className={cn("admin-card", !job.active && "opacity-60")}>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold">{job.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">{job.name}</h3>
+                        {job.created_by_agent_id && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-violet-500/10 text-violet-400 rounded text-[10px] font-bold uppercase">
+                            <Bot className="h-2.5 w-2.5" />
+                            {t('agentBadge')}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-cyan-400/80 mt-1">
                         <Clock className="h-3 w-3" />
-                        {job.schedule}
+                        {job.schedule || (job.run_at ? new Date(job.run_at).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', { timeZone: runtimeSettings.timezone || 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—')}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -498,53 +508,81 @@ function JobHistory({ jobId, timezone }: { jobId: string; timezone?: string }) {
   );
 }
 
-function JobDialog({ 
-  open, 
-  onOpenChange, 
-  onSuccess, 
+function JobDialog({
+  open,
+  onOpenChange,
+  onSuccess,
   agents,
   initialJob
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   agents: AgentDefinition[];
   initialJob?: CronJobEntry | null;
 }) {
-  const { t } = useTranslation(['automation', 'common', 'chat', 'errors']);
+  const { t, i18n } = useTranslation(['automation', 'common', 'chat', 'errors']);
+  const { preferences, runtimeSettings } = useChatSidebar();
   const [name, setName] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<'recurring' | 'once'>('recurring');
   const [schedule, setSchedule] = useState('0 9 * * *');
+  const [runAt, setRunAt] = useState('');
   const [chatTitleTemplate, setChatTitleTemplate] = useState('Auto-Run: {{name}} [{{timestamp}}]');
   const [agentId, setAgentId] = useState('');
   const [taskId, setTaskId] = useState('');
   const [chainId, setChainId] = useState('');
+  const [promptMode, setPromptMode] = useState<'template' | 'text'>('template');
   const [promptTemplateId, setPromptTemplateId] = useState('');
+  const [promptText, setPromptText] = useState('');
+  const [chatId, setChatId] = useState('');
+  const [notify, setNotify] = useState(false);
   const [preventOverlap, setPreventOverlap] = useState(true);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [chats, setChats] = useState<{ id: string; title: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialJob) {
       setName(initialJob.name);
-      setSchedule(initialJob.schedule);
+      setScheduleMode(initialJob.run_at ? 'once' : 'recurring');
+      setSchedule(initialJob.schedule || '0 9 * * *');
+      setRunAt(initialJob.run_at ? initialJob.run_at.slice(0, 16) : '');
       setChatTitleTemplate(initialJob.chat_title_template || 'Auto-Run: {{name}} [{{timestamp}}]');
       setAgentId(initialJob.agent_id || '');
       setTaskId(initialJob.task_id || '');
       setChainId(initialJob.chain_id || '');
+      setPromptMode(initialJob.prompt_text ? 'text' : 'template');
       setPromptTemplateId(initialJob.prompt_template_id || '');
+      setPromptText(initialJob.prompt_text || '');
+      setChatId(initialJob.chat_id || '');
+      setNotify(initialJob.notify ?? false);
       setPreventOverlap(initialJob.prevent_overlap ?? true);
     } else {
       setName('');
+      setScheduleMode('recurring');
       setSchedule('0 9 * * *');
+      setRunAt('');
       setChatTitleTemplate('Auto-Run: {{name}} [{{timestamp}}]');
       setAgentId('');
       setTaskId('');
       setChainId('');
+      setPromptMode('template');
       setPromptTemplateId('');
+      setPromptText('');
+      setChatId('');
+      setNotify(false);
       setPreventOverlap(true);
     }
   }, [initialJob, open]);
+
+  // Load chats for the output-chat dropdown
+  useEffect(() => {
+    if (!open) return;
+    void (listChats() as Promise<any[]>).then(data => {
+      setChats(data.map((c: any) => ({ id: c.id, title: c.title || c.id })));
+    }).catch(() => setChats([]));
+  }, [open]);
 
   // Fetch templates based on context
   useEffect(() => {
@@ -600,17 +638,23 @@ function JobDialog({
   }));
 
   const handleSave = async () => {
-    if (!name || !schedule || !agentId) return;
+    if (!name || !agentId) return;
+    if (scheduleMode === 'recurring' && !schedule) return;
+    if (scheduleMode === 'once' && !runAt) return;
     try {
       setLoading(true);
       const payload = {
         name,
-        schedule,
+        schedule: scheduleMode === 'recurring' ? schedule : null,
+        run_at: scheduleMode === 'once' ? runAt : null,
         chat_title_template: chatTitleTemplate,
         agent_id: agentId,
         task_id: taskId || null,
         chain_id: chainId || null,
-        prompt_template_id: promptTemplateId || null,
+        prompt_template_id: promptMode === 'template' ? (promptTemplateId || null) : null,
+        prompt_text: promptMode === 'text' ? (promptText || null) : null,
+        chat_id: chatId || null,
+        notify,
         prevent_overlap: preventOverlap,
         active: initialJob ? initialJob.active : true
       };
@@ -650,41 +694,78 @@ function JobDialog({
             </div>
             
             <div className="settings-field">
-              <div className="flex items-center gap-2">
-                <span>{t('cronSchedule')}</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[300px] text-xs">
-                    <p className="font-bold mb-1">{t('standardCronFormat')}:</p>
-                    <ul className="list-disc pl-4 space-y-1">
-                      <li>* * * * *: {t('cronEveryMinute')}</li>
-                      <li>0 9 * * *: {t('cronEveryDay9')}</li>
-                      <li>0 0 * * 0: {t('cronEverySundayMidnight')}</li>
-                      <li>*/15 * * * *: {t('cronEvery15Min')}</li>
-                    </ul>
-                  </TooltipContent>
-                </Tooltip>
+              <span>{t('scheduleMode')}</span>
+              <div className="flex gap-2">
+                {(['recurring', 'once'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setScheduleMode(mode)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-sm border transition-colors',
+                      scheduleMode === mode
+                        ? 'bg-white/10 border-white/20 text-white'
+                        : 'border-white/10 text-white/50 hover:text-white/80'
+                    )}
+                  >
+                    {t(mode === 'recurring' ? 'scheduleModeRecurring' : 'scheduleModeOneTime')}
+                  </button>
+                ))}
               </div>
-              <Input
-                className="font-mono"
-                value={schedule}
-                onChange={e => setSchedule(e.target.value)}
-                placeholder="* * * * *"
-              />
-              <p className="settings-hint">{t('cronExample')}</p>
             </div>
 
-            <div className="settings-field">
-              <span>{t('chatTitleTemplate')}</span>
-              <Input
-                value={chatTitleTemplate}
-                onChange={e => setChatTitleTemplate(e.target.value)}
-                placeholder="Auto-Run: {{name}} [{{timestamp}}]"
-              />
-              <p className="settings-hint">{t('placeholders')}</p>
-            </div>
+            {scheduleMode === 'recurring' && (
+              <>
+                <div className="settings-field">
+                  <div className="flex items-center gap-2">
+                    <span>{t('cronSchedule')}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[300px] text-xs">
+                        <p className="font-bold mb-1">{t('standardCronFormat')}:</p>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li>* * * * *: {t('cronEveryMinute')}</li>
+                          <li>0 9 * * *: {t('cronEveryDay9')}</li>
+                          <li>0 0 * * 0: {t('cronEverySundayMidnight')}</li>
+                          <li>*/15 * * * *: {t('cronEvery15Min')}</li>
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    className="font-mono"
+                    value={schedule}
+                    onChange={e => setSchedule(e.target.value)}
+                    placeholder="* * * * *"
+                  />
+                  <p className="settings-hint">{t('cronExample')}</p>
+                </div>
+
+                <div className="settings-field">
+                  <span>{t('chatTitleTemplate')}</span>
+                  <Input
+                    value={chatTitleTemplate}
+                    onChange={e => setChatTitleTemplate(e.target.value)}
+                    placeholder="Auto-Run: {{name}} [{{timestamp}}]"
+                  />
+                  <p className="settings-hint">{t('placeholders')}</p>
+                </div>
+              </>
+            )}
+
+            {scheduleMode === 'once' && (
+              <div className="settings-field">
+                <span>{t('runAt')}</span>
+                <Input
+                  type="datetime-local"
+                  value={runAt}
+                  onChange={e => setRunAt(e.target.value)}
+                />
+                <p className="settings-hint">{t('runAtHint')}</p>
+              </div>
+            )}
 
             <div className="settings-field">
               <span>{t('agent', { ns: 'chat' })}</span>
@@ -718,22 +799,96 @@ function JobDialog({
             )}
 
             <div className="settings-field">
-              <span>{t('promptTemplate')}</span>
+              <span>{t('promptMode')}</span>
+              <div className="flex gap-2">
+                {(['template', 'text'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setPromptMode(mode)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-sm border transition-colors',
+                      promptMode === mode
+                        ? 'bg-white/10 border-white/20 text-white'
+                        : 'border-white/10 text-white/50 hover:text-white/80'
+                    )}
+                  >
+                    {t(mode === 'template' ? 'promptModeTemplate' : 'promptModeText')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {promptMode === 'template' && (
+              <div className="settings-field">
+                <AppSelect
+                  value={promptTemplateId || 'none'}
+                  onValueChange={(val) => setPromptTemplateId(val === 'none' ? '' : val)}
+                  options={[
+                    { value: 'none', label: t('noTemplate') },
+                    ...templates.map(tmpl => {
+                      const label = tmpl.title
+                        ? (tmpl.title.length > 50 ? tmpl.title.slice(0, 50) + '...' : tmpl.title)
+                        : (tmpl.content.length > 50 ? tmpl.content.slice(0, 50) + '...' : tmpl.content);
+                      return { value: tmpl.id, label };
+                    })
+                  ]}
+                />
+                <p className="settings-hint">{t('templateHint')}</p>
+              </div>
+            )}
+
+            {promptMode === 'text' && (
+              <div className="settings-field">
+                <textarea
+                  className="settings-textarea"
+                  rows={3}
+                  value={promptText}
+                  onChange={e => setPromptText(e.target.value)}
+                  placeholder={t('promptTextPlaceholder')}
+                />
+              </div>
+            )}
+
+            <div className="settings-field">
+              <span>{t('chatTarget')}</span>
               <AppSelect
-                value={promptTemplateId || 'none'}
-                onValueChange={(val) => setPromptTemplateId(val === 'none' ? '' : val)}
+                value={chatId || 'none'}
+                onValueChange={(val) => setChatId(val === 'none' ? '' : val)}
                 options={[
-                  { value: 'none', label: t('noTemplate') },
-                  ...templates.map(t => {
-                    const label = t.title 
-                      ? (t.title.length > 50 ? t.title.slice(0, 50) + '...' : t.title)
-                      : (t.content.length > 50 ? t.content.slice(0, 50) + '...' : t.content);
-                    return { value: t.id, label };
-                  })
+                  { value: 'none', label: t('noChatTarget') },
+                  ...chats.map(c => ({
+                    value: c.id,
+                    label: c.title.length > 60 ? c.title.slice(0, 60) + '…' : c.title
+                  }))
                 ]}
               />
-              <p className="settings-hint">{t('templateHint')}</p>
+              <p className="settings-hint">{t('chatTargetHint')}</p>
             </div>
+
+            {preferences.desktopNotifications && (
+              <div className="settings-field">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>{t('notifyOnComplete')}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[300px] text-xs">
+                        {t('notifyOnCompleteDesc')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="app-toggle"
+                    checked={notify}
+                    onChange={e => setNotify(e.target.checked)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="settings-field">
               <div className="flex items-center justify-between">
@@ -772,10 +927,10 @@ function JobDialog({
           >
             {t('cancel', { ns: 'common' })}
           </button>
-          <button 
+          <button
             type="button"
-            onClick={handleSave} 
-            disabled={loading || !name || !schedule || !agentId}
+            onClick={handleSave}
+            disabled={loading || !name || !agentId || (scheduleMode === 'recurring' ? !schedule : !runAt)}
             className="btn-default min-w-[100px]"
           >
             {loading ? (
