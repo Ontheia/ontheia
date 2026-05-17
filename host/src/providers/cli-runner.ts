@@ -309,14 +309,16 @@ function buildCliArgs(provider: ProviderRecord, model: ProviderModelRecord, form
   }
 
   if (format === 'claude') {
-    // claude -p <prompt> --output-format json --no-mcp
+    // claude --print — pure LLM mode: no built-in tools, no MCP, no session
+    // Ontheia handles all tool execution via its own orchestration layer
     const args = [
       '--output-format', 'json',
       '--print',
       '--no-session-persistence',
       '--disable-slash-commands',
       '--mcp-config', '{"mcpServers":{}}',
-      '--strict-mcp-config'
+      '--strict-mcp-config',
+      '--allowedTools', ''
     ];
     if (cliModelId) args.push('--model', cliModelId);
     return args;
