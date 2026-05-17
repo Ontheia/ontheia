@@ -309,8 +309,9 @@ function buildCliArgs(provider: ProviderRecord, model: ProviderModelRecord, form
   }
 
   if (format === 'claude') {
-    // claude --print — pure LLM mode: no built-in tools, no MCP, no session
-    // Ontheia handles all tool execution via its own orchestration layer
+    // claude --print — Ontheia handles all tool execution via its own orchestration layer.
+    // Block built-in tools explicitly (not via --allowedTools '' which signals "no tool infra")
+    // so Claude still outputs TOOL_CALL format for external tools defined in the prompt.
     const args = [
       '--output-format', 'json',
       '--print',
@@ -318,7 +319,7 @@ function buildCliArgs(provider: ProviderRecord, model: ProviderModelRecord, form
       '--disable-slash-commands',
       '--mcp-config', '{"mcpServers":{}}',
       '--strict-mcp-config',
-      '--allowedTools', ''
+      '--disallowedTools', 'Bash,Edit,MultiEdit,Write,Read,NotebookEdit,NotebookRead,WebFetch,WebSearch,TodoRead,TodoWrite'
     ];
     if (cliModelId) args.push('--model', cliModelId);
     return args;
