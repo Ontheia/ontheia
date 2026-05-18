@@ -53,8 +53,14 @@ Agents can independently create and manage schedules via the internal **Schedule
 
 Agent-created jobs are marked with an **Agent** badge in the automation view.
 
+### Task Context Preservation
+When an agent creates a schedule, the system automatically stores the **agent/task combination** of the calling run. When the job fires, that exact configuration is reused — the job runs with the same system prompt (task context) as the run in which it was created.
+
+### Loop Prevention
+When a cron job executes, the model automatically receives a **system notice** clarifying that this is an automated execution and that no new schedules should be created. This prevents infinite loops — for example, if the original prompt contained a reminder that the model would otherwise reschedule on every execution.
+
 ### Depth Guard
-To prevent recursive scheduling loops, the scheduler tools are only available in runs directly started by the user (`schedule_depth = 0`). Jobs that are themselves triggered by a schedule do not have access to the scheduling tools.
+In addition, the scheduler tools are only available in runs directly started by the user (`schedule_depth = 0`). Jobs that are themselves triggered by a schedule do not have access to the scheduling tools. Both protection layers operate independently.
 
 ## Configuration
 

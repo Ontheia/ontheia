@@ -53,8 +53,14 @@ Agenten können über den internen **Scheduler-MCP-Server** eigenständig Zeitpl
 
 Agentenerstelle Jobs sind in der Automatisierungs-Ansicht mit einem **Agent**-Badge gekennzeichnet.
 
+### Task-Kontext-Beibehaltung
+Wenn ein Agent einen Zeitplan anlegt, speichert das System automatisch die **Agent/Task-Kombination** des aufrufenden Runs. Bei Ausführung des Jobs wird exakt diese Konfiguration wiederverwendet — der Job läuft mit demselben System-Prompt (Task-Kontext) wie der Run, in dem er erstellt wurde.
+
+### Schutz vor Scheduling-Schleifen
+Beim Ausführen eines Cron-Jobs wird dem Modell automatisch ein **System-Hinweis** vorangestellt, der klarstellt, dass es sich um eine automatisierte Ausführung handelt und keine neuen Zeitpläne angelegt werden sollen. Dies verhindert Endlosschleifen — z. B. wenn der ursprüngliche Prompt eine Erinnerung enthielt, die das Modell sonst bei jeder Ausführung erneut einplanen würde.
+
 ### Tiefenschutz (Depth Guard)
-Um rekursive Scheduling-Schleifen zu verhindern, stehen die Scheduler-Tools nur in direkt vom Benutzer gestarteten Runs zur Verfügung (`schedule_depth = 0`). Jobs, die selbst durch einen Zeitplan ausgelöst wurden, erhalten keinen Zugriff auf die Scheduling-Tools.
+Zusätzlich stehen die Scheduler-Tools nur in direkt vom Benutzer gestarteten Runs zur Verfügung (`schedule_depth = 0`). Jobs, die selbst durch einen Zeitplan ausgelöst wurden, erhalten keinen Zugriff auf die Scheduling-Tools. Beide Schutzebenen wirken unabhängig voneinander.
 
 ## Konfiguration
 
