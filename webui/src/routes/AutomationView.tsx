@@ -580,7 +580,10 @@ function JobDialog({
   useEffect(() => {
     if (!open) return;
     void (listChats() as Promise<any[]>).then(data => {
-      setChats(data.map((c: any) => ({ id: c.id, title: c.title || c.id })));
+      setChats(data.map((c: any) => {
+        const id = c.id || c.chatId || c.chat_id;
+        return { id, title: c.title || id };
+      }));
     }).catch(() => setChats([]));
   }, [open]);
 
