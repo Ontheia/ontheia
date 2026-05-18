@@ -377,17 +377,19 @@ export class RunService {
           // Fallback: Load from DB if not in user settings
           await withRls(this.db, userId, role, async (client) => {
             const res = await client.query(`
-              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id
+              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id, a.persona
                 FROM app.agents a
                WHERE a.id = $1
             `, [enrichedInput.agent_id]);
-            
+
             if (res.rowCount && res.rowCount > 0) {
               const row = res.rows[0];
               activeMcpServers = row.default_mcp_servers || [];
               agentToolSelection = row.default_tools || [];
               if (!enrichedInput.provider_id) enrichedInput.provider_id = row.provider_id || '';
               if (!enrichedInput.model_id) enrichedInput.model_id = row.model_id || '';
+              // Use persona as fallback context if no task provides a context_prompt
+              if (!taskContextPrompt && row.persona) taskContextPrompt = row.persona;
             }
 
             if (enrichedInput.task_id) {
@@ -410,8 +412,9 @@ export class RunService {
 
       if (activeMcpServers.length > 0) {
         const tools = await loadServerTools(this.orchestrator, activeMcpServers, false, logger, userId);
-        const filteredTools = agentToolSelection.length > 0 
-          ? tools.filter(t => agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
+        const INTERNAL_SERVERS = new Set(['memory', 'delegation', 'scheduler']);
+        const filteredTools = agentToolSelection.length > 0
+          ? tools.filter(t => INTERNAL_SERVERS.has(t.server) || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
           : tools;
 
         if (filteredTools.length > 0) {

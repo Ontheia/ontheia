@@ -23,19 +23,18 @@
 import type { PoolClient } from 'pg';
 import { randomUUID } from 'crypto';
 import { CronExpressionParser } from 'cron-parser';
-import type { CronService } from '../../runtime/CronService.js';
 
 export async function handleCreateSchedule(
   client: PoolClient,
   args: any,
-  context: any,
-  cronService: CronService
+  context: any
 ): Promise<{ schedule_id: string }> {
   const { name, input, schedule, run_at } = args;
   const chat_id: string | null = args.chat_id ?? context?.run?.options?.metadata?.chat_id ?? null;
 
   const userId: string | undefined = context?.userId || context?.run?.options?.metadata?.user_id;
   const agentId: string | undefined = context?.run?.agent_id || context?.run?.options?.metadata?.agent_id;
+  const taskId: string | null = context?.run?.task_id || null;
 
   if (!userId) throw new Error('User context required for create_schedule.');
   if (!agentId) throw new Error('Agent context required for create_schedule.');
@@ -63,8 +62,8 @@ export async function handleCreateSchedule(
   await client.query(
     `INSERT INTO app.cron_jobs
      (id, user_id, name, schedule, run_at, prompt_text, chat_id, agent_id,
-      created_by_agent_id, schedule_depth, notify, active, prevent_overlap, chat_title_template)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1, true, true, true, $10)`,
+      created_by_agent_id, task_id, schedule_depth, notify, active, prevent_overlap, chat_title_template)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, true, true, true, $11)`,
     [
       scheduleId,
       userId,
@@ -75,12 +74,10 @@ export async function handleCreateSchedule(
       chat_id || null,
       agentId,
       agentId,
+      taskId || null,
       name
     ]
   );
-
-  // Notify the cron scheduler about the new job
-  void cronService.rescheduleAll().catch(() => {});
 
   return { schedule_id: scheduleId };
 }
@@ -109,7 +106,7 @@ export async function handleCancelSchedule(
 
 export async function handleListSchedules(
   client: PoolClient,
-  args: any,
+  _args: any,
   context: any
 ): Promise<Array<{ schedule_id: string; name: string; schedule: string | null; run_at: string | null; active: boolean }>> {
   const userId: string | undefined = context?.userId || context?.run?.options?.metadata?.user_id;

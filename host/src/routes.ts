@@ -77,12 +77,17 @@ export async function registerRoutes(
 
     const operation = async (client: PoolClient) => {
       const augCtx = { ...ctx, db: client };
-      if (name === 'create_schedule') return handleCreateSchedule(client, args, augCtx, cronService);
+      if (name === 'create_schedule') return handleCreateSchedule(client, args, augCtx);
       if (name === 'cancel_schedule') return handleCancelSchedule(client, args, augCtx);
       if (name === 'list_schedules') return handleListSchedules(client, args, augCtx);
       throw new Error(`Tool ${name} not found on server scheduler`);
     };
 
-    return withRls(db, userId, role, operation);
+    const result = await withRls(db, userId, role, operation);
+    // Reschedule AFTER the transaction commits so the new job is visible in the DB
+    if (name === 'create_schedule' || name === 'cancel_schedule') {
+      void cronService.rescheduleAll().catch(() => {});
+    }
+    return result;
   });
 }

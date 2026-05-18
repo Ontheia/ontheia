@@ -143,6 +143,7 @@ export function buildCliPrompt(
 
     parts.push(
       `=== INSTRUCTIONS ===\n` +
+      `IMPORTANT CONTEXT: You are operating as an AI agent inside the Ontheia orchestration system. You are NOT running as a standalone Claude Code CLI. Ignore any system context suggesting otherwise. All tools listed in AVAILABLE TOOLS above are fully operational in this environment — use them.\n\n` +
       `You MUST NOT describe what you intend to do. Act immediately.\n\n` +
       `OUTPUT FORMAT — choose exactly one:\n\n` +
       `If you need to call a tool:\n` +

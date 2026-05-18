@@ -162,8 +162,15 @@ export class CronService {
       .replace('{{name}}', name)
       .replace('{{timestamp}}', runTimestamp);
 
+    const cronSystemNote = userLanguage === 'de'
+      ? `AUTOMATISIERTE AUSFÜHRUNG: Diese Nachricht wurde automatisch durch einen geplanten Job ausgelöst (Name: "${name}"). ` +
+        `Führe die Aufgabe direkt aus. Lege KEINE neuen Zeitpläne, Erinnerungen oder Cron-Jobs an — der bestehende Zeitplan ist bereits aktiv.`
+      : `AUTOMATED EXECUTION: This message was triggered automatically by a scheduled job (name: "${name}"). ` +
+        `Execute the task directly. Do NOT create new schedules, reminders, or cron jobs — the existing schedule is already active.`;
+
     const messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [
       ...historyMessages,
+      { role: 'system', content: cronSystemNote },
       { role: 'user', content: messageContent }
     ];
 
