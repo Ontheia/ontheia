@@ -63,7 +63,7 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
       const res = await client.query(
         `SELECT run_id, events, created_at, input->'options'->'metadata'->'chat_id' as chat_id
          FROM app.run_logs
-         WHERE cron_job_id = $1 AND user_id = $2
+         WHERE trigger_id = $1 AND trigger_type = 'cron' AND user_id = $2
          ORDER BY created_at DESC
          LIMIT 20`,
         [id, auth.session.userId]

@@ -1,6 +1,6 @@
--- V63: Agent-gesteuerte Cron-Jobs
--- Erweitert app.cron_jobs um einmalige Ausführung, direkten Prompt-Text,
--- Chat-Ausgabeziel, Agent-Tracking, Rekursionsschutz und Benachrichtigung.
+-- V63: Agent-driven cron jobs
+-- Extends app.cron_jobs with one-time execution, direct prompt text,
+-- chat output target, agent tracking, recursion guard and completion notification.
 
 DO $$ BEGIN
 

@@ -59,7 +59,8 @@ export type RunContext = {
   role?: string;
   runId?: string;
   chatId?: string;
-  cronJobId?: string;
+  /** Replaces the former cronJobId — identifies the automation trigger (cron, webhook, …). */
+  trigger?: import('./automation-utils.js').AutomationTrigger;
   scheduleDepth?: number;
   title?: string;
   projectId?: string;
@@ -274,12 +275,15 @@ export class RunService {
         const cId = (enrichedInput.chain_id && isUuid(enrichedInput.chain_id)) ? enrichedInput.chain_id : null;
         const cvId = (enrichedInput.chain_version_id && isUuid(enrichedInput.chain_version_id)) ? enrichedInput.chain_version_id : null;
         const pId = (projectId && isUuid(projectId)) ? projectId : null;
-        const cronJobId = (context.cronJobId && isUuid(context.cronJobId)) ? context.cronJobId : null;
+        const triggerId = (context.trigger?.id && isUuid(context.trigger.id)) ? context.trigger.id : null;
+        const triggerType = triggerId ? (context.trigger?.type ?? null) : null;
+        // cron_job_id kept for backward compat with existing rows; new writes use trigger_type/trigger_id
+        const legacyCronJobId = triggerType === 'cron' ? triggerId : null;
 
         await client.query(
-          `INSERT INTO app.run_logs (run_id, agent_id, task_id, project_id, chain_id, chain_version_id, cron_job_id, input, events, user_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, '[]'::jsonb, $9)`,
-          [runId, enrichedInput.agent_id || '', enrichedInput.task_id || '', pId, cId, cvId, cronJobId, JSON.stringify(enrichedInput), userId]
+          `INSERT INTO app.run_logs (run_id, agent_id, task_id, project_id, chain_id, chain_version_id, cron_job_id, trigger_type, trigger_id, input, events, user_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, '[]'::jsonb, $11)`,
+          [runId, enrichedInput.agent_id || '', enrichedInput.task_id || '', pId, cId, cvId, legacyCronJobId, triggerType, triggerId, JSON.stringify(enrichedInput), userId]
         );
       });
 

@@ -29,6 +29,7 @@ import { RunService } from './RunService.js';
 import { withRls, isUuid, withTransaction } from '../routes/utils.js';
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
 import { pushUserNotification } from '../routes/runs-state.js';
+import { buildAutomationSystemNote } from './automation-utils.js';
 
 export class CronService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
@@ -162,15 +163,9 @@ export class CronService {
       .replace('{{name}}', name)
       .replace('{{timestamp}}', runTimestamp);
 
-    const cronSystemNote = userLanguage === 'de'
-      ? `AUTOMATISIERTE AUSFÜHRUNG: Diese Nachricht wurde automatisch durch einen geplanten Job ausgelöst (Name: "${name}"). ` +
-        `Führe die Aufgabe direkt aus. Lege KEINE neuen Zeitpläne, Erinnerungen oder Cron-Jobs an — der bestehende Zeitplan ist bereits aktiv.`
-      : `AUTOMATED EXECUTION: This message was triggered automatically by a scheduled job (name: "${name}"). ` +
-        `Execute the task directly. Do NOT create new schedules, reminders, or cron jobs — the existing schedule is already active.`;
-
     const messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [
       ...historyMessages,
-      { role: 'system', content: cronSystemNote },
+      { role: 'system', content: buildAutomationSystemNote('cron', name) },
       { role: 'user', content: messageContent }
     ];
 
@@ -188,12 +183,10 @@ export class CronService {
       role,
       runId,
       chatId,
-      cronJobId: id,
+      trigger: { type: 'cron', id },
       scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
       title: chatTitle,
-      onEvent: (_event) => {
-        // Background logging of events if needed
-      },
+      onEvent: (_event) => {},
       logger: this.log
     });
 
