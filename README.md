@@ -27,7 +27,7 @@ Ontheia keeps AI powerful — and keeps your data yours.
 - **Chain Engine** — visual workflow automation, no code required
 - **Long-term Memory** — built-in RAG with pgvector, isolated per user and namespace
 - **Agent-to-Agent** — complex tasks coordinated across specialized sub-agents
-- **Cron Automation** — schedule agent runs and chain executions on a time-based trigger
+- **Automation** — time-based and agent-driven scheduling; one-time and recurring jobs with chat continuation
 
 ---
 
@@ -101,6 +101,7 @@ Full documentation at **[docs.ontheia.ai](https://docs.ontheia.ai)**
 | Chain Engine | [EN](https://docs.ontheia.ai/en/admin/chains/01_concept) | [DE](https://docs.ontheia.ai/de/admin/chains/01_concept) |
 | Memory / RAG | [EN](https://docs.ontheia.ai/en/admin/memory_audit/01_architecture) | [DE](https://docs.ontheia.ai/de/admin/memory_audit/01_architecture) |
 | Security | [EN](https://docs.ontheia.ai/en/security/01_security_concept) | [DE](https://docs.ontheia.ai/de/security/01_security_concept) |
+| Automation | [EN](https://docs.ontheia.ai/en/automation/01_overview) | [DE](https://docs.ontheia.ai/de/automation/01_overview) |
 | API Reference | [EN](https://docs.ontheia.ai/en/api/01_api-ref) | [DE](https://docs.ontheia.ai/de/api/01_api-ref) |
 
 ---
