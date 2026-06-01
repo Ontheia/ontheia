@@ -31,7 +31,7 @@ docker exec ontheia-db pg_dump -U postgres ontheia | gzip > backup-$(date +%Y%m%
 docker run --rm \
   -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine tar czf /backup/namespaces-$(date +%Y%m%d).tar.gz /data
+  alpine tar czf /backup./sources-$(date +%Y%m%d).tar.gz /data
 ```
 
 ### Vollständiges Backup-Skript
@@ -101,7 +101,7 @@ gunzip -c backup-20240101.sql.gz | docker exec -i ontheia-db psql -U postgres on
 docker run --rm \
   -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine sh -c "rm -rf /data/* && tar xzf /backup/namespaces-20240101.tar.gz -C / --strip-components=1"
+  alpine sh -c "rm -rf /data/* && tar xzf /backup./sources-20240101.tar.gz -C / --strip-components=1"
 ```
 
 ---

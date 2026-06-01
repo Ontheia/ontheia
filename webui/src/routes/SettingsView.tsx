@@ -1197,7 +1197,7 @@ function MemorySection({
   const NS_PAGE_SIZE = 20;
 
   // Maintenance & Ingest State
-  const [ingestPath, setIngestPath] = useState('./namespaces/vector/global/ontheia');
+  const [ingestPath, setIngestPath] = useState('./sources/vector/global/ontheia');
   const [ingestNamespace, setIngestNamespace] = useState('vector.global.ontheia');
   const [ingestChunkSize, setIngestChunkSize] = useState(1000);
   const [ingestOverlapPct, setIngestOverlapPct] = useState(10);
@@ -1209,7 +1209,7 @@ function MemorySection({
   const [ingestResult, setIngestResult] = useState<{ inserted: number; files: number; errors: string[] } | null>(null);
 
   // PDF → Markdown Convert State
-  const [pdfConvertPath, setPdfConvertPath] = useState('./namespaces/vector/global/ontheia');
+  const [pdfConvertPath, setPdfConvertPath] = useState('./sources/vector/global/ontheia');
   const [pdfOcrEndpoint, setPdfOcrEndpoint] = useState('');
   const [pdfConvertOnConflict, setPdfConvertOnConflict] = useState<'replace' | 'skip'>('replace');
   const [isPdfConverting, setIsPdfConverting] = useState(false);
@@ -2777,7 +2777,7 @@ function MemorySection({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="settings-field">
                 <span>{t('memory.dirPath')}</span>
-                <Input value={ingestPath} onChange={e => setIngestPath(e.target.value)} placeholder="./namespaces/import" style={{ backgroundColor: '#121B2B' }} />
+                <Input value={ingestPath} onChange={e => setIngestPath(e.target.value)} placeholder="./sources/import" style={{ backgroundColor: '#121B2B' }} />
               </label>
               <label className="settings-field">
                 <span>{t('memory.writeNamespace')}</span>
@@ -2845,7 +2845,7 @@ function MemorySection({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="settings-field">
                 <span>{t('memory.dirPath')}</span>
-                <Input value={pdfConvertPath} onChange={e => setPdfConvertPath(e.target.value)} placeholder="./namespaces/import" style={{ backgroundColor: '#121B2B' }} />
+                <Input value={pdfConvertPath} onChange={e => setPdfConvertPath(e.target.value)} placeholder="./sources/import" style={{ backgroundColor: '#121B2B' }} />
               </label>
               <label className="settings-field">
                 <span>{t('memory.ocrEndpoint')}</span>

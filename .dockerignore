@@ -27,6 +27,7 @@ ontheia.dump
 
 # Application Data (not in git)
 namespaces/
+sources/
 mcp_server/
 config/
 backup/

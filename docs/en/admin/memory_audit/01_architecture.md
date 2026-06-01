@@ -16,7 +16,7 @@ All namespaces follow the prefix `vector.` followed by a hierarchical structure 
 ## Hierarchy Overview
 
 ```
-namespaces/vector/
+sources/vector/
 ├── agent/
 │   └── [user_id]/
 │       ├── memory       # Automatic chat recordings (long-term memory)

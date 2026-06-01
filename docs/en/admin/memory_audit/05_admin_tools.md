@@ -45,7 +45,7 @@ Converts all `.pdf` files in a directory into matching `.md` files in the same d
 The memory store is **not written** during this step.
 
 **Parameters:**
-- **Directory Path** – relative to the host process (e.g. `./namespaces/vector/global/docs`)
+- **Directory Path** – relative to the host process (e.g. `./sources/vector/global/docs`)
 - **OCR Endpoint** – optional Apache Tika endpoint (`http://host:9998/tika`) for image-based PDFs without a text layer
 - **If .md exists** – `Replace` overwrites existing files, `Skip` leaves them unchanged
 
@@ -66,15 +66,15 @@ Reads all `.md` and `.txt` files from a directory (recursively) and writes them 
 Subdirectories are automatically appended as namespace suffixes:
 
 ```
-namespaces/vector/global/docs/       → vector.global.docs
-namespaces/vector/global/docs/api/   → vector.global.docs.api
+sources/vector/global/docs/       → vector.global.docs
+sources/vector/global/docs/api/   → vector.global.docs.api
 ```
 
 **Parameters:**
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| Directory Path | – | Relative to the host process, e.g. `./namespaces/vector/global/docs` |
+| Directory Path | – | Relative to the host process, e.g. `./sources/vector/global/docs` |
 | Namespace | – | Target namespace, e.g. `vector.global.docs` |
 | Chunk Size (Tokens) | 512 | Maximum size of a chunk in tokens (1 token ≈ 0.75 words) |
 | Overlap (%) | 10 | Portion of the previous chunk carried over into the next |

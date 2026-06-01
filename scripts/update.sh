@@ -14,14 +14,14 @@ NC='\033[0m'
 # ─── Banner ───────────────────────────────────────────────────────────────────
 [ -n "$TERM" ] && clear || echo ""
 echo -e "${BLUE}"
-echo "   ____  _   _     _     ____  ___ ____  "
-echo "  / __ \| \ | |   / \   |  _ \|_ _/ ___| "
-echo " | |  | |  \| |  / _ \  | |_) || |\___ \ "
-echo " | |__| | |\  | / ___ \ |  _ < | | ___) |"
-echo "  \____/|_| \_|/_/   \_\|_| \_\___|____/ "
+echo "  ___  _   _ _____ _   _ _____ ___  _     "
+echo " / _ \| \ | |_   _| | | | ____|_ _|/ \    "
+echo "| | | |  \| | | | | |_| |  _|  | |/ _ \   "
+echo "| |_| | |\  | | | |  _  | |___ | / ___ \  "
+echo " \___/|_| \_| |_| |_| |_|_____|_/_/   \_\ "
 echo -e "${NC}"
 echo "===================================================="
-echo "              Ontheia Update Script"
+echo "       Open Network Agentic Runtime System"
 echo "===================================================="
 echo ""
 
@@ -161,10 +161,23 @@ if docker ps --format '{{.Names}}' | grep -q "ontheia-db"; then
     echo -e "${GREEN}$MSG_BACKUP_OK ${BOLD}$BACKUP_FILE${NC}"
 
     # Migration: namespaces/ -> sources/ (einmalig, v0.1.10+)
-    if [ -d "$(pwd)/namespaces" ] && [ ! -d "$(pwd)/sources" ]; then
-        echo -e "${YELLOW}Migration: Renaming namespaces/ -> sources/ ...${NC}"
-        mv "$(pwd)/namespaces" "$(pwd)/sources"
-        echo -e "${GREEN}Migration complete: sources/ ready${NC}"
+    # Prüft ob namespaces/ noch echten Inhalt hat (nicht nur .gitkeep-Dateien)
+    if [ -d "$(pwd)/namespaces" ]; then
+        REAL_FILES=$(find "$(pwd)/namespaces" -type f ! -name '.gitkeep' | wc -l)
+        if [ "$REAL_FILES" -gt 0 ]; then
+            echo -e "${YELLOW}Migration: Renaming namespaces/ -> sources/ (${REAL_FILES} files) ...${NC}"
+            rm -rf "$(pwd)/sources"
+            mv "$(pwd)/namespaces" "$(pwd)/sources"
+            echo -e "${GREEN}Migration complete: sources/ ready${NC}"
+        fi
+    fi
+
+    # Leeres namespaces/-Verzeichnis entfernen (Artefakt von Docker-Bind-Mount)
+    if [ -d "$(pwd)/namespaces" ]; then
+        REMAINING=$(find "$(pwd)/namespaces" -mindepth 1 | wc -l)
+        if [ "$REMAINING" -eq 0 ]; then
+            rmdir "$(pwd)/namespaces"
+        fi
     fi
 
     # Sources-Verzeichnis sichern falls vorhanden

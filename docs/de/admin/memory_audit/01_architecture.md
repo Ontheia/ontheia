@@ -16,7 +16,7 @@ Alle Namespaces folgen dem Präfix `vector.` gefolgt von einer hierarchischen St
 ## Hierarchie-Übersicht
 
 ```
-namespaces/vector/
+sources/vector/
 ├── agent/
 │   └── [user_id]/
 │       ├── memory       # Automatische Chat-Aufzeichnungen (Langzeitgedächtnis)

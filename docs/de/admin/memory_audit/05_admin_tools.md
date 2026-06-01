@@ -45,7 +45,7 @@ Konvertiert alle `.pdf`-Dateien eines Verzeichnisses in gleichnamige `.md`-Datei
 Der Memory wird dabei **nicht** beschrieben.
 
 **Parameter:**
-- **Verzeichnispfad** – relativ zum Host-Prozess (z. B. `./namespaces/vector/global/docs`)
+- **Verzeichnispfad** – relativ zum Host-Prozess (z. B. `./sources/vector/global/docs`)
 - **OCR-Endpunkt** – optionaler Apache Tika-Endpunkt (`http://host:9998/tika`) für bild-basierte PDFs ohne Textlayer
 - **Wenn .md existiert** – `Ersetzen` überschreibt vorhandene Dateien, `Überspringen` lässt sie unberührt
 
@@ -66,15 +66,15 @@ Liest alle `.md`- und `.txt`-Dateien aus einem Verzeichnis (rekursiv) und schrei
 Unterverzeichnisse werden automatisch als Namespace-Suffix angehängt:
 
 ```
-namespaces/vector/global/docs/       → vector.global.docs
-namespaces/vector/global/docs/api/   → vector.global.docs.api
+sources/vector/global/docs/       → vector.global.docs
+sources/vector/global/docs/api/   → vector.global.docs.api
 ```
 
 **Parameter:**
 
 | Parameter | Standard | Beschreibung |
 | --- | --- | --- |
-| Verzeichnispfad | – | Relativ zum Host-Prozess, z. B. `./namespaces/vector/global/docs` |
+| Verzeichnispfad | – | Relativ zum Host-Prozess, z. B. `./sources/vector/global/docs` |
 | Namespace | – | Ziel-Namespace, z. B. `vector.global.docs` |
 | Chunk-Größe (Token) | 1000 | Maximale Größe eines Chunks in Tokens (1 Token ≈ 0,75 Wörter) |
 | Überlappung (%) | 10 | Anteil des vorherigen Chunks, der in den nächsten übernommen wird |
