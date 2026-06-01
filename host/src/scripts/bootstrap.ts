@@ -915,7 +915,7 @@ Always respond in the language of the user's input.`,
 
     // ── 9. Preferences file (user.md) ────────────────────────────────────
     console.log(`Bootstrap: Writing preferences for ${adminId}...`);
-    const prefDir = path.join('/app/host/namespaces/vector/agent', adminId, 'preferences');
+    const prefDir = path.join('/app/host/sources/vector/agent', adminId, 'preferences');
     await fs.mkdir(prefDir, { recursive: true });
     await fs.writeFile(
       path.join(prefDir, 'user.md'),

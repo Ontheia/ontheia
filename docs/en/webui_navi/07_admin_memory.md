@@ -128,7 +128,7 @@ Button: **[Delete Expired Entries]** (with confirmation dialog, danger button)
 
 | Field | Type | Description |
 | --- | --- | --- |
-| Directory Path (relative to host) | Text | Path of the source directory (e.g. `./namespaces/import`). |
+| Directory Path (relative to host) | Text | Path of the source directory (e.g. `./sources/import`). |
 | Write (Namespace) | Text | Target namespace for the import (e.g. `vector.global.knowledge`). |
 | Chunk Size (Tokens) | Number | Size of text blocks when splitting (128–4096). |
 | Overlap (%) | Number | Percentage overlap of adjacent chunks (0–50). |

@@ -9,4 +9,4 @@ Jeder Task kann eine eigene **Memory-Policy** besitzen, die den Zugriff auf den 
 - **Schreiben:** Legen Sie fest, wo die KI Erkenntnisse aus diesem speziellen Task speichern soll.
 
 ## Querverweis
-Die detaillierte Konfiguration dieser Regeln finden Sie im Bereich **"Memory & Audit"** der Admin-Konsole sowie in der zugehörigen Dokumentation unter `docs/admin/namespaces/`.
+Die detaillierte Konfiguration dieser Regeln finden Sie im Bereich **"Memory & Audit"** der Admin-Konsole sowie in der zugehörigen Dokumentation unter `docs/admin/sources/`.

@@ -160,14 +160,17 @@ if docker ps --format '{{.Names}}' | grep -q "ontheia-db"; then
     docker exec ontheia-db pg_dump -U postgres ontheia > "$BACKUP_FILE" 2>/dev/null
     echo -e "${GREEN}$MSG_BACKUP_OK ${BOLD}$BACKUP_FILE${NC}"
 
-    # Namespace-Volume sichern falls vorhanden
-    if docker volume ls --format '{{.Name}}' | grep -q "namespaces"; then
-        VOL_NAME=$(docker volume ls --format '{{.Name}}' | grep "namespaces" | head -1)
-        NS_BACKUP="$BACKUP_DIR/namespaces-${TIMESTAMP}.tar.gz"
-        docker run --rm \
-            -v "${VOL_NAME}:/data" \
-            -v "$(pwd)/backups:/backup" \
-            alpine tar czf "/backup/namespaces-${TIMESTAMP}.tar.gz" /data 2>/dev/null || true
+    # Migration: namespaces/ -> sources/ (einmalig, v0.1.10+)
+    if [ -d "$(pwd)/namespaces" ] && [ ! -d "$(pwd)/sources" ]; then
+        echo -e "${YELLOW}Migration: Renaming namespaces/ -> sources/ ...${NC}"
+        mv "$(pwd)/namespaces" "$(pwd)/sources"
+        echo -e "${GREEN}Migration complete: sources/ ready${NC}"
+    fi
+
+    # Sources-Verzeichnis sichern falls vorhanden
+    if [ -d "$(pwd)/sources" ]; then
+        NS_BACKUP="$BACKUP_DIR/sources-${TIMESTAMP}.tar.gz"
+        tar czf "$NS_BACKUP" -C "$(pwd)" sources 2>/dev/null || true
         [ -f "$NS_BACKUP" ] && echo -e "${GREEN}$MSG_BACKUP_OK ${BOLD}$NS_BACKUP${NC}"
     fi
 else

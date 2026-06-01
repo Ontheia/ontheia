@@ -794,14 +794,14 @@ if [ "$EMBED_MODE" != "disabled" ]; then
         done
 
         if [ -n "$SESSION_TOKEN" ]; then
-            echo "[ingest] Copying docs/en to namespaces/vector/global/ontheia/docs..."
-            mkdir -p ./namespaces/vector/global/ontheia/docs
-            cp -r ./docs/en/. ./namespaces/vector/global/ontheia/docs/
+            echo "[ingest] Copying docs/en to sources/vector/global/ontheia/docs..."
+            mkdir -p ./sources/vector/global/ontheia/docs
+            cp -r ./docs/en/. ./sources/vector/global/ontheia/docs/
             echo "[ingest] Token acquired, running directory ingest (subdirectory-aware)..."
             INGEST_SSE=$(curl -s --max-time 300 -X POST "http://localhost:$API_PORT/memory/ingest/directory" \
                 -H "Content-Type: application/json" \
                 -H "Authorization: Bearer $SESSION_TOKEN" \
-                -d '{"dir_path":"/app/host/namespaces/vector/global/ontheia/docs/","namespace":"vector.global.ontheia.docs","chunk_size":1000,"overlap_pct":10,"chunk_mode":"sliding-window","on_conflict":"replace"}' \
+                -d '{"dir_path":"/app/host/sources/vector/global/ontheia/docs/","namespace":"vector.global.ontheia.docs","chunk_size":1000,"overlap_pct":10,"chunk_mode":"sliding-window","on_conflict":"replace"}' \
                 2>/dev/null) || true
             COMPLETE_DATA=$(echo "$INGEST_SSE" | grep "^data:" | tail -1 | sed 's/^data://') || true
             INGEST_STATUS=$(echo "$COMPLETE_DATA" | jq -r '.status // "error"' 2>/dev/null) || true

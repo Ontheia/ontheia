@@ -7,7 +7,7 @@ Ontheia stores all persistent data in two Docker volumes. Regular backups are es
 | Volume | Contents |
 |---|---|
 | `ontheia-db-data` | PostgreSQL database (chats, agents, configuration, users) |
-| `ontheia-namespaces` | Namespace rule files (memory policies, configuration) |
+| `ontheia-sources` | Namespace rule files (memory policies, configuration) |
 
 ---
 
@@ -29,7 +29,7 @@ docker exec ontheia-db pg_dump -U postgres ontheia | gzip > backup-$(date +%Y%m%
 
 ```bash
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
   alpine tar czf /backup/namespaces-$(date +%Y%m%d).tar.gz /data
 ```
@@ -49,10 +49,10 @@ echo "✓ DB backup: $BACKUP_DIR/ontheia-db-${TIMESTAMP}.sql"
 
 # Namespaces volume
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine tar czf "/backup/namespaces-${TIMESTAMP}.tar.gz" /data
-echo "✓ Namespaces backup: $BACKUP_DIR/namespaces-${TIMESTAMP}.tar.gz"
+  alpine tar czf "/backup/sources-${TIMESTAMP}.tar.gz" /data
+echo "✓ Namespaces backup: $BACKUP_DIR/sources-${TIMESTAMP}.tar.gz"
 ```
 
 ### Recommendation: Cron Job
@@ -99,7 +99,7 @@ gunzip -c backup-20240101.sql.gz | docker exec -i ontheia-db psql -U postgres on
 
 ```bash
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
   alpine sh -c "rm -rf /data/* && tar xzf /backup/namespaces-20240101.tar.gz -C / --strip-components=1"
 ```

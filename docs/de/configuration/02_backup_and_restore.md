@@ -7,7 +7,7 @@ Ontheia speichert alle persistenten Daten in zwei Docker-Volumes. Regelmäßige 
 | Volume | Inhalt |
 |---|---|
 | `ontheia-db-data` | PostgreSQL-Datenbank (Chats, Agenten, Konfiguration, Benutzer) |
-| `ontheia-namespaces` | Namespace-Regeldateien (Memory-Policies, Konfiguration) |
+| `ontheia-sources` | Namespace-Regeldateien (Memory-Policies, Konfiguration) |
 
 ---
 
@@ -29,7 +29,7 @@ docker exec ontheia-db pg_dump -U postgres ontheia | gzip > backup-$(date +%Y%m%
 
 ```bash
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
   alpine tar czf /backup/namespaces-$(date +%Y%m%d).tar.gz /data
 ```
@@ -49,10 +49,10 @@ echo "✓ DB-Backup: $BACKUP_DIR/ontheia-db-${TIMESTAMP}.sql"
 
 # Namespaces-Volume
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
-  alpine tar czf "/backup/namespaces-${TIMESTAMP}.tar.gz" /data
-echo "✓ Namespaces-Backup: $BACKUP_DIR/namespaces-${TIMESTAMP}.tar.gz"
+  alpine tar czf "/backup/sources-${TIMESTAMP}.tar.gz" /data
+echo "✓ Namespaces-Backup: $BACKUP_DIR/sources-${TIMESTAMP}.tar.gz"
 ```
 
 ### Empfehlung: Cron-Job
@@ -99,7 +99,7 @@ gunzip -c backup-20240101.sql.gz | docker exec -i ontheia-db psql -U postgres on
 
 ```bash
 docker run --rm \
-  -v ontheia-namespaces:/data \
+  -v ontheia-sources:/data \
   -v "$(pwd)/backups:/backup" \
   alpine sh -c "rm -rf /data/* && tar xzf /backup/namespaces-20240101.tar.gz -C / --strip-components=1"
 ```

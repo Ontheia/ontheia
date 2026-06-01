@@ -71,7 +71,7 @@ services:
       - ontheia-host-npx-cache:/root/.cache/npx
       - ontheia-host-bun-cache:/root/.bun
       - ontheia-host-logs:/app/logs
-      - ./namespaces:/app/host/namespaces
+      - ./sources:/app/host/sources
     ports:
       - "8080:8080"
     networks:

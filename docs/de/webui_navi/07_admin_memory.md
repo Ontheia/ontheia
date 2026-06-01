@@ -128,7 +128,7 @@ Button: **[Abgelaufene Einträge löschen]** (mit Bestätigungsdialog, Gefahr-Bu
 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
-| Verzeichnispfad (relativ zum Host) | Text | Pfad des Quellverzeichnisses (z. B. `./namespaces/import`). |
+| Verzeichnispfad (relativ zum Host) | Text | Pfad des Quellverzeichnisses (z. B. `./sources/import`). |
 | Schreiben (Namespace) | Text | Ziel-Namespace für den Import (z. B. `vector.global.knowledge`). |
 | Chunk-Größe (Token) | Zahl | Größe der Textblöcke beim Aufteilen (128–4096). |
 | Überlappung (%) | Zahl | Prozentualer Überlapp benachbarter Chunks (0–50). |

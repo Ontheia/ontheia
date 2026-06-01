@@ -9,4 +9,4 @@ At the task level, you can control access very precisely:
 - **Write:** Specify where the AI should save insights from this specific task.
 
 ## Cross-reference
-The detailed configuration of these rules can be found in the **"Memory & Audit"** section of the Admin Console and in the associated documentation under `docs/admin/namespaces/`.
+The detailed configuration of these rules can be found in the **"Memory & Audit"** section of the Admin Console and in the associated documentation under `docs/admin/sources/`.
