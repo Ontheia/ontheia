@@ -55,5 +55,6 @@ COPY host/package.json host/package-lock.json ./
 RUN npm ci --omit=dev
 COPY contracts ../contracts
 COPY --from=build /app/host/dist ./dist
+COPY host/mcp-servers ./mcp-servers
 EXPOSE 8080
 CMD ["node", "dist/index.js"]

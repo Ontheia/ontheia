@@ -19,6 +19,7 @@ webui/node_modules_backup/
 
 # Application Data (not in git)
 mcp_server/
+!host/mcp-servers/
 config/mail/
 config/allowlist.*.local
 config/embedding.config.json
