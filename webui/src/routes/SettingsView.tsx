@@ -108,7 +108,11 @@ import {
   type MemoryAuditEntry,
   type VectorHealthResponse,
   type McpToolDefinitionDto,
-  type McpServerConfig
+  type McpServerConfig,
+  listSkills,
+  listAgentSkills,
+  setAgentSkills,
+  type SkillEntry
 } from '../lib/api';
 import { useChatSidebar, type McpStatusEntry } from '../context/chat-sidebar-context';
 import { useProviderContext } from '../context/provider-context';
@@ -4071,6 +4075,10 @@ function AgentsSection({
   const [openAgentId, setOpenAgentId] = useState<string | null>(null);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [agentChains, setAgentChains] = useState<ChainEntry[]>([]);
+
+  // Skills
+  const [availableSkills, setAvailableSkills] = useState<SkillEntry[]>([]);
+  const [agentSkillIds, setAgentSkillIds] = useState<Record<string, string[]>>({});
   const [toolCatalog, setToolCatalog] = useState<
     Record<string, { running: boolean; tools: McpToolDefinitionDto[]; version?: string; fetchedAt?: string }>
   >({});
@@ -4111,6 +4119,24 @@ function AgentsSection({
       .then((res) => setAgentChains(res))
       .catch((error) => console.error(t('chains.loadError'), error));
   }, []);
+
+  // Load available skills once
+  useEffect(() => {
+    listSkills()
+      .then((skills) => setAvailableSkills((skills as SkillEntry[]).filter(s => s.active)))
+      .catch(() => {});
+  }, []);
+
+  // Load assigned skills when an agent is opened
+  useEffect(() => {
+    if (!openAgentId || agentSkillIds[openAgentId] !== undefined) return;
+    listAgentSkills(openAgentId)
+      .then((res) => {
+        const ids = (res as { id: string; active: boolean }[]).filter(s => s.active).map(s => s.id);
+        setAgentSkillIds((prev) => ({ ...prev, [openAgentId]: ids }));
+      })
+      .catch(() => setAgentSkillIds((prev) => ({ ...prev, [openAgentId]: [] })));
+  }, [openAgentId, agentSkillIds]);
 
   const providerOptions = providers.find((provider) => provider.id === agentProviderId)?.models ?? [];
 
@@ -4372,6 +4398,11 @@ function AgentsSection({
       ...agent,
       toolApprovalMode: mode
     });
+  };
+
+  const handleAgentSkillsChange = (agentId: string, skillIds: string[]) => {
+    setAgentSkillIds((prev) => ({ ...prev, [agentId]: skillIds }));
+    void setAgentSkills(agentId, skillIds).catch(() => {});
   };
 
   const handleAgentMcpServersChange = (agent: AgentDefinition, values: string[]) => {
@@ -4737,6 +4768,22 @@ function AgentsSection({
                           </div>
                         )}
                       </div>
+                      {availableSkills.length > 0 && (
+                        <div className="admin-agent-tasks">
+                          <h4>{t('agents.skills', { defaultValue: 'Skills' })}</h4>
+                          <label>
+                            <AppMultiSelect
+                              values={agentSkillIds[agent.id] ?? []}
+                              onValuesChange={(ids) => handleAgentSkillsChange(agent.id, ids)}
+                              options={availableSkills.map(s => ({
+                                value: s.id,
+                                label: `${s.name}${s.scope === 'global' ? '' : ' (user)'}`
+                              }))}
+                              placeholder={t('agents.selectSkills', { defaultValue: 'Select skills…' })}
+                            />
+                          </label>
+                        </div>
+                      )}
                       <div className="admin-agent-tasks">
                         <h4>{t('tasks', { ns: 'chat' })}</h4>
                         {agent.tasks.length > 0 ? (

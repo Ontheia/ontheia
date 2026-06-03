@@ -1580,6 +1580,38 @@ export type CronJobRunEntry = {
   chat_id: string | null;
 };
 
+// ── Skills ───────────────────────────────────────────────────────────────────
+
+export interface SkillEntry {
+  id: string;
+  name: string;
+  description: string;
+  when_to_use: string | null;
+  scope: 'global' | 'user';
+  active: boolean;
+}
+
+export function listSkills() {
+  return request('/api/skills', { method: 'GET' }) as Promise<SkillEntry[]>;
+}
+
+export function listAgentSkills(agentId: string) {
+  return request(`/api/agents/${encodeURIComponent(agentId)}/skills`, { method: 'GET' }) as Promise<{ id: string; name: string; scope: string; active: boolean }[]>;
+}
+
+export function setAgentSkills(agentId: string, skillIds: string[]) {
+  return request(`/api/agents/${encodeURIComponent(agentId)}/skills`, {
+    method: 'PUT',
+    body: JSON.stringify({ skill_ids: skillIds }),
+  });
+}
+
+export function triggerSkillScan() {
+  return request('/api/skills/scan', { method: 'POST' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function listCronJobs() {
   return request('/api/cron', { method: 'GET' }) as Promise<CronJobEntry[]>;
 }
