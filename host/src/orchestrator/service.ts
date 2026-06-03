@@ -624,6 +624,60 @@ export class OrchestratorService {
       ];
     }
 
+    if (serverName === 'skills') {
+      return [
+        {
+          name: 'activate_skill',
+          description: 'Loads the full instructions of a named skill into context when a task matches the skill description.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the skill to activate (available skills depend on agent assignment).' }
+            },
+            required: ['name']
+          }
+        },
+        {
+          name: 'read_skill_resource',
+          description: 'Reads a file from a skill directory (references/, assets/). Path must stay within the skill directory.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              skill_name: { type: 'string' },
+              path: { type: 'string', description: 'Relative path, e.g. "references/REFERENCE.md".' }
+            },
+            required: ['skill_name', 'path']
+          }
+        },
+        {
+          name: 'write_skill_resource',
+          description: 'Writes or updates a file inside a skill directory.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              skill_name: { type: 'string' },
+              path: { type: 'string' },
+              content: { type: 'string' }
+            },
+            required: ['skill_name', 'path', 'content']
+          }
+        },
+        {
+          name: 'create_skill',
+          description: 'Creates a new skill with a SKILL.md file in the appropriate scope directory.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Skill name (kebab-case, max 64 chars).' },
+              scope: { type: 'string', enum: ['user', 'global'] },
+              content: { type: 'string', description: 'Full SKILL.md content including frontmatter.' }
+            },
+            required: ['name', 'scope', 'content']
+          }
+        }
+      ];
+    }
+
     if (serverName === 'scheduler') {
       return [
         {
