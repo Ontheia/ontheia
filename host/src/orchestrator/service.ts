@@ -500,7 +500,14 @@ export class OrchestratorService {
       status: 'running' as const,
       startedAt: this.startTime.toISOString()
     };
-    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess, schedulerProcess];
+    const skillsProcess = {
+      name: 'skills',
+      command: 'internal',
+      args: [],
+      status: 'running' as const,
+      startedAt: this.startTime.toISOString()
+    };
+    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess, schedulerProcess, skillsProcess];
   }
 
   async stop(name: string) {
@@ -530,7 +537,7 @@ export class OrchestratorService {
   }
 
   listClientNames() {
-    return Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler']);
+    return Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler', 'skills']);
   }
 
   /**

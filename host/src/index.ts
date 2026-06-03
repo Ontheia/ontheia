@@ -41,6 +41,7 @@ import { loadEmbeddingConfig, loadEmbeddingConfigFromDb } from './memory/config.
 import { createEmbeddingProvider, NullEmbeddingProvider } from './memory/provider.js';
 import { RunService } from './runtime/RunService.js';
 import { CronService } from './runtime/CronService.js';
+import { SkillService } from './runtime/SkillService.js';
 
 const config = loadConfig();
 
@@ -232,7 +233,10 @@ await server.register(cors, {
 await server.register(websocket);
 await server.register(FastifySSEPlugin);
 
-const runService = new RunService(dbPool, orchestrator, memoryAdapter);
+const skillService = new SkillService(dbPool, server.log);
+await skillService.start();
+
+const runService = new RunService(dbPool, orchestrator, memoryAdapter, skillService);
 const cronService = new CronService(dbPool, runService, server.log);
 await cronService.start();
 
@@ -243,7 +247,7 @@ server.get('/metrics', async (request, reply) => {
 
 server.get('/health', async () => ({ status: 'ok', rootless: rootlessCheckOk }));
 
-await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config);
+await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config, skillService);
 
 async function bootstrapAutoStartServers(attempt = 1, maxAttempts = 5) {
   try {

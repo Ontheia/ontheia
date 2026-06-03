@@ -38,15 +38,18 @@ import { CronService } from './runtime/CronService.js';
 import { ServiceConfig } from './config.js';
 import { withRls } from './routes/utils.js';
 import { handleCreateSchedule, handleCancelSchedule, handleListSchedules } from './mcp/plugins/scheduler.js';
+import { handleSkillsTool } from './mcp/plugins/skills.js';
+import { SkillService } from './runtime/SkillService.js';
 
 export async function registerRoutes(
-  server: FastifyInstance, 
-  orchestrator: OrchestratorService, 
-  db: Pool, 
+  server: FastifyInstance,
+  orchestrator: OrchestratorService,
+  db: Pool,
   memoryAdapter: MemoryAdapter,
   cronService: CronService,
   runService: RunService,
-  config: ServiceConfig
+  config: ServiceConfig,
+  skillService?: SkillService
 ) {
   const promptOptimizerChainId = process.env.PROMPT_OPTIMIZER_CHAIN_ID || process.env.VITE_PROMPT_OPTIMIZER_CHAIN_ID || '';
   const builderChainId = process.env.BUILDER_CHAIN_ID || process.env.VITE_BUILDER_CHAIN_ID || '';
@@ -90,4 +93,23 @@ export async function registerRoutes(
     }
     return result;
   });
+
+  if (skillService) {
+    orchestrator.registerInternalToolHandler('skills', async (toolName, args, ctx) => {
+      const userId = ctx?.userId;
+      const agentId = ctx?.run?.agent_id || ctx?.run?.options?.metadata?.agent_id;
+      if (!userId) throw new Error('User context required for skill tools.');
+
+      const skills = agentId
+        ? await skillService.getSkillsForAgent(agentId, userId)
+        : [];
+
+      const client = await db.connect();
+      try {
+        return await handleSkillsTool(toolName, args, ctx, skills, skillService, client);
+      } finally {
+        client.release();
+      }
+    });
+  }
 }

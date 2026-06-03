@@ -53,6 +53,7 @@ import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
+import { SkillService, type SkillRecord } from './SkillService.js';
 
 export type RunContext = {
   userId: string;
@@ -74,7 +75,8 @@ export class RunService {
   constructor(
     private db: Pool,
     private orchestrator: OrchestratorService,
-    private memoryAdapter: MemoryAdapter
+    private memoryAdapter: MemoryAdapter,
+    public skillService?: SkillService
   ) {}
 
   async executeRun(request: RunRequest, context: RunContext): Promise<RunEvent[]> {
@@ -414,9 +416,22 @@ export class RunService {
         }
       }
 
+      // Skills: load only when agent has active skills assigned
+      let agentSkills: import('./SkillService.js').SkillRecord[] = [];
+      if (enrichedInput.agent_id && this.skillService) {
+        try {
+          agentSkills = await this.skillService.getSkillsForAgent(enrichedInput.agent_id, userId);
+          if (agentSkills.length > 0 && !activeMcpServers.includes('skills')) {
+            activeMcpServers.push('skills');
+          }
+        } catch { /* non-fatal */ }
+      }
+
       if (activeMcpServers.length > 0) {
-        const tools = await loadServerTools(this.orchestrator, activeMcpServers, false, logger, userId);
-        const INTERNAL_SERVERS = new Set(['memory', 'delegation', 'scheduler']);
+        const tools = await loadServerTools(
+          this.orchestrator, activeMcpServers, false, logger, userId, agentSkills
+        );
+        const INTERNAL_SERVERS = new Set(['memory', 'delegation', 'scheduler', 'skills']);
         const filteredTools = agentToolSelection.length > 0
           ? tools.filter(t => INTERNAL_SERVERS.has(t.server) || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
           : tools;

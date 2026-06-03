@@ -56,7 +56,8 @@ export const loadServerTools = async (
   serverNames: string[],
   forceRefresh = false,
   logger?: any,
-  userId?: string
+  userId?: string,
+  agentSkills?: import('../runtime/SkillService.js').SkillRecord[]
 ): Promise<RunToolDefinition[]> => {
   if (!Array.isArray(serverNames) || serverNames.length === 0) {
     return [];
@@ -112,6 +113,20 @@ export const loadServerTools = async (
           }
         }
       );
+      continue;
+    }
+
+    if (serverName === 'skills') {
+      const { buildSkillsToolList } = await import('../mcp/plugins/skills.js');
+      const skillTools = buildSkillsToolList(agentSkills ?? []);
+      for (const t of skillTools) {
+        resolved.push({
+          name: t.name,
+          server: 'skills',
+          description: t.description,
+          parameters: t.inputSchema as Record<string, unknown>,
+        });
+      }
       continue;
     }
 
