@@ -515,7 +515,7 @@ export class RunService {
           });
         if (catalogEntries.length > 0) {
           skillCatalogText =
-            `AVAILABLE SKILLS — call activate_skill(name) when a task matches:\n${catalogEntries.join('\n')}`;
+            `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${catalogEntries.join('\n')}\n\nDo not answer from memory alone when a skill is relevant — activate it first.`;
         }
       }
 
