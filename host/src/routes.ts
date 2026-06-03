@@ -40,6 +40,7 @@ import { withRls } from './routes/utils.js';
 import { handleCreateSchedule, handleCancelSchedule, handleListSchedules } from './mcp/plugins/scheduler.js';
 import { handleSkillsTool } from './mcp/plugins/skills.js';
 import { SkillService } from './runtime/SkillService.js';
+import { registerSkillRoutes } from './routes/skills.js';
 
 export async function registerRoutes(
   server: FastifyInstance,
@@ -72,6 +73,7 @@ export async function registerRoutes(
   registerRunRoutes(server, context);
   registerCronRoutes(server, { ...context, cronService });
   registerPromptRoutes(server, context);
+  if (skillService) registerSkillRoutes(server, { ...context, skillService });
 
   orchestrator.registerInternalToolHandler('scheduler', async (name, args, ctx) => {
     const userId = ctx?.userId;
