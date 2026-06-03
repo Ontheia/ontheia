@@ -254,7 +254,9 @@ export class SkillService {
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
-      await client.query(`SELECT set_config('app.user_role', 'user', true)`);
+      // Use admin role so global skills (owner_id IS NULL) are always visible.
+      // Skill assignments are system config, not user-private data.
+      await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
       await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
       const res = await client.query(`
         SELECT s.*
