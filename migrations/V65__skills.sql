@@ -48,8 +48,14 @@ CREATE POLICY skills_write_policy ON app.skills FOR ALL TO ontheia_app
 
 ALTER TABLE app.agent_skills ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY agent_skills_policy ON app.agent_skills FOR ALL TO ontheia_app
-  USING (current_setting('app.user_role', true) = 'admin');
+-- All users can read agent-skill assignments (needed for RunService to load skills per agent).
+-- Only admins can write (assign/remove skills from agents).
+CREATE POLICY agent_skills_read_policy ON app.agent_skills FOR SELECT TO ontheia_app
+  USING (true);
+
+CREATE POLICY agent_skills_write_policy ON app.agent_skills FOR ALL TO ontheia_app
+  USING (current_setting('app.user_role', true) = 'admin')
+  WITH CHECK (current_setting('app.user_role', true) = 'admin');
 
 CREATE INDEX IF NOT EXISTS skills_scope_idx    ON app.skills (scope);
 CREATE INDEX IF NOT EXISTS skills_owner_idx    ON app.skills (owner_id) WHERE owner_id IS NOT NULL;

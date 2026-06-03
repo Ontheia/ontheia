@@ -30,6 +30,7 @@ import { safeSkillPath, SkillService, type SkillRecord } from '../../runtime/Ski
 export function buildSkillsToolList(skills: SkillRecord[]) {
   const catalogSkills = skills.filter(s => !s.disable_model_invocation);
   const skillNames = catalogSkills.map(s => s.name);
+  if (skillNames.length === 0) return [];
 
   return [
     {
