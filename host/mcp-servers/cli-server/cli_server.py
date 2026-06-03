@@ -24,7 +24,7 @@ LOG_DIR = os.environ.get("LOG_DIR", "/app/logs")
 
 class CliServer:
     def __init__(self):
-        self.allowed_commands = os.environ.get("ALLOWED_COMMANDS", "ls,cat,grep,head,tail").split(",")
+        self.allowed_commands = self._load_allowed_commands()
         self.base_workdir = os.environ.get("BASE_WORKDIR", os.getcwd())
         self.timeout = int(os.environ.get("COMMAND_TIMEOUT", "30"))
 
@@ -34,6 +34,13 @@ class CliServer:
             "grep":    "Search in file. Example: ['-i', 'error', '/app/logs/host.log']",
             "head":    "First N lines. Example: ['-n', '20', '/app/logs/host.log']",
             "tail":    "Last N lines. Example: ['-n', '100', '/app/logs/host.log']",
+            "find":    "Search files. Example: ['/mnt/nextcloud', '-name', '*.docx']. NEVER pass shell redirects (2>/dev/null) as args — omit them.",
+            "cp":      "Copy file. Example: ['/src/file.docx', '/dst/file.docx']",
+            "mv":      "Move/rename file. Example: ['/tmp/out.docx', '/mnt/nextcloud/wbrangl/Ontheia/Briefe/out.docx']",
+            "mkdir":   "Create directory. Example: ['-p', '/tmp/workdir']",
+            "bash":    "Run shell script. Example: ['/app/host/sources/skills/global/foo/scripts/run.sh']",
+            "node":    "Run JavaScript file. Example: ['/tmp/create_doc.js']. Do NOT use for inline -e scripts — write to a file first.",
+            "npm":     "Node package manager. Example: ['install', 'docx'] (run in skill dir via bash or from a script).",
             "python3": "Run Python inline. Example: ['-c', 'print(\"hello\")']",
             "uv":      "Run Python with auto-installed packages (preferred). Example: ['run', '--with', 'pdfplumber', 'python3', '-c', 'import pdfplumber; ...'] — use this when packages like pdfplumber, pypdf, pandas are needed.",
             "uvx":     "Run a Python CLI tool. Example: ['ruff@0.8.0', 'check', '.']",
@@ -113,6 +120,32 @@ class CliServer:
                 }
             }
         ]
+
+    # ── Allowlist loading ─────────────────────────────────────────────────────
+
+    def _load_allowed_commands(self) -> list:
+        """Load allowed commands from allowlist file, with env-var fallback."""
+        default_path = os.path.join(
+            os.path.dirname(__file__),
+            "../../../config/allowlist.cli-commands"
+        )
+        allowlist_path = os.environ.get("ALLOWLIST_CLI_COMMANDS_PATH", default_path)
+        allowlist_path = os.path.realpath(allowlist_path)
+
+        commands = []
+        try:
+            with open(allowlist_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        commands.append(line)
+            logger.info(f"Loaded {len(commands)} allowed commands from {allowlist_path}")
+        except FileNotFoundError:
+            logger.warning(f"Allowlist not found at {allowlist_path} — falling back to ALLOWED_COMMANDS env var")
+            fallback = os.environ.get("ALLOWED_COMMANDS", "ls,cat,grep,head,tail")
+            commands = [c.strip() for c in fallback.split(",") if c.strip()]
+
+        return commands
 
     # ── helpers ──────────────────────────────────────────────────────────────
 

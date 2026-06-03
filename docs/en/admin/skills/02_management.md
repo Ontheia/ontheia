@@ -26,7 +26,11 @@ The **ScanService** detects new or changed `SKILL.md` files at startup and regis
 **Admin (global skills):**
 1. Create a directory under `sources/skills/global/<skill-name>/`.
 2. Add a `SKILL.md` file with valid frontmatter (`name` and `description` required).
-3. Restart the host container or call `POST /api/skills/scan` — the skill appears in the catalog immediately.
+3. **The skill is detected automatically** — no restart required.
+
+> The ScanService runs a **Filewatcher** on `sources/skills/`. Any new or changed `SKILL.md` file is detected within seconds and immediately registered in the database. The skill is then available for agent assignment without any manual action.
+>
+> If the Filewatcher is not available (e.g. on some Linux kernel/Docker configurations), a restart of the host container or a manual call to `POST /api/skills/scan` will trigger the scan.
 
 **From the Anthropic ecosystem (GitHub):**
 Download the skill directory from [github.com/anthropics/skills](https://github.com/anthropics/skills) and place it in `sources/skills/global/`.

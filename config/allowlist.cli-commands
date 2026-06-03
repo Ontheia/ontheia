@@ -1,0 +1,28 @@
+# Allowlist: shell commands the cli-tools MCP server is permitted to execute.
+#
+# One entry per line. Exact command names only (no paths, no arguments).
+# Lines starting with # are comments and are ignored.
+#
+# This file is read by host/mcp-servers/cli-server/cli_server.py at startup.
+# The path can be overridden via the ALLOWLIST_CLI_COMMANDS_PATH environment variable.
+
+# ── File operations ────────────────────────────────────────────────────────────
+ls
+cat
+grep
+head
+tail
+find
+cp
+mv
+mkdir
+
+# ── Script execution ───────────────────────────────────────────────────────────
+bash
+node
+npm
+
+# ── Python ─────────────────────────────────────────────────────────────────────
+python3
+uv
+uvx

@@ -26,7 +26,11 @@ Der **ScanService** erkennt neue oder geänderte `SKILL.md`-Dateien beim Contain
 **Admin (globale Skills):**
 1. Verzeichnis unter `sources/skills/global/<skill-name>/` anlegen.
 2. `SKILL.md`-Datei mit gültigem Frontmatter hinzufügen (`name` und `description` erforderlich).
-3. Host-Container neustarten oder `POST /api/skills/scan` aufrufen — der Skill erscheint sofort im Katalog.
+3. **Der Skill wird automatisch erkannt** — kein Neustart erforderlich.
+
+> Der ScanService betreibt einen **Filewatcher** auf `sources/skills/`. Jede neue oder geänderte `SKILL.md`-Datei wird innerhalb von Sekunden erkannt und sofort in der Datenbank registriert. Der Skill steht danach unmittelbar zur Agenten-Zuweisung bereit — ohne manuelle Aktion.
+>
+> Sollte der Filewatcher nicht verfügbar sein (z. B. auf bestimmten Linux-Kernel/Docker-Konfigurationen), löst ein Neustart des Host-Containers oder ein manueller Aufruf von `POST /api/skills/scan` den Scan aus.
 
 **Aus dem Anthropic-Ökosystem (GitHub):**
 Skill-Verzeichnis von [github.com/anthropics/skills](https://github.com/anthropics/skills) herunterladen und unter `sources/skills/global/` ablegen.
