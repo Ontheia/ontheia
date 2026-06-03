@@ -34,6 +34,13 @@ export function buildSkillsToolList(skills: SkillRecord[]) {
 
   return [
     {
+      name: 'list_skills',
+      description:
+        'Returns the list of skills available to this agent. ' +
+        'Call this when the user asks what skills are available or what you can do.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
       name: 'activate_skill',
       description:
         'Loads the full instructions of a skill into context. Call this when a task matches ' +
@@ -114,6 +121,19 @@ export async function handleSkillsTool(
   const role: string = context?.role || 'user';
 
   if (!userId) throw new Error('User context required for skill tools.');
+
+  // ── list_skills ───────────────────────────────────────────────────────────
+  if (toolName === 'list_skills') {
+    const catalog = skills
+      .filter(s => !s.disable_model_invocation)
+      .map(s => ({
+        name: s.name,
+        scope: s.scope,
+        description: s.description,
+        when_to_use: s.when_to_use ?? null,
+      }));
+    return { skills: catalog, count: catalog.length };
+  }
 
   // ── activate_skill ────────────────────────────────────────────────────────
   if (toolName === 'activate_skill') {

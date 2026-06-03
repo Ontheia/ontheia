@@ -627,6 +627,11 @@ export class OrchestratorService {
     if (serverName === 'skills') {
       return [
         {
+          name: 'list_skills',
+          description: 'Returns the list of skills available to this agent. Call when the user asks what skills are available.',
+          inputSchema: { type: 'object', properties: {} }
+        },
+        {
           name: 'activate_skill',
           description: 'Loads the full instructions of a named skill into context when a task matches the skill description.',
           inputSchema: {
