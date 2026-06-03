@@ -117,15 +117,34 @@ export const loadServerTools = async (
     }
 
     if (serverName === 'skills') {
-      const { buildSkillsToolList } = await import('../mcp/plugins/skills.js');
-      const skillTools = buildSkillsToolList(agentSkills ?? []);
-      for (const t of skillTools) {
-        resolved.push({
-          name: t.name,
-          server: 'skills',
-          description: t.description,
-          parameters: t.inputSchema as Record<string, unknown>,
-        });
+      if (agentSkills && agentSkills.length > 0) {
+        // Agent-specific: build tools with skill-name enum from assigned skills
+        const { buildSkillsToolList } = await import('../mcp/plugins/skills.js');
+        const skillTools = buildSkillsToolList(agentSkills);
+        for (const t of skillTools) {
+          resolved.push({
+            name: t.name,
+            server: 'skills',
+            description: t.description,
+            parameters: t.inputSchema as Record<string, unknown>,
+          });
+        }
+      } else {
+        // Generic context (admin UI, no agent): use orchestrator.listTools for generic definitions
+        try {
+          const tools = await orchestrator.listTools(serverName, { force: forceRefresh });
+          for (const tool of tools ?? []) {
+            if (!tool?.name) continue;
+            resolved.push({
+              name: tool.name,
+              server: 'skills',
+              description: tool.description || undefined,
+              parameters: (tool.inputSchema as Record<string, unknown>) ?? { type: 'object', properties: {} },
+            });
+          }
+        } catch (error) {
+          if (logger) logger.warn({ err: error, server: serverName }, 'listTools failed');
+        }
       }
       continue;
     }
