@@ -52,12 +52,27 @@ function parseFrontmatter(raw: string): { meta: Record<string, unknown>; body: s
   const yamlBlock = raw.slice(4, end);
   const body = raw.slice(end + 4).trimStart();
   const meta: Record<string, unknown> = {};
-  for (const line of yamlBlock.split('\n')) {
+  const lines = yamlBlock.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const sep = line.indexOf(':');
     if (sep === -1) continue;
     const key = line.slice(0, sep).trim();
-    const val = line.slice(sep + 1).trim();
-    if (key) meta[key] = val;
+    if (!key || key.startsWith(' ')) continue;
+    const rawVal = line.slice(sep + 1).trim();
+
+    // YAML block scalar: > (folded) or | (literal) — collect indented continuation lines
+    if (rawVal === '>' || rawVal === '|') {
+      const parts: string[] = [];
+      while (i + 1 < lines.length && (lines[i + 1].startsWith(' ') || lines[i + 1].startsWith('\t'))) {
+        i++;
+        parts.push(lines[i].trim());
+      }
+      meta[key] = parts.join(rawVal === '>' ? ' ' : '\n').trim();
+    } else {
+      meta[key] = rawVal;
+    }
   }
   return { meta, body };
 }
@@ -171,7 +186,7 @@ export class SkillService {
           (name, description, when_to_use, content, skill_dir, scope, owner_id,
            disable_model_invocation, user_invocable, model_override, active, scanned_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,now())
-        ON CONFLICT (name, scope, owner_id)
+        ON CONFLICT (name, scope, COALESCE(owner_id, '00000000-0000-0000-0000-000000000000'))
         DO UPDATE SET
           description              = EXCLUDED.description,
           when_to_use              = EXCLUDED.when_to_use,
