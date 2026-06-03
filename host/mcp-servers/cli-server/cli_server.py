@@ -29,11 +29,14 @@ class CliServer:
         self.timeout = int(os.environ.get("COMMAND_TIMEOUT", "30"))
 
         self.command_help = {
-            "ls":   "List files. Example: ['-la', '/app']",
-            "cat":  "Read file. Example: ['/app/README.md']",
-            "grep": "Search in file. Example: ['-i', 'error', '/app/logs/host.log']",
-            "head": "First N lines. Example: ['-n', '20', '/app/logs/host.log']",
-            "tail": "Last N lines. Example: ['-n', '100', '/app/logs/host.log']",
+            "ls":      "List files. Example: ['-la', '/app']",
+            "cat":     "Read file. Example: ['/app/README.md']",
+            "grep":    "Search in file. Example: ['-i', 'error', '/app/logs/host.log']",
+            "head":    "First N lines. Example: ['-n', '20', '/app/logs/host.log']",
+            "tail":    "Last N lines. Example: ['-n', '100', '/app/logs/host.log']",
+            "python3": "Run Python inline. Example: ['-c', 'print(\"hello\")']",
+            "uv":      "Run Python with auto-installed packages (preferred). Example: ['run', '--with', 'pdfplumber', 'python3', '-c', 'import pdfplumber; ...'] — use this when packages like pdfplumber, pypdf, pandas are needed.",
+            "uvx":     "Run a Python CLI tool. Example: ['ruff@0.8.0', 'check', '.']",
         }
 
         self.tools = [
