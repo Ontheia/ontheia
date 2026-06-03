@@ -4,7 +4,7 @@
 
 Ontheia turns isolated language models into integrated, action-capable assistants. A master planner analyzes complex requests, breaks them into subtasks, and delegates them to specialized agents. Each agent has its own tools, decision logic, and persistent memory. All data stays on-premise.
 
-Core capabilities: multi-agent orchestration with A2A delegation (up to 5 levels deep), MCP server integration (Docker-isolated), long-term vector memory (pgvector), visual chain/workflow designer, scheduled automation (cron), multi-tenancy with RBAC and Row-Level Security.
+Core capabilities: multi-agent orchestration with A2A delegation (up to 5 levels deep), MCP server integration (Docker-isolated), long-term vector memory (pgvector), visual chain/workflow designer, scheduled automation (cron), Agent Skills (open agentskills.io standard — compatible with Claude Code, GitHub Copilot, Cursor), multi-tenancy with RBAC and Row-Level Security.
 
 Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, PostgreSQL + pgvector, rootless Docker for MCP server isolation.
 
@@ -27,6 +27,10 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Access and Visibility](https://docs.ontheia.ai/en/admin/agents/03_access_and_visibility): Public, user-specific, private agents
 - [Capabilities](https://docs.ontheia.ai/en/admin/agents/04_capabilities): Tools, memory access, system prompt
 - [Agent Delegation (A2A)](https://docs.ontheia.ai/en/admin/agents/05_agent_delegation): Agent-to-agent delegation, delegation depth, context passing
+
+## Admin: Agent Skills
+- [Concept](https://docs.ontheia.ai/en/admin/skills/01_concept): What skills are, progressive disclosure, two skill classes, available tools
+- [Management](https://docs.ontheia.ai/en/admin/skills/02_management): Installation, agent assignment, scope/permissions, API reference
 
 ## Admin: Chain Engine (Workflows)
 - [Concept](https://docs.ontheia.ai/en/admin/chains/01_concept): What chains are and when to use them

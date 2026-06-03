@@ -127,7 +127,19 @@ Für wiederkehrende, mehrstufige Prozesse bietet Ontheia die **Chain Engine** �
 
 ---
 
-### 5. Zeitgesteuerte Automatisierung (Cron-Jobs)
+### 5. Agent Skills
+
+Ontheia implementiert den offenen **Agent Skills Standard** von Anthropic — kompatibel mit Claude Code, GitHub Copilot, Cursor und vielen weiteren Tools.
+
+Ein Skill ist eine `SKILL.md`-Datei mit Instruktionen und optionalen Code-Vorlagen. Skills werden einem Agenten zugewiesen und bereichern seinen Kontext gezielt: Der Agent sieht im Katalog, welche Skills verfügbar sind, und lädt die vollständigen Instruktionen per `activate_skill`-Tool nur wenn nötig.
+
+- **Instruktions-Skills** — Stilregeln, Domänenwissen, Verhaltensregeln (kein Code-Zugang nötig)
+- **Code-Library-Skills** — Eingebettete Code-Vorlagen, die das LLM adaptiert und ausführt (z. B. PDF-Verarbeitung, Datenanalyse)
+- **Kompatibel mit dem Ökosystem** — Skills von [github.com/anthropics/skills](https://github.com/anthropics/skills) können direkt unter `sources/skills/global/` abgelegt werden.
+
+---
+
+### 6. Zeitgesteuerte Automatisierung (Cron-Jobs)
 
 Agenten und Chains lassen sich zeitgesteuert ausführen — vollständig ohne manuellen Eingriff.
 
@@ -140,7 +152,7 @@ Cron-Jobs werden über eine Standard-Cron-Syntax konfiguriert und können sowohl
 
 ---
 
-### 6. Langzeitgedächtnis (Vector Memory)
+### 7. Langzeitgedächtnis (Vector Memory)
 
 Ontheia vergisst nichts — außer Sie wollen es.
 
@@ -171,7 +183,7 @@ Die Mandantentrennung wird durch Row-Level Security (RLS) direkt in der Datenban
 
 ---
 
-### 7. MCP-Integration (Model Context Protocol)
+### 8. MCP-Integration (Model Context Protocol)
 
 Ontheia setzt vollständig auf den offenen Standard MCP. Beliebige externe Systeme können als MCP-Server eingebunden werden:
 

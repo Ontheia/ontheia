@@ -47,7 +47,21 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 
 ---
 
-## 5. Netzwerksicherheit
+## 5. Agent Skills — Sicherheitsmodell
+
+| Schutzmaßnahme | Beschreibung |
+| :--- | :--- |
+| **Pfad-Begrenzung (skill_dir)** | Jeder Skill-Dateizugriff prüft `resolved.startsWith(skill_dir)`. Pfad-Traversal-Angriffe (`../../etc/passwd`) werden blockiert. |
+| **Scope-Berechtigungen** | User-Scope-Skills: nur Owner kann schreiben. Global-Scope-Skills: nur Admin kann schreiben. Lesen ist für alle autorisierten Nutzer erlaubt. |
+| **Script-Ausführung (cli-tools)** | Scripts werden ausschließlich über den `cli-tools`-MCP-Server ausgeführt, der selbst in Docker Rootless läuft. Die ALLOWED_COMMANDS-Allowlist begrenzt, welche Befehle ausgeführt werden dürfen. |
+| **Code-Adaption durch LLM** | Das LLM adaptiert Code-Vorlagen aus der SKILL.md und übergibt sie als Argumente an `uv run` oder `python3 -c`. Kein Schreiben von dauerhaften Script-Dateien durch das LLM außerhalb expliziter `write_skill_resource`-Aufrufe. |
+| **Keine Selbst-Installation** | Der cli-server kann keine Pakete dauerhaft installieren. `uv run --with <paket>` erstellt isolierte Umgebungen; nach dem Prozessende wird nichts behalten. |
+| **RLS auf app.skills** | Die Tabelle `app.skills` unterliegt Row Level Security. Nutzer sehen nur globale und eigene Skills. |
+| **Content-Sicherheit** | Skills dürfen keine Malware, Exploit-Code oder irreführende Inhalte enthalten (Principle of Lack of Surprise, agentskills.io-Standard). |
+
+---
+
+## 6. Netzwerksicherheit
 - **Netzwerk-Isolation:** MCP-Server laufen in einem dedizierten Docker-Netzwerk (`ontheia-net`) ohne direkten Zugriff auf den Host oder andere Container (außer explizit konfiguriert).
 - **Egress-Kontrolle:** Globale Allowlist für ausgehende Verbindungen (`config/allowlist.urls`).
 - **WebUI-Schutz:**
@@ -56,7 +70,7 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 
 ---
 
-## 6. Datensicherheit & Verschlüsselung
+## 7. Datensicherheit & Verschlüsselung
 - **In-Transit:** Alle Verbindungen (WebUI -> Host, Host -> LLM-Provider) müssen über TLS (HTTPS/WSS) verschlüsselt sein.
 - **At-Rest:** Verschlüsselung der Datenbank-Volumes und Dateisysteme (Infrastruktur-Ebene).
 - **Geheimnisverwaltung (Secrets):**
@@ -66,21 +80,21 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 
 ---
 
-## 7. Input-Validierung & API-Sicherheit
+## 8. Input-Validierung & API-Sicherheit
 - **Schema-Validierung:** Alle API-Requests werden gegen JSON-Schemas geprüft (`contracts/schemas/`).
 - **Sanitizing:** Bereinigung von KI-generierten Inhalten (Markdown, HTML) vor der Anzeige in der WebUI.
 - **Rate Limiting:** Schutz der API-Endpunkte vor Brute-Force und DoS-Angriffen.
 
 ---
 
-## 8. Observability & Auditing
+## 9. Observability & Auditing
 - **Audit-Logs:** Protokollierung aller sicherheitsrelevanten Aktionen (Logins, MCP-Server Starts, Zugriff auf Memory-Namespaces).
 - **Metriken:** Überwachung von Fehlerraten und Ressourcenverbrauch via Prometheus.
 - **Alarmierung:** Benachrichtigung bei verdächtigen Aktivitäten (z.B. mehrfache fehlgeschlagene Logins, Ausbruchsversuche aus Sandboxes).
 
 ---
 
-## 9. Audit-Checkliste (Prüfvorlage)
+## 10. Audit-Checkliste (Prüfvorlage)
 
 | Bereich | Prüfpunkt | Status | Bemerkung |
 | :--- | :--- | :--- | :--- |
@@ -94,11 +108,14 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 | **Secrets** | Sind API-Keys in der DB/Konfig maskiert/referenziert? | [x] | SecretRef Pattern aktiv |
 | **Input** | Werden alle API-Inputs gegen Schemas validiert? | [x] | Ajv Integration aktiv |
 | **Audit** | Werden MCP-Server-Starts im Audit-Log erfasst? | [x] | Logging im Host aktiv |
+| **Skills** | Ist Pfad-Traversal bei Skill-Dateizugriffen geblockt? | [x] | `safeSkillPath()` in SkillService |
+| **Skills** | Werden Skill-Scope-Berechtigungen serverseitig geprüft? | [x] | Via RLS + Handler-Check |
+| **Skills** | Läuft Skill-Script-Ausführung durch cli-tools (Docker Rootless)? | [x] | cli-tools in eigenem Container |
 
 
 ---
 
-## 10. Implementierungs-Roadmap (Kritische Schwachstellen)
+## 11. Implementierungs-Roadmap (Kritische Schwachstellen)
 
 ### 1. API-Absicherung (`/runs` & Autorisierung)
 - [x] **Strikte Authentifizierung für `/runs`:** `requireSession` im `POST /runs`-Handler erzwingen.

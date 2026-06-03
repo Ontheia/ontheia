@@ -34,10 +34,19 @@ The LLM receives an ordered list of messages. Each block is its own system messa
 │      are resolved here                                          │
 │    → For sub-agents: anti-self-delegation notice                │
 ├─────────────────────────────────────────────────────────────────┤
-│ [system] 3. Tool Notice                                         │
+│ [system] 3. Skill Catalog                                       │
+│    → Only when the agent has skills assigned                    │
+│    "SKILLS AVAILABLE — call activate_skill(name) BEFORE         │
+│     answering when the request matches a skill's description:   │
+│     - skill-name: [description] [when_to_use]                   │
+│     ..."                                                        │
+│    → After Rolling Summary: activated skills re-attached        │
+│      as system blocks (up to 5,000 tokens/skill)               │
+├─────────────────────────────────────────────────────────────────┤
+│ [system] 4. Tool Notice                                         │
 │    → Only when tools are available                              │
 ├─────────────────────────────────────────────────────────────────┤
-│ [system] 4. Memory Context                                      │
+│ [system] 5. Memory Context                                      │
 │    → Only when memory hits were found                           │
 │    "RELEVANT CONTEXT FROM LONG-TERM MEMORY:                     │
 │     --- MEMORY ENTRY (Stored on ..., Namespace: ...) ---        │
@@ -99,7 +108,7 @@ Ontheia distinguishes three modes for read access to memory, configurable per ag
 
 | Mode | Configuration | Behavior |
 |---|---|---|
-| **Automatically injected** | `read_namespaces` + `auto_read_enabled = true` | Top-K hits are automatically inserted into the context as system block 4 before each run. |
+| **Automatically injected** | `read_namespaces` + `auto_read_enabled = true` | Top-K hits are automatically inserted into the context as system block 5 before each run. |
 | **Tool access (from `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | The listed namespaces are searchable by the LLM via the memory search tool but are **not** automatically injected. |
 | **Tool access (dedicated)** | `tool_read_namespaces` | Namespaces that are readable **only** via tool call — independent of `auto_read_enabled`. Useful for knowledge bases the LLM should query on demand. |
 

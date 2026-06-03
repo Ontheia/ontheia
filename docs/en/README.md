@@ -18,6 +18,7 @@ Everything for the setup, monitoring, and control of the Ontheia instance.
 - **[AI Provider](./admin/ai-provider/01_concept.md):** Integration of LLMs (OpenAI, Anthropic, etc.).
 - **[MCP Server](./admin/mcp-server/01_basics.md):** Tools, sandboxing, and security.
 - **[Agents](./admin/agents/01_concept.md) & [Tasks](./admin/tasks/01_concept.md):** Definition of identities and tasks.
+- **[Skills](./admin/skills/01_concept.md):** Reusable capability modules (agentskills.io standard).
 - **[Chains](./admin/chains/01_concept.md):** Multi-agent workflows and logic.
 - **[Memory & Audit](./admin/memory_audit/01_architecture.md):** Long-term memory and RLS monitoring.
 - **[User Management](./admin/user-management/01_roles_and_permissions.md):** Roles and permissions.

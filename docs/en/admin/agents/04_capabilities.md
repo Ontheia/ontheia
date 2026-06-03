@@ -1,6 +1,6 @@
 # Capabilities & Tool Configuration
 
-Agents are functionally expanded through the assignment of MCP Servers and specific tools.
+Agents are functionally expanded through the assignment of MCP Servers, specific tools, and Skills.
 
 ## 1. MCP Server Assignment
 An Agent can be assigned multiple running MCP Servers.
@@ -18,3 +18,12 @@ This mode determines how the system reacts when the AI wants to execute an actio
 
 ## 4. Bulk Actions
 To speed up configuration with many tools, buttons such as "Select All" or "Server-related Selection" are available.
+
+## 5. Skills
+Skills are reusable capability modules that extend the agent with specialized knowledge and workflows. Assigned skills appear in the agent's system context as a catalog; the agent activates relevant skills via the `activate_skill` tool.
+
+- **Assignment:** Select skills in the **Skills** multi-select field in the agent accordion.
+- **Scope:** Global skills (installed by admin) and user-specific skills are available.
+- **Effect:** The agent sees skill names and descriptions in every run and can load their full instructions on demand.
+
+See [Skills — Concept](../skills/01_concept.md) for details.

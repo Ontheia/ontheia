@@ -51,7 +51,15 @@ These variables control API access and browser security.
 | `ORCHESTRATOR_HARDENING_PATH` | Overrides the path to the hardening configuration (JSON). |
 | `MCP_CLIENT_CONNECT_TIMEOUT_MS` | Timeout for establishing connections to MCP servers. |
 
-## 5. AI Services & Agents
+## 5. Skills
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `SKILLS_BASE_DIR` | Base directory for skill files inside the container. The ScanService scans `<SKILLS_BASE_DIR>/global/` and `<SKILLS_BASE_DIR>/user/` on startup. | `/app/host/sources/skills` |
+
+The host directory `sources/skills/` is mounted into the container at `/app/host/sources/skills` via the volume binding `./sources:/app/host/sources` in `docker-compose.yml`.
+
+## 6. AI Services & Agents
 
 | Variable | Description |
 | :--- | :--- |
@@ -61,7 +69,7 @@ These variables control API access and browser security.
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID of the chain used for prompt optimization. |
 | `EMBEDDING_CONFIG_PATH` | Path to the embedding configuration file (`embedding.config.json`). **Optional:** The database configuration (Administration → AI Provider → Embedding tab) takes precedence. This file is only used as a fallback. |
 
-## 6. Initial Setup (Bootstrap)
+## 7. Initial Setup (Bootstrap)
 
 These variables are used by the `setup.sh` script to create the initial administrator account.
 
@@ -72,7 +80,7 @@ These variables are used by the `setup.sh` script to create the initial administ
 | `ADMIN_FNAME` | First name of the administrator (for personalization). |
 | `ADMIN_LOCALE` | Default language (`de-DE` or `en-US`). |
 
-## 7. Frontend (WebUI / Vite)
+## 8. Frontend (WebUI / Vite)
 
 These variables must be prefixed with `VITE_` to be available in the browser code. **Important:** These values are hardcoded into the WebUI during the build process (`docker build`).
 
@@ -81,7 +89,7 @@ These variables must be prefixed with `VITE_` to be available in the browser cod
 | `VITE_HOST_API_URL` | The URL where the frontend can reach the host service (e.g., `http://192.168.2.13:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Must be identical to `PROMPT_OPTIMIZER_CHAIN_ID`. |
 
-## 8. Security & Tenant Separation (RLS)
+## 9. Security & Tenant Separation (RLS)
 
 To guarantee the isolation of user data (Row Level Security), the following rules apply:
 

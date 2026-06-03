@@ -26,13 +26,17 @@ Diese Sektion richtet sich an Systemverwalter der Ontheia-Plattform. Hier finden
 - [Agent-zu-Agent Delegation](./agents/05_agent_delegation.md)
 - [Task-Konfiguration (System-Prompts)](./tasks/01_concept.md)
 
-### 5. [Multi-Agenten-Chains](./chains/01_concept.md)
+### 5. [Agent Skills](./skills/01_concept.md)
+- [Konzept & Progressive Disclosure](./skills/01_concept.md)
+- [Verwaltung, Installation & API](./skills/02_management.md)
+
+### 6. [Multi-Agenten-Chains](./chains/01_concept.md)
 - [Verwaltung & Versionierung](./chains/02_management.md)
 - [Ablauf-Designer & Schritt-Typen](./chains/03_designer.md)
 - [Logik, Variablen & Datenfluss](./chains/04_logic_and_data_flow.md)
 - [Agent-zu-Chain Bindung & Delegation](./chains/06_agent_chain_binding.md)
 
-### 6. [Memory & Audit (Gedächtnis)](./memory_audit/01_architecture.md)
+### 7. [Memory & Audit (Gedächtnis)](./memory_audit/01_architecture.md)
 - [Wie Memory und Kontext funktionieren](./memory_audit/00_context_and_memory_flow.md)
 - [Sichtbarkeit & RLS-Berechtigungen](./memory_audit/02_permissions.md)
 - [Policies & dynamische Templates](./memory_audit/03_policies_and_templates.md)
@@ -41,8 +45,8 @@ Diese Sektion richtet sich an Systemverwalter der Ontheia-Plattform. Hier finden
 - [Audit-Log Referenz](./memory_audit/07_audit_reference.md)
 - [Systemstatus & Wartung (VACUUM/REINDEX)](./memory_audit/06_maintenance_and_status.md)
 
-### 7. [Benutzer & Rollen](./user-management/01_roles_and_permissions.md)
+### 8. [Benutzer & Rollen](./user-management/01_roles_and_permissions.md)
 - [Rollenmodell (Admin/User)](./user-management/01_roles_and_permissions.md)
 
-### 8. [System-Status](./info/01_system_status.md)
+### 9. [System-Status](./info/01_system_status.md)
 - [Kennzahlen & Dashboard](./info/01_system_status.md)

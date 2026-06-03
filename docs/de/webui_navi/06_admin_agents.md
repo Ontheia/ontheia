@@ -37,6 +37,7 @@ Jeder Agent erscheint als aufklappbarer Eintrag. Im geöffneten Zustand inline e
 | Tool-Freigabe (Standard) | Dropdown | `Nachfragen` (Agent fragt vor jedem Tool-Aufruf), `Voller Zugriff` (ohne Rückfrage), `Blockiert` (keine Tool-Aufrufe). |
 | MCP-Server | Multiselect | Weist dem Agent verfügbare MCP-Server zu. |
 | Tools | Multiselect | Wählt einzelne Tools aus den zugewiesenen Servern. Buttons: **Alle auswählen** · **Auswahl leeren** · **Tool-Liste aktualisieren**. |
+| Skills | Multiselect | Weist dem Agent verfügbare Skills zu. Zugewiesene Skills werden als Katalog in den System-Kontext jedes Runs injiziert; der Agent aktiviert sie bei Bedarf via `activate_skill`. Globale Skills (vom Admin installiert) und nutzer-eigene Skills werden aufgelistet. |
 | Tasks | Liste (nur lesen) | Zeigt die mit diesem Agent verknüpften Tasks. |
 | Chains | Liste (nur lesen) | Zeigt die mit diesem Agent verknüpften Chains. |
 

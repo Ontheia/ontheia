@@ -26,13 +26,17 @@ This section is intended for system administrators of the Ontheia platform. Here
 - [Agent-to-Agent Delegation](./agents/05_agent_delegation.md)
 - [Task Configuration (System Prompts)](./tasks/01_concept.md)
 
-### 5. [Multi-Agent Chains](./chains/01_concept.md)
+### 5. [Agent Skills](./skills/01_concept.md)
+- [Concept & Progressive Disclosure](./skills/01_concept.md)
+- [Management, Installation & API](./skills/02_management.md)
+
+### 6. [Multi-Agent Chains](./chains/01_concept.md)
 - [Management & Versioning](./chains/02_management.md)
 - [Flow Designer & Step Types](./chains/03_designer.md)
 - [Logic, Variables & Data Flow](./chains/04_logic_and_data_flow.md)
 - [Agent-to-Chain Binding & Delegation](./chains/06_agent_chain_binding.md)
 
-### 6. [Memory & Audit](./memory_audit/01_architecture.md)
+### 7. [Memory & Audit](./memory_audit/01_architecture.md)
 - [How Memory and Context Work](./memory_audit/00_context_and_memory_flow.md)
 - [Visibility & RLS Permissions](./memory_audit/02_permissions.md)
 - [Policies & Dynamic Templates](./memory_audit/03_policies_and_templates.md)
@@ -41,8 +45,8 @@ This section is intended for system administrators of the Ontheia platform. Here
 - [Audit Log Reference](./memory_audit/07_audit_reference.md)
 - [System Status & Maintenance (VACUUM/REINDEX)](./memory_audit/06_maintenance_and_status.md)
 
-### 7. [Users & Roles](./user-management/01_roles_and_permissions.md)
+### 8. [Users & Roles](./user-management/01_roles_and_permissions.md)
 - [Role Model (Admin/User)](./user-management/01_roles_and_permissions.md)
 
-### 8. [System Status](./info/01_system_status.md)
+### 9. [System Status](./info/01_system_status.md)
 - [Key Figures & Dashboard](./info/01_system_status.md)

@@ -37,6 +37,7 @@ Each agent appears as a collapsible entry. When expanded, inline-editable:
 | Tool Approval (Default) | Dropdown | `Ask` (agent asks before each tool call), `Full Access` (without confirmation), `Blocked` (no tool calls). |
 | MCP Servers | Multiselect | Assigns available MCP servers to the agent. |
 | Tools | Multiselect | Selects individual tools from assigned servers. Buttons: **Select All** · **Clear Selection** · **Refresh Tool List**. |
+| Skills | Multiselect | Assigns available skills to the agent. Selected skills are injected as a catalog into every run's system context; the agent activates them on demand via `activate_skill`. Global skills (installed by admin) and user-scope skills are listed. |
 | Tasks | List (read-only) | Shows tasks linked to this agent. |
 | Chains | List (read-only) | Shows chains linked to this agent. |
 

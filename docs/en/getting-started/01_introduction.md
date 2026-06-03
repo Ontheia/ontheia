@@ -127,7 +127,19 @@ For recurring, multi-step processes, Ontheia offers the **Chain Engine** — a v
 
 ---
 
-### 5. Scheduled Automation (Cron Jobs)
+### 5. Agent Skills
+
+Ontheia implements the open **Agent Skills standard** by Anthropic — compatible with Claude Code, GitHub Copilot, Cursor, and many other tools.
+
+A skill is a `SKILL.md` file containing instructions and optional code templates. Skills are assigned to an agent and enrich its context on demand: the agent sees the catalog of available skills and loads the full instructions via the `activate_skill` tool only when relevant.
+
+- **Instruction skills** — Style rules, domain knowledge, behavioral guidelines (no code execution needed)
+- **Code-library skills** — Embedded code templates that the LLM adapts and executes (e.g., PDF processing, data analysis)
+- **Ecosystem compatible** — Skills from [github.com/anthropics/skills](https://github.com/anthropics/skills) can be placed directly under `sources/skills/global/`.
+
+---
+
+### 6. Scheduled Automation (Cron Jobs)
 
 Agents and chains can be executed on a schedule — fully without manual intervention.
 
@@ -140,7 +152,7 @@ Cron jobs are configured using standard cron syntax and can trigger both individ
 
 ---
 
-### 6. Long-Term Memory (Vector Memory)
+### 7. Long-Term Memory (Vector Memory)
 
 Ontheia never forgets — unless you want it to.
 
@@ -171,7 +183,7 @@ Tenant separation is enforced by Row-Level Security (RLS) directly in the databa
 
 ---
 
-### 7. MCP Integration (Model Context Protocol)
+### 8. MCP Integration (Model Context Protocol)
 
 Ontheia is fully built on the open MCP standard. Any external system can be connected as an MCP server:
 
@@ -187,7 +199,7 @@ Each MCP server runs in its own Docker container (rootless, without root privile
 
 ---
 
-### 8. Enterprise Use & Multi-Tenancy
+### 9. Enterprise Use & Multi-Tenancy
 
 Ontheia is designed from the ground up for multi-user operation:
 
@@ -199,7 +211,7 @@ Ontheia is designed from the ground up for multi-user operation:
 
 ---
 
-### 9. Use Cases
+### 10. Use Cases
 
 #### Personal Productivity
 A user delegates their entire office routine: checking emails, coordinating appointments, structuring notes, managing tasks — all in one chat interface, without switching between apps.

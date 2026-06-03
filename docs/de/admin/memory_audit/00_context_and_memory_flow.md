@@ -34,10 +34,19 @@ Das LLM empfängt eine geordnete Liste von Nachrichten. Jeder Block ist eine eig
 │      werden hier aufgelöst                                      │
 │    → Bei Sub-Agents: Anti-Selbst-Delegations-Hinweis            │
 ├─────────────────────────────────────────────────────────────────┤
-│ [system] 3. Tool-Hinweis                                        │
+│ [system] 3. Skill-Katalog                                       │
+│    → Nur wenn dem Agenten Skills zugewiesen sind                │
+│    "SKILLS AVAILABLE — call activate_skill(name) BEFORE         │
+│     answering when the request matches a skill's description:   │
+│     - skill-name: [Beschreibung] [when_to_use]                  │
+│     ..."                                                        │
+│    → Nach Rolling Summary: aktivierte Skills werden             │
+│      als Re-Attach-Blöcke (bis 5.000 Token/Skill) vorangestellt │
+├─────────────────────────────────────────────────────────────────┤
+│ [system] 4. Tool-Hinweis                                        │
 │    → Nur wenn Tools vorhanden sind                              │
 ├─────────────────────────────────────────────────────────────────┤
-│ [system] 4. Memory-Kontext                                      │
+│ [system] 5. Memory-Kontext                                      │
 │    → Nur wenn Memory-Treffer gefunden wurden                    │
 │    "RELEVANT CONTEXT FROM LONG-TERM MEMORY:                     │
 │     --- MEMORY ENTRY (Stored on ..., Namespace: ...) ---        │
@@ -86,7 +95,7 @@ Bevor das LLM die erste Antwort generiert, durchläuft Ontheia folgende Schritte
          ↓
 4. Semantische Suche: Letzte User-Nachricht als Suchbegriff
          ↓
-5. Top-K Treffer als Text in System-Prompt einfügen (Block 4)
+5. Top-K Treffer als Text in System-Prompt einfügen (Block 5)
          ↓
 6. Audit-Log: Wer hat wann welchen Namespace gelesen?
 ```
@@ -99,7 +108,7 @@ Für den Lese-Zugriff auf Memory unterscheidet Ontheia drei Modi, die pro Agent 
 
 | Modus | Konfiguration | Verhalten |
 |---|---|---|
-| **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch als System-Block 4 in den Kontext eingefügt. |
+| **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch als System-Block 5 in den Kontext eingefügt. |
 | **Tool-Zugriff (aus `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | Die eingetragenen Namespaces sind für das LLM über das Memory-Suche-Tool erreichbar, werden aber **nicht** automatisch injiziert. |
 | **Tool-Zugriff (dediziert)** | `tool_read_namespaces` | Namespaces, die **ausschließlich** per Tool-Aufruf lesbar sind — unabhängig von `auto_read_enabled`. Nützlich für Wissensdatenbanken, die das LLM gezielt abfragen soll. |
 

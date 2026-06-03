@@ -1,6 +1,6 @@
 # Fähigkeiten & Tool-Konfiguration
 
-Agenten werden durch die Zuweisung von MCP-Servern und spezifischen Werkzeugen funktional erweitert.
+Agenten werden durch die Zuweisung von MCP-Servern, spezifischen Werkzeugen und Skills funktional erweitert.
 
 ## 1. MCP-Server Zuweisung
 Einem Agenten können mehrere laufende MCP-Server zugewiesen werden.
@@ -18,3 +18,12 @@ Dieser Modus bestimmt, wie das System reagiert, wenn die KI eine Aktion ausführ
 
 ## 4. Bulk-Aktionen
 Um die Konfiguration bei vielen Tools zu beschleunigen, stehen Schaltflächen wie "Alle auswählen" oder "Server-bezogene Auswahl" zur Verfügung.
+
+## 5. Skills
+Skills sind wiederverwendbare Fähigkeitsmodule, die den Agenten mit spezialisierten Kenntnissen und Workflows erweitern. Zugewiesene Skills erscheinen im System-Kontext des Agenten als Katalog; der Agent aktiviert relevante Skills über das `activate_skill`-Tool.
+
+- **Zuweisung:** Skills im Multi-Select-Feld **Skills** im Agenten-Accordion auswählen.
+- **Scope:** Globale Skills (vom Admin installiert) und nutzerspezifische Skills stehen zur Verfügung.
+- **Wirkung:** Der Agent sieht Skill-Namen und -Beschreibungen bei jedem Run und kann ihre vollständigen Instruktionen bei Bedarf laden.
+
+Siehe [Skills — Konzept](../skills/01_concept.md) für Details.

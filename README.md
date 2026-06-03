@@ -28,6 +28,7 @@ Ontheia keeps AI powerful — and keeps your data yours.
 - **Long-term Memory** — built-in RAG with pgvector, isolated per user and namespace
 - **Agent-to-Agent** — complex tasks coordinated across specialized sub-agents
 - **Automation** — time-based and agent-driven scheduling; one-time and recurring jobs with chat continuation
+- **Agent Skills** — reusable capability modules compatible with the open [agentskills.io](https://agentskills.io) standard (Claude Code, Cursor, GitHub Copilot, and more)
 
 ---
 

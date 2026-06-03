@@ -135,6 +135,46 @@ Scheduled agent interactions based on time intervals or one-time timestamps.
 
 ---
 
+## Skills
+
+Reusable capability modules that extend agents with specialized knowledge and workflows. Skills are stored as `SKILL.md` files in `sources/skills/` and indexed into the database by the ScanService.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/skills` | Lists all skills visible to the current user (global + own user-scope skills). |
+| `GET` | `/api/skills/:id` | Returns a single skill including its full body content. |
+| `PATCH` | `/api/skills/:id` | Updates skill metadata (not body — edit the file directly for content changes). |
+| `DELETE` | `/api/skills/:id` | Deactivates a skill (does not delete the file from disk). |
+| `POST` | `/api/skills/scan` | Triggers a manual rescan of `sources/skills/`. Admin only. |
+| `GET` | `/api/agents/:id/skills` | Returns all skills assigned to the specified agent. |
+| `PUT` | `/api/agents/:id/skills` | Sets the skill assignments for an agent (replaces existing). Body: `{ "skill_ids": ["uuid", ...] }`. Admin only. |
+
+**Skill object fields:**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | uuid | Unique identifier. Stable across rescans (UNIQUE NULLS NOT DISTINCT on name + scope + owner). |
+| `name` | string | Kebab-case skill name (from `SKILL.md` frontmatter). |
+| `description` | string | What the skill does and when to use it (max 1024 chars). |
+| `when_to_use` | string \| null | Additional trigger context (optional frontmatter field). |
+| `content` | string | Full `SKILL.md` body (returned by `GET /api/skills/:id` only). |
+| `skill_dir` | string | Absolute path to the skill directory inside the container. Used by the MCP server as path boundary. |
+| `scope` | `global` \| `user` | `global` = visible to all; `user` = owner only. |
+| `owner_id` | uuid \| null | User ID for user-scope skills; `null` for global skills. |
+| `active` | boolean | False if the skill directory no longer exists on disk. |
+
+**Internal MCP tools (available to agents at runtime):**
+
+| Tool | Description |
+| --- | --- |
+| `list_skills` | Returns all skills assigned to this agent. |
+| `activate_skill(name)` | Loads full skill body from DB into context. Returns body + resource file listing. |
+| `read_skill_resource(skill_name, path)` | Reads a file from the skill directory (path-bounded). |
+| `write_skill_resource(skill_name, path, content)` | Writes a file to the skill directory (scope-permission enforced). |
+| `create_skill(name, scope, content)` | Creates a new skill on disk and triggers a rescan. |
+
+---
+
 ## Runs (Execution)
 
 Runs represent the actual execution of an agent or a chain.

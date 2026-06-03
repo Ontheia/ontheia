@@ -51,7 +51,15 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 | `ORCHESTRATOR_HARDENING_PATH` | Überschreibt den Pfad zur Hardening-Konfiguration (JSON). |
 | `MCP_CLIENT_CONNECT_TIMEOUT_MS` | Timeout für den Verbindungsaufbau zu MCP-Servern. |
 
-## 5. AI-Dienste & Agenten
+## 5. Skills
+
+| Variable | Beschreibung | Standard |
+| :--- | :--- | :--- |
+| `SKILLS_BASE_DIR` | Basisverzeichnis für Skill-Dateien im Container. Der ScanService durchsucht `<SKILLS_BASE_DIR>/global/` und `<SKILLS_BASE_DIR>/user/` beim Start. | `/app/host/sources/skills` |
+
+Das Host-Verzeichnis `sources/skills/` wird via Volume-Binding `./sources:/app/host/sources` in `docker-compose.yml` in den Container eingebunden.
+
+## 6. AI-Dienste & Agenten
 
 | Variable | Beschreibung |
 | :--- | :--- |
@@ -61,7 +69,7 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID der Chain, die für die Prompt-Optimierung genutzt wird. |
 | `EMBEDDING_CONFIG_PATH` | Pfad zur Embedding-Konfigurationsdatei (`embedding.config.json`). **Optional:** Die Datenbankkonfiguration (Administration → AI-Provider → Tab Embedding) hat Vorrang. Diese Datei wird nur als Fallback verwendet. |
 
-## 6. Initiales Setup (Bootstrap)
+## 7. Initiales Setup (Bootstrap)
 
 Diese Variablen werden vom `setup.sh` Skript verwendet, um den ersten Administrator-Account anzulegen.
 
@@ -72,7 +80,7 @@ Diese Variablen werden vom `setup.sh` Skript verwendet, um den ersten Administra
 | `ADMIN_FNAME` | Vorname des Administrators (für Personalisierung). |
 | `ADMIN_LOCALE` | Standard-Sprache (`de-DE` oder `en-US`). |
 
-## 7. Frontend (WebUI / Vite)
+## 8. Frontend (WebUI / Vite)
 
 Diese Variablen müssen mit dem Präfix `VITE_` versehen sein, damit sie im Browser-Code verfügbar sind. **Wichtig:** Diese Werte werden beim Build-Prozess (`docker build`) fest in die WebUI eingebrannt.
 
@@ -81,7 +89,7 @@ Diese Variablen müssen mit dem Präfix `VITE_` versehen sein, damit sie im Brow
 | `VITE_HOST_API_URL` | Die URL, unter der das Frontend den Host-Service erreichen kann (z.B. `http://192.168.2.13:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Muss identisch mit `PROMPT_OPTIMIZER_CHAIN_ID` sein. |
 
-## 8. Sicherheit & Mandantentrennung (RLS)
+## 9. Sicherheit & Mandantentrennung (RLS)
 
 Um die Isolation der Benutzerdaten (Row Level Security) zu garantieren, gelten folgende Regeln:
 
