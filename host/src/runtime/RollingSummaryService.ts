@@ -107,6 +107,46 @@ function buildSummaryMessages(summary: string): ChatMessage[] {
   ];
 }
 
+// ── Skill re-attach after compaction ─────────────────────────────────────────
+// Per Claude Code spec: budget of 5000 tokens per skill, 25000 total.
+const SKILL_TOKEN_BUDGET_TOTAL = 25000;
+const SKILL_TOKEN_BUDGET_EACH  = 5000;
+const SKILL_CHARS_EACH = SKILL_TOKEN_BUDGET_EACH * 4;
+
+/**
+ * Scans the compressed portion of the conversation for activate_skill tool
+ * results, returning the most recent content per skill name.
+ */
+function extractActivatedSkills(messages: ChatMessage[]): Map<string, string> {
+  const skills = new Map<string, string>();
+  for (const msg of messages) {
+    if (msg.role !== 'tool') continue;
+    const text = typeof msg.content === 'string' ? msg.content
+      : Array.isArray(msg.content) ? (msg.content as any[]).map((p: any) => p?.text ?? '').join('') : '';
+    const m = text.match(/<skill_content name="([^"]+)">([\s\S]*?)<\/skill_content>/);
+    if (m) skills.set(m[1], m[0]); // most recent wins (Map preserves insertion order, last set wins)
+  }
+  return skills;
+}
+
+/**
+ * Converts extracted skill contents into system messages to prepend after
+ * the summary, respecting per-skill and total token budgets.
+ */
+function buildSkillReattachMessages(skills: Map<string, string>): ChatMessage[] {
+  if (skills.size === 0) return [];
+  const msgs: ChatMessage[] = [];
+  let totalChars = 0;
+  const totalBudgetChars = SKILL_TOKEN_BUDGET_TOTAL * 4;
+  for (const [, content] of skills) {
+    if (totalChars >= totalBudgetChars) break;
+    const trimmed = content.length > SKILL_CHARS_EACH ? content.slice(0, SKILL_CHARS_EACH) + '…' : content;
+    msgs.push({ role: 'system', content: `[Re-attached skill after compaction]\n${trimmed}` });
+    totalChars += trimmed.length;
+  }
+  return msgs;
+}
+
 export class RollingSummaryService {
   constructor(
     private db: Pool,
@@ -154,8 +194,9 @@ export class RollingSummaryService {
       if (existingSummary && coversUntil > 0) {
         // Apply existing summary + uncompressed tail — no summarizer call needed
         L('apply — summary + uncompressed tail', { coversUntil, uncompressedCount: uncompressed.length });
+        const reusedSkills = buildSkillReattachMessages(extractActivatedSkills(messages.slice(0, coversUntil)));
         return {
-          messages: [...buildSummaryMessages(existingSummary), ...uncompressed],
+          messages: [...buildSummaryMessages(existingSummary), ...reusedSkills, ...uncompressed],
           applied: true,
           reused: true,
           compressedCount: coversUntil,
@@ -171,6 +212,9 @@ export class RollingSummaryService {
     if (overTokens) L('trigger — uncompressed tokens exceeded threshold');
 
     // COMPRESS: summarise only uncompressed messages; existing summary covers the rest
+    // Extract activated skill contents before compression — re-attach after
+    const activatedSkills = extractActivatedSkills(messages);
+
     L('COMPRESS START', { total: messages.length, newMessages: uncompressed.length });
     const newSummary = await this.runSummarizer(existingSummary, uncompressed, config, logger);
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
@@ -205,8 +249,9 @@ export class RollingSummaryService {
       return { messages, applied: false };
     }
 
+    const skillMessages = buildSkillReattachMessages(activatedSkills);
     return {
-      messages: buildSummaryMessages(finalSummary),
+      messages: [...buildSummaryMessages(finalSummary), ...skillMessages],
       applied: true,
       reused: false,
       compressedCount: messages.length,
