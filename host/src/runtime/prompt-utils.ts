@@ -31,6 +31,8 @@ export interface BuildSystemMessagesOptions {
   agentLabel?: string;
   /** Pre-formatted memory context text to inject. */
   memoryContextText?: string;
+  /** Skill catalog text listing available skills and when to activate them. */
+  skillCatalogText?: string;
   /** Whether to include the tool required-properties hint. */
   includeToolHint?: boolean;
 }
@@ -52,7 +54,7 @@ export function buildSystemMessages(
   templateContext: ChainTemplateContext,
   options: BuildSystemMessagesOptions = {}
 ): ChatMessage[] {
-  const { taskContextPrompt, agentLabel, memoryContextText, includeToolHint } = options;
+  const { taskContextPrompt, agentLabel, memoryContextText, skillCatalogText, includeToolHint } = options;
   const messages: ChatMessage[] = [];
 
   // 1. Date/time — always first in the final prompt
@@ -72,7 +74,12 @@ export function buildSystemMessages(
     messages.push({ role: 'system', content: resolved });
   }
 
-  // 3. Tool required-properties hint
+  // 3. Skill catalog — placed close to the conversation so triggers are fresh
+  if (skillCatalogText) {
+    messages.push({ role: 'system', content: skillCatalogText });
+  }
+
+  // 4. Tool required-properties hint
   if (includeToolHint) {
     messages.push({
       role: 'system',
@@ -80,7 +87,7 @@ export function buildSystemMessages(
     });
   }
 
-  // 4. Memory context — closest to the conversation turn
+  // 5. Memory context — closest to the conversation turn
   if (memoryContextText) {
     messages.push({
       role: 'system',

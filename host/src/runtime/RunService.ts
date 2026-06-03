@@ -503,9 +503,26 @@ export class RunService {
 
       // 5. Prepend all system messages in one shot
       const hasTools = !!(enrichedInput as any).toolset?.length;
+
+      // Build skill catalog text for system message injection
+      let skillCatalogText: string | undefined;
+      if (agentSkills.length > 0) {
+        const catalogEntries = agentSkills
+          .filter(s => !s.disable_model_invocation)
+          .map(s => {
+            const whenToUse = s.when_to_use ? ` ${s.when_to_use}` : '';
+            return `- **${s.name}**: ${s.description}${whenToUse}`;
+          });
+        if (catalogEntries.length > 0) {
+          skillCatalogText =
+            `AVAILABLE SKILLS — call activate_skill(name) when a task matches:\n${catalogEntries.join('\n')}`;
+        }
+      }
+
       const systemMsgs = buildSystemMessages(templateContext, {
         taskContextPrompt,
         memoryContextText,
+        skillCatalogText,
         includeToolHint: hasTools
       });
       enrichedInput.messages.unshift(...systemMsgs);
