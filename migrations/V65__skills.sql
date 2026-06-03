@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS app.skills (
   active                   BOOLEAN     NOT NULL DEFAULT true,
   scanned_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-  -- UNIQUE handled by skills_name_unique_idx below (NULL-safe via COALESCE)
+  UNIQUE NULLS NOT DISTINCT (name, scope, owner_id)
 );
 
 CREATE TABLE IF NOT EXISTS app.agent_skills (
@@ -56,10 +56,6 @@ CREATE POLICY agent_skills_read_policy ON app.agent_skills FOR SELECT TO ontheia
 CREATE POLICY agent_skills_write_policy ON app.agent_skills FOR ALL TO ontheia_app
   USING (current_setting('app.user_role', true) = 'admin')
   WITH CHECK (current_setting('app.user_role', true) = 'admin');
-
--- NULL-safe unique: global skills have owner_id=NULL, must not duplicate by name+scope
-CREATE UNIQUE INDEX IF NOT EXISTS skills_name_unique_idx
-  ON app.skills (name, scope, COALESCE(owner_id, '00000000-0000-0000-0000-000000000000'));
 
 CREATE INDEX IF NOT EXISTS skills_scope_idx    ON app.skills (scope);
 CREATE INDEX IF NOT EXISTS skills_owner_idx    ON app.skills (owner_id) WHERE owner_id IS NOT NULL;

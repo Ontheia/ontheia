@@ -186,7 +186,7 @@ export class SkillService {
           (name, description, when_to_use, content, skill_dir, scope, owner_id,
            disable_model_invocation, user_invocable, model_override, active, scanned_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,now())
-        ON CONFLICT (name, scope, COALESCE(owner_id, '00000000-0000-0000-0000-000000000000'))
+        ON CONFLICT (name, scope, owner_id)
         DO UPDATE SET
           description              = EXCLUDED.description,
           when_to_use              = EXCLUDED.when_to_use,

@@ -106,6 +106,7 @@ export async function registerRoutes(
         ? await skillService.getSkillsForAgent(agentId, userId)
         : [];
 
+
       const client = await db.connect();
       try {
         return await handleSkillsTool(toolName, args, ctx, skills, skillService, client);
