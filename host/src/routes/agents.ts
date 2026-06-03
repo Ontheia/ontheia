@@ -599,12 +599,37 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       }
     }
     if (body && 'default_mcp_servers' in body) {
+      const newMcpServers = sanitizeStringArray(body.default_mcp_servers);
       updates.push(`default_mcp_servers = $${idx++}`);
-      values.push(sanitizeStringArray(body.default_mcp_servers));
+      values.push(newMcpServers);
+
+      // When MCP servers change, strip default_tools entries whose server
+      // is no longer in the new MCP server list (prevent orphaned tool bindings).
+      // Only applies if default_tools is NOT also being explicitly set in this request.
+      if (!('default_tools' in body)) {
+        const internalServers = new Set(['memory', 'delegation', 'scheduler', 'skills']);
+        updates.push(`default_tools = (
+          SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+          FROM jsonb_array_elements(default_tools) elem
+          WHERE elem->>'server' = ANY($${idx++}::text[])
+             OR elem->>'server' = ANY(ARRAY['memory','delegation','scheduler','skills'])
+        )`);
+        values.push(newMcpServers.filter((s: string) => !internalServers.has(s)));
+      }
     }
     if (body && 'default_tools' in body) {
+      // If both MCP servers and tools are provided, filter tools to only include
+      // servers that are still active (prevents stale bindings).
+      const newServers: string[] | null = body && 'default_mcp_servers' in body
+        ? sanitizeStringArray(body.default_mcp_servers)
+        : null;
+      let tools = sanitizeDefaultTools(body.default_tools);
+      if (newServers !== null) {
+        const allowed = new Set([...newServers, 'memory', 'delegation', 'scheduler', 'skills']);
+        tools = tools.filter((t: any) => !t.server || allowed.has(t.server));
+      }
       updates.push(`default_tools = $${idx++}::jsonb`);
-      values.push(JSON.stringify(sanitizeDefaultTools(body.default_tools)));
+      values.push(JSON.stringify(tools));
     }
     if (body && 'metadata' in body) {
       updates.push(`metadata = $${idx++}::jsonb`);
