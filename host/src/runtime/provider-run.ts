@@ -42,6 +42,12 @@ import type {
 
 const MAX_TOOL_CALLS = 50;
 export const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
+// Abort a run if the prompt exceeds this many tokens — prevents context explosion
+// (e.g. binary file accidentally loaded into conversation history).
+// Configurable via MAX_PROMPT_TOKENS env var; default 200k.
+const MAX_PROMPT_TOKENS = process.env.MAX_PROMPT_TOKENS
+  ? parseInt(process.env.MAX_PROMPT_TOKENS, 10)
+  : 200_000;
 const debugTools = process.env.DEBUG_TOOLS === 'true';
 
 /**
@@ -634,6 +640,10 @@ export async function runOpenAiCompletion(
       const usage = extractUsage(responseBody);
       if (usage) {
         emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion });
+        if (usage.prompt > MAX_PROMPT_TOKENS) {
+          emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${usage.prompt.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
+          return events;
+        }
       }
 
       if (request.isOpenAICompatible) {
@@ -839,6 +849,10 @@ async function consumeEventStream(
 
   if (promptTokens || completionTokens) {
     emit({ type: 'tokens', prompt: promptTokens, completion: completionTokens });
+    if (promptTokens > MAX_PROMPT_TOKENS) {
+      emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${promptTokens.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
+      return [];
+    }
   }
 
   // After stream completion, check if we have tool calls to process
