@@ -68,6 +68,7 @@ The host directory `sources/skills/` is mounted into the container at `/app/host
 | `XAI_API_KEY` | Global API key for xAI (Grok). |
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID of the chain used for prompt optimization. |
 | `EMBEDDING_CONFIG_PATH` | Path to the embedding configuration file (`embedding.config.json`). **Optional:** The database configuration (Administration → AI Provider → Embedding tab) takes precedence. This file is only used as a fallback. |
+| `MAX_PROMPT_TOKENS` | Maximum allowed prompt tokens per LLM request. If a response reports a larger prompt, the run is aborted immediately with an error to prevent context explosion loops (e.g. caused by large binary files accidentally loaded into the conversation history). Default: `200000`. |
 
 ## 7. Initial Setup (Bootstrap)
 

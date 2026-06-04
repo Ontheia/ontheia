@@ -68,6 +68,7 @@ Das Host-Verzeichnis `sources/skills/` wird via Volume-Binding `./sources:/app/h
 | `XAI_API_KEY` | Globaler API-Key für xAI (Grok). |
 | `PROMPT_OPTIMIZER_CHAIN_ID` | UUID der Chain, die für die Prompt-Optimierung genutzt wird. |
 | `EMBEDDING_CONFIG_PATH` | Pfad zur Embedding-Konfigurationsdatei (`embedding.config.json`). **Optional:** Die Datenbankkonfiguration (Administration → AI-Provider → Tab Embedding) hat Vorrang. Diese Datei wird nur als Fallback verwendet. |
+| `MAX_PROMPT_TOKENS` | Maximale erlaubte Prompt-Token pro LLM-Anfrage. Überschreitet eine Antwort diesen Wert, wird der Run sofort mit einem Fehler abgebrochen, um Kontext-Explosions-Schleifen zu verhindern (z. B. durch versehentlich in die Konversationshistorie geladene Binärdateien). Standard: `200000`. |
 
 ## 7. Initiales Setup (Bootstrap)
 
