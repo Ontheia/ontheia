@@ -671,9 +671,31 @@ export class ChainRunner {
         this.debug(`Memory context load for sub-agent ${profile.id} failed: ${(err as Error).message}`);
       }
 
+      // Build skill catalog text for sub-agent (mirrors RunService catalog injection)
+      let subAgentSkillCatalogText: string | undefined;
+      try {
+        const skillsRes = await this.client.query(`
+          SELECT s.name, s.description, s.when_to_use
+          FROM app.skills s
+          JOIN app.agent_skills as2 ON as2.skill_id = s.id
+          WHERE as2.agent_id = $1 AND as2.active = true AND s.active = true
+            AND s.disable_model_invocation = false
+          ORDER BY s.scope DESC, s.name
+        `, [profile.id]);
+        if (skillsRes.rows.length > 0) {
+          const entries = skillsRes.rows.map((s: any) => {
+            const when = s.when_to_use ? ` ${s.when_to_use}` : '';
+            return `- **${s.name}**: ${s.description}${when}`;
+          });
+          subAgentSkillCatalogText =
+            `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${entries.join('\n')}\n\nRules:\n- If the user asks what skills are available, call list_skills.\n- Do not answer from memory alone when a skill is relevant — activate it first.`;
+        }
+      } catch { /* non-fatal */ }
+
       // Build system messages identically to RunService (date/time + task context + identity note)
       const agentSystemMsgs = buildSystemMessages(this.templateContext, {
         taskContextPrompt,
+        skillCatalogText: subAgentSkillCatalogText,
         memoryContextText: subAgentMemoryContextText,
         agentLabel: profile.label || undefined
       });
