@@ -1,28 +1,24 @@
 # Allowlist: shell commands the cli-tools MCP server is permitted to execute.
 #
-# One entry per line. Exact command names only (no paths, no arguments).
+# Format:  command: Short description shown by list_commands tool.
+#          command  (no description — shown as empty in list_commands)
 # Lines starting with # are comments and are ignored.
 #
 # This file is read by host/mcp-servers/cli-server/cli_server.py at startup.
 # The path can be overridden via the ALLOWLIST_CLI_COMMANDS_PATH environment variable.
 
 # ── File operations ────────────────────────────────────────────────────────────
-ls
-cat
-grep
-head
-tail
-find
-cp
-mv
-mkdir
+ls: List files. Example: ['-la', '/app']
+cat: Read file. Example: ['/app/README.md']
+grep: Search in file. Example: ['-i', 'error', '/app/logs/host.log']
+head: First N lines. Example: ['-n', '20', '/app/logs/host.log']
+tail: Last N lines. Example: ['-n', '100', '/app/logs/host.log']
+find: Search files. Example: ['/mnt/nextcloud', '-name', '*.docx']. NEVER pass shell redirects (2>/dev/null) as args — omit them.
+cp: Copy file. Example: ['/src/file.docx', '/dst/file.docx']
 
 # ── Script execution ───────────────────────────────────────────────────────────
-bash
-node
-npm
+node: Run JavaScript file. Example: ['/tmp/create_doc.js']. Do NOT use for inline -e scripts — write to a file first.
 
 # ── Python ─────────────────────────────────────────────────────────────────────
-python3
-uv
-uvx
+python3: Run Python inline. Example: ['-c', 'print("hello")']
+uv: Run Python with auto-installed packages (preferred). Example: ['run', '--with', 'pdfplumber', 'python3', '-c', 'import pdfplumber; ...'] — use this when packages like pdfplumber, pypdf, pandas are needed.

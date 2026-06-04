@@ -421,10 +421,13 @@ export class RunService {
       if (enrichedInput.agent_id && this.skillService) {
         try {
           agentSkills = await this.skillService.getSkillsForAgent(enrichedInput.agent_id, userId);
+          if (logger) logger.info({ agentId: enrichedInput.agent_id, skillCount: agentSkills.length, skillNames: agentSkills.map(s => s.name) }, 'Skills loaded for agent');
           if (agentSkills.length > 0 && !activeMcpServers.includes('skills')) {
             activeMcpServers.push('skills');
           }
-        } catch { /* non-fatal */ }
+        } catch (err) {
+          if (logger) logger.warn({ err, agentId: enrichedInput.agent_id }, 'getSkillsForAgent failed');
+        }
       }
 
       if (activeMcpServers.length > 0) {
