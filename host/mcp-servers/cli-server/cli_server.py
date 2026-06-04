@@ -26,6 +26,7 @@ class CliServer:
     def __init__(self):
         self.allowed_commands, self.command_help = self._load_allowlist()
         self.base_workdir = os.environ.get("BASE_WORKDIR", os.getcwd())
+        self.timeout = int(os.environ.get("COMMAND_TIMEOUT", "30"))
 
         self.tools = [
             {

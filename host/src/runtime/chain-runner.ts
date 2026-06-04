@@ -519,12 +519,26 @@ export class ChainRunner {
       const mcpServers = Array.isArray(profile.default_mcp_servers) ? [...profile.default_mcp_servers] : [];
       if (!mcpServers.includes('memory')) mcpServers.push('memory');
       if (!mcpServers.includes('delegation')) mcpServers.push('delegation');
-      
+
       const toolApprovalMode = this.templateContext.tool_approval || (this.waitForToolApproval ? 'prompt' : 'granted');
-      
+
       let resolvedToolset: RunToolDefinition[] = [];
-      
+
       const userId = this.templateContext.user_id || profile.user_id;
+
+      // Pre-load skills for this agent (used for both toolset and catalog injection)
+      let skillsRes: { rows: any[] } = { rows: [] };
+      if (mcpServers.includes('skills')) {
+        try {
+          skillsRes = await this.client.query(`
+            SELECT s.name, s.description, s.when_to_use, s.disable_model_invocation
+            FROM app.skills s
+            JOIN app.agent_skills as2 ON as2.skill_id = s.id
+            WHERE as2.agent_id = $1 AND as2.active = true AND s.active = true
+            ORDER BY s.scope DESC, s.name
+          `, [profile.id]);
+        } catch { /* non-fatal */ }
+      }
 
       try {
         const defaultTools = Array.isArray(profile.default_tools) ? profile.default_tools : [];
@@ -567,14 +581,34 @@ export class ChainRunner {
           }
         }
 
+        // Inject Skills Tools if 'skills' is in mcpServers
+        // Skills is an internal server (not in orchestrator.clients) — must be handled explicitly.
+        if (mcpServers.includes('skills') && skillsRes.rows.length > 0) {
+          const { buildSkillsToolList } = await import('../mcp/plugins/skills.js');
+          const skillTools = buildSkillsToolList(skillsRes?.rows ?? []);
+          if (defaultTools.length > 0) {
+            if (defaultTools.some((dt: DefaultToolEntry) => dt.server === 'skills')) {
+              const allowedNames = new Set(
+                defaultTools.filter((dt: DefaultToolEntry) => dt.server === 'skills').map((dt: DefaultToolEntry) => dt.tool || dt.name)
+              );
+              resolvedToolset.push(...skillTools
+                .filter(t => allowedNames.has(t.name))
+                .map(t => ({ name: t.name, server: 'skills', description: t.description, parameters: t.inputSchema as Record<string, unknown> }))
+              );
+            }
+          } else {
+            resolvedToolset.push(...skillTools.map(t => ({ name: t.name, server: 'skills', description: t.description, parameters: t.inputSchema as Record<string, unknown> })));
+          }
+        }
+
         if (defaultTools.length > 0) {
           // Explicit filtering logic
           for (const tRef of defaultTools) {
             let server = tRef.server;
             const toolName = tRef.tool || tRef.name;
-            
+
             if (!server || !toolName) continue;
-            if (server === 'memory' || server === 'delegation') continue; // Already handled above
+            if (server === 'memory' || server === 'delegation' || server === 'skills') continue; // Already handled above
 
             const activeServer = this.orchestrator.resolveClientName(server, userId);
             if (!activeServer) continue;
@@ -673,24 +707,18 @@ export class ChainRunner {
 
       // Build skill catalog text for sub-agent (mirrors RunService catalog injection)
       let subAgentSkillCatalogText: string | undefined;
-      try {
-        const skillsRes = await this.client.query(`
-          SELECT s.name, s.description, s.when_to_use
-          FROM app.skills s
-          JOIN app.agent_skills as2 ON as2.skill_id = s.id
-          WHERE as2.agent_id = $1 AND as2.active = true AND s.active = true
-            AND s.disable_model_invocation = false
-          ORDER BY s.scope DESC, s.name
-        `, [profile.id]);
-        if (skillsRes.rows.length > 0) {
-          const entries = skillsRes.rows.map((s: any) => {
-            const when = s.when_to_use ? ` ${s.when_to_use}` : '';
-            return `- **${s.name}**: ${s.description}${when}`;
-          });
-          subAgentSkillCatalogText =
-            `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${entries.join('\n')}\n\nRules:\n- If the user asks what skills are available, call list_skills.\n- Do not answer from memory alone when a skill is relevant — activate it first.`;
-        }
-      } catch { /* non-fatal */ }
+      // Build skill catalog from pre-loaded skillsRes
+      const catalogRows = skillsRes.rows.filter((s: any) => !s.disable_model_invocation);
+      this.debug(`Skill catalog: ${catalogRows.length} skills for agent ${profile.id}`);
+      if (catalogRows.length > 0) {
+        const entries = catalogRows.map((s: any) => {
+          const when = s.when_to_use ? ` ${s.when_to_use}` : '';
+          return `- **${s.name}**: ${s.description}${when}`;
+        });
+        subAgentSkillCatalogText =
+          `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${entries.join('\n')}\n\nRules:\n- If the user asks what skills are available, call list_skills.\n- Do not answer from memory alone when a skill is relevant — activate it first.`;
+        this.debug(`Skill catalog built for agent ${profile.id}: ${catalogRows.map((s: any) => s.name).join(', ')}`);
+      }
 
       // Build system messages identically to RunService (date/time + task context + identity note)
       const agentSystemMsgs = buildSystemMessages(this.templateContext, {
