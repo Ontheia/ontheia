@@ -50,6 +50,8 @@ These variables control API access and browser security.
 | `ALLOWLIST_PACKAGES_BUN_PATH` | Overrides the path to the Bun package allowlist. |
 | `ORCHESTRATOR_HARDENING_PATH` | Overrides the path to the hardening configuration (JSON). |
 | `MCP_CLIENT_CONNECT_TIMEOUT_MS` | Timeout for establishing connections to MCP servers. |
+| `ALLOWLIST_CLI_COMMANDS_PATH` | Path to the cli-tools command allowlist (`allowlist.cli-commands`). Format per line: `command: description` or just `command`. Default: `config/allowlist.cli-commands` relative to `cli_server.py`. |
+| `COMMAND_TIMEOUT` | Timeout in seconds for individual shell commands executed by the cli-tools server. Default: `30`. |
 
 ## 5. Skills
 
