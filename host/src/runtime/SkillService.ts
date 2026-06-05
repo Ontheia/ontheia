@@ -280,5 +280,29 @@ export class SkillService {
     return skills.find(s => s.name === name) ?? null;
   }
 
+  // Lookup by name without agent assignment — for read/write_skill_resource on freshly created skills.
+  async getSkillByNameForUser(name: string, userId: string): Promise<SkillRecord | null> {
+    const client = await this.db.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
+      await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
+      const res = await client.query(`
+        SELECT * FROM app.skills
+        WHERE name = $1 AND active = true
+          AND (scope = 'global' OR owner_id = $2)
+        ORDER BY scope DESC
+        LIMIT 1
+      `, [name, userId]);
+      await client.query('COMMIT');
+      return res.rows[0] ?? null;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   static get baseDir() { return SKILLS_BASE_DIR; }
 }

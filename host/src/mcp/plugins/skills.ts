@@ -50,8 +50,7 @@ export function buildSkillsToolList(skills: SkillRecord[]) {
         properties: {
           name: {
             type: 'string',
-            enum: skillNames,
-            description: 'Name of the skill to activate.',
+            description: `Name of the skill to activate. Available: ${skillNames.join(', ')}`,
           },
         },
         required: ['name'],
@@ -138,7 +137,8 @@ export async function handleSkillsTool(
   // ── activate_skill ────────────────────────────────────────────────────────
   if (toolName === 'activate_skill') {
     const { name } = args;
-    const skill = skills.find(s => s.name === name);
+    const skill = skills.find(s => s.name === name)
+      ?? await skillService.getSkillByNameForUser(name, userId);
     if (!skill) throw new Error(`Skill '${name}' not found or not assigned to this agent.`);
 
     // List available resource files
@@ -166,7 +166,8 @@ export async function handleSkillsTool(
   // ── read_skill_resource ───────────────────────────────────────────────────
   if (toolName === 'read_skill_resource') {
     const { skill_name, path: relPath } = args;
-    const skill = skills.find(s => s.name === skill_name);
+    const skill = skills.find(s => s.name === skill_name)
+      ?? await skillService.getSkillByNameForUser(skill_name, userId);
     if (!skill) throw new Error(`Skill '${skill_name}' not found.`);
 
     const fullPath = safeSkillPath(skill.skill_dir, relPath);
@@ -179,7 +180,8 @@ export async function handleSkillsTool(
   // ── write_skill_resource ──────────────────────────────────────────────────
   if (toolName === 'write_skill_resource') {
     const { skill_name, path: relPath, content } = args;
-    const skill = skills.find(s => s.name === skill_name);
+    const skill = skills.find(s => s.name === skill_name)
+      ?? await skillService.getSkillByNameForUser(skill_name, userId);
     if (!skill) throw new Error(`Skill '${skill_name}' not found.`);
 
     if (skill.scope === 'global' && role !== 'admin') {
@@ -195,9 +197,8 @@ export async function handleSkillsTool(
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, 'utf8');
 
-    // If SKILL.md was updated, rescan
     if (relPath === 'SKILL.md') {
-      void skillService.scanAll().catch(() => {});
+      await skillService.scanAll();
     }
 
     return { written: fullPath };
@@ -221,9 +222,9 @@ export async function handleSkillsTool(
     await fs.mkdir(basePath, { recursive: true });
     await fs.writeFile(path.join(basePath, 'SKILL.md'), content, 'utf8');
 
-    void skillService.scanAll().catch(() => {});
+    await skillService.scanAll();
 
-    return { skill_dir: basePath, message: `Skill '${name}' created. ScanService will index it shortly.` };
+    return { skill_dir: basePath, message: `Skill '${name}' created and indexed.` };
   }
 
   void agentId; void client;
