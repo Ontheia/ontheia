@@ -3469,6 +3469,10 @@
   border-color: rgba(56, 189, 248, 0.45);
 }
 
+.admin-mcp-accordion-item.inactive {
+  opacity: 0.55;
+}
+
 .admin-mcp-accordion-trigger {
   width: 100%;
   display: flex;

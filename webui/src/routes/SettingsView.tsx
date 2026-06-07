@@ -112,7 +112,12 @@ import {
   listSkills,
   listAgentSkills,
   setAgentSkills,
-  type SkillEntry
+  getSkill,
+  updateSkill,
+  getSkillAgents,
+  triggerSkillScan,
+  type SkillEntry,
+  type SkillAgentEntry
 } from '../lib/api';
 import { useChatSidebar, type McpStatusEntry } from '../context/chat-sidebar-context';
 import { useProviderContext } from '../context/provider-context';
@@ -371,6 +376,7 @@ type AdminSectionId =
   | 'general'
   | 'users'
   | 'mcp'
+  | 'skills'
   | 'providers'
   | 'agents'
   | 'memory'
@@ -2962,6 +2968,225 @@ function MemorySection({
 
       {statusMessage && <div className="success-box">{statusMessage}</div>}
       {errorMessage && <div className="error-box">{errorMessage}</div>}
+    </div>
+  );
+}
+
+function SkillsSection({ onHasChanges, timezone }: { onHasChanges: (hasChanges: boolean) => void; timezone?: string }) {
+  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const [skills, setSkills] = useState<SkillEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [openSkill, setOpenSkill] = useState<string | null>(null);
+  const [details, setDetails] = useState<Record<string, { content: string; agents: SkillAgentEntry[] }>>({});
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  void onHasChanges;
+
+  const loadSkills = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const rows = await listSkills();
+      setSkills(rows);
+    } catch (err) {
+      setError(localizeError(err, t, 'skills.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadSkills();
+  }, [loadSkills]);
+
+  const handleScan = async () => {
+    setScanning(true);
+    setError('');
+    try {
+      await triggerSkillScan();
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await loadSkills();
+      setDetails({});
+    } catch (err) {
+      setError(localizeError(err, t, 'skills.scanError'));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const loadDetail = async (skill: SkillEntry) => {
+    if (details[skill.id]) return;
+    setDetailLoading(skill.id);
+    try {
+      const [full, skillAgents] = await Promise.all([getSkill(skill.id), getSkillAgents(skill.id)]);
+      setDetails((prev) => ({ ...prev, [skill.id]: { content: full.content, agents: skillAgents } }));
+    } catch (err) {
+      setError(localizeError(err, t, 'skills.detailError'));
+    } finally {
+      setDetailLoading(null);
+    }
+  };
+
+  const handleToggleEnabled = async (skill: SkillEntry) => {
+    setActionLoading(`toggle:${skill.id}`);
+    setError('');
+    try {
+      await updateSkill(skill.id, { enabled: !skill.enabled });
+      await loadSkills();
+    } catch (err) {
+      setError(localizeError(err, t, 'skills.updateError'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const formatTimestamp = (value: string | null) => {
+    if (!value) return '–';
+    return new Date(value).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+      timeZone: timezone || 'Europe/Berlin',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="admin-section-card">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-sm font-medium text-slate-200">{t('skills.title')}</h4>
+          <p className="muted text-xs">{t('skills.subtitle')}</p>
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" className="btn-default h-8 text-xs" onClick={() => void handleScan()} disabled={scanning}>
+              <RefreshCw size={14} className={scanning ? 'animate-spin mr-1' : 'mr-1'} />
+              {scanning ? t('skills.scanning') : t('skills.rescan')}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('skills.rescanHint')}</TooltipContent>
+        </Tooltip>
+      </div>
+
+      {error && <div className="error-box mb-3">{error}</div>}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Loader2 size={16} className="animate-spin" /> {t('loading', { ns: 'common' })}
+        </div>
+      ) : skills.length === 0 ? (
+        <div className="empty-state-container">
+          <p className="empty-state-text">{t('skills.empty')}</p>
+        </div>
+      ) : (
+        <div className="admin-mcp-accordion">
+          {skills.map((skill) => {
+            const isOpen = openSkill === skill.id;
+            const detail = details[skill.id];
+            return (
+              <div key={skill.id} className={`admin-mcp-accordion-item${skill.active && skill.enabled ? '' : ' inactive'}`}>
+                <button
+                  type="button"
+                  className="admin-mcp-accordion-trigger"
+                  onClick={() => {
+                    const next = isOpen ? null : skill.id;
+                    setOpenSkill(next);
+                    if (next) void loadDetail(skill);
+                  }}
+                >
+                  <div className="admin-mcp-trigger-name">
+                    {skill.name}
+                  </div>
+                  <div className="admin-mcp-trigger-meta">
+                    {!skill.active ? (
+                      <span className="admin-mcp-status admin-mcp-status-danger">{t('skills.fileMissing')}</span>
+                    ) : !skill.enabled ? (
+                      <span className="admin-mcp-status admin-mcp-status-muted">{t('skills.inactive')}</span>
+                    ) : null}
+                    <span className={`admin-mcp-status admin-mcp-status-${skill.scope === 'global' ? 'info' : 'muted'}`}>
+                      {skill.scope === 'global' ? t('skills.scopeGlobal') : t('skills.scopeUser')}
+                    </span>
+                    <span className="admin-mcp-trigger-icon" aria-hidden="true">
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="admin-mcp-accordion-content">
+                    <p className="muted text-sm">{skill.description}</p>
+                    {skill.when_to_use && (
+                      <p className="muted text-xs mt-1">
+                        <span className="admin-mcp-meta-label">{t('skills.whenToUse')}:</span> {skill.when_to_use}
+                      </p>
+                    )}
+                    <div className="admin-mcp-meta-grid mt-2">
+                      <div>
+                        <span className="admin-mcp-meta-label">{t('skills.scanned')}</span>
+                        <span>{formatTimestamp(skill.scanned_at)}</span>
+                      </div>
+                      <div>
+                        <span className="admin-mcp-meta-label">{t('skills.invocation')}</span>
+                        <span>
+                          {skill.disable_model_invocation ? t('skills.modelInvocationOff') : t('skills.modelInvocationOn')}
+                          {!skill.user_invocable ? ` · ${t('skills.userInvocationOff')}` : ''}
+                        </span>
+                      </div>
+                      {skill.model_override && (
+                        <div>
+                          <span className="admin-mcp-meta-label">{t('skills.modelOverride')}</span>
+                          <code className="admin-mcp-command">{skill.model_override}</code>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2">
+                      <span className="admin-mcp-meta-label">{t('skills.assignedAgents')}</span>
+                      {detailLoading === skill.id ? (
+                        <Loader2 size={14} className="animate-spin inline-block ml-1" />
+                      ) : detail && detail.agents.length > 0 ? (
+                        <div className="admin-mcp-tools">
+                          {detail.agents.map((a) => (
+                            <span key={a.id} className={`admin-mcp-tool-chip${a.active ? '' : ' muted'}`}>
+                              {a.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : detail ? (
+                        <span className="muted text-xs ml-1">{t('skills.noAgents')}</span>
+                      ) : null}
+                    </div>
+
+                    {detail && (
+                      <details className="admin-mcp-logs mt-2">
+                        <summary>{t('skills.viewContent')}</summary>
+                        <pre>{detail.content}</pre>
+                      </details>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-3">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="btn-default h-8 text-xs"
+                            onClick={() => void handleToggleEnabled(skill)}
+                            disabled={actionLoading === `toggle:${skill.id}` || !skill.active}
+                          >
+                            {skill.enabled ? t('skills.deactivate') : t('skills.activate')}
+                          </button>
+                        </TooltipTrigger>
+                        {!skill.active && <TooltipContent>{t('skills.fileMissingHint')}</TooltipContent>}
+                      </Tooltip>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -7526,6 +7751,11 @@ export function useAdminSections(): AdminSectionMeta[] {
         description: t('mcpDesc')
       },
       {
+        id: 'skills',
+        label: t('skills'),
+        description: t('skillsDesc')
+      },
+      {
         id: 'providers',
         label: t('providers'),
         description: t('providersDesc')
@@ -7946,6 +8176,8 @@ export function SettingsView() {
             onReplaceSteps={(steps) => setChainSteps(steps)}
           />
         );
+      case 'skills':
+        return <SkillsSection onHasChanges={setHasChanges} timezone={runtimeSettings.timezone} />;
       case 'memory':
         return <MemorySection agents={agents} onHasChanges={setHasChanges} timezone={runtimeSettings.timezone} />;
       case 'info':

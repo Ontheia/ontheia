@@ -39,7 +39,7 @@ export function registerSkillRoutes(
     return withRls(db, auth.session.userId, auth.session.role, async (client) => {
       const res = await client.query(`
         SELECT id, name, description, when_to_use, skill_dir, scope, owner_id,
-               disable_model_invocation, user_invocable, model_override, active, scanned_at
+               disable_model_invocation, user_invocable, model_override, active, enabled, scanned_at
         FROM app.skills
         WHERE active = true
         ORDER BY scope DESC, name ASC
@@ -62,13 +62,15 @@ export function registerSkillRoutes(
   });
 
   // PATCH /api/skills/:id — update metadata (not content — edit SKILL.md file for content)
+  // Note: 'active' is scanner-managed (reflects whether SKILL.md exists on disk) and
+  // intentionally not patchable here — use 'enabled' for the admin on/off switch.
   server.patch('/api/skills/:id', async (request, reply) => {
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     const { id } = request.params as { id: string };
     if (!isUuid(id)) return reply.code(400).send({ error: 'invalid_id' });
     const body = request.body as Record<string, unknown>;
-    const allowed = ['disable_model_invocation', 'user_invocable', 'model_override', 'active'];
+    const allowed = ['disable_model_invocation', 'user_invocable', 'model_override', 'enabled'];
     const updates: string[] = [];
     const values: unknown[] = [];
     for (const key of allowed) {
@@ -89,7 +91,7 @@ export function registerSkillRoutes(
     });
   });
 
-  // DELETE /api/skills/:id — deactivate (does not delete file)
+  // DELETE /api/skills/:id — disable persistently (does not delete the file or undo on rescan)
   server.delete('/api/skills/:id', async (request, reply) => {
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
@@ -97,7 +99,7 @@ export function registerSkillRoutes(
     if (!isUuid(id)) return reply.code(400).send({ error: 'invalid_id' });
     return withRls(db, auth.session.userId, auth.session.role, async (client) => {
       const res = await client.query(
-        `UPDATE app.skills SET active = false WHERE id = $1 RETURNING id`,
+        `UPDATE app.skills SET enabled = false WHERE id = $1 RETURNING id`,
         [id]
       );
       if (!res.rowCount) return reply.code(404).send({ error: 'not_found' });

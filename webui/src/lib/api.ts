@@ -1588,11 +1588,47 @@ export interface SkillEntry {
   description: string;
   when_to_use: string | null;
   scope: 'global' | 'user';
+  owner_id: string | null;
+  disable_model_invocation: boolean;
+  user_invocable: boolean;
+  model_override: string | null;
+  active: boolean;
+  enabled: boolean;
+  scanned_at: string | null;
+}
+
+export interface SkillDetail extends SkillEntry {
+  content: string;
+  skill_dir: string;
+}
+
+export interface SkillAgentEntry {
+  id: string;
+  label: string;
   active: boolean;
 }
 
 export function listSkills() {
   return request('/api/skills', { method: 'GET' }) as Promise<SkillEntry[]>;
+}
+
+export function getSkill(id: string) {
+  return request(`/api/skills/${encodeURIComponent(id)}`, { method: 'GET' }) as Promise<SkillDetail>;
+}
+
+export function updateSkill(id: string, patch: Partial<Pick<SkillEntry, 'disable_model_invocation' | 'user_invocable' | 'model_override' | 'enabled'>>) {
+  return request(`/api/skills/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  }) as Promise<SkillEntry>;
+}
+
+export function deleteSkill(id: string) {
+  return request(`/api/skills/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function getSkillAgents(id: string) {
+  return request(`/api/skills/${encodeURIComponent(id)}/agents`, { method: 'GET' }) as Promise<SkillAgentEntry[]>;
 }
 
 export function listAgentSkills(agentId: string) {

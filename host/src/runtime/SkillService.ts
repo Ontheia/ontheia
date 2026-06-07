@@ -41,6 +41,7 @@ export interface SkillRecord {
   user_invocable: boolean;
   model_override: string | null;
   active: boolean;
+  enabled: boolean;
 }
 
 // ── Frontmatter parser ────────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ export class SkillService {
     }
   }
 
-  private async upsert(data: Omit<SkillRecord, 'id' | 'active'>) {
+  private async upsert(data: Omit<SkillRecord, 'id' | 'active' | 'enabled'>) {
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
@@ -262,7 +263,7 @@ export class SkillService {
         SELECT s.*
         FROM app.skills s
         JOIN app.agent_skills a ON a.skill_id = s.id
-        WHERE a.agent_id = $1 AND a.active = true AND s.active = true
+        WHERE a.agent_id = $1 AND a.active = true AND s.active = true AND s.enabled = true
         ORDER BY s.scope DESC, s.name
       `, [agentId]);
       await client.query('COMMIT');
@@ -289,7 +290,7 @@ export class SkillService {
       await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
       const res = await client.query(`
         SELECT * FROM app.skills
-        WHERE name = $1 AND active = true
+        WHERE name = $1 AND active = true AND enabled = true
           AND (scope = 'global' OR owner_id = $2)
         ORDER BY scope DESC
         LIMIT 1
