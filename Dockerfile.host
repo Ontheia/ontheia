@@ -33,6 +33,19 @@ RUN echo 'export NVM_DIR="/home/rock/.nvm"' >> /root/.profile && \
 # Claude Code CLI wrapper — resolves latest version from host-mounted share dir (/opt/claude-share)
 RUN printf '#!/bin/sh\n_v=$(ls /opt/claude-share/versions 2>/dev/null | sort -rV | head -1)\n[ -z "$_v" ] && { echo "claude: not available (CLAUDE_SHARE_DIR not mounted)" >&2; exit 127; }\nexec "/opt/claude-share/versions/$_v" "$@"\n' \
     > /usr/local/bin/claude && chmod +x /usr/local/bin/claude
+# bun ships without a separate `bunx` binary (modern bun detects argv[0] == "bunx" and
+# behaves like `bun x`); add the expected alias as a symlink. Resolves lazily, so this
+# also works on deployments that bind-mount a `bun` binary over /usr/local/bin/bun at runtime.
+RUN ln -sf /usr/local/bin/bun /usr/local/bin/bunx
+# Pre-create cache/config dirs under /home/node owned by the "node" user (uid 1000).
+# Deployments that run the container as a non-root user (e.g. user: "1000:1000" for
+# rootless Docker) mount named volumes at these paths; Docker initializes a volume's
+# content from the image directory it shadows, so having node:node ownership here
+# ensures the volume starts out node-writable instead of root-owned (which would
+# otherwise cause EACCES for npm/npx/bun/gemini/claude running as "node").
+RUN mkdir -p /home/node/.npm /home/node/.cache/npx /home/node/.cache/uv \
+             /home/node/.bun /home/node/.gemini /home/node/.claude && \
+    chown -R node:node /home/node
 WORKDIR /app
 
 FROM base AS deps
