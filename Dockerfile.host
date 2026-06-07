@@ -17,10 +17,10 @@ RUN apt-get update && \
     libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
     fonts-liberation xdg-utils && \
     rm -rf /var/lib/apt/lists/*
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-# uv/uvx global verfügbar machen
-RUN ln -sf /root/.local/bin/uvx /usr/local/bin/uvx && \
-    ln -sf /root/.local/bin/uv /usr/local/bin/uv
+# Install into /usr/local/bin (world-readable/executable) instead of /root/.local/bin
+# (drwx------) — the host process runs as the unprivileged "node" user (uid 1000)
+# and needs to invoke `uv run` for PEP-723 inline-dependency skill scripts.
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 # Python 3.13 für postgres-mcp (erfordert >=3.12, Basis-Image hat nur 3.11)
 RUN uv python install 3.13
 RUN uv tool install nextcloud-mcp-server@0.85.1
