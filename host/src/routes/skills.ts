@@ -38,11 +38,13 @@ export function registerSkillRoutes(
     if (!auth) return;
     return withRls(db, auth.session.userId, auth.session.role, async (client) => {
       const res = await client.query(`
-        SELECT id, name, description, when_to_use, skill_dir, scope, owner_id,
-               disable_model_invocation, user_invocable, model_override, active, enabled, scanned_at
-        FROM app.skills
-        WHERE active = true
-        ORDER BY scope DESC, name ASC
+        SELECT s.id, s.name, s.description, s.when_to_use, s.skill_dir, s.scope, s.owner_id,
+               s.disable_model_invocation, s.user_invocable, s.model_override, s.active, s.enabled, s.scanned_at,
+               u.email AS owner_email
+        FROM app.skills s
+        LEFT JOIN app.users u ON u.id = s.owner_id
+        WHERE s.active = true
+        ORDER BY s.scope DESC, s.name ASC
       `);
       return res.rows;
     });

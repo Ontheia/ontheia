@@ -1589,6 +1589,7 @@ export interface SkillEntry {
   when_to_use: string | null;
   scope: 'global' | 'user';
   owner_id: string | null;
+  owner_email?: string | null;
   disable_model_invocation: boolean;
   user_invocable: boolean;
   model_override: string | null;

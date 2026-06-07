@@ -3106,7 +3106,11 @@ function SkillsSection({ onHasChanges, timezone }: { onHasChanges: (hasChanges: 
                       <span className="admin-mcp-status admin-mcp-status-muted">{t('skills.inactive')}</span>
                     ) : null}
                     <span className={`admin-mcp-status admin-mcp-status-${skill.scope === 'global' ? 'info' : 'muted'}`}>
-                      {skill.scope === 'global' ? t('skills.scopeGlobal') : t('skills.scopeUser')}
+                      {skill.scope === 'global'
+                        ? t('skills.scopeGlobal')
+                        : skill.owner_email
+                          ? `${t('skills.scopeUser')} · ${skill.owner_email}`
+                          : t('skills.scopeUser')}
                     </span>
                     <span className="admin-mcp-trigger-icon" aria-hidden="true">
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -5002,7 +5006,9 @@ function AgentsSection({
                               onValuesChange={(ids) => handleAgentSkillsChange(agent.id, ids)}
                               options={availableSkills.map(s => ({
                                 value: s.id,
-                                label: `${s.name}${s.scope === 'global' ? '' : ' (user)'}`
+                                label: s.scope === 'global'
+                                  ? s.name
+                                  : `${s.name} (${s.owner_email ?? 'user'})`
                               }))}
                               placeholder={t('agents.selectSkills', { defaultValue: 'Select skills…' })}
                             />
