@@ -28,9 +28,9 @@ Benutzermenü*        │ [Composer]            │
 > **Hinweis:** Administration, Einstellungen und Automatisierung werden über das **Avatar-Dropdown** am unteren Rand der linken Sidebar aufgerufen — sie sind nicht direkt in der Sidebar sichtbar.
 
 Detaildokumentation:
-- [Linke Sidebar](/de/webui_navi/12_sidebar_left/)
-- [Rechte Sidebar](/de/webui_navi/13_sidebar_right/)
-- [Composer](/de/webui_navi/11_composer/)
+- [Linke Sidebar](/de/webui_navi/13_sidebar_left/)
+- [Rechte Sidebar](/de/webui_navi/14_sidebar_right/)
+- [Composer](/de/webui_navi/12_composer/)
 
 ---
 
@@ -44,7 +44,8 @@ linkes Panel (Menü)  | rechtes Panel (Inhaltsbereich)
 Allgemein            │ Header: Abschnittstitel + Beschreibung
 Benutzer             │ Tab-Leiste (falls vorhanden)
 MCP-Server           │ Formularfelder
-AI-Provider          │ Akkordeons / Tabellen (falls vorhanden)
+Skills               │ Akkordeons / Tabellen (falls vorhanden)
+AI-Provider          │
 Agents               │
 Memory               │
 Info                 │

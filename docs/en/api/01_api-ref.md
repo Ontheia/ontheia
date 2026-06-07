@@ -143,8 +143,8 @@ Reusable capability modules that extend agents with specialized knowledge and wo
 | :--- | :--- | :--- |
 | `GET` | `/api/skills` | Lists all skills visible to the current user (global + own user-scope skills). |
 | `GET` | `/api/skills/:id` | Returns a single skill including its full body content. |
-| `PATCH` | `/api/skills/:id` | Updates skill metadata (not body — edit the file directly for content changes). |
-| `DELETE` | `/api/skills/:id` | Deactivates a skill (does not delete the file from disk). |
+| `PATCH` | `/api/skills/:id` | Updates skill metadata — `enabled`, `disable_model_invocation`, `user_invocable`, `model_override` (not body — edit the file directly for content changes; `active` is scanner-managed and not patchable). |
+| `DELETE` | `/api/skills/:id` | Disables a skill persistently (`enabled = false`) — does not delete the file from disk and is not undone by a rescan. |
 | `POST` | `/api/skills/scan` | Triggers a manual rescan of `sources/skills/`. Admin only. |
 | `GET` | `/api/agents/:id/skills` | Returns all skills assigned to the specified agent. |
 | `PUT` | `/api/agents/:id/skills` | Sets the skill assignments for an agent (replaces existing). Body: `{ "skill_ids": ["uuid", ...] }`. Admin only. |
@@ -161,7 +161,8 @@ Reusable capability modules that extend agents with specialized knowledge and wo
 | `skill_dir` | string | Absolute path to the skill directory inside the container. Used by the MCP server as path boundary. |
 | `scope` | `global` \| `user` | `global` = visible to all; `user` = owner only. |
 | `owner_id` | uuid \| null | User ID for user-scope skills; `null` for global skills. |
-| `active` | boolean | False if the skill directory no longer exists on disk. |
+| `active` | boolean | Scanner-managed: `false` if the skill directory no longer exists on disk. Reset automatically on every rescan. |
+| `enabled` | boolean | Admin-managed: persistent on/off switch, independent of file presence. Survives rescans. A skill is only usable when `active = true AND enabled = true`. |
 
 **Internal MCP tools (available to agents at runtime):**
 

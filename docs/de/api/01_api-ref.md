@@ -146,8 +146,8 @@ Wiederverwendbare Fähigkeitsmodule, die Agenten mit spezialisierten Kenntnissen
 | :--- | :--- | :--- |
 | `GET` | `/api/skills` | Listet alle für den aktuellen Nutzer sichtbaren Skills (global + eigene user-scope Skills). |
 | `GET` | `/api/skills/:id` | Gibt einen einzelnen Skill inkl. vollständigem Body-Content zurück. |
-| `PATCH` | `/api/skills/:id` | Aktualisiert Skill-Metadaten (nicht den Body — für Inhaltsänderungen die Datei direkt bearbeiten). |
-| `DELETE` | `/api/skills/:id` | Deaktiviert einen Skill (löscht die Datei nicht). |
+| `PATCH` | `/api/skills/:id` | Aktualisiert Skill-Metadaten — `enabled`, `disable_model_invocation`, `user_invocable`, `model_override` (nicht den Body — für Inhaltsänderungen die Datei direkt bearbeiten; `active` ist scanner-verwaltet und nicht patchbar). |
+| `DELETE` | `/api/skills/:id` | Deaktiviert einen Skill dauerhaft (`enabled = false`) — löscht die Datei nicht und wird durch einen Rescan nicht rückgängig gemacht. |
 | `POST` | `/api/skills/scan` | Löst einen manuellen Rescan von `sources/skills/` aus. Nur Admin. |
 | `GET` | `/api/agents/:id/skills` | Gibt alle dem Agenten zugewiesenen Skills zurück. |
 | `PUT` | `/api/agents/:id/skills` | Setzt die Skill-Zuweisung für einen Agenten (ersetzt bestehende). Body: `{ "skill_ids": ["uuid", ...] }`. Nur Admin. |
@@ -164,7 +164,8 @@ Wiederverwendbare Fähigkeitsmodule, die Agenten mit spezialisierten Kenntnissen
 | `skill_dir` | string | Absoluter Pfad zum Skill-Verzeichnis im Container. Dient als Pfad-Begrenzer für den MCP-Server. |
 | `scope` | `global` \| `user` | `global` = für alle sichtbar; `user` = nur Owner. |
 | `owner_id` | uuid \| null | Nutzer-ID bei user-scope Skills; `null` bei globalen Skills. |
-| `active` | boolean | False wenn das Skill-Verzeichnis nicht mehr auf dem Dateisystem existiert. |
+| `active` | boolean | Scanner-verwaltet: `false` wenn das Skill-Verzeichnis nicht mehr auf dem Dateisystem existiert. Wird bei jedem Rescan automatisch neu gesetzt. |
+| `enabled` | boolean | Admin-verwaltet: persistenter Ein/Aus-Schalter, unabhängig von der Dateipräsenz. Übersteht Rescans. Ein Skill ist nur nutzbar wenn `active = true AND enabled = true`. |
 
 **Interne MCP-Tools (zur Laufzeit für Agenten verfügbar):**
 

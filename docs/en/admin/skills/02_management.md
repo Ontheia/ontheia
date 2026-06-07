@@ -47,6 +47,34 @@ The assignment is saved immediately via the API. No restart required.
 
 ---
 
+## Skills Overview in the Admin Console
+
+**Admin Console → Skills**
+
+A dedicated "Skills" tab (positioned between "MCP Servers" and "AI Providers") shows all skills — global and user-owned — as an expandable list:
+
+- **Rescan button**: triggers `POST /api/skills/scan` manually and reloads the list afterwards — useful when the filewatcher is unavailable or an immediate refresh is desired.
+- **Header per skill**: name, status badges (see below), and a scope pill (`User`/`Global`), right-aligned before the expand chevron.
+- **Expanded content**: description, "When to use", metadata (last scanned — shown in the configured timezone, invocation mode, model override), assigned agents as chips, and a collapsible viewer for the `SKILL.md` content.
+- **Activate/Deactivate button**: toggles the admin-managed `enabled` flag (see next section). The button is disabled when the file is missing (`active = false`).
+
+---
+
+## Active vs. Enabled — Two Separate States
+
+Skills carry two independent boolean fields that are easy to confuse:
+
+| Field | Managed by | Meaning | Overwritten on rescan? |
+| --- | --- | --- | --- |
+| `active` | ScanService | Reflects whether the `SKILL.md` file currently exists on disk | Yes — set automatically based on file presence |
+| `enabled` | Admin (via UI/API) | Persistent on/off switch, independent of file presence | No — survives rescans |
+
+A skill is only usable by agents when **both** fields are `true` (`active = true AND enabled = true`).
+
+> **Note:** In earlier versions, `DELETE /api/skills/:id` set `active = false`. However, this value was automatically reset to `true` on the next rescan as long as the file still existed — silently undoing a manual deactivation. Since the two fields were separated, admin deactivation now controls only `enabled`, which the scanner never touches and therefore persists reliably.
+
+---
+
 ## Scope and Permissions
 
 | Scope | Path | Read | Write |
@@ -64,8 +92,8 @@ When a global and a user skill share the same name, the user skill takes precede
 | --- | --- | --- |
 | `GET` | `/api/skills` | List all skills visible to the current user |
 | `GET` | `/api/skills/:id` | Single skill including full body |
-| `PATCH` | `/api/skills/:id` | Update metadata (not body — edit the file for that) |
-| `DELETE` | `/api/skills/:id` | Deactivate skill (does not delete the file) |
+| `PATCH` | `/api/skills/:id` | Update metadata — `enabled`, `disable_model_invocation`, `user_invocable`, `model_override` (not content — edit the file for that; `active` is scanner-managed and not patchable) |
+| `DELETE` | `/api/skills/:id` | Disable skill persistently (`enabled = false`) — does not delete the file and is not undone by a rescan |
 | `POST` | `/api/skills/scan` | Trigger manual rescan (admin only) |
 | `GET` | `/api/agents/:id/skills` | Skills assigned to an agent |
 | `PUT` | `/api/agents/:id/skills` | Set skill assignments for an agent |

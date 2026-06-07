@@ -28,9 +28,9 @@ User menu*           │ [Composer]             │
 > **Note:** Administration, Settings, and Automation are accessed via the **Avatar dropdown** at the bottom of the left sidebar — they are not directly visible in the sidebar.
 
 Detailed documentation:
-- [Left Sidebar](/en/webui_navi/12_sidebar_left/)
-- [Right Sidebar](/en/webui_navi/13_sidebar_right/)
-- [Composer](/en/webui_navi/11_composer/)
+- [Left Sidebar](/en/webui_navi/13_sidebar_left/)
+- [Right Sidebar](/en/webui_navi/14_sidebar_right/)
+- [Composer](/en/webui_navi/12_composer/)
 
 ---
 
@@ -44,7 +44,8 @@ left panel (menu)    | right panel (content area)
 General              │ Header: section title + description
 Users                │ Tab bar (if applicable)
 MCP Servers          │ Form fields
-AI Providers         │ Accordions / tables (if applicable)
+Skills               │ Accordions / tables (if applicable)
+AI Providers         │
 Agents               │
 Memory               │
 Info                 │
