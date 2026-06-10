@@ -159,8 +159,7 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: timezone || 'Europe/Berlin',
-        timeZoneName: 'short'
+        timeZone: timezone || 'Europe/Berlin'
       });
     } catch (e) {
       return null;
