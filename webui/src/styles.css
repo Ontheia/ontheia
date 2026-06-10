@@ -702,7 +702,6 @@
 .message-usage {
   display: inline-flex;
   align-items: center;
-  user-select: none;
   white-space: nowrap;
 }
 
@@ -1283,6 +1282,18 @@
   align-items: center;
   gap: 0.35rem;
   flex-shrink: 0;
+}
+
+.composer-context-tokens {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.2rem;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(148, 163, 184, 0.7);
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
 }
 
 .composer-bar-button {

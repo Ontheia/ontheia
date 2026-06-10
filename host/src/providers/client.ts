@@ -263,6 +263,16 @@ export async function buildProviderChatRequest(
       }));
       body.tool_choice = 'auto';
     }
+
+    // Most OpenAI-compatible providers omit token usage entirely when streaming
+    // unless stream_options.include_usage is requested. Providers that reject the
+    // field can opt out via metadata `stream_include_usage: false`.
+    const streamUsageOptOut =
+      providerMetadata['stream_include_usage'] === false ||
+      modelMetadata['stream_include_usage'] === false;
+    if (isOpenAICompatible && body.stream === true && body.stream_options === undefined && !streamUsageOptOut) {
+      body.stream_options = { include_usage: true };
+    }
   }
 
   return {

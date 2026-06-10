@@ -87,7 +87,13 @@ export class RunService {
     const capturedEvents: RunEvent[] = [];
     let lastPersistenceTime = 0;
     let persistenceQueue = Promise.resolve();
-    let currentUsage: { prompt: number; completion: number } | undefined;
+    // input/output/cache* accumulate across all tool-loop iterations, chain
+    // steps and delegated sub-agents of this run (billing semantics);
+    // lastPrompt holds the latest non-delegated prompt size incl. cache tokens
+    // (context-size semantics for the composer display).
+    let currentUsage:
+      | { input: number; output: number; cacheRead: number; cacheCreation: number; lastPrompt: number }
+      | undefined;
 
     let chatId: string | undefined;
     let enrichedInput: RunRequest = { ...request };
@@ -100,9 +106,20 @@ export class RunService {
       
       capturedEvents.push(event);
       
-      // TRACK USAGE: Update local currentUsage whenever tokens event arrives
+      // TRACK USAGE: accumulate run totals whenever a tokens event arrives
       if (event.type === 'tokens') {
-        currentUsage = { prompt: event.prompt, completion: event.completion };
+        const cacheRead = event.cacheRead ?? 0;
+        const cacheCreation = event.cacheCreation ?? 0;
+        if (!currentUsage) {
+          currentUsage = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0, lastPrompt: 0 };
+        }
+        currentUsage.input += event.prompt + cacheRead + cacheCreation;
+        currentUsage.output += event.completion;
+        currentUsage.cacheRead += cacheRead;
+        currentUsage.cacheCreation += cacheCreation;
+        if (!event.delegated) {
+          currentUsage.lastPrompt = event.prompt + cacheRead + cacheCreation;
+        }
       }
 
       // CAPTURE MEMORY HITS into snapshot for later persistence

@@ -24,7 +24,7 @@
 /** Frontend mirror of the backend RunEvent discriminated union (SSE stream events). */
 export type RunEvent =
   | { type: 'step_start'; step: string; timestamp?: string }
-  | { type: 'tokens'; prompt: number; completion: number; timestamp?: string }
+  | { type: 'tokens'; prompt: number; completion: number; cacheRead?: number; cacheCreation?: number; delegated?: boolean; timestamp?: string }
   | { type: 'run_token'; role: string; text: string; timestamp?: string }
   | { type: 'complete'; status: string; output?: string; metadata?: Record<string, unknown>; timestamp?: string }
   | { type: 'error'; code: string; message: string; metadata?: Record<string, unknown>; timestamp?: string }

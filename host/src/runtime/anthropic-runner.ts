@@ -123,7 +123,13 @@ export async function runAnthropicCompletion(
         signal: options?.signal
       });
 
-      emit({ type: 'tokens', prompt: response.usage.input_tokens, completion: response.usage.output_tokens });
+      emit({
+        type: 'tokens',
+        prompt: response.usage.input_tokens,
+        completion: response.usage.output_tokens,
+        cacheRead: (response.usage as any).cache_read_input_tokens ?? 0,
+        cacheCreation: (response.usage as any).cache_creation_input_tokens ?? 0
+      });
 
       let assistantText = '';
       const toolCalls: any[] = [];

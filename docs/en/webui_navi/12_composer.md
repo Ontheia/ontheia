@@ -44,10 +44,13 @@ Two coupled dropdowns:
 
 Only entries with "Show in Composer" enabled appear in the selection.
 
+The selection is saved per chat (persists across chat switches and reloads). Switching to an agent adopts that agent's administrator-configured tool approval mode for this chat; selecting a provider leaves the current tool approval mode unchanged.
+
 ### Action Buttons (right)
 
 | Button | Description |
 | --- | --- |
+| **Context size (e.g. "8.9k T")** | Shows the token count of the last request's prompt (context utilization). Hover for the exact value. |
 | **Shield / ShieldCheck** | Toggle tool approval mode: "Ask" ↔ "Full access". Only visible when an agent is selected. |
 | **Sparkles** | Optimize prompt — sends the current input for AI reformulation. |
 | **Bookmark+** | Open prompt templates (see below). |

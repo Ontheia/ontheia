@@ -100,6 +100,12 @@ export type RunEvent =
       type: 'tokens';
       prompt: number;
       completion: number;
+      // Anthropic prompt-cache tokens; not included in `prompt`.
+      cacheRead?: number;
+      cacheCreation?: number;
+      // Set when emitted by a delegated sub-agent run: counts into the run's
+      // cumulative usage but must not drive the chat's context-size display.
+      delegated?: boolean;
       timestamp?: string;
     }
   | {

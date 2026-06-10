@@ -44,10 +44,13 @@ Zwei gekoppelte Dropdowns:
 
 Nur Einträge mit aktivem „Im Composer anzeigen"-Flag erscheinen in der Auswahl.
 
+Die Auswahl wird pro Chat gespeichert (bleibt nach Chat-Wechsel und Neuladen erhalten). Beim Wechsel auf einen Agenten übernimmt Ontheia dessen vom Administrator konfigurierten Tool-Freigabe-Modus für diesen Chat; eine Provider-Auswahl lässt den aktuellen Tool-Freigabe-Modus unverändert.
+
 ### Aktions-Buttons (rechts)
 
 | Button | Beschreibung |
 | --- | --- |
+| **Kontextgröße (z. B. „8,9k T")** | Zeigt die Tokenanzahl des Prompts der letzten Anfrage (Kontext-Auslastung). Hover zeigt den genauen Wert. |
 | **Shield / ShieldCheck** | Tool-Freigabe-Modus umschalten: „Nachfragen" ↔ „Voller Zugriff". Nur sichtbar wenn ein Agent gewählt ist. |
 | **Sparkles** | Prompt optimieren — sendet die aktuelle Eingabe zur KI-Umformulierung. |
 | **Lesezeichen+** | Prompt-Vorlagen öffnen (siehe unten). |

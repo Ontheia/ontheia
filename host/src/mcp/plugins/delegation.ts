@@ -90,7 +90,9 @@ export async function handleDelegation(
       client,
       orchestrator,
       templateContext as any,
-      (ev) => { if (context?.onEvent) context.onEvent(ev); },
+      // Token events from delegated runs count into the parent run's cumulative
+      // usage but must not drive the chat's context-size display (lastPrompt).
+      (ev) => { if (context?.onEvent) context.onEvent(ev.type === 'tokens' ? { ...ev, delegated: true } : ev); },
       memoryAdapter,
       dummySpec as any,
       context?.history || [],

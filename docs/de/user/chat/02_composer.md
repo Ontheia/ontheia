@@ -7,6 +7,7 @@ Bevor du eine Nachricht sendest, wählst du aus, wer antworten soll:
 - **Agent oder Provider:** Wähle eine spezialisierte KI-Persona oder einen direkten AI-Provider (z. B. OpenAI).
 - **Task oder Chain:** Wähle eine spezifische Aufgabe (Task) oder einen mehrstufigen Workflow (Chain) aus.
 - **Vorauswahl:** Ontheia merkt sich deine letzte Auswahl für neue Chats. Du kannst diese Voreinstellung in deinen Benutzereinstellungen dauerhaft ändern.
+- **Pro Chat gespeichert:** Innerhalb eines bestehenden Chats wird deine Auswahl für genau diesen Chat gespeichert und bleibt auch nach einem Chat-Wechsel oder Neuladen der Seite erhalten. Wechselst du dabei zu einem Agenten, übernimmt Ontheia automatisch dessen vom Administrator konfigurierte Tool-Freigabe (siehe Abschnitt 3) für diesen Chat — eine zuvor manuell gesetzte Freigabe wird dadurch überschrieben. Wechselst du stattdessen zu einem Provider, bleibt die aktuelle Tool-Freigabe unverändert.
 
 ## 2. Text-Eingabe
 Das Eingabefeld unterstützt mehrzeiligen Text. 
@@ -43,8 +44,16 @@ Wenn ein Agent eine Aktion ausführen möchte (z. B. eine E-Mail senden oder im 
   Weitere Variablen (z. B. `${agent_id}`, `${task_id}`, `${role}`) sind ebenfalls verfügbar — die vollständige Liste findet sich in der Admin-Dokumentation unter *Tasks / Konfiguration*.
 
 ## 5. Token-Anzeige (Nutzung)
-Nachdem der Agent geantwortet hat, erscheint rechtsbündig unter der Nachricht eine kleine Statistik (z. B. `1.250 / 80 Tokens`).
-- **Erste Zahl:** Zeigt die Anzahl der Tokens, die an das Modell gesendet wurden (deine Nachricht + Kontext + System-Prompts).
-- **Zweite Zahl:** Zeigt die Anzahl der Tokens in der Antwort des Agenten.
-- **Sinn:** Dies hilft dir, die Komplexität deines Kontextes und die Kosten/Last des Runs einzuschätzen.
+Nachdem der Agent geantwortet hat, erscheint rechtsbündig unter der Nachricht eine kleine Statistik in der Form `↑ 1,2k ↓ 80`.
+- **↑ (Eingabe):** Gesamtzahl der Tokens, die für diesen Run an das Modell gesendet wurden — kumuliert über alle Zwischenschritte (z. B. mehrere Tool-Aufrufe, Chain-Schritte oder delegierte Sub-Agenten) inklusive eventuell wiederverwendeter Cache-Tokens.
+- **↓ (Ausgabe):** Gesamtzahl der vom Agenten erzeugten Tokens, ebenfalls kumuliert über alle Zwischenschritte.
+- **Kompaktnotation:** Werte ab 1.000 werden gerundet dargestellt (z. B. `12,4k`, `1,2M`).
+- **Kopierbar:** Wie der Zeitstempel lässt sich auch diese Anzeige markieren und kopieren — praktisch, um Werte für Debugging oder Support weiterzugeben.
+- **Sinn:** Hilft dir, den Token-Verbrauch und damit die Kosten/Last des Runs einzuschätzen — insbesondere bei Chains und Delegation, wo mehrere Modellaufrufe zusammengezählt werden.
+
+## 6. Kontextgröße (Composer-Bar)
+Rechts in der unteren Composer-Leiste, vor dem Tool-Freigabe-Symbol, zeigt Ontheia die aktuelle Kontextgröße als kompakte Zahl (z. B. `8,9k T`).
+- **Bedeutung:** Anzahl der Tokens, die beim letzten Request tatsächlich als Prompt an das Modell gesendet wurden (inkl. Cache-Tokens) — unabhängig von Tokens, die durch delegierte Sub-Agenten verbraucht wurden.
+- **Hover:** Ein Tooltip zeigt den genauen Wert in Tokens.
+- **Sinn:** Gibt dir ein Gefühl dafür, wie nahe du am Kontextlimit des gewählten Modells bist — im Unterschied zur kumulierten Token-Anzeige an der Nachricht (siehe oben), die auf Kosten/Abrechnung des gesamten Runs abzielt.
 

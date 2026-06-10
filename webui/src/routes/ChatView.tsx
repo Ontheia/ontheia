@@ -97,6 +97,7 @@ import { copyText } from '@/lib/clipboard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { localizeError } from '@/lib/error-utils';
+import { accumulateUsage, usageTotals, usageLastPrompt, formatTokens } from '@/lib/token-usage';
 import type { RunEvent, MemoryHit } from '../types/run-events';
 
 type ChatMessage = {
@@ -142,16 +143,9 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
   const normalizedRole = role === 'user' ? 'user' : 'agent';
   const showRoleBadge = role === 'tool' || role === 'system';
   
-  const usage = useMemo(() => {
-    if (!metadata?.usage) return null;
-    const u = metadata.usage as any;
-    if (typeof u?.prompt === 'number' && typeof u?.completion === 'number') {
-      return u.prompt + u.completion;
-    }
-    return null;
-  }, [metadata?.usage]);
+  const usage = useMemo(() => usageTotals(metadata?.usage), [metadata?.usage]);
 
-  const { t } = useTranslation(['chat', 'common']);
+  const { t, i18n } = useTranslation(['chat', 'common']);
 
   const formattedTime = useMemo(() => {
     if (!createdAt) return null;
@@ -228,8 +222,10 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
             </div>
           )}
           {usage !== null && (
-            <div className="message-usage">
-              {usage} T
+            <div className="message-usage" title={t('tokenUsageTitle')}>
+              {'input' in usage
+                ? `↑ ${formatTokens(usage.input, i18n.language)} ↓ ${formatTokens(usage.output, i18n.language)}`
+                : `${formatTokens(usage.sum, i18n.language)} T`}
             </div>
           )}
         </div>
@@ -281,7 +277,7 @@ export function ChatView({
   showSecondarySidebar,
   onToggleSecondarySidebar
 }: ChatViewProps) {
-  const { t } = useTranslation(['chat', 'common', 'settings', 'errors']);
+  const { t, i18n } = useTranslation(['chat', 'common', 'settings', 'errors']);
   const sidebarCtx = useSidebar();
   const { id: chatId } = useParams<{ id: string }>();
   const activeChatId = chatId ?? null;
@@ -300,6 +296,11 @@ export function ChatView({
   const [messageSearch, setMessageSearch] = useState('');
   const streamCancelRef = useRef<(() => void) | null>(null);
   const streamingMessageRef = useRef<{ id: string; content: string } | null>(null);
+  // Run-wide usage accumulator. tokens events arrive BEFORE the iteration's
+  // text (and step_start resets streamingMessageRef), so per-message
+  // accumulation would miss or mistarget them — this ref carries the run
+  // total and is attached to whichever agent message is current/created.
+  const runUsageRef = useRef<ReturnType<typeof accumulateUsage> | null>(null);
   const lastScrollRef = useRef<{ targetId: string; reason: string } | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const serverRunIdRef = useRef<string | null>(null);
@@ -517,6 +518,9 @@ export function ChatView({
     ? getToolApproval(activeChatId, agentDefaultApproval)
     : (defaultToolApproval ?? agentDefaultApproval);
   const [approvalMode, setApprovalMode] = useState<ToolApprovalMode>(resolvedToolApproval);
+  // Current context size (prompt tokens incl. cache of the latest non-delegated
+  // request) — shown in the composer bar; null until a value is known.
+  const [contextTokens, setContextTokens] = useState<number | null>(null);
 
   useEffect(() => {
     setTemplateScope(defaultTemplateScope);
@@ -1262,6 +1266,7 @@ export function ChatView({
       streamCancelRef.current = runAgentStream(payload, {
         onStarted: (hostRunId) => {
           serverRunIdRef.current = hostRunId;
+          runUsageRef.current = null;
           setEvents([]);
           setActiveRunForChat(effectiveChatId, hostRunId);
         },
@@ -1280,11 +1285,18 @@ export function ChatView({
                 const msgId = makeId('msg');
                 const createdAt = new Date().toISOString();
                 streamingMessageRef.current = { id: msgId, content: text };
-                return [...prev, { id: msgId, role: 'agent', content: text, createdAt }];
+                return [...prev, {
+                  id: msgId,
+                  role: 'agent',
+                  content: text,
+                  createdAt,
+                  ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+                }];
               });
             });
             setStreamingText(prev => prev + text);
           } else if (event.type === 'tokens') {
+            runUsageRef.current = accumulateUsage(runUsageRef.current, event);
             flushSync(() => {
               setMessages((prev) => {
                 const currentRef = streamingMessageRef.current;
@@ -1292,11 +1304,14 @@ export function ChatView({
                 if (!targetId) return prev;
                 return prev.map(m =>
                   m.id === targetId
-                    ? { ...m, metadata: { ...m.metadata, usage: { prompt: ((m.metadata?.usage as any)?.prompt || 0) + event.prompt, completion: ((m.metadata?.usage as any)?.completion || 0) + event.completion } } }
+                    ? { ...m, metadata: { ...m.metadata, usage: runUsageRef.current } }
                     : m
                 );
               });
             });
+            if (!event.delegated) {
+              setContextTokens(event.prompt + (event.cacheRead ?? 0) + (event.cacheCreation ?? 0));
+            }
           } else if (event.type === 'step_start') {
             streamingMessageRef.current = null;
             setStreamingText('');
@@ -1309,7 +1324,13 @@ export function ChatView({
             if (output && !streamingMessageRef.current) {
               const msgId = makeId('msg');
               const createdAt = new Date().toISOString();
-              setMessages((prev) => [...prev, { id: msgId, role: 'agent', content: output, createdAt }]);
+              setMessages((prev) => [...prev, {
+                id: msgId,
+                role: 'agent',
+                content: output,
+                createdAt,
+                ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+              }]);
               if (activeChatId) {
                 upsertMessage({ id: activeChatId, preview: makePreview(output), timestamp: createdAt });
               }
@@ -1469,6 +1490,7 @@ export function ChatView({
       streamCancelRef.current = resumeRunStream(hostRunId, {
         onStarted: () => {
           serverRunIdRef.current = hostRunId;
+          runUsageRef.current = null;
         },
         onEvent: (event: any) => {
           if (event.type === 'warning') {
@@ -1505,12 +1527,19 @@ export function ChatView({
                 const agentMessageId = makeId('msg');
                 const createdAt = new Date().toISOString();
                 streamingMessageRef.current = { id: agentMessageId, content: text };
-                return [...prev, { id: agentMessageId, role: 'agent', content: text, createdAt }];
+                return [...prev, {
+                  id: agentMessageId,
+                  role: 'agent',
+                  content: text,
+                  createdAt,
+                  ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+                }];
               });
             });
             return;
           }
           if (event.type === 'tokens') {
+            runUsageRef.current = accumulateUsage(runUsageRef.current, event);
             flushSync(() => {
               setMessages((prev) => {
                 const currentRef = streamingMessageRef.current;
@@ -1518,11 +1547,14 @@ export function ChatView({
                 if (!targetId) return prev;
                 return prev.map(m =>
                   m.id === targetId
-                    ? { ...m, metadata: { ...m.metadata, usage: { prompt: ((m.metadata?.usage as any)?.prompt || 0) + event.prompt, completion: ((m.metadata?.usage as any)?.completion || 0) + event.completion } } }
+                    ? { ...m, metadata: { ...m.metadata, usage: runUsageRef.current } }
                     : m
                 );
               });
             });
+            if (!event.delegated) {
+              setContextTokens(event.prompt + (event.cacheRead ?? 0) + (event.cacheCreation ?? 0));
+            }
             return;
           }
           if (event.type === 'tool_call') {
@@ -1767,6 +1799,7 @@ export function ChatView({
       setMessages([]);
       setError('');
       setMessage('');
+      setContextTokens(null);
 
       if (!currentChatId) {
         return;
@@ -1864,6 +1897,18 @@ export function ChatView({
           nextMessages = [...historyMessages, agentMsg];
         }
         setMessages(nextMessages);
+
+        // Initialize the composer context-size display from the latest agent
+        // message carrying a persisted lastPrompt value.
+        for (let i = nextMessages.length - 1; i >= 0; i -= 1) {
+          const msg = nextMessages[i];
+          if (msg.role !== 'agent') continue;
+          const lastPrompt = usageLastPrompt(msg.metadata?.usage);
+          if (lastPrompt !== null) {
+            setContextTokens(lastPrompt);
+            break;
+          }
+        }
 
         const nextActiveRunId = messagesResponse?.active_run_id ?? eventsResponse?.active_run_id ?? null;
 
@@ -2255,6 +2300,18 @@ export function ChatView({
                 />
               </div>
               <div className="composer-bottom-right">
+                {contextTokens !== null && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="composer-context-tokens" aria-label={t('contextTokens')}>
+                        {formatTokens(contextTokens, i18n.language)} T
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {t('contextTokensTooltip', { count: contextTokens })}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {primary.type === 'agent' && (
                   <Tooltip>
                     <TooltipTrigger asChild>
