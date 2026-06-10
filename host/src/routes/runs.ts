@@ -46,6 +46,7 @@ import { activeRunControllers, runStreamStates, pendingToolApprovals, getActiveR
 import { deleteVectorNamespacesSafe } from './agents.js';
 import { slugifySegment } from '../memory/namespaces.js';
 import { parseRunRequest, extractRunMetadata } from './run-utils.js';
+import { normalizeChatSettings } from './chat-utils.js';
 
 export function registerRunRoutes(server: FastifyInstance, context: RouteContext & { runService: RunService }) {
   const { db, runService, memoryAdapter } = context;
@@ -629,6 +630,11 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       let idx = 2;
       if (body.title) { updates.push(`title = $${idx++}`); values.push(body.title); }
       if (body.project_id !== undefined) { updates.push(`project_id = $${idx++}`); values.push(body.project_id); }
+      const settingsPatch = normalizeChatSettings(body.settings);
+      if (settingsPatch) {
+        updates.push(`settings = COALESCE(settings, '{}'::jsonb) || $${idx++}::jsonb`);
+        values.push(JSON.stringify(settingsPatch));
+      }
       if (updates.length > 0) {
         await client.query(`UPDATE app.chats SET ${updates.join(', ')}, updated_at = now() WHERE id = $1`, values);
       }

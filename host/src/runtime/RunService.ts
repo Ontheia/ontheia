@@ -47,7 +47,7 @@ import {
 import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
 import { loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
-import { upsertChat, insertChatMessage, upsertAgentMessage } from '../routes/chat-utils.js';
+import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countMemoryWarning } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages } from './prompt-utils.js';
@@ -303,7 +303,8 @@ export class RunService {
             userId,
             projectId,
             title: context.title || buildChatTitlePreview(enrichedInput.messages, 'Auto-Chat'),
-            lastMessageAt: new Date().toISOString()
+            lastMessageAt: new Date().toISOString(),
+            settings: normalizeChatSettings((enrichedInput.options?.metadata as Record<string, unknown> | undefined)?.settings)
           });
           if (userText) {
             await insertChatMessage(this.db, client, { chatId: activeChatId, runId, role: 'user', content: userText });

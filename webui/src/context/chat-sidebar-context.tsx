@@ -126,7 +126,9 @@ type ChatPreferenceSecondary = { id: string; label: string } | null;
 export type ChatPreferences = {
   primary: ChatPreferencePrimary;
   secondary: ChatPreferenceSecondary;
-  toolApproval: ToolApprovalMode;
+  // null = not explicitly set for this chat — resolution falls back to the
+  // user default and, last, the selected agent's toolApprovalMode.
+  toolApproval: ToolApprovalMode | null;
 };
 
 type ChatSidebarContextValue = {
@@ -191,7 +193,7 @@ const TOOL_APPROVAL_KEY = 'chatToolApprovals';
 const createDefaultChatPreferences = (): ChatPreferences => ({
   primary: { type: 'provider', id: '' },
   secondary: null,
-  toolApproval: 'prompt'
+  toolApproval: null
 });
 
 const mergePreferences = (
@@ -202,7 +204,7 @@ const mergePreferences = (
   return {
     primary: patch.primary ?? base.primary,
     secondary: patch.secondary !== undefined ? patch.secondary : base.secondary,
-    toolApproval: patch.toolApproval ?? base.toolApproval
+    toolApproval: patch.toolApproval !== undefined ? patch.toolApproval : base.toolApproval
   };
 };
 const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
@@ -781,12 +783,16 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
 
         // Trigger persistence outside of the state update if needed
         const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!options?.skipPersist && UUID_REGEX.test(chatId)) {
-          setTimeout(() => {
-            updateChat(chatId, { settings: nextVal }).catch((err) =>
-              console.warn('Failed to persist chat settings', err)
-            );
-          }, 0);
+        if (!options?.skipPersist) {
+          if (UUID_REGEX.test(chatId)) {
+            setTimeout(() => {
+              updateChat(chatId, { settings: nextVal }).catch((err) =>
+                console.warn('Failed to persist chat settings', err)
+              );
+            }, 0);
+          } else {
+            console.debug('Chat settings kept local only (non-UUID chat id)', chatId);
+          }
         }
 
         return {
@@ -833,7 +839,7 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
 
   const clearToolApproval = useCallback(
     (chatId: string) => {
-      updateChatPreferences(chatId, { toolApproval: 'prompt' });
+      updateChatPreferences(chatId, { toolApproval: null });
     },
     [updateChatPreferences]
   );
@@ -863,7 +869,7 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
                newPreferences[chatId] = {
                  primary: chat.settings.primary ?? defaults.primary,
                  secondary: chat.settings.secondary ?? defaults.secondary,
-                 toolApproval: chat.settings.toolApproval ?? defaults.toolApproval
+                 toolApproval: chat.settings.toolApproval ?? null
                };
             }
             const title = typeof chat?.title === 'string' && chat.title.trim().length > 0 ? chat.title : i18n.t('chat:newChat');

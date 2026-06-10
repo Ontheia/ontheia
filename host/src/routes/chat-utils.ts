@@ -27,6 +27,40 @@ import {
   toIsoString 
 } from './utils.js';
 
+export type ChatSettingsPatch = {
+  primary?: { type: 'provider' | 'agent'; id: string };
+  secondary?: { id: string; label: string } | null;
+  toolApproval?: 'prompt' | 'granted' | 'denied' | null;
+};
+
+// Validates a client-supplied chat-settings patch (picker selection + tool
+// approval). Returns only the recognized keys so the jsonb merge in the chats
+// table cannot be polluted with arbitrary payload; null clears a value.
+export function normalizeChatSettings(input: unknown): ChatSettingsPatch | null {
+  if (!isPlainObject(input)) return null;
+  const raw = input as Record<string, unknown>;
+  const out: ChatSettingsPatch = {};
+  const primary = raw.primary as any;
+  if (isPlainObject(primary) && (primary.type === 'provider' || primary.type === 'agent') && typeof primary.id === 'string') {
+    out.primary = { type: primary.type, id: primary.id };
+  }
+  if ('secondary' in raw) {
+    const secondary = raw.secondary as any;
+    if (secondary === null) {
+      out.secondary = null;
+    } else if (isPlainObject(secondary) && typeof secondary.id === 'string') {
+      out.secondary = { id: secondary.id, label: typeof secondary.label === 'string' ? secondary.label : secondary.id };
+    }
+  }
+  if ('toolApproval' in raw) {
+    const toolApproval = raw.toolApproval;
+    if (toolApproval === null || toolApproval === 'prompt' || toolApproval === 'granted' || toolApproval === 'denied') {
+      out.toolApproval = toolApproval;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 export async function upsertChat(db: Pool, client: PoolClient | null, params: { chatId: string; userId: string | null; projectId?: string | null; title?: string | null; defaultAgent?: string | null; defaultToolApproval?: string | null; lastMessageAt?: string | null; settings?: Record<string, unknown> | null }) {
   const runner = client ?? db;
   await runner.query(

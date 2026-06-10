@@ -478,11 +478,24 @@ export function ChatView({
     (selection: PrimarySelection) => {
       onPrimaryChange(selection);
       secondaryInitializedRef.current = false;
+      // Selecting an agent adopts its admin-configured tool approval as the
+      // chat's setting; selecting a provider carries the current value along.
+      const adoptedApproval =
+        selection.type === 'agent'
+          ? agents.find((agent) => agent.id === selection.id)?.toolApprovalMode ?? 'prompt'
+          : undefined;
       if (activeChatId) {
-        updateChatPreferences(activeChatId, { primary: selection, secondary: null });
+        updateChatPreferences(activeChatId, {
+          primary: selection,
+          secondary: null,
+          ...(adoptedApproval !== undefined ? { toolApproval: adoptedApproval } : {})
+        });
+      }
+      if (adoptedApproval !== undefined) {
+        setApprovalMode(adoptedApproval);
       }
     },
-    [onPrimaryChange, activeChatId, updateChatPreferences]
+    [onPrimaryChange, activeChatId, updateChatPreferences, agents]
   );
   const handleSecondaryChange = useCallback(
     (selection: SecondarySelection | null) => {

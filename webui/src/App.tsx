@@ -134,7 +134,6 @@ function AuthenticatedApp() {
     refreshChats,
     isInitialLoadComplete,
     getChatPreferences,
-    updateChatPreferences,
     uiFlags
   } = useChatSidebar();
   const { providers, loading: providersLoading } = useProviderContext();
@@ -345,19 +344,12 @@ function AuthenticatedApp() {
       onPrimaryChange={(next) => {
         setPrimary(next);
         setSecondary(null);
-        // Persist change
-        const chatId = location.pathname.match(/^\/chat\/([^\/]+)$/)?.[1];
-        if (chatId) {
-          updateChatPreferences(chatId, { primary: next, secondary: null });
-        }
+        // Persistence happens in ChatView's handlePrimaryChange (single write
+        // path that also adopts the agent's tool approval).
       }}
       onSecondaryChange={(value) => {
         setSecondary(value);
-        // Persist change
-        const chatId = location.pathname.match(/^\/chat\/([^\/]+)$/)?.[1];
-        if (chatId) {
-          updateChatPreferences(chatId, { secondary: value });
-        }
+        // Persistence happens in ChatView's handleSecondaryChange.
       }}
       onSelectionChange={onSelectionChangeAtomic}
     />
