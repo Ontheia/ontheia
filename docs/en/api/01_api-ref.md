@@ -2,23 +2,6 @@
 
 This documentation describes the available API endpoints of the Ontheia host.
 
-## Table of Contents
-- [Authentication & Users](#authentication--users)
-- [Agents & Tasks](#agents--tasks)
-- [Prompt Templates](#prompt-templates)
-- [Chains](#chains)
-- [Automation (Cron Jobs)](#automation-cron-jobs)
-- [Runs (Execution)](#runs-execution)
-- [Memory (Vector Database)](#memory-vector-database)
-- [Projects & Chats](#projects--chats)
-- [MCP & Servers](#mcp--servers)
-- [Admin & Maintenance](#admin--maintenance)
-- [System & Monitoring](#system--monitoring)
-- [Data Privacy (GDPR) & Memory Access](#data-privacy-gdpr--memory-access)
-- [Data Types & Schemas](#data-types--schemas)
-
----
-
 ## Authentication & Users
 
 All endpoints (except `/auth/login` and `/auth/signup`) require a valid Bearer token in the `Authorization` header.

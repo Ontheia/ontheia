@@ -2,26 +2,6 @@
 
 Diese Dokumentation beschreibt die verfügbaren API-Endpunkte des Ontheia-Hosts.
 
-## Inhaltsverzeichnis
-- [Authentifizierung & Benutzer](#authentifizierung--benutzer)
-- [Agenten & Tasks](#agenten--tasks)
-- [Prompt-Vorlagen](#prompt-vorlagen)
-- [Chains](#chains)
-- [Automatisierung (Cron-Jobs)](#automatisierung-cron-jobs)
-- [Runs (Ausführung)](#runs-ausführung)
-- [Memory (Vektordatenbank)](#memory-vektordatenbank)
-- [Projekte & Chats](#projekte--chats)
-- [MCP & Server](#mcp--server)
-- [Admin & Maintenance](#admin--maintenance)
-  - [Benutzerverwaltung](#benutzerverwaltung)
-  - [Systemeinstellungen](#systemeinstellungen) — inkl. `GET /admin/system/status`
-  - [Vektor-Datenbank & Namespaces](#vektor-datenbank--namespaces)
-- [System & Monitoring](#system--monitoring)
-- [Datenschutz (DSGVO) & Memory-Zugriff](#datenschutz-dsgvo--memory-zugriff)
-- [Datentypen & Schemas](#datentypen--schemas)
-
----
-
 ## Authentifizierung & Benutzer
 
 Alle Endpunkte (außer `/auth/login` und `/auth/signup`) erfordern ein gültiges Bearer-Token im `Authorization`-Header.
