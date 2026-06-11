@@ -50,12 +50,12 @@ System-Messages und die eigentlichen Agenten-Prompts bleiben davon unberührt.
 
 | Feld | Standard | Beschreibung |
 | --- | --- | --- |
-| Provider | — | KI-Provider für den Summarizer-LLM-Aufruf. Muss im Tab *AI-Provider* konfiguriert sein. |
-| Modell | — | Modell innerhalb des gewählten Providers. |
-| Token-Schwellenwert | 32 000 | Gesamttokens (chars ÷ 4) aller Chat-Nachrichten, ab dem komprimiert wird. |
+| Provider | Install-Default | KI-Provider für den Summarizer-LLM-Aufruf. Wird von der Installation vorbelegt (gleicher Provider wie die Beispiel-Agenten); änderbar im Tab *AI-Provider*. |
+| Modell | Install-Default | Modell innerhalb des gewählten Providers. Wird von der Installation vorbelegt. |
+| Token-Schwellenwert | 8 000 | Gesamttokens (chars ÷ 4) aller Chat-Nachrichten, ab dem komprimiert wird. |
 | Mindest-Klartextfenster | 20 | Anzahl der letzten Nachrichten, die immer im Volltext an den LLM übergeben werden. |
 
-> **Wichtig:** Ohne Provider und Modell bleibt die Komprimierung inaktiv. Die Einstellungen werden global für alle Nutzer gespeichert.
+> **Wichtig:** Ohne Provider und Modell bleibt die Komprimierung inaktiv — bei einer Frischinstallation ist beides bereits vorbelegt. Die Einstellungen werden global für alle Nutzer gespeichert.
 
 ---
 

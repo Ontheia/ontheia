@@ -21,7 +21,7 @@ Ontheia unterscheidet zwischen drei Typen von Servern:
 
 ## System-MCP-Server: cli-tools
 
-Der `cli-tools`-Server (`host/mcp-servers/cli-server/cli_server.py`) ist ein Python-basierter MCP-Server, der Agenten kontrollierten Zugriff auf Shell-Befehle und Skill-Scripts ermöglicht. Er wird als gespeicherter Server in der Datenbank registriert und bei Bedarf gestartet.
+Der `cli-tools`-Server (`host/mcp-servers/cli-server/cli_server.py`) ist ein Python-basierter MCP-Server, der Agenten kontrollierten Zugriff auf Shell-Befehle und Skill-Scripts ermöglicht. Die Installation registriert ihn automatisch als gespeicherten Server mit Auto-Start (er wird vom skill-creator-Skill benötigt); er läuft als Subprozess des Host-Containers und erbt dessen Umgebung (u. a. `DATABASE_URL`).
 
 ### Tools
 

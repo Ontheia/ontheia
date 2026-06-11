@@ -50,12 +50,12 @@ System messages and the actual agent prompts are not affected.
 
 | Field | Default | Description |
 | --- | --- | --- |
-| Provider | — | AI provider for the summarizer LLM call. Must be configured in the *AI Provider* tab. |
-| Model | — | Model within the chosen provider. |
-| Token Threshold | 32,000 | Total tokens (chars ÷ 4) of all chat messages above which compression triggers. |
+| Provider | install default | AI provider for the summarizer LLM call. Preset by the installer (same provider as the example agents); changeable in the *AI Provider* tab. |
+| Model | install default | Model within the chosen provider. Preset by the installer. |
+| Token Threshold | 8,000 | Total tokens (chars ÷ 4) of all chat messages above which compression triggers. |
 | Minimum Plaintext Window | 20 | Number of most recent messages always passed to the LLM as full text. |
 
-> **Important:** Without a provider and model configured, compression remains inactive. Settings are stored globally for all users.
+> **Important:** Without a provider and model configured, compression remains inactive — a fresh install comes with both preset. Settings are stored globally for all users.
 
 ---
 
