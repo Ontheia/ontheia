@@ -23,9 +23,11 @@ RUN apt-get update && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 # Python 3.13 für postgres-mcp (erfordert >=3.12, Basis-Image hat nur 3.11)
 RUN uv python install 3.13
-RUN uv tool install nextcloud-mcp-server@0.85.1
-RUN npm install -g markdown2pdf-mcp@latest && \
-    sed -i 's/if (process.argv\[1\] && path.resolve(process.argv\[1\]) === __filename)/if (true)/' /usr/local/lib/node_modules/markdown2pdf-mcp/build/index.js
+# Optional MCP servers (nextcloud-mcp-server, markdown2pdf-mcp, …) are NOT
+# baked into the image: that couples every build to PyPI/npm availability and
+# fails on network problems. Instead, the first uvx/npx start downloads at
+# runtime into the volume-mounted caches (/root/.cache/uv, /root/.cache/npx) —
+# pre-warm with scripts/warmup-mcp.sh, see docs/{de,en}/admin/mcp-server/01_basics.md.
 ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 # Source NVM from mounted host path so CLI tools (claude, gemini) are found in login shells
 RUN echo 'export NVM_DIR="/home/rock/.nvm"' >> /root/.profile && \

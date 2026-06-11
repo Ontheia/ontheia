@@ -46,3 +46,21 @@ befehl  (ohne Beschreibung)
 Diese Datei ist die einzige Quelle — kein Code-Change nötig um Befehle hinzuzufügen, zu entfernen oder zu beschreiben. Der Pfad kann über `ALLOWLIST_CLI_COMMANDS_PATH` überschrieben werden.
 
 > **Sicherheit:** `execute` akzeptiert nur Befehle die in der Allowlist stehen. `run_skill_script` begrenzt alle Pfade zusätzlich auf das Skill-Verzeichnis um Traversal-Angriffe zu verhindern.
+
+---
+
+## Paket-Caches & Warm-up für uvx/npx-Server
+
+MCP-Server, die per `uvx` oder `npx` gestartet werden (z. B. `nextcloud-mcp-server`, `postgres-mcp`, `markdown2pdf-mcp`), sind **nicht** ins Docker-Image eingebaut — das würde jeden Image-Build an die Erreichbarkeit von PyPI/npm koppeln. Stattdessen lädt der erste Start in die volume-gemounteten Caches (`/root/.cache/uv`, `/root/.cache/npx`), die Container-Neuanlagen überleben.
+
+Damit der erste Start nicht in den Startup-Timeout läuft, nach dem Einrichten eines solchen Servers einmalig vorwärmen:
+
+```bash
+bash scripts/warmup-mcp.sh                              # bekannte optionale Server
+bash scripts/warmup-mcp.sh uvx nextcloud-mcp-server@0.85.1   # einzelnes uvx-Paket
+bash scripts/warmup-mcp.sh npx markdown2pdf-mcp              # einzelnes npx-Paket
+```
+
+Empfehlungen für die Server-Konfiguration:
+- **Versionen pinnen** (z. B. `nextcloud-mcp-server@0.85.1`), damit `uvx` aus dem Cache auflöst statt bei jedem Start PyPI zu prüfen.
+- Für `markdown2pdf-mcp`: `npx -y markdown2pdf-mcp` verwenden (nicht `npx --no-install`, das eine globale npm-Installation voraussetzt).
