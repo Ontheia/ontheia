@@ -28,7 +28,7 @@ Ontheia keeps AI powerful — and keeps your data yours.
 - **Long-term Memory** — built-in RAG with pgvector, isolated per user and namespace
 - **Agent-to-Agent** — complex tasks coordinated across specialized sub-agents
 - **Automation** — time-based and agent-driven scheduling; one-time and recurring jobs with chat continuation
-- **Agent Skills** — reusable capability modules compatible with the open [agentskills.io](https://agentskills.io) standard (Claude Code, Cursor, GitHub Copilot, and more)
+- **Agent Skills** — reusable capability modules compatible with the open [agentskills.io](https://agentskills.io) standard (Claude Code, Cursor, GitHub Copilot, and more), including a built-in skill-creator that builds and tests new skills directly in chat
 
 ---
 
@@ -105,6 +105,7 @@ Full documentation at **[docs.ontheia.ai](https://docs.ontheia.ai)**
 | Installation | [EN](https://docs.ontheia.ai/en/getting-started/02_installation) | [DE](https://docs.ontheia.ai/de/getting-started/02_installation) |
 | Environment variables | [EN](https://docs.ontheia.ai/en/configuration/01_environment_variables) | [DE](https://docs.ontheia.ai/de/configuration/01_environment_variables) |
 | Agents | [EN](https://docs.ontheia.ai/en/admin/agents/01_concept) | [DE](https://docs.ontheia.ai/de/admin/agents/01_concept) |
+| Agent Skills | [EN](https://docs.ontheia.ai/en/admin/skills/01_concept) | [DE](https://docs.ontheia.ai/de/admin/skills/01_concept) |
 | Chain Engine | [EN](https://docs.ontheia.ai/en/admin/chains/01_concept) | [DE](https://docs.ontheia.ai/de/admin/chains/01_concept) |
 | Memory / RAG | [EN](https://docs.ontheia.ai/en/admin/memory_audit/01_architecture) | [DE](https://docs.ontheia.ai/de/admin/memory_audit/01_architecture) |
 | Security | [EN](https://docs.ontheia.ai/en/security/01_security_concept) | [DE](https://docs.ontheia.ai/de/security/01_security_concept) |

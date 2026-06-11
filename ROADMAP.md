@@ -6,25 +6,31 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.1.x — Early Access
+## Current: v0.2.x — Feature Milestone
 
-The platform is functional and in active use. Focus: stability, onboarding, and community foundation.
+The core feature set is in place and in active use. Shipped with 0.2.0:
+
+- **Agent Skills system** — skill catalog, admin UI, and a built-in skill-creator that builds and tests new skills directly in chat
+- **Guided onboarding** — the Ontheia Guide walks new users through setup, memory, skills, and automation; example agents work out of the box
+- **Scheduling for agents** — reminders and recurring prompts via agent tools
+- **Per-run token usage** — input/output tokens per run (incl. sub-agents) and live context-size display
+- **One-line installer** — `curl | bash` setup with preconfigured AI tools (prompt optimizer, summarizer)
+
+Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.1.7-x)
+## Near-term (v0.2.x)
 
 | Feature | Description |
 |---|---|
-| **Demo Agent** | Pre-installed agent that works out of the box — no setup required, runs with any configured provider |
-| **First-run Experience** | WebUI surfaces the demo agent prominently on first login |
 | **Provider Fallback Hint** | Clear message in chat when no AI provider is configured yet |
 | **CI Pipeline** | Automated lint and test runs on every pull request |
 | **Embedding Fallback** | Documents are embedded with a primary and a backup provider simultaneously (e.g. OpenAI + Ollama). If the primary provider is unavailable, the backup takes over automatically. |
 
 ---
 
-## Mid-term (v0.2–v0.x)
+## Mid-term (v0.3–v0.x)
 
 | Feature | Description |
 |---|---|
@@ -32,7 +38,7 @@ The platform is functional and in active use. Focus: stability, onboarding, and 
 | **Bulk Ingest: More Formats** | Extend document ingestion beyond MD and PDF: HTML, DOCX, PPTX, CSV, XLSX |
 | **Memory Browser: Namespace Tree** | Hierarchical view of all memory namespaces with statistics and admin user filter |
 | **Notifications** | Notify via external channels when runs complete or fail |
-| **Token & Cost Tracking** | Per-run token usage and cost calculation across master and sub-agents, with usage dashboard |
+| **Cost Tracking** | Cost calculation per provider/model on top of the shipped per-run token usage, with usage dashboard |
 | **Voice (TTS / STT)** | Speech input and output in chat — provider infrastructure already prepared |
 | **Chat Search** | Full-text search across chat history |
 | **Rate Limits per User** | Admins can set token and request limits per user |
