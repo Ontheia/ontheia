@@ -209,11 +209,11 @@ export async function handleMemoryWrite(
 export async function handleMemoryDelete(
   db: Pool | PoolClient,
   memoryAdapter: MemoryAdapter,
-  args: { content: string; namespace: string },
+  args: { content?: string; namespace: string; id?: string },
   context?: { run?: Pick<RunRequest, 'agent_id' | 'task_id' | 'options'>; db?: Pool | PoolClient }
 ) {
-  if (!args?.content || !args?.namespace) {
-    throw new Error('content and namespace are required.');
+  if (!args?.namespace || (!args?.content && !args?.id)) {
+    throw new Error('namespace and either id (preferred, from memory-search hits) or content are required.');
   }
 
   const dbClient = context?.db || db;
@@ -236,8 +236,21 @@ export async function handleMemoryDelete(
     throw new Error(`Delete access to namespace '${args.namespace}' not allowed.`);
   }
 
-  const affected = await memoryAdapter.deleteDocuments(args.namespace, [args.content], { hard: false }, dbClient as PoolClient);
+  // Prefer id-based deletion: content matching is exact and routinely fails
+  // for long entries the agent reconstructs from chat context.
+  const affected = args.id
+    ? await memoryAdapter.deleteDocumentById(args.namespace, args.id, { hard: false }, dbClient as PoolClient)
+    : await memoryAdapter.deleteDocuments(args.namespace, [args.content as string], { hard: false }, dbClient as PoolClient);
 
+  if (affected === 0) {
+    return {
+      success: false,
+      affected,
+      hint: args.id
+        ? 'No entry with this id in this namespace. Re-run memory-search and use the id from the hit.'
+        : 'No exact content match. Run memory-search first and pass the id of the hit instead of content.'
+    };
+  }
   return { success: true, affected };
 }
 

@@ -592,6 +592,39 @@ export class MemoryAdapter {
     return affected;
   }
 
+  // Delete a single document by its id. The namespace must match too — the
+  // caller's namespace authorization check would be meaningless otherwise.
+  async deleteDocumentById(
+    namespace: string,
+    id: string,
+    options?: { hard?: boolean },
+    client?: PoolClient
+  ): Promise<number> {
+    const trimmedNs = namespace?.trim();
+    const trimmedId = id?.trim();
+    if (!trimmedNs || !trimmedId) return 0;
+    const dbClient = client || (await this.db.connect());
+    const ownClient = !client;
+    let affected = 0;
+    try {
+      if (ownClient) await dbClient.query('BEGIN');
+      for (const table of this.tables) {
+        const sql = options?.hard
+          ? `DELETE FROM ${table.name} WHERE namespace = $1 AND id = $2`
+          : `UPDATE ${table.name} SET deleted_at = now() WHERE namespace = $1 AND id = $2`;
+        const res = await dbClient.query(sql, [trimmedNs, trimmedId]);
+        affected += res.rowCount ?? 0;
+      }
+      if (ownClient) await dbClient.query('COMMIT');
+    } catch (error) {
+      if (ownClient) await dbClient.query('ROLLBACK');
+      throw error;
+    } finally {
+      if (ownClient) (dbClient as PoolClient).release();
+    }
+    return affected;
+  }
+
   async cleanupExpired(client?: PoolClient): Promise<{ deleted: number }> {
     const db = client || this.db;
     let totalDeleted = 0;

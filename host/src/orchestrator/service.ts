@@ -591,15 +591,16 @@ export class OrchestratorService {
         },
         {
           name: 'memory-delete',
-          description: 'Deletes information from memory (soft-delete or permanent).',
+          description: 'Deletes information from memory (soft-delete or permanent). Prefer deleting by id (taken from a memory-search hit) — content matching is exact and fails on any whitespace or formatting difference.',
           inputSchema: {
             type: 'object',
             properties: {
-              content: { type: 'string', description: 'Content of the document to delete (for precise search)' },
+              id: { type: 'string', description: 'Id of the entry to delete, as returned in memory-search hits (preferred).' },
+              content: { type: 'string', description: 'Exact content of the document to delete — fallback when no id is available; must match the stored content verbatim.' },
               namespace: { type: 'string', description: 'Namespace' },
               hard: { type: 'boolean', default: false, description: 'Delete permanently (true) or just mark (false)' }
             },
-            required: ['content', 'namespace']
+            required: ['namespace']
           }
         }
       ];
@@ -775,8 +776,10 @@ export class OrchestratorService {
           return { count } as any;
         }
         if (params.name === 'memory-delete') {
-          const { content, namespace, hard } = params.arguments as any;
-          const count = await this.memoryAdapter.deleteDocuments(namespace, [content], { hard }, context?.db);
+          const { content, namespace, hard, id } = params.arguments as any;
+          const count = id
+            ? await this.memoryAdapter.deleteDocumentById(namespace, id, { hard }, context?.db)
+            : await this.memoryAdapter.deleteDocuments(namespace, [content], { hard }, context?.db);
           return { count } as any;
         }
       }
