@@ -68,7 +68,7 @@ The `skills` internal MCP server provides four tools:
 | `activate_skill(name)` | Loads the full skill body into context. |
 | `read_skill_resource(skill_name, path)` | Reads a file from the skill directory. |
 | `write_skill_resource(skill_name, path, content)` | Writes a file to the skill directory. |
-| `create_skill(name, scope, content)` | Creates a new skill. |
+| `create_skill(name, scope, content)` | Creates a new skill and assigns it to the creating agent (other agents need assignment via Admin Console → Skills). |
 
 ---
 
@@ -87,3 +87,20 @@ Skills complement tasks: a task defines the agent's identity, skills add cross-c
 Before: Agent → Task (1:1)
 After:  Agent → Task + [Skill A, Skill B, Skill C] (1:n)
 ```
+
+---
+
+## Built-in Skill: skill-creator
+
+Ontheia ships with the **skill-creator** skill (`sources/skills/global/skill-creator/`), adapted from Anthropic's skill-creator (Apache License 2.0, see its `LICENSE.txt`). It guides an agent through creating, testing, and iteratively improving skills.
+
+The installer assigns it to the **Ontheia Guide** and wires up two roles:
+
+| Role | Default agent | Purpose |
+| --- | --- | --- |
+| Orchestrator | Ontheia Guide | Has the skill-creator assigned; creates/improves skills and coordinates the trigger-eval loop. |
+| Test agent | Personal Assistant | Receives delegated test queries; gets the skill under test assigned automatically and can execute the finished skill afterwards. |
+
+Both roles can be moved to dedicated agents (e.g. `Skill_Creator` / `Skill_Test`) — the eval script accepts a `test_agent_label` parameter, and the orchestrator passes its own label to `analyze`.
+
+**Prerequisites:** `DATABASE_URL` in the host container environment (the eval script `scripts/run_eval_ontheia.py` inherits it via `run_skill_script` — no credentials are stored in the skill), the `cli-tools` MCP server (registered by the installer), and `uv` for Python script dependencies.

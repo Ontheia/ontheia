@@ -40,6 +40,8 @@ Inaktive oder deaktivierte Einträge werden in der Liste abgedunkelt dargestellt
 
 > **Hinweis — Aktiv vs. aktiviert:** `active` spiegelt wider, ob die Datei auf der Festplatte existiert (vom ScanService gesetzt, übersteht keinen Rescan). `enabled` ist der persistente Admin-Schalter (übersteht Rescans). Ein Skill ist nur nutzbar, wenn beide Felder `true` sind. Details siehe [Skill-Verwaltung › Aktiv vs. aktiviert](/de/admin/skills/02_management/#aktiv-vs-aktiviert-zwei-getrennte-zustände).
 
+> **Mitgelieferter Skill:** Die Installation registriert den globalen Skill **skill-creator** und weist ihn dem Ontheia Guide zu — damit lassen sich neue Skills direkt im Chat erstellen und testen. Details siehe [Agent Skills — Konzept › Mitgelieferter Skill](/de/admin/skills/01_concept/#mitgelieferter-skill-skill-creator).
+
 ---
 
 ## Siehe auch

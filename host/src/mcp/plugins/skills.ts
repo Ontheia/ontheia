@@ -224,9 +224,26 @@ export async function handleSkillsTool(
 
     await skillService.scanAll();
 
-    return { skill_dir: basePath, message: `Skill '${name}' created and indexed.` };
+    // Auto-assign to the creating agent — without an agent_skills row the
+    // skill never appears in any catalog and would silently never trigger.
+    let assignNote = '';
+    if (agentId) {
+      try {
+        const created = await skillService.getSkillByNameForUser(name, userId);
+        if (created) {
+          await skillService.assignSkillToAgent(created.id, agentId);
+          assignNote = ' Assigned to the current agent — other agents need assignment via Admin Console → Skills (or the skill-creator test loop).';
+        }
+      } catch (err) {
+        assignNote = ` WARNING: could not assign to the current agent (${(err as Error).message}) — assign manually via Admin Console → Skills, otherwise the skill will never trigger.`;
+      }
+    } else {
+      assignNote = ' NOT assigned to any agent yet — assign via Admin Console → Skills, otherwise the skill will never trigger.';
+    }
+
+    return { skill_dir: basePath, message: `Skill '${name}' created and indexed.${assignNote}` };
   }
 
-  void agentId; void client;
+  void client;
   throw new Error(`Unknown skill tool: ${toolName}`);
 }

@@ -40,6 +40,8 @@ Inactive or disabled entries are dimmed in the list.
 
 > **Note — Active vs. Enabled:** `active` reflects whether the file exists on disk (set by the ScanService, reset on every rescan). `enabled` is the persistent admin switch (survives rescans). A skill is only usable when both fields are `true`. See [Skill Management › Active vs. Enabled](/en/admin/skills/02_management/#active-vs-enabled--two-separate-states) for details.
 
+> **Built-in skill:** The installer registers the global **skill-creator** skill and assigns it to the Ontheia Guide — so new skills can be created and tested directly in chat. See [Agent Skills — Concept › Built-in Skill](/en/admin/skills/01_concept/#built-in-skill-skill-creator) for details.
+
 ---
 
 ## See Also

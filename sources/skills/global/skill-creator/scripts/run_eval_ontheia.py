@@ -7,26 +7,38 @@
 # Apache-2.0-licensed skill-creator components in this directory.
 """Ontheia-native skill trigger evaluator.
 
-Replaces run_eval.py + claude -p for Ontheia environments.
+Replaces external CLI-based eval runners for Ontheia environments.
 No external API key needed — uses Ontheia's own DB and agent infrastructure.
 
-Two-phase workflow (called by W_Skill_Creator, the orchestrator agent):
+Two roles are involved (any agent labels work; the install defaults are):
+  - orchestrator agent (default: "Ontheia Guide", or a dedicated e.g. "Skill_Creator"):
+    has the skill-creator skill assigned and calls this script.
+  - test agent (default: "Personal Assistant", or a dedicated e.g. "Skill_Test"):
+    receives the delegated test queries and has the skill under test assigned.
+
+Two-phase workflow (called by the orchestrator agent):
 
   Phase 1 — setup:
-    Temporarily updates the skill description in app.skills so W_Skill_Test
-    picks it up on the next run. Returns the original description for later restore.
+    Temporarily updates the skill description in app.skills so the test agent
+    picks it up on the next run, and ensures the skill is assigned to the test
+    agent (app.agent_skills upsert — the assignment persists after testing, so
+    the finished skill stays executable). Returns the original description for
+    later restore.
 
-  Phase 2 — analyze (call AFTER all delegate-to-agent calls to W_Skill_Test):
+  Phase 2 — analyze (call AFTER all delegate-to-agent calls to the test agent):
     Reads the orchestrator's OWN most recent app.run_logs row — delegated
     sub-agent runs do NOT get separate run_logs rows; the whole chain (every
     delegate-to-agent call plus the nested activate_skill / tool_call events
-    triggered inside W_Skill_Test) is logged as one flat `events` array on the
+    triggered inside the test agent) is logged as one flat `events` array on the
     orchestrator's row. analyze() splits that array into per-delegation segments
     at "chain:delegate" / "chain:delegate:complete" markers, checks each segment
     for an `activate_skill` call with arguments.name == skill_name, matches
     segments to eval_queries by the exact prompt text (delegate-to-agent
     arguments.input), computes trigger stats, then restores the original
     description.
+
+Requires DATABASE_URL in the environment (inherited from the Ontheia host
+container — never hardcode credentials here).
 
 Input via stdin (JSON):
 
@@ -35,7 +47,8 @@ Input via stdin (JSON):
     "action": "setup",
     "skill_name": "my-skill",
     "owner_id": "uuid-of-skill-owner",   // required for user-scoped skills
-    "candidate_description": "..."
+    "candidate_description": "...",
+    "test_agent_label": "Personal Assistant"  // optional, this is the default
   }
 
   analyze:
@@ -43,7 +56,7 @@ Input via stdin (JSON):
     "action": "analyze",
     "skill_name": "my-skill",
     "owner_id": "uuid-of-skill-owner",
-    "orchestrator_label": "W_Skill_Creator",  // agent whose run_logs row to read (= the agent calling this script)
+    "orchestrator_label": "Ontheia Guide",  // agent whose run_logs row to read (= the agent calling this script)
     "original_description": "...",
     "eval_queries": [
       {"query": "...", "should_trigger": true},
@@ -58,21 +71,34 @@ import sys
 
 import psycopg2
 
+DEFAULT_TEST_AGENT_LABEL = "Personal Assistant"
+
 
 def get_conn():
-    db_url = os.environ.get("DATABASE_URL", "postgresql://ontheia_app:ontheia_app_pwd_123@db:5432/ontheia")
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        print(json.dumps({"error": "DATABASE_URL is not set. This script must run inside the Ontheia host container (via run_skill_script), which provides it."}))
+        sys.exit(1)
     return psycopg2.connect(db_url)
 
 
 def _set_rls_context(cur, owner_id: str | None) -> None:
-    """Set session variables so RLS allows access to user-scoped skills and run_logs."""
+    """Set session variables so RLS allows access to skills, agent_skills and run_logs.
+
+    Admin role is always required: global-scope skills have no owner_id, and both
+    skills_write_policy and agent_skills_write_policy demand the admin role. The
+    script itself is trusted host-side code, sandboxed by run_skill_script's path
+    restrictions.
+    """
+    cur.execute("SET LOCAL app.user_role = 'admin'")
     if owner_id:
-        cur.execute("SET LOCAL app.user_role = 'admin'")
         cur.execute("SET LOCAL app.current_user_id = %s", (owner_id,))
 
 
-def setup(skill_name: str, candidate_description: str, owner_id: str | None) -> dict:
-    """Temporarily update skill description in DB. Returns original for restore."""
+def setup(skill_name: str, candidate_description: str, owner_id: str | None,
+          test_agent_label: str = DEFAULT_TEST_AGENT_LABEL) -> dict:
+    """Temporarily update skill description in DB and assign the skill to the
+    test agent. Returns original description for restore."""
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
@@ -90,13 +116,32 @@ def setup(skill_name: str, candidate_description: str, owner_id: str | None) -> 
                 "UPDATE app.skills SET description = %s WHERE id = %s",
                 (candidate_description, skill_id)
             )
+
+            # Ensure the test agent has the skill under test assigned. The
+            # assignment is left in place after analyze so the finished skill
+            # remains directly executable by the test agent.
+            cur.execute(
+                "SELECT id FROM app.agents WHERE label = %s",
+                (test_agent_label,)
+            )
+            agent_row = cur.fetchone()
+            if not agent_row:
+                return {"error": f"Test agent '{test_agent_label}' not found in app.agents"}
+            cur.execute(
+                """INSERT INTO app.agent_skills (agent_id, skill_id, active)
+                   VALUES (%s, %s, true)
+                   ON CONFLICT (agent_id, skill_id) DO UPDATE SET active = true""",
+                (agent_row[0], skill_id)
+            )
         return {
             "status": "ok",
             "skill_id": str(skill_id),
             "original_description": original_description,
+            "test_agent": test_agent_label,
             "message": (
-                f"Skill '{skill_name}' description updated for testing. "
-                "Delegate test queries to W_Skill_Test now, then call analyze."
+                f"Skill '{skill_name}' description updated for testing and assigned "
+                f"to '{test_agent_label}'. Delegate test queries to '{test_agent_label}' "
+                "now, then call analyze."
             )
         }
     finally:
@@ -237,7 +282,8 @@ def main() -> None:
         if not candidate:
             print(json.dumps({"error": "candidate_description is required for setup"}))
             sys.exit(1)
-        print(json.dumps(setup(skill_name, candidate, owner_id)))
+        test_agent_label = data.get("test_agent_label") or DEFAULT_TEST_AGENT_LABEL
+        print(json.dumps(setup(skill_name, candidate, owner_id, test_agent_label)))
 
     elif action == "analyze":
         original = data.get("original_description", "")

@@ -68,7 +68,7 @@ Der interne MCP-Server `skills` stellt fünf Tools bereit:
 | `activate_skill(name)` | Lädt den vollständigen Skill-Body in den Kontext. |
 | `read_skill_resource(skill_name, path)` | Liest eine Datei aus dem Skill-Verzeichnis. |
 | `write_skill_resource(skill_name, path, content)` | Schreibt eine Datei in das Skill-Verzeichnis. |
-| `create_skill(name, scope, content)` | Legt einen neuen Skill an. |
+| `create_skill(name, scope, content)` | Legt einen neuen Skill an und weist ihn dem erstellenden Agenten zu (weitere Agenten über Admin-Konsole → Skills zuweisen). |
 
 ---
 
@@ -87,3 +87,20 @@ Skills ergänzen Tasks: ein Task definiert die Identität des Agenten, Skills f�
 Vorher: Agent → Task (1:1)
 Nachher: Agent → Task + [Skill A, Skill B, Skill C] (1:n)
 ```
+
+---
+
+## Mitgelieferter Skill: skill-creator
+
+Ontheia liefert den Skill **skill-creator** mit (`sources/skills/global/skill-creator/`), adaptiert vom skill-creator von Anthropic (Apache License 2.0, siehe dessen `LICENSE.txt`). Er führt einen Agenten durch das Erstellen, Testen und iterative Verbessern von Skills.
+
+Der Installer weist ihn dem **Ontheia Guide** zu und richtet zwei Rollen ein:
+
+| Rolle | Standard-Agent | Zweck |
+| --- | --- | --- |
+| Orchestrator | Ontheia Guide | Hat den skill-creator zugewiesen; erstellt/verbessert Skills und koordiniert den Trigger-Eval-Loop. |
+| Test-Agent | Personal Assistant | Erhält die delegierten Testanfragen; bekommt den zu testenden Skill automatisch zugewiesen und kann den fertigen Skill danach direkt ausführen. |
+
+Beide Rollen lassen sich auf dedizierte Agenten verlagern (z. B. `Skill_Creator` / `Skill_Test`) — das Eval-Script akzeptiert einen `test_agent_label`-Parameter, und der Orchestrator übergibt sein eigenes Label an `analyze`.
+
+**Voraussetzungen:** `DATABASE_URL` in der Host-Container-Umgebung (das Eval-Script `scripts/run_eval_ontheia.py` erbt sie über `run_skill_script` — im Skill selbst sind keine Credentials hinterlegt), der `cli-tools`-MCP-Server (wird vom Installer registriert) sowie `uv` für Python-Script-Abhängigkeiten.

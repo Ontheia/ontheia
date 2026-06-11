@@ -41,6 +41,8 @@ Your role is to help \${user_name} get started with Ontheia and answer questions
 
 When \${user_name} asks how to do something in Ontheia, search the docs first and give a precise, step-by-step answer with references to the relevant documentation.
 
+Beyond answering questions, you can set up simple skills (reusable instruction or small script modules) and schedule reminders for \${user_name}.
+
 Be friendly, concise and encouraging. This is likely \${user_name}'s first experience with Ontheia.`;
 
 const ASSISTANT_PERSONA = `Your name is Ontheia. You are a personal AI assistant for \${user_name}.
@@ -288,24 +290,63 @@ async function main() {
       : null;
     const defaultModelKey = defaultModelRow?.model_key ?? null;
 
+    // ── 6b. cli-tools MCP server ──────────────────────────────────────────
+    // Provides run_skill_script (needed by the skill-creator skill) plus
+    // allowlisted shell commands. Runs as a host-container subprocess and
+    // inherits DATABASE_URL from the container env — no credentials stored.
+    console.log('Bootstrap: Registering cli-tools MCP server...');
+    await pool.query(
+      `INSERT INTO app.mcp_server_configs (name, config, auto_start)
+       VALUES ('cli-tools', $1::jsonb, true)
+       ON CONFLICT (name) DO NOTHING`,
+      [JSON.stringify({
+        command: 'python3',
+        args: ['/app/host/mcp-servers/cli-server/cli_server.py'],
+        env: { ALLOWED_COMMANDS: 'ls,find,cat,grep,head,tail,cp,node,python3,uv' },
+      })]
+    );
+
     // ── 7. Example agents ─────────────────────────────────────────────────
     if (installExampleAgents) {
       console.log('Bootstrap: Creating example agents...');
 
       const hasEmbedding = process.env.HAS_OPENAI_KEY === 'true' || process.env.OLLAMA_FOUND === 'true' || process.env.HAS_XAI_KEY === 'true';
 
-      // Guide: search + write + delete (to update/merge preference entries)
+      // Skill tools shared by both agents: the Guide orchestrates skill
+      // creation (skill-creator skill), the Personal Assistant runs skills
+      // under test and executes finished skills.
+      const skillTools = [
+        { server: 'skills', tool: 'list_skills' },
+        { server: 'skills', tool: 'activate_skill' },
+        { server: 'skills', tool: 'read_skill_resource' },
+        { server: 'skills', tool: 'write_skill_resource' },
+        { server: 'skills', tool: 'create_skill' },
+        { server: 'cli-tools', tool: 'run_skill_script' },
+      ];
+
+      // Scheduler tools shared by both agents (reminders, recurring tasks).
+      const schedulerTools = [
+        { server: 'scheduler', tool: 'create_schedule' },
+        { server: 'scheduler', tool: 'cancel_schedule' },
+        { server: 'scheduler', tool: 'list_schedules' },
+      ];
+
+      // Guide: memory search + write + delete (to update/merge preference
+      // entries), delegation (eval loop → test agent), skill + scheduler tools.
       const guideTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
         { server: 'memory', tool: 'memory-delete' },
+        { server: 'delegation', tool: 'delegate-to-agent' },
+        ...skillTools,
+        ...schedulerTools,
       ]);
 
       // Agent 1: Ontheia Guide
       await pool.query(
         `INSERT INTO app.agents
            (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory'], $8::jsonb, true)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
            persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
@@ -327,8 +368,10 @@ async function main() {
 
       // Memory policy — applied to both agents regardless of embedding state.
       // Placeholders (${user_id}) are resolved at runtime by the memory adapter.
+      // Namespaces are tool-only (searchable via memory-search, never
+      // auto-injected) so runs don't pull in hits from all of vector.global.*.
       const agentMemoryPolicy = JSON.stringify({
-        read_namespaces: [
+        tool_read_namespaces: [
           'vector.user.${user_id}.*',
           'vector.agent.${user_id}.*',
           'vector.global.*',
@@ -352,19 +395,23 @@ async function main() {
         [GUIDE_AGENT_ID, agentMemoryPolicy]
       );
 
-      // Assistant: memory read/write + delegation
+      // Assistant: memory read/write + delegation + skill execution (acts as
+      // the default test agent for the skill-creator eval loop and can run
+      // finished skills afterwards).
       const assistantTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
         { server: 'memory', tool: 'memory-delete' },
         { server: 'delegation', tool: 'delegate-to-agent' },
+        ...skillTools,
+        ...schedulerTools,
       ]);
 
-      // Agent 2: Personal Assistant (memory + delegation)
+      // Agent 2: Personal Assistant (memory + delegation + skills + scheduler)
       await pool.query(
         `INSERT INTO app.agents
            (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation'], $8::jsonb, true)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
            persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
@@ -392,21 +439,61 @@ async function main() {
       );
 
       // ── MCP server bindings ─────────────────────────────────────────────
-      // Guide: memory (search + write for onboarding preferences)
+      // Guide: memory (onboarding preferences), delegation (skill eval loop),
+      // skills + cli-tools (skill-creator), scheduler (reminders)
       await pool.query(
         `INSERT INTO app.agent_mcp_servers (agent_id, server, active)
-         VALUES ($1, 'memory', true)
+         VALUES ($1, 'memory', true), ($1, 'delegation', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
          ON CONFLICT (agent_id, server) DO NOTHING`,
         [GUIDE_AGENT_ID]
       );
 
-      // Personal Assistant: memory + delegation (can delegate to sub-agents)
+      // Personal Assistant: memory + delegation + skills + cli-tools + scheduler
+      // (default test agent for the skill-creator eval loop)
       await pool.query(
         `INSERT INTO app.agent_mcp_servers (agent_id, server, active)
-         VALUES ($1, 'memory', true), ($1, 'delegation', true)
+         VALUES ($1, 'memory', true), ($1, 'delegation', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
          ON CONFLICT (agent_id, server) DO NOTHING`,
         [ASSISTANT_AGENT_ID]
       );
+
+      // ── skill-creator skill ─────────────────────────────────────────────
+      // The SkillService scanner only runs once the host is up — bootstrap
+      // runs before that, so register the bundled skill-creator skill here
+      // and assign it to the Guide. The scanner refreshes the same row later
+      // (same unique key: name, scope, owner_id).
+      const skillCreatorDir = '/app/host/sources/skills/global/skill-creator';
+      try {
+        const raw = await fs.readFile(path.join(skillCreatorDir, 'SKILL.md'), 'utf8');
+        const fmEnd = raw.indexOf('\n---', 3);
+        const fm = raw.startsWith('---') && fmEnd !== -1 ? raw.slice(4, fmEnd) : '';
+        const fmValue = (key: string) =>
+          fm.split('\n').find((l) => l.startsWith(`${key}:`))?.slice(key.length + 1).trim() ?? '';
+        const skillName = fmValue('name') || 'skill-creator';
+        const skillDescription = fmValue('description');
+        const skillBody = fmEnd !== -1 ? raw.slice(fmEnd + 4).trimStart() : raw;
+        if (skillDescription) {
+          const skillRes = await pool.query(
+            `INSERT INTO app.skills (name, description, content, skill_dir, scope, owner_id)
+             VALUES ($1, $2, $3, $4, 'global', NULL)
+             ON CONFLICT (name, scope, owner_id) DO UPDATE SET skill_dir = EXCLUDED.skill_dir
+             RETURNING id`,
+            [skillName, skillDescription, skillBody, skillCreatorDir]
+          );
+          await pool.query(
+            `INSERT INTO app.agent_skills (agent_id, skill_id, active)
+             VALUES ($1, $2, true)
+             ON CONFLICT (agent_id, skill_id) DO NOTHING`,
+            [GUIDE_AGENT_ID, skillRes.rows[0].id]
+          );
+          console.log(`Bootstrap: Skill '${skillName}' registered and assigned to Ontheia Guide.`);
+        } else {
+          console.warn('Bootstrap: skill-creator SKILL.md has no description — skipping registration.');
+        }
+      } catch (err: any) {
+        // Missing skill directory is fine (slim distributions) — don't fail bootstrap.
+        console.warn(`Bootstrap: skill-creator not registered (${err?.code === 'ENOENT' ? 'directory not found' : err?.message}).`);
+      }
 
       // ── Tasks ───────────────────────────────────────────────────────────
       console.log('Bootstrap: Creating tasks...');
@@ -480,6 +567,7 @@ Document structure:
 - namespaces_suggested: []
 
 ## Progress
+- skills_created: []
 - mcp_installed: []
 - agents_created: []
 - chains_created: []
@@ -487,9 +575,21 @@ Document structure:
 
 ---
 
+## Memory Operations (general rules)
+
+These rules apply to ALL memory entries you manage for \${user_name} — tasks, notes, snippets — not just the state document:
+
+- **Updating an entry:** memory-delete the old entry, then memory-write the new version. Never tell \${user_name} that memory is append-only or that entries cannot be edited — you can and must update them yourself instead of sending the user to the Admin Console.
+- **Deleting reliably:** always run memory-search first and pass the hit's id to memory-delete — content-based deletion requires a verbatim match and fails on any formatting difference. If the result reports affected: 0, the entry was NOT deleted: re-search and retry by id instead of asking the user to clean up manually.
+- **Moving an entry between namespaces:** memory-write to the target namespace, then memory-delete from the source — both in the same turn. Confirm both actions explicitly so no duplicate is left behind.
+- **Persist before moving on:** When you produce a final version of something \${user_name} wants kept (a normalized task, a snippet, a decision), save it immediately via memory-write — never switch to the next topic with the result existing only in the chat.
+- **Honest confirmations:** Only say "saved", "moved" or "updated" when the corresponding tool call actually succeeded in this turn. After saving, name the target namespace. If a tool call fails, say so plainly and retry once.
+
+---
+
 ## Onboarding Steps
 
-Steps 1–4 are completed with every user. Steps 5–9 are offered based on use case and interest — skip gracefully if not relevant or if the user declines.
+Steps 1–4 are completed with every user. Steps 5–10 are offered based on use case and interest — skip gracefully if not relevant or if the user declines.
 
 Never rush. One step at a time. Wait for the response before moving on. Keep it conversational, not like a checklist. Celebrate small wins along the way.
 
@@ -567,20 +667,46 @@ Then offer one concrete next action:
 
 Cover only sections relevant to their context. One section at a time, briefly:
 - **Memory** — Vector store, namespace browser, ingest, search. (Already familiar from Step 3.)
+- **Skills** — Reusable capability modules any agent can apply. Covered in Step 5.
 - **Agents** — Where AI assistants live. Each agent has a persona, a task (context prompt), memory policy, and tools.
-- **MCP Servers** — Connects Ontheia to external tools (file system, web search, email, etc.). Covered in detail in Step 5.
-- **Chains** — Automated multi-step workflows. Covered in Step 8.
+- **MCP Servers** — Connects Ontheia to external tools (file system, web search, email, etc.). Covered in detail in Step 6.
+- **Chains** — Automated multi-step workflows. Covered in Step 9.
 - **AI Providers** — API keys and model selection. (Already connected — just point it out.)
 - **Users** — If works_with_team = yes: mention multi-user setup and shared namespaces.
 
 Do not go into configuration detail here. This is orientation only.
 
 **Completed when:** User has a rough mental map of the Admin Console.
+**Transition:** "Now let me show you one of the most practical features — skills. We can build one together in a few minutes."
+
+---
+
+### Step 5 — First Skill (optional)
+**Goal:** Show how skills capture recurring know-how, and create a first simple skill together.
+
+Explain in one sentence: a skill is a reusable instruction module — optionally with a small bundled script — that an agent applies automatically whenever a task matches its description.
+
+You create skills yourself: activate your skill-creator skill and follow its workflow (it covers drafting, testing via the Personal Assistant, and improving the trigger description). Your job here is to keep the scope simple — offer only skills from these categories:
+
+- **Format & checklist skills (no code):** a meeting-notes template, a quote/offer checklist, an email tone guide for customer communication.
+- **Small data helpers (bundled Python script, executed via run_skill_script):** a formula collection with exact lookup (pricing, engineering or commercial formulas), a business travel journal that records trips in a fixed structure and sums costs, a text-snippet manager for recurring quote and email building blocks.
+
+**Storage — file vs. memory.** Decide per application and explain the trade-off in one sentence:
+- **JSON file in the skill directory** (read/written by the bundled script): for structured data that needs exact lookup, listing or calculations — e.g. the travel journal (cost totals, exports) or a formula collection retrieved by key.
+- **Memory namespaces** (e.g. vector.global.business.*): for free-text knowledge that benefits from semantic search or team-wide sharing — e.g. text snippets found by intent ("the polite payment reminder") rather than by exact name.
+
+Suggest 2–3 concrete examples matching main_use_case and let \${user_name} pick one. Do NOT offer skills that need external services (web search, email, calendars), database access, or arbitrary shell commands — those need MCP servers (Step 6) or an administrator. If the idea is too complex, say so and offer a simpler first version.
+
+**Assignment — a skill only triggers for agents it is assigned to.** create_skill assigns the new skill to you automatically; the tool response tells you the assignment status — relay it. If the skill should also work in everyday chats with the Personal Assistant (usually yes), tell \${user_name} explicitly: assign it in Admin Console → Skills to "Personal Assistant", or do it via the skill-creator test loop (its setup step assigns the skill to the test agent). Confirm at the end which agents have the skill.
+
+**Save to state:** skills_created (append skill name)
+**Skip gracefully if:** No immediate idea resonates. Mark as skipped.
+**Completed when:** One skill created and tested, OR skipped.
 **Transition:** "Now let's look at whether there are external tools that would make Ontheia even more useful for you."
 
 ---
 
-### Step 5 — MCP Server Setup (optional)
+### Step 6 — MCP Server Setup (optional)
 **Goal:** Connect Ontheia to an external tool that fits their use case.
 
 Offer based on main_use_case:
@@ -604,7 +730,7 @@ Walk through: Admin Console → MCP Servers → Add Server. Explain the config f
 
 ---
 
-### Step 6 — First Custom Agent + Task (optional)
+### Step 7 — First Custom Agent + Task (optional)
 **Goal:** Configure a purpose-built agent that serves their use case.
 
 Guide through:
@@ -625,7 +751,7 @@ Suggest adding it to the Picker for easy access.
 
 ---
 
-### Step 7 — Memory Management Deep Dive (optional)
+### Step 8 — Memory Management Deep Dive (optional)
 **Goal:** Make \${user_name} confident managing their knowledge base independently.
 
 Offer topics one at a time based on interest:
@@ -641,10 +767,12 @@ Offer topics one at a time based on interest:
 
 ---
 
-### Step 8 — Chains & Automation (optional)
+### Step 9 — Chains & Automation (optional)
 **Goal:** Introduce workflow automation for users ready to go beyond single-turn conversations.
 
-Explain: a Chain is a sequence of steps — LLM calls, memory lookups, conditions, loops — that run automatically without user input at each stage.
+Start with the simplest form: **scheduled prompts**. You can create reminders and recurring tasks directly via your create_schedule tool — no chain needed (e.g. "Every Monday at 9:00, ask me for my weekly goals" or a one-time reminder before an appointment). Offer this whenever \${user_name} mentions anything time-based.
+
+For multi-step automation, explain: a Chain is a sequence of steps — LLM calls, memory lookups, conditions, loops — that run automatically without user input at each stage.
 
 Suggest a concrete example matching their use case:
 - "Summarize and store a document I paste"
@@ -659,7 +787,7 @@ Walk through the Chain Designer if they want to try it.
 
 ---
 
-### Step 9 — Master Agent with Sub-Agents (optional)
+### Step 10 — Master Agent with Sub-Agents (optional)
 **Goal:** Show the power of agent delegation — a coordinator that routes tasks to specialist agents.
 
 Explain the concept: a Master Agent that understands a broad range of tasks and delegates specific jobs (research, writing, data lookup, memory management) to purpose-built sub-agents via the delegate-to-agent tool.
@@ -691,6 +819,7 @@ After onboarding (status = complete):
 - Reference features by their exact name in the UI
 - If a feature is not yet implemented, say so clearly
 - Proactively suggest features when \${user_name} describes a new use case
+- When \${user_name} describes a recurring manual routine, offer to capture it as a simple skill (see the categories and limits in Step 5); for anything time-based, offer a scheduled prompt via create_schedule
 - If a use case is not well served yet, write a note to vector.global.ontheia.feedback as a feature request
 
 ---
@@ -888,6 +1017,16 @@ Always respond in the language of the user's input.`,
                 system_prompt:
                   'You are an expert at writing precise AI prompts. Return ONLY the improved prompt — no explanations, no preamble, no quotes. Preserve the original language. Make the prompt clear, concise and optimal for an AI assistant. Add context if needed (role, format, goal).',
                 prompt: '${input}',
+                // Bind the step to the Personal Assistant so provider/model
+                // resolve from the agent at runtime (follows admin changes).
+                // Without example agents, pin the install default instead —
+                // the step has no provider/model in its template context.
+                ...(installExampleAgents
+                  ? { agent_id: ASSISTANT_AGENT_ID, task_id: ASSISTANT_TASK_ID }
+                  : {
+                      ...(defaultModelKey ? { model: defaultModelKey } : {}),
+                      ...(defaultSlug ? { params: { provider: defaultSlug } } : {}),
+                    }),
               },
             ],
           }),
@@ -896,20 +1035,28 @@ Always respond in the language of the user's input.`,
     }
     output.promptOptimizerChainId = PROMPT_OPTIMIZER_CHAIN_ID;
 
-    // Set default provider/model for the prompt optimizer (same as Personal Assistant)
+    // Set default provider/model for the prompt optimizer and the rolling
+    // summarizer (same install default as the example agents).
     if (defaultSlug && defaultModelKey) {
       await pool.query(
         `INSERT INTO app.user_settings (user_id, settings)
          VALUES ('00000000-0000-0000-0000-000000000000', $1::jsonb)
          ON CONFLICT (user_id) DO UPDATE
            SET settings = jsonb_set(
-             COALESCE(app.user_settings.settings, '{}'::jsonb),
-             '{promptOptimizer}',
-             $1::jsonb->'promptOptimizer'
+             jsonb_set(
+               COALESCE(app.user_settings.settings, '{}'::jsonb),
+               '{promptOptimizer}',
+               $1::jsonb->'promptOptimizer'
+             ),
+             '{rollingSummary}',
+             $1::jsonb->'rollingSummary'
            )`,
-        [JSON.stringify({ promptOptimizer: { providerId: defaultSlug, modelId: defaultModelKey } })]
+        [JSON.stringify({
+          promptOptimizer: { providerId: defaultSlug, modelId: defaultModelKey },
+          rollingSummary: { providerId: defaultSlug, modelId: defaultModelKey, thresholdTokens: 8000, maxMessages: 40 },
+        })]
       );
-      console.log(`Bootstrap: Prompt optimizer set to ${defaultSlug}/${defaultModelKey}.`);
+      console.log(`Bootstrap: Prompt optimizer and summarizer set to ${defaultSlug}/${defaultModelKey}.`);
     }
     console.log('Bootstrap: Prompt optimizer chain ready.');
 

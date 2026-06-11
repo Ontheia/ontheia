@@ -3,6 +3,11 @@ name: skill-creator
 description: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.
 ---
 
+<!--
+  Adapted for Ontheia from Anthropic's skill-creator (Apache License 2.0, see LICENSE.txt).
+  Modified by Wolfgang Brangl, 2026 — AGPL-3.0 components by Ontheia separately licensed.
+-->
+
 # Skill Creator
 
 A skill for creating new skills and iteratively improving them.
@@ -379,7 +384,7 @@ This step matters — bad eval queries lead to bad descriptions.
 
 ### Step 3: Run the optimization loop
 
-Ontheia has no `claude -p` subprocess and no `scripts/run_loop.py` execution path — you (the orchestrator agent) run the loop yourself, inline, by repeating Steps 1-4 of "Eval loop in Ontheia" (see the Ontheia-Specific Instructions section below): load the candidate description, delegate the eval queries to W_Skill_Test, analyze the results with `scripts/run_eval_ontheia.py`, then write an improved description directly (you are the LLM — no subprocess needed).
+You (the orchestrator agent) run the loop yourself, inline, by repeating Steps 1-4 of "Eval loop in Ontheia" (see the Ontheia-Specific Instructions section below): load the candidate description, delegate the eval queries to the test agent, analyze the results with `scripts/run_eval_ontheia.py`, then write an improved description directly (you are the LLM — no subprocess needed).
 
 Tell the user: "I'll run the optimization loop myself, iterating on the description and re-testing — I'll check in with progress after each round."
 
@@ -411,15 +416,26 @@ After packaging, direct the user to the resulting `.skill` file path so they can
 
 ## Ontheia-Specific Instructions
 
-Ontheia is the only target environment for this skill — there is no separate Claude.ai/Claude Code/Cowork distinction here. Ontheia replaces `claude -p` with its own agent delegation and logging system. The core workflow (draft → test → evaluate → improve) above is identical; this section covers what changes in practice.
+Ontheia is the only target environment for this skill. It uses its own agent delegation and logging system instead of external CLI subprocesses. The core workflow (draft → test → evaluate → improve) above is identical; this section covers what changes in practice.
+
+### Roles and prerequisites
+
+Two agent roles are involved. Any labels work — these are the install defaults:
+
+| Role | Default agent | Purpose |
+| --- | --- | --- |
+| Orchestrator | **Ontheia Guide** (or a dedicated agent, e.g. `Skill_Creator`) | Has this skill assigned; creates/improves skills and coordinates the eval loop. Needs `delegate-to-agent`, the skills tools and `run_skill_script`. |
+| Test agent | **Personal Assistant** (or a dedicated agent, e.g. `Skill_Test`) | Receives the delegated test queries; gets the skill under test assigned automatically (setup phase) and can execute the finished skill afterwards. |
+
+Prerequisites: `DATABASE_URL` set in the Ontheia host container (the eval script inherits it via `run_skill_script` — no credentials are stored anywhere in this skill), the `cli-tools` MCP server active, and `uv` available for Python script dependencies.
 
 ### What changes
 
 **Running test cases**: Use `delegate-to-agent` to spawn the with-skill and baseline runs in parallel — this plays the role of subagents in the generic workflow above.
 
-**Trigger tests** run via `delegate-to-agent` → W_Skill_Test (which has the target skill assigned), not via `claude -p`. The script `scripts/run_eval_ontheia.py` handles DB setup and result analysis.
+**Trigger tests** run via `delegate-to-agent` → the test agent. The script `scripts/run_eval_ontheia.py` handles DB setup (including assigning the skill under test to the test agent) and result analysis.
 
-**Description improvement** you do inline as the agent — no subprocess needed. You are the LLM; you can generate improvements directly. `scripts/run_eval.py`, `run_loop.py`, and `improve_description.py` require `claude -p` and are not usable in Ontheia — use the manual eval loop below instead. Coordinate iterations yourself (e.g. via a todo list entry per iteration).
+**Description improvement** you do inline as the agent — no subprocess needed. You are the LLM; you can generate improvements directly using the manual eval loop below. Coordinate iterations yourself, e.g. by tracking progress with `memory-write` into `vector.global.ontheia.temp` (always set `ttl_seconds`, this is short-lived scratch state for the current run).
 
 **Browser viewer**: There is no display in the container — always use `--static <path>` with `generate_review.py` to write a standalone HTML file, then point the user to it. Always generate the eval viewer **before** evaluating outputs yourself, so the human can review examples first.
 
@@ -432,15 +448,15 @@ Ontheia is the only target environment for this skill — there is no separate C
 
 ### Eval loop in Ontheia
 
-Important: delegated sub-agent runs (W_Skill_Test) do **not** get their own
+Important: delegated sub-agent runs (the test agent's) do **not** get their own
 `app.run_logs` rows. The whole chain — every `delegate-to-agent` call plus the
-nested `activate_skill` calls W_Skill_Test makes — is logged as one flat
-`events` array on **your own** (the orchestrator's, e.g. W_Skill_Creator's)
-run_logs row. So there is no run_id lookup needed at all: `analyze` reads your
-own latest run, splits it into per-delegation segments, and checks each one for
-an `activate_skill` call matching the target skill.
+nested `activate_skill` calls the test agent makes — is logged as one flat
+`events` array on **your own** (the orchestrator's) run_logs row. So there is
+no run_id lookup needed at all: `analyze` reads your own latest run, splits it
+into per-delegation segments, and checks each one for an `activate_skill` call
+matching the target skill.
 
-**Step 1 — Load candidate description into DB:**
+**Step 1 — Load candidate description into DB and assign skill to test agent:**
 ```
 run_skill_script(
   script_path = "scripts/run_eval_ontheia.py",
@@ -448,16 +464,19 @@ run_skill_script(
     "action": "setup",
     "skill_name": "<name>",
     "candidate_description": "<candidate>",
-    "owner_id": "<uuid>"   // required for user-scoped skills; omit for global skills
+    "owner_id": "<uuid>",   // required for user-scoped skills; omit for global skills
+    "test_agent_label": "Personal Assistant"   // optional, this is the default
   }'
 )
 → Returns original_description — save it for Step 3!
+  Also assigns the skill to the test agent (the assignment persists after
+  testing, so the finished skill stays executable by that agent).
 ```
 
 **Step 2 — Delegate test queries (all in parallel):**
 ```
 # For each eval query:
-delegate-to-agent(W_Skill_Test, "<query>")
+delegate-to-agent("Personal Assistant", "<query>")
 ```
 Use the *exact* query text as the `input` argument — `analyze` matches each
 delegation back to its `eval_queries` entry by comparing this prompt text
@@ -471,7 +490,7 @@ run_skill_script(
     "action": "analyze",
     "skill_name": "<name>",
     "owner_id": "<uuid>",                  // same as Step 1 — required for user-scoped skills
-    "orchestrator_label": "W_Skill_Creator",  // your own agent label
+    "orchestrator_label": "Ontheia Guide",  // your own agent label
     "original_description": "<from Step 1>",
     "eval_queries": [
       {"query": "...", "should_trigger": true},
@@ -515,6 +534,6 @@ Repeating one more time the core loop here for emphasis:
 - Repeat until you and the user are satisfied
 - Package the final skill and return it to the user.
 
-Please add steps to your TodoList, if you have such a thing, to make sure you don't forget — specifically "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" should always be on it.
+Track these steps as you go so you don't forget any of them — e.g. via `memory-write` into `vector.global.ontheia.temp` with `ttl_seconds` set (short-lived scratch state for the current run). Make sure "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" is always one of them.
 
 Good luck!

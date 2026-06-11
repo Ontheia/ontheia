@@ -281,6 +281,30 @@ export class SkillService {
     return skills.find(s => s.name === name) ?? null;
   }
 
+  // Assigns a skill to an agent (idempotent). Used by create_skill so a
+  // freshly created skill is immediately usable by the creating agent —
+  // without an agent_skills row a skill never appears in any catalog.
+  async assignSkillToAgent(skillId: string, agentId: string): Promise<void> {
+    const client = await this.db.connect();
+    try {
+      await client.query('BEGIN');
+      // Admin role: agent_skills writes are admin-gated by RLS; skill
+      // assignments are system config, not user-private data.
+      await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
+      await client.query(`
+        INSERT INTO app.agent_skills (agent_id, skill_id, active)
+        VALUES ($1, $2, true)
+        ON CONFLICT (agent_id, skill_id) DO UPDATE SET active = true
+      `, [agentId, skillId]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   // Lookup by name without agent assignment — for read/write_skill_resource on freshly created skills.
   async getSkillByNameForUser(name: string, userId: string): Promise<SkillRecord | null> {
     const client = await this.db.connect();
