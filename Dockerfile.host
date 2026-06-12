@@ -71,5 +71,9 @@ RUN npm ci --omit=dev
 COPY contracts ../contracts
 COPY --from=build /app/host/dist ./dist
 COPY host/mcp-servers ./mcp-servers
+# Maintenance backups (pg_dump before duplicate cleanup) are written to
+# /app/host/backup. Pre-create it node-owned so the named volume mounted there
+# initializes node-writable (same pattern as the /home/node cache dirs above).
+RUN mkdir -p /app/host/backup && chown node:node /app/host/backup
 EXPOSE 8080
 CMD ["node", "dist/index.js"]

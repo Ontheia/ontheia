@@ -424,19 +424,18 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     if (!auth) return;
 
     try {
-      // 1. Trigger DB backup before cleanup
+      // 1. Trigger DB backup before cleanup (best effort — a failed backup,
+      // including an unwritable backup directory, must not block the cleanup).
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const backupPath = path.join(process.cwd(), 'backup', `maintenance_backup_${timestamp}.sql`);
-      
-      // Ensure backup directory exists
-      await fs.mkdir(path.join(process.cwd(), 'backup'), { recursive: true });
 
       server.log.info({ backupPath }, 'Starting maintenance DB backup');
-      
+
       let backup_created = false;
       const dbUrl = context.config.databaseUrl;
       if (dbUrl) {
         try {
+          await fs.mkdir(path.join(process.cwd(), 'backup'), { recursive: true });
           // We only back up schema 'vector' as duplicates are deleted here.
           // --no-owner and --no-privileges help reduce permission checks during dump.
           // --enable-row-security allows dump even if RLS restricts access to some rows.

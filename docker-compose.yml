@@ -71,6 +71,7 @@ services:
       - ontheia-host-npx-cache:/root/.cache/npx
       - ontheia-host-bun-cache:/root/.bun
       - ontheia-host-logs:/app/logs
+      - ontheia-host-backup:/app/host/backup
       - ./sources:/app/host/sources
     ports:
       - "8080:8080"
@@ -123,6 +124,7 @@ volumes:
   ontheia-host-npx-cache:
   ontheia-host-bun-cache:
   ontheia-host-logs:
+  ontheia-host-backup:
   ontheia-webui-node-modules:
 
 networks:
