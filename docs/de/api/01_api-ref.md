@@ -464,23 +464,23 @@ Verwendet im Endpunkt `POST /runs/:id/tool-approval`.
 ```
 
 ### AgentCreate
-Verwendet im Endpunkt `POST /agents`.
+Verwendet in den Endpunkten `POST /agents` und `PATCH /agents/:id` (beide admin-only; bei PATCH sind alle Felder optional).
 
 ```json
 {
-  "name": "string (required)",
+  "label": "string (required)",
   "description": "string",
-  "visibility": "private | project | org (required)",
-  "owner_id": "uuid (required)",
-  "persona": "string",
-  "tools": [
-    {
-      "server": "string",
-      "tool": "string",
-      "scopes": ["string"],
-      "config": {}
-    }
-  ],
+  "provider_id": "string",
+  "model_id": "string",
+  "tool_approval_mode": "prompt | granted | denied",
+  "default_mcp_servers": ["string"],
+  "default_tools": [ { "server": "string", "tool": "string" } ],
+  "metadata": {},
+  "visibility": "private | public",
+  "owner_id": "uuid (optional — Besitzer; Standard: anlegender Admin. Bei PATCH: Ownership-Übertragung.)",
+  "allowed_user_ids": ["uuid oder E-Mail (Berechtigte Benutzer)"],
+  "active": "boolean",
+  "show_in_composer": "boolean",
   "tasks": [ "TaskCreate Object" ]
 }
 ```

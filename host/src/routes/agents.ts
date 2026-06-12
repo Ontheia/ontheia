@@ -478,6 +478,23 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     const visibility = typeof body?.visibility === 'string' && ['private', 'public'].includes(body.visibility) ? body.visibility : 'private';
     const active = typeof body?.active === 'boolean' ? body.active : true;
     const showInComposer = typeof body?.show_in_composer === 'boolean' ? body.show_in_composer : true;
+
+    // owner_id: admins may create an agent on behalf of another user — the owner
+    // sees it in their composer, the creating admin does not. Defaults to creator.
+    let ownerId = session.userId;
+    if (typeof body?.owner_id === 'string' && body.owner_id.trim().length > 0) {
+      const requestedOwner = body.owner_id.trim();
+      if (!isUuid(requestedOwner)) {
+        reply.code(400);
+        return { error: 'agents_owner_invalid', message: 'owner_id must be a valid user UUID.' };
+      }
+      const ownerExists = await db.query(`SELECT 1 FROM app.users WHERE id = $1`, [requestedOwner]);
+      if (!ownerExists.rowCount) {
+        reply.code(400);
+        return { error: 'agents_owner_unknown', message: 'owner_id does not match an existing user.' };
+      }
+      ownerId = requestedOwner;
+    }
     const tasks = parseAgentBindings(body?.tasks);
     const chains = parseAgentBindings(body?.chains);
     
@@ -498,7 +515,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12, $13, now(), now())
            RETURNING id, label, description, provider_id, model_id, tool_approval_mode, default_mcp_servers,
                      default_tools, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at`,
-          [label, description, providerId, modelId, toolApprovalMode, defaultMcpServers, JSON.stringify(defaultTools), JSON.stringify(metadata), visibility, session.userId, session.userId, active, showInComposer]
+          [label, description, providerId, modelId, toolApprovalMode, defaultMcpServers, JSON.stringify(defaultTools), JSON.stringify(metadata), visibility, ownerId, session.userId, active, showInComposer]
         );
         const agentRow = insertResult.rows[0];
         const agentId = String(agentRow.id);
@@ -651,6 +668,22 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     if (typeof body?.show_in_composer === 'boolean') {
       updates.push(`show_in_composer = $${idx++}`);
       values.push(body.show_in_composer);
+    }
+    if (typeof body?.owner_id === 'string' && body.owner_id.trim().length > 0) {
+      // Ownership transfer (admin-only endpoint): the new owner sees the agent
+      // in their composer, the previous owner does not.
+      const requestedOwner = body.owner_id.trim();
+      if (!isUuid(requestedOwner)) {
+        reply.code(400);
+        return { error: 'agents_owner_invalid', message: 'owner_id must be a valid user UUID.' };
+      }
+      const ownerExists = await db.query(`SELECT 1 FROM app.users WHERE id = $1`, [requestedOwner]);
+      if (!ownerExists.rowCount) {
+        reply.code(400);
+        return { error: 'agents_owner_unknown', message: 'owner_id does not match an existing user.' };
+      }
+      updates.push(`owner_id = $${idx++}`);
+      values.push(requestedOwner);
     }
 
     const tasks = parseAgentBindings(body?.tasks);

@@ -465,23 +465,23 @@ Used in the `POST /runs/:id/tool-approval` endpoint.
 ```
 
 ### AgentCreate
-Used in the `POST /agents` endpoint.
+Used in the `POST /agents` and `PATCH /agents/:id` endpoints (both admin-only; all fields optional for PATCH).
 
 ```json
 {
-  "name": "string (required)",
+  "label": "string (required)",
   "description": "string",
-  "visibility": "private | project | org (required)",
-  "owner_id": "uuid (required)",
-  "persona": "string",
-  "tools": [
-    {
-      "server": "string",
-      "tool": "string",
-      "scopes": ["string"],
-      "config": {}
-    }
-  ],
+  "provider_id": "string",
+  "model_id": "string",
+  "tool_approval_mode": "prompt | granted | denied",
+  "default_mcp_servers": ["string"],
+  "default_tools": [ { "server": "string", "tool": "string" } ],
+  "metadata": {},
+  "visibility": "private | public",
+  "owner_id": "uuid (optional — owner; default: creating admin. On PATCH: ownership transfer.)",
+  "allowed_user_ids": ["uuid or email (authorized users)"],
+  "active": "boolean",
+  "show_in_composer": "boolean",
   "tasks": [ "TaskCreate Object" ]
 }
 ```

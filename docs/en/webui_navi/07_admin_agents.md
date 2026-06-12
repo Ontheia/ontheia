@@ -22,6 +22,7 @@ Tab bar: **Agents** · **Tasks** · **Chains**
 | Field | Type | Description |
 | --- | --- | --- |
 | Authorized Users | Multiselect | Selects who is allowed to use the agent. The first option `* All users` makes the agent accessible to all logged-in users (equivalent to "public"). Selecting individual users restricts access to explicitly named accounts. Links: **Select all** (sets `* All users`) · **Clear selection** (no access except owner). |
+| Owner | Dropdown | The user the agent belongs to — they see it in their composer. Default: the creating admin ("Creator (default)"). When creating an agent on behalf of another user, select the target user here; when editing, ownership can be transferred. |
 | Show in Composer | Checkbox (Toggle) | Determines whether the agent appears in the Composer selection. |
 
 Buttons: **[Create Agent]** (when creating) or **[Save Changes]** (when editing).

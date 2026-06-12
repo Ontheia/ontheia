@@ -497,7 +497,7 @@ function UsersSection({
       loadUsers();
       onHasChanges(true);
     } catch (err: any) {
-      alert(localizeError(err, t, 'common:error'));
+      setError(localizeError(err, t, 'common:error'));
     }
   };
 
@@ -509,7 +509,7 @@ function UsersSection({
       loadUsers();
       onHasChanges(true);
     } catch (err: any) {
-      alert(localizeError(err, t, 'common:error'));
+      setError(localizeError(err, t, 'common:error'));
     }
   };
 
@@ -1230,6 +1230,7 @@ function MemorySection({
   const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false);
   const [isCleaningExpired, setIsCleaningExpired] = useState(false);
   const [isCleanupExpiredDialogOpen, setIsCleanupExpiredDialogOpen] = useState(false);
+  const [isClearNamespaceDialogOpen, setIsClearNamespaceDialogOpen] = useState(false);
 
   const handleCleanupExpired = async () => {
     setIsCleaningExpired(true);
@@ -1825,8 +1826,6 @@ function MemorySection({
     const isPrefix = raw.endsWith('*');
     const ns = isPrefix ? raw.replace(/\.\*$|\*$/, '') : raw;
     if (!ns) return;
-    const confirmed = window.confirm(t('memory.clearNamespaceConfirm', { namespace: raw }));
-    if (!confirmed) return;
     setErrorMessage(null);
     setStatusMessage(null);
     try {
@@ -2093,6 +2092,7 @@ function MemorySection({
                     </td>
                     <td className="p-3 align-top">{row.docs.toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US')}</td>
                     <td className="p-3 align-top text-slate-400">{row.latest ? new Date(row.latest).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+                      timeZone: timezone || 'Europe/Berlin',
                       day: '2-digit', month: '2-digit', year: 'numeric',
                       hour: '2-digit', minute: '2-digit', second: '2-digit'
                     }) : '–'}</td>
@@ -2263,15 +2263,32 @@ function MemorySection({
           >
             {t('memory.deleteSelected')}
           </button>
-          <button
-            type="button"
-            className="danger-button"
-            onClick={() => void handleClearNamespace()}
-            disabled={!namespaceFilter.trim()}
-            title={t('memory.clearNamespaceTitle')}
-          >
-            {t('memory.clearNamespace')}
-          </button>
+          <AlertDialog open={isClearNamespaceDialogOpen} onOpenChange={setIsClearNamespaceDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className="danger-button"
+                disabled={!namespaceFilter.trim()}
+                title={t('memory.clearNamespaceTitle')}
+              >
+                {t('memory.clearNamespace')}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('memory.clearNamespaceTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('memory.clearNamespaceConfirm', { namespace: namespaceFilter.trim() })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="ghost">{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void handleClearNamespace()} className="danger-button">
+                  {t('memory.clearNamespace')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       {searchResults.length > 0 && (
@@ -2397,21 +2414,6 @@ function MemorySection({
             disabled={agents.length === 0}
           />
         </label>
-        <label className="settings-field">
-          <span>{t('memory.readNamespacesLabel')}</span>
-          <textarea
-            rows={4}
-            value={(agentPolicy?.read_namespaces ?? []).join('\n')}
-            onChange={(event) => {
-              const lines = event.target.value
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean);
-              updatePolicyField('agent', 'read_namespaces', lines.length > 0 ? lines : null);
-              onHasChanges?.(true);
-            }}
-          />
-        </label>
         <label className="settings-field inline py-2">
           <input
             type="checkbox"
@@ -2425,13 +2427,16 @@ function MemorySection({
           <span>{t('memory.autoReadEnabled')}</span>
         </label>
         <label className="settings-field">
-          <span>{t('memory.writeNamespace')}</span>
-          <Input
-            type="text"
-            value={agentPolicy?.write_namespace ?? ''}
+          <span>{t('memory.readNamespacesLabel')}</span>
+          <textarea
+            rows={4}
+            value={(agentPolicy?.read_namespaces ?? []).join('\n')}
             onChange={(event) => {
-              const val = event.target.value.trim();
-              updatePolicyField('agent', 'write_namespace', val || null);
+              const lines = event.target.value
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean);
+              updatePolicyField('agent', 'read_namespaces', lines.length > 0 ? lines : null);
               onHasChanges?.(true);
             }}
           />
@@ -2470,6 +2475,18 @@ function MemorySection({
             }}
           />
           <span>{t('memory.allowWriteAuto')}</span>
+        </label>
+        <label className="settings-field">
+          <span>{t('memory.writeNamespace')}</span>
+          <Input
+            type="text"
+            value={agentPolicy?.write_namespace ?? ''}
+            onChange={(event) => {
+              const val = event.target.value.trim();
+              updatePolicyField('agent', 'write_namespace', val || null);
+              onHasChanges?.(true);
+            }}
+          />
         </label>
         <div className="border-t border-[#1E293B] pt-4 mt-2 space-y-4">
           <h5 className="text-sm font-medium text-amber-400 flex items-center gap-2">
@@ -2577,6 +2594,14 @@ function MemorySection({
         </label>
         {selectedTask ? (
           <>
+            <TriStateSelect
+              label={t('memory.autoReadEnabled')}
+              value={taskPolicy?.auto_read_enabled ?? null}
+              onValueChange={(val) => {
+                updatePolicyField('task', 'auto_read_enabled', val);
+                onHasChanges?.(true);
+              }}
+            />
             <label className="settings-field">
               <span>{t('memory.readNamespacesLabel')}</span>
               <textarea
@@ -2588,26 +2613,6 @@ function MemorySection({
                     .map((line) => line.trim())
                     .filter(Boolean);
                   updatePolicyField('task', 'read_namespaces', lines.length > 0 ? lines : null);
-                  onHasChanges?.(true);
-                }}
-              />
-            </label>
-            <TriStateSelect
-              label={t('memory.autoReadEnabled')}
-              value={taskPolicy?.auto_read_enabled ?? null}
-              onValueChange={(val) => {
-                updatePolicyField('task', 'auto_read_enabled', val);
-                onHasChanges?.(true);
-              }}
-            />
-            <label className="settings-field">
-              <span>{t('memory.writeNamespace')}</span>
-              <Input
-                type="text"
-                value={taskPolicy?.write_namespace ?? ''}
-                onChange={(event) => {
-                  const val = event.target.value.trim();
-                  updatePolicyField('task', 'write_namespace', val || null);
                   onHasChanges?.(true);
                 }}
               />
@@ -2643,6 +2648,18 @@ function MemorySection({
                 onHasChanges?.(true);
               }}
             />
+            <label className="settings-field">
+              <span>{t('memory.writeNamespace')}</span>
+              <Input
+                type="text"
+                value={taskPolicy?.write_namespace ?? ''}
+                onChange={(event) => {
+                  const val = event.target.value.trim();
+                  updatePolicyField('task', 'write_namespace', val || null);
+                  onHasChanges?.(true);
+                }}
+              />
+            </label>
             <div className="border-t border-[#1E293B] pt-4 mt-2 space-y-4">
               <h5 className="text-sm font-medium text-amber-400 flex items-center gap-2">
                 <Sparkles className="h-4 w-4" /> LLM Memory Tools
@@ -2943,6 +2960,7 @@ function MemorySection({
                   <tr key={entry.id} className="bg-[#121B2B] hover:bg-[#1e293b] transition-colors">
                     <td className="p-3 align-top text-xs text-slate-400">
                       {new Date(entry.created_at).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+                        timeZone: timezone || 'Europe/Berlin',
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
                       })}
@@ -3200,13 +3218,15 @@ function McpServerSection({
   onConfigDraftChange,
   onHasChanges,
   onProcessesUpdate,
-  liveStatuses
+  liveStatuses,
+  timezone
 }: {
   configDraft: string;
   onConfigDraftChange: (config: string) => void;
   onHasChanges: (hasChanges: boolean) => void;
   onProcessesUpdate: (processes: ProcessInfo[]) => void;
   liveStatuses: McpStatusEntry[];
+  timezone?: string;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [draftName, setDraftName] = useState('filesystem');
@@ -3493,6 +3513,7 @@ function McpServerSection({
       return '–';
     }
     return date.toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+      timeZone: timezone || 'Europe/Berlin',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -3993,8 +4014,11 @@ function McpServerSection({
           <button
             type="button"
             className="btn-default"
-            onClick={() => refreshProcesses()}
-            disabled={loading}
+            onClick={() => {
+              void refreshProcesses();
+              void loadServerConfigs();
+            }}
+            disabled={loading || configsLoading}
           >
             {t('mcp.refreshStatus')}
           </button>
@@ -4299,6 +4323,7 @@ function AgentsSection({
   const [agentsTab, setAgentsTab] = useState<'agents' | 'tasks' | 'chains'>('agents');
   const [agentAllowedUsers, setAgentAllowedUsers] = useState<string[]>([]);
   const [agentShowInComposer, setAgentShowInComposer] = useState<boolean>(true);
+  const [agentOwnerId, setAgentOwnerId] = useState<string>('');
   const [availableUsers, setAvailableUsers] = useState<AdminUserEntry[]>([]);
 
   const [openAgentId, setOpenAgentId] = useState<string | null>(null);
@@ -4377,7 +4402,8 @@ function AgentsSection({
     const payloadExtra = {
       visibility: (isPublic ? 'public' : 'private') as 'public' | 'private',
       allowedUsers: isPublic ? [] : agentAllowedUsers,
-      showInComposer: agentShowInComposer
+      showInComposer: agentShowInComposer,
+      ...(agentOwnerId ? { ownerId: agentOwnerId } : {})
     };
 
     if (editingAgentId) {
@@ -4414,6 +4440,7 @@ function AgentsSection({
 
     setAgentAllowedUsers([]);
     setAgentShowInComposer(true);
+    setAgentOwnerId('');
   };
 
   const handleEditClick = (agent: AgentDefinition) => {
@@ -4422,6 +4449,7 @@ function AgentsSection({
     setAgentDescription(agent.description ?? '');
     setAgentAllowedUsers(agent.visibility === 'public' ? ['*'] : (agent.allowedUsers ?? []));
     setAgentShowInComposer(agent.showInComposer ?? true);
+    setAgentOwnerId(agent.ownerId ?? '');
     
     // Ensure provider/model are valid
     const provId = agent.providerId && providers.some(p => p.id === agent.providerId) 
@@ -4448,6 +4476,7 @@ function AgentsSection({
 
     setAgentAllowedUsers([]);
     setAgentShowInComposer(true);
+    setAgentOwnerId('');
   };
 
   const handleAgentProviderChange = (agent: AgentDefinition, providerId: string) => {
@@ -4764,6 +4793,17 @@ function AgentsSection({
                   ]}
                   placeholder={t('agents.selectUsers')}
                 />
+              </label>
+
+              <label className="settings-field">
+                <span>{t('agents.owner')}</span>
+                <AppSelect
+                  value={agentOwnerId}
+                  onValueChange={setAgentOwnerId}
+                  options={availableUsers.map((u) => ({ value: u.id, label: `${u.email}${u.name ? ` (${u.name})` : ''}` }))}
+                  placeholder={t('agents.ownerDefault')}
+                />
+                <p className="muted text-xs mt-1">{t('agents.ownerHint')}</p>
               </label>
 
               <label className="settings-field">
@@ -8118,7 +8158,8 @@ export function SettingsView() {
       default_tools: agent.tools ?? [],
       visibility: agent.visibility ?? 'private',
       allowed_user_ids: agent.allowedUsers ?? [],
-      show_in_composer: agent.showInComposer ?? true
+      show_in_composer: agent.showInComposer ?? true,
+      ...(agent.ownerId ? { owner_id: agent.ownerId } : {})
     };
     try {
       const exists = agents.some((entry) => entry.id === agent.id);
@@ -8162,6 +8203,7 @@ export function SettingsView() {
             onHasChanges={setHasChanges}
             onProcessesUpdate={setMcpProcesses}
             liveStatuses={mcpStatuses}
+            timezone={runtimeSettings.timezone}
           />
         );
       case 'providers':

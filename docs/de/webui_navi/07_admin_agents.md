@@ -22,6 +22,7 @@ Tab-Leiste: **Agents** · **Tasks** · **Chains**
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Berechtigte Benutzer | Multiselect | Wählt aus, wer den Agent verwenden darf. Erste Option `* Alle Benutzer` macht den Agent für alle eingeloggten Benutzer zugänglich (entspricht „öffentlich"). Einzelne Benutzer schränken den Zugriff auf explizit genannte Accounts ein. Links: **Alle auswählen** (setzt `* Alle Benutzer`) · **Auswahl leeren** (kein Zugriff außer Owner). |
+| Besitzer | Dropdown | Der Benutzer, dem der Agent gehört — er sieht ihn in seinem Composer. Standard: der anlegende Admin („Ersteller (Standard)"). Beim Anlegen für einen anderen Benutzer hier den Zielbenutzer wählen; beim Bearbeiten lässt sich die Ownership übertragen. |
 | Im Composer anzeigen | Checkbox (Toggle) | Bestimmt, ob der Agent in der Composer-Auswahl erscheint. |
 
 Buttons: **[Agent anlegen]** (beim Erstellen) bzw. **[Änderungen speichern]** (beim Bearbeiten).
