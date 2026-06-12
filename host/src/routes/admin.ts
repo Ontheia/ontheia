@@ -681,16 +681,23 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
       // So we don't use withRls or withTransaction here.
       const client = await db.connect();
       try {
-        // Set role to admin locally for this session to bypass RLS if needed, 
+        // Set role to admin locally for this session to bypass RLS if needed,
         // though VACUUM/REINDEX are mostly about table ownership.
         await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
-        
-        if (action === 'vacuum') {
-          await client.query('VACUUM (ANALYZE) vector.documents;');
-          await client.query('VACUUM (ANALYZE) vector.documents_768;');
-        } else {
-          await client.query('REINDEX TABLE vector.documents;');
-          await client.query('REINDEX TABLE vector.documents_768;');
+
+        // Maintain every table in the vector schema (dimension tables such as
+        // documents_768 vary per installation). Table names are taken from
+        // pg_tables and quoted, never from user input.
+        const tablesResult = await client.query(
+          `SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) AS qualified
+             FROM pg_tables WHERE schemaname = 'vector' ORDER BY tablename`
+        );
+        for (const row of tablesResult.rows) {
+          if (action === 'vacuum') {
+            await client.query(`VACUUM (ANALYZE) ${row.qualified};`);
+          } else {
+            await client.query(`REINDEX TABLE ${row.qualified};`);
+          }
         }
       } finally {
         client.release();
