@@ -1362,22 +1362,22 @@ const handleSaveSettings = useCallback(async () => {
       const nextSecondary = options.length > 0 ? options[0] : null;
       setSecondarySelection(nextSecondary);
       setDefaultSecondary(nextSecondary ? nextSecondary.id : null);
-      const timestamp = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = new Date().toLocaleTimeString('de-DE', { timeZone: runtimeSettings.timezone || 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
       setPickerStatus(`${t('defaultPicker')} ${t('updated')} (${timestamp}).`);
       setHasChanges(true);
     },
-    [computeSecondaryOptions, setDefaultPrimary, setDefaultSecondary, t]
+    [computeSecondaryOptions, setDefaultPrimary, setDefaultSecondary, t, runtimeSettings.timezone]
   );
 
   const handleSecondarySelectionChange = useCallback(
     (next: SecondarySelection | null) => {
       setSecondarySelection(next);
       setDefaultSecondary(next ? next.id : null);
-      const timestamp = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = new Date().toLocaleTimeString('de-DE', { timeZone: runtimeSettings.timezone || 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
       setPickerStatus(`${t('defaultPicker')} ${t('updated')} (${timestamp}).`);
       setHasChanges(true);
     },
-    [setDefaultSecondary, t]
+    [setDefaultSecondary, t, runtimeSettings.timezone]
   );
 
   const handleDisplayNameChange = useCallback(

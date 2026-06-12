@@ -1681,8 +1681,8 @@ export function ChatView({
         agent_id: primary.type === 'agent' ? primary.id : '',
         agent_label: primary.type === 'agent' ? (agents.find((a) => a.id === primary.id)?.label ?? '') : '',
         task_id: secondary && !secondary.id.startsWith('chain:') ? secondary.id : '',
-        current_date: now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-        current_time: now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        current_date: now.toLocaleDateString('de-DE', { timeZone: runtimeSettings.timezone || 'Europe/Berlin', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        current_time: now.toLocaleTimeString('de-DE', { timeZone: runtimeSettings.timezone || 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }),
       };
       const resolved = template.content.replace(/\$\{(\w+)\}|\{\{(\w+)\}\}/g, (_, a, b) => ctx[a ?? b] ?? _);
       setMessage(resolved);
@@ -1691,7 +1691,7 @@ export function ChatView({
         composerTextareaRef.current?.focus();
       });
     },
-    [user, activeChatId, primary, secondary, agents]
+    [user, activeChatId, primary, secondary, agents, runtimeSettings.timezone]
   );
 
   const handleDeleteTemplate = useCallback((template: PromptTemplate) => {
