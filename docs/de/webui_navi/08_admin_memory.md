@@ -61,11 +61,11 @@ Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeit
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Agent auswählen | Dropdown | Wählt den Agent, dessen Memory-Policy bearbeitet wird. |
+| Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, findet keinerlei automatische Injektion statt — die Lese-Namespaces bleiben aber per LLM Memory Tool erreichbar. |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | Liste der Namespaces, aus denen der Agent lesen darf. |
-| Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, sind diese Namespaces nur per LLM Memory Tool erreichbar. |
-| Schreiben (Namespace) | Text | Namespace, in den der Agent automatisch schreibt. |
 | Top K | Zahl | Maximale Anzahl zurückgegebener Memory-Treffer (1–20). |
 | Schreiben erlauben (Auto) | Checkbox | Erlaubt dem Agent, automatisch in den Schreib-Namespace zu speichern. |
+| Schreiben (Namespace) | Text | Namespace, in den der Agent automatisch schreibt. |
 
 Unterabschnitt **LLM Memory Tools:**
 
@@ -78,16 +78,16 @@ Unterabschnitt **LLM Memory Tools:**
 
 Button: **[Agent-Policy speichern]**
 
-**Task-Policy** (dasselbe Formular für den ausgewählten Task):
+**Task-Policy** (dasselbe Formular für den ausgewählten Task). Die Agent-Policy gilt als Basis für alle Tasks des Agenten; jedes hier belegte Feld überschreibt die Agent-Policy für diesen Task (Feinjustierung). Leere bzw. auf „erben" gestellte Felder fallen auf die Agent-Policy zurück.
 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Task wählen | Dropdown | Wählt den Task, dessen Memory-Policy bearbeitet wird. Zeigt Tasks des aktuell gewählten Agents. |
-| Lesen (Namespaces, einer pro Zeile) | Textarea | |
 | Automatisch in Kontext injizieren (bei jedem Run) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
-| Schreiben (Namespace) | Text | |
+| Lesen (Namespaces, einer pro Zeile) | Textarea | |
 | Top K | Zahl | Leer lassen = vom Agent erben. |
 | Schreiben erlauben (Auto) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
+| Schreiben (Namespace) | Text | |
 | Schreiben erlauben (Tool) | Tri-State-Dropdown | |
 | Löschen erlauben (Tool) | Tri-State-Dropdown | |
 | Nur Tool-Zugriff (Namespaces, einer pro Zeile) | Textarea | Leer lassen = vom Agent erben. |

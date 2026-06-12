@@ -9,7 +9,7 @@ Ontheia nutzt ein hierarchisches System für Memory-Policies, um Flexibilität b
 1.  **Agent-Policy**: Definiert die Standard-Namespaces und Parameter (`top_k`, `allow_write`) für einen Agenten.
 2.  **Task-Policy**: Ermöglicht es, für spezifische Aufgabenprofile (Tasks) abweichende Einstellungen festzulegen.
 
-**Wichtig**: Falls für einen Task eine Memory-Policy definiert ist, **überschreibt** diese die Einstellungen des Agenten vollständig für diesen Task. Dies ermöglicht es beispielsweise, einem Agenten generell Zugriff auf das Firmenwissen zu geben, aber für den Task "Privates Briefing" den Zugriff exklusiv auf den persönlichen Namespace des Benutzers zu beschränken.
+**Wichtig**: Die Agent-Policy ist die Basis für alle Tasks des Agenten. Jedes in der Task-Policy explizit belegte Feld **überschreibt** die entsprechende Agent-Einstellung für diesen Task; leere bzw. auf „erben" gestellte Felder fallen auf die Agent-Policy zurück. Dies ermöglicht es beispielsweise, einem Agenten generell Zugriff auf das Firmenwissen zu geben, aber für den Task "Privates Briefing" den Zugriff exklusiv auf den persönlichen Namespace des Benutzers zu beschränken.
 
 ## Dynamische Templates
 

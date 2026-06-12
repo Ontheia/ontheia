@@ -110,13 +110,15 @@ export const mergePolicies = (base: MemoryPolicy, override: MemoryPolicy): Memor
 
 export const loadMemoryPolicy = async (db: Pool | null, agentId?: string, taskId?: string, client: PoolClient | null = null): Promise<MemoryPolicy> => {
   const runner = (client ?? db)!;
+  // Agent policy is the base (applies to all tasks of the agent); task policy
+  // overrides individual fields when explicitly set (fine-tuning per task).
   let policy: MemoryPolicy = {};
-  if (taskId) {
-    const result = await runner.query(`SELECT memory FROM app.tasks WHERE id = $1`, [taskId]);
-    if (result.rowCount && result.rowCount > 0) policy = mergePolicies(policy, parsePolicyPayload(result.rows[0]?.memory));
-  }
   if (agentId) {
     const result = await runner.query(`SELECT memory FROM app.agent_config WHERE agent_id = $1`, [agentId]);
+    if (result.rowCount && result.rowCount > 0) policy = mergePolicies(policy, parsePolicyPayload(result.rows[0]?.memory));
+  }
+  if (taskId) {
+    const result = await runner.query(`SELECT memory FROM app.tasks WHERE id = $1`, [taskId]);
     if (result.rowCount && result.rowCount > 0) policy = mergePolicies(policy, parsePolicyPayload(result.rows[0]?.memory));
   }
   return policy;

@@ -61,11 +61,11 @@ Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]
 | Field | Type | Description |
 | --- | --- | --- |
 | Select Agent | Dropdown | Selects the agent whose memory policy is being edited. |
+| Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, no automatic injection takes place at all — the read namespaces remain reachable via the LLM Memory Tool. |
 | Read (Namespaces, one per line) | Textarea | List of namespaces the agent may read from. |
-| Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, these namespaces are only reachable via the LLM Memory Tool. |
-| Write (Namespace) | Text | Namespace the agent automatically writes to. |
 | Top K | Number | Maximum number of memory hits returned (1–20). |
 | Allow Writing (Auto) | Checkbox | Allows the agent to automatically save to the write namespace. |
+| Write (Namespace) | Text | Namespace the agent automatically writes to. |
 
 Subsection **LLM Memory Tools:**
 
@@ -78,16 +78,16 @@ Subsection **LLM Memory Tools:**
 
 Button: **[Save Agent Policy]**
 
-**Task Policy** (same form for the selected task):
+**Task Policy** (same form for the selected task). The agent policy serves as the base for all tasks of the agent; every field set here overrides the agent policy for this task (fine-tuning). Empty fields or fields set to "inherit" fall back to the agent policy.
 
 | Field | Type | Description |
 | --- | --- | --- |
 | Select Task | Dropdown | Selects the task whose memory policy is being edited. Shows tasks of the currently selected agent. |
-| Read (Namespaces, one per line) | Textarea | |
 | Auto-inject into Context (on every Run) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
-| Write (Namespace) | Text | |
+| Read (Namespaces, one per line) | Textarea | |
 | Top K | Number | Leave empty = inherit from agent. |
 | Allow Writing (Auto) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
+| Write (Namespace) | Text | |
 | Allow Writing (Tool) | Tri-state Dropdown | |
 | Allow Deleting (Tool) | Tri-state Dropdown | |
 | Tool-Only Read Namespaces (one per line) | Textarea | Leave empty = inherit from agent. |

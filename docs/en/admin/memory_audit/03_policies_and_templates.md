@@ -9,7 +9,7 @@ Ontheia uses a hierarchical system for memory policies to provide flexibility wh
 1.  **Agent Policy**: Defines the standard namespaces and parameters (`top_k`, `allow_write`) for an agent.
 2.  **Task Policy**: Allows for differing settings to be established for specific task profiles (tasks).
 
-**Important**: If a memory policy is defined for a task, it **overwrites** the agent's settings completely for that task. This allows, for example, giving an agent general access to company knowledge, but restricting access exclusively to the user's personal namespace for the task "Private Briefing."
+**Important**: The agent policy is the base for all tasks of the agent. Every field explicitly set in the task policy **overrides** the corresponding agent setting for that task; empty fields or fields set to "inherit" fall back to the agent policy. This allows, for example, giving an agent general access to company knowledge, but restricting access exclusively to the user's personal namespace for the task "Private Briefing."
 
 ## Dynamic Templates
 

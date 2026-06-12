@@ -472,14 +472,19 @@ export class RunService {
         });
 
         // Resolve namespaces: policy templates are applied (placeholders + wildcards kept as-is).
-        // auto_read_enabled=false suppresses injection without removing readNamespaces from tool access.
+        // auto_read_enabled=false suppresses ALL auto-injection (policy namespaces and derived
+        // defaults) without removing readNamespaces from tool access. Namespaces explicitly
+        // requested in the run input are still honored.
         let namespacesToUse = memoryConfig.namespaces;
         const autoReadEnabled = policy.autoReadEnabled !== false;
-        if ((!namespacesToUse || namespacesToUse.length === 0) && autoReadEnabled && Array.isArray(policy.readNamespaces)) {
-          namespacesToUse = policy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, templateContext));
-        }
         if (!namespacesToUse || namespacesToUse.length === 0) {
-          namespacesToUse = deriveNamespaces({ userId, chatId });
+          if (!autoReadEnabled) {
+            namespacesToUse = [];
+          } else if (Array.isArray(policy.readNamespaces) && policy.readNamespaces.length > 0) {
+            namespacesToUse = policy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, templateContext));
+          } else {
+            namespacesToUse = deriveNamespaces({ userId, chatId });
+          }
         }
 
         const { namespaces: allowed } = await filterNamespacesForSession(this.db, namespacesToUse, { userId, role } as any);
