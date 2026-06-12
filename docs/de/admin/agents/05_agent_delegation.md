@@ -41,7 +41,9 @@ In einer Chain wird ein Step vom Typ `agent` verwendet. Die Engine (`ChainRunner
 Dies ist die dynamischere Form der Delegation. Hier entscheidet ein LLM während der Laufzeit selbstständig, ob und an wen es eine Aufgabe delegieren möchte.
 
 ### Das Tool: `delegate-to-agent`
-Das Tool ist Teil des internen `delegation`-Servers und wird automatisch injiziert, wenn der Agent dafür konfiguriert ist.
+Das Tool ist Teil des internen `delegation`-Servers und steht einem Agenten **nur bei expliziter Zuweisung** zur Verfügung — der Server `delegation` muss in den MCP-Servern des Agenten ausgewählt sein (bei eingeschränkter Tool-Auswahl zusätzlich das Tool selbst). Das gilt für alle internen Server (`memory`, `delegation`, `scheduler`): Nicht zugewiesene Tools erscheinen nicht im Prompt und verursachen keine Token-Kosten.
+
+**Hinweis für Sub-Agenten:** Ein reiner Worker-Agent benötigt keine Delegation-Tools — er erhält die Aufgabe vom Master und sein Ergebnis fließt automatisch als Tool-Resultat zurück. Delegation braucht nur, wer selbst orchestriert. Selbst-Delegation wird blockiert (per UUID und Label), die maximale Delegationstiefe ist 5.
 
 #### Tool-Definition (für KI-Modelle)
 - **Server**: `delegation`

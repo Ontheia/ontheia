@@ -392,7 +392,10 @@ export class RunService {
           if (!enrichedInput.model_id) enrichedInput.model_id = agentEntry.modelId || '';
           activeMcpServers = agentEntry.mcpServers || [];
           agentToolSelection = agentEntry.tools || [];
-          
+          // Expose the agent identity to tool handlers (self-delegation guard)
+          meta.agent_id = enrichedInput.agent_id;
+          if (agentEntry.label) meta.agent_label = agentEntry.label;
+
           if (enrichedInput.task_id) {
             const taskEntry = agentEntry.tasks.find(t => t.id === enrichedInput.task_id);
             taskContextPrompt = taskEntry?.contextPrompt;
@@ -401,7 +404,7 @@ export class RunService {
           // Fallback: Load from DB if not in user settings
           await withRls(this.db, userId, role, async (client) => {
             const res = await client.query(`
-              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id, a.persona
+              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id, a.persona, a.label
                 FROM app.agents a
                WHERE a.id = $1
             `, [enrichedInput.agent_id]);
@@ -412,6 +415,9 @@ export class RunService {
               agentToolSelection = row.default_tools || [];
               if (!enrichedInput.provider_id) enrichedInput.provider_id = row.provider_id || '';
               if (!enrichedInput.model_id) enrichedInput.model_id = row.model_id || '';
+              // Expose the agent identity to tool handlers (self-delegation guard)
+              meta.agent_id = enrichedInput.agent_id;
+              if (row.label) meta.agent_label = row.label;
               // Use persona as fallback context if no task provides a context_prompt
               if (!taskContextPrompt && row.persona) taskContextPrompt = row.persona;
             }
@@ -426,12 +432,13 @@ export class RunService {
         }
       }
 
-      if (enrichedInput.memory?.enabled !== false) {
-        if (!activeMcpServers.includes('memory')) activeMcpServers.push('memory');
-        if (!activeMcpServers.includes('delegation')) activeMcpServers.push('delegation');
-        if (scheduleDepth === 0 && !activeMcpServers.includes('scheduler')) {
-          activeMcpServers.push('scheduler');
-        }
+      // Internal servers (memory, delegation, scheduler) are NOT auto-enabled:
+      // their tool descriptions cost prompt tokens on every run, so an agent only
+      // gets them when they are explicitly assigned via default_mcp_servers.
+      // Scheduler tools are stripped inside scheduled runs to prevent agents from
+      // scheduling follow-up jobs recursively.
+      if (scheduleDepth > 0) {
+        activeMcpServers = activeMcpServers.filter((s) => s !== 'scheduler');
       }
 
       // Skills: load only when agent has active skills assigned
@@ -452,9 +459,11 @@ export class RunService {
         const tools = await loadServerTools(
           this.orchestrator, activeMcpServers, false, logger, userId, agentSkills
         );
-        const INTERNAL_SERVERS = new Set(['memory', 'delegation', 'scheduler', 'skills']);
+        // Internal servers are subject to the agent's tool selection like any
+        // other server. Only 'skills' bypasses it: its availability is already
+        // an explicit assignment (app.agent_skills) managed via Admin → Skills.
         const filteredTools = agentToolSelection.length > 0
-          ? tools.filter(t => INTERNAL_SERVERS.has(t.server) || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
+          ? tools.filter(t => t.server === 'skills' || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
           : tools;
 
         if (filteredTools.length > 0) {

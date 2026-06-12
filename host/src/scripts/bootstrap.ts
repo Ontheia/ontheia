@@ -395,23 +395,23 @@ async function main() {
         [GUIDE_AGENT_ID, agentMemoryPolicy]
       );
 
-      // Assistant: memory read/write + delegation + skill execution (acts as
-      // the default test agent for the skill-creator eval loop and can run
-      // finished skills afterwards).
+      // Assistant: memory read/write + skill execution (acts as the default
+      // test agent for the skill-creator eval loop and can run finished skills
+      // afterwards). No delegation tools: the assistant receives tasks from an
+      // orchestrator and returns its result implicitly — it does not delegate.
       const assistantTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
         { server: 'memory', tool: 'memory-delete' },
-        { server: 'delegation', tool: 'delegate-to-agent' },
         ...skillTools,
         ...schedulerTools,
       ]);
 
-      // Agent 2: Personal Assistant (memory + delegation + skills + scheduler)
+      // Agent 2: Personal Assistant (memory + skills + scheduler)
       await pool.query(
         `INSERT INTO app.agents
            (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
            persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
@@ -448,12 +448,19 @@ async function main() {
         [GUIDE_AGENT_ID]
       );
 
-      // Personal Assistant: memory + delegation + skills + cli-tools + scheduler
-      // (default test agent for the skill-creator eval loop)
+      // Personal Assistant: memory + skills + cli-tools + scheduler
+      // (default test agent for the skill-creator eval loop; no delegation —
+      // it executes tasks, it does not orchestrate other agents)
       await pool.query(
         `INSERT INTO app.agent_mcp_servers (agent_id, server, active)
-         VALUES ($1, 'memory', true), ($1, 'delegation', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
+         VALUES ($1, 'memory', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
          ON CONFLICT (agent_id, server) DO NOTHING`,
+        [ASSISTANT_AGENT_ID]
+      );
+      // Remove a delegation binding left over from earlier bootstrap versions
+      // (the assistant no longer orchestrates other agents).
+      await pool.query(
+        `DELETE FROM app.agent_mcp_servers WHERE agent_id = $1 AND server = 'delegation'`,
         [ASSISTANT_AGENT_ID]
       );
 

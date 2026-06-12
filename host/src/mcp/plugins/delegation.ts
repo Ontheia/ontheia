@@ -37,14 +37,22 @@ export async function handleDelegation(
   const userId = context?.userId || context?.run?.options?.metadata?.user_id;
   const role = context?.role || context?.run?.options?.metadata?.role || 'user';
 
-  const currentAgentId = context?.run?.options?.metadata?.agent_id || context?.agent_id;
-  
+  // The calling agent's id lives in context.run.agent_id (set by provider-run for
+  // top-level and delegated runs alike); metadata fields are kept as fallbacks.
+  const currentAgentId =
+    context?.run?.agent_id || context?.run?.options?.metadata?.agent_id || context?.agent_id;
+  const currentAgentLabel = context?.run?.options?.metadata?.agent_label;
+
   if (!agent || !input) {
     throw new Error('agent and input are required for delegation.');
   }
 
-  // Prevent self-delegation loop
-  if (agent === currentAgentId || agent === context?.run?.options?.metadata?.agent_label) {
+  // Prevent self-delegation loop (by UUID or label, case-insensitive)
+  const requestedAgent = String(agent).trim();
+  if (
+    (currentAgentId && requestedAgent === String(currentAgentId)) ||
+    (currentAgentLabel && requestedAgent.toLowerCase() === String(currentAgentLabel).toLowerCase())
+  ) {
     throw new Error(`Self-delegation detected: Agent cannot delegate to itself (${agent}). Please use your own tools directly.`);
   }
 

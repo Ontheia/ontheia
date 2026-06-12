@@ -41,7 +41,9 @@ A step of type `agent` is used within a Chain. The engine (`ChainRunner`) interr
 This is the more dynamic form of delegation. Here, an LLM independently decides during runtime whether and to whom it wants to delegate a task.
 
 ### The Tool: `delegate-to-agent`
-The tool is part of the internal `delegation` server and is automatically injected if the Agent is configured for it.
+The tool is part of the internal `delegation` server and is available to an Agent **only when explicitly assigned** — the `delegation` server must be selected in the Agent's MCP servers (plus the tool itself if a restricted tool selection is configured). This applies to all internal servers (`memory`, `delegation`, `scheduler`): unassigned tools do not appear in the prompt and incur no token cost.
+
+**Note for Sub-Agents:** A pure worker Agent does not need delegation tools — it receives its task from the master and its result flows back automatically as the tool result. Only orchestrating Agents need delegation. Self-delegation is blocked (by UUID and label), and the maximum delegation depth is 5.
 
 #### Tool Definition (for AI Models)
 - **Server**: `delegation`

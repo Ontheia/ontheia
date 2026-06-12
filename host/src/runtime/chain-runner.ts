@@ -516,9 +516,11 @@ export class ChainRunner {
       if (!provId || !modId) throw new Error(`Agent ${profile.id} has no provider/model configuration.`);
 
       // RESOLVE TOOLS
+      // Internal servers (memory, delegation) are NOT auto-enabled for sub-agents:
+      // tool descriptions cost prompt tokens, and a sub-agent returns its result to
+      // the caller implicitly — it only needs delegation tools if it orchestrates
+      // further agents itself, which requires an explicit assignment.
       const mcpServers = Array.isArray(profile.default_mcp_servers) ? [...profile.default_mcp_servers] : [];
-      if (!mcpServers.includes('memory')) mcpServers.push('memory');
-      if (!mcpServers.includes('delegation')) mcpServers.push('delegation');
 
       const toolApprovalMode = this.templateContext.tool_approval || (this.waitForToolApproval ? 'prompt' : 'granted');
 
@@ -760,6 +762,7 @@ export class ChainRunner {
           stream: false, 
           metadata: {
             tool_permissions: profile.default_tool_permissions || {},
+            agent_id: profile.id,
             agent_label: profile.label, // Add label here
             depth: this.depth,
             history: this.history,
