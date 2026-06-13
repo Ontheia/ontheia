@@ -70,6 +70,15 @@ function getLoginShellEnv(): Promise<NodeJS.ProcessEnv> {
 
 export type CliFormat = 'gemini' | 'claude' | 'generic';
 
+// Replaces the entire Claude Code system prompt (--system-prompt). Without this,
+// the model believes it runs as an interactive Claude Code agent with internal
+// tools and ignores the ReAct protocol whenever Ontheia tools are in play.
+const CLAUDE_CLI_SYSTEM_PROMPT =
+  'You are an AI agent operating inside the Ontheia orchestration platform. ' +
+  'Ontheia controls the conversation, defines the available tools, and executes all tool calls itself. ' +
+  'You have no built-in tools, no file system access, and no shell. ' +
+  'Follow the instructions in the user message exactly, including the required TOOL_CALL/ANSWER output format.';
+
 // ── Result type ─────────────────────────────────────────────────────────────
 
 export interface CliCompletion {
@@ -200,12 +209,43 @@ export function buildCliPrompt(
 
 // ── Output parsing ───────────────────────────────────────────────────────────
 
+// Extracts the first complete, brace-balanced JSON object starting at or after
+// `from`. A non-greedy regex would stop at the FIRST closing brace and truncate
+// nested arguments (e.g. create_skill payloads), yielding invalid JSON.
+function extractJsonObject(text: string, from: number): string | null {
+  const start = text.indexOf('{', from);
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (inString) {
+      if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 function parseReact(text: string): CliCompletion | null {
-  // TOOL_CALL block
-  const m = text.match(/TOOL_CALL:\s*(\S+)\s*\nARGUMENTS:\s*(\{[\s\S]*?\})/i);
+  // TOOL_CALL block — arguments are extracted brace-balanced, not via regex,
+  // so nested JSON (skill content, thinking steps, …) survives intact.
+  const m = text.match(/TOOL_CALL:\s*(\S+)\s*\n\s*ARGUMENTS:/i);
   if (m) {
+    const jsonStr = extractJsonObject(text, (m.index ?? 0) + m[0].length);
     let args: Record<string, unknown> = {};
-    try { args = JSON.parse(m[2]); } catch { /* keep empty */ }
+    if (jsonStr) {
+      try { args = JSON.parse(jsonStr); } catch { /* keep empty */ }
+    }
     return {
       content: null,
       tool_calls: [{ name: m[1].trim(), arguments: args }],
@@ -310,17 +350,25 @@ function buildCliArgs(provider: ProviderRecord, model: ProviderModelRecord, form
   }
 
   if (format === 'claude') {
-    // claude --print — Ontheia handles all tool execution via its own orchestration layer.
-    // Block built-in tools explicitly (not via --allowedTools '' which signals "no tool infra")
-    // so Claude still outputs TOOL_CALL format for external tools defined in the prompt.
+    // claude --print — Ontheia handles all tool execution via its own orchestration
+    // layer (ReAct protocol in the prompt), so the Claude Code agent runtime is
+    // stripped completely (requires Claude Code >= 2.x):
+    //   --tools ''           remove ALL built-in tools from the model's context
+    //   --system-prompt      replace the Claude Code agent system prompt entirely
+    //   --setting-sources '' load no user/project settings (incl. CLAUDE.md)
+    //   --strict-mcp-config + empty --mcp-config: no MCP servers at all
+    // Note: --bare is deliberately NOT used — it breaks credential resolution
+    // for the mounted CLAUDE_CONFIG_DIR ("Not logged in", verified on 2.1.173).
     const args = [
       '--output-format', 'json',
       '--print',
       '--no-session-persistence',
       '--disable-slash-commands',
+      '--tools', '',
+      '--setting-sources', '',
       '--mcp-config', '{"mcpServers":{}}',
       '--strict-mcp-config',
-      '--disallowedTools', 'Bash,Edit,MultiEdit,Write,Read,NotebookEdit,NotebookRead,WebFetch,WebSearch,TodoRead,TodoWrite'
+      '--system-prompt', CLAUDE_CLI_SYSTEM_PROMPT
     ];
     if (cliModelId) args.push('--model', cliModelId);
     return args;
