@@ -28,7 +28,7 @@ import { logMemoryAudit, applyNamespaceTemplate, countHitsForNamespace } from '.
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery, deriveNamespaces } from '../routes/run-utils.js';
 import { isGlobalNamespace } from '../memory/namespaces.js';
-import { buildSystemMessages } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
   ChatMessage,
@@ -734,7 +734,7 @@ export class ChainRunner {
       // 1. Start with sanitized history (excluding old system messages to avoid confusion)
       let messages: ChatMessage[] = this.sanitizeHistory([...this.history]).filter(m => m.role !== 'system');
 
-      // 2. Prepend system messages (date/time, task context, identity note)
+      // 2. Prepend system messages (task context, identity note, skills, memory)
       messages.unshift(...agentSystemMsgs);
 
       // 3. Add current user input
@@ -744,6 +744,11 @@ export class ChainRunner {
       if (input && input !== lastUserContent) {
         messages.push({ role: 'user', content: input });
       }
+
+      // Date/time anchored to the last user message (non-cacheable suffix), so the
+      // system prefix stays cacheable. Called after the input push above so it
+      // targets the final user message.
+      appendDateTimeContext(messages, this.templateContext);
 
       // Filter out internal params that should not be sent to the AI provider
       const providerParams = { ...(step.params ?? {}) };

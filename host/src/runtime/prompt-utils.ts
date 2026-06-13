@@ -40,15 +40,16 @@ export interface BuildSystemMessagesOptions {
 /**
  * Builds the ordered list of system messages that precede the conversation.
  *
- * Order (innermost = prepended last, so earliest in final message array):
- *   1. Memory context    (if provided)
- *   2. Tool hint         (if includeToolHint)
- *   3. Task/persona      (if provided, after template resolution)
- *   4. Date/time         (always)
+ * Order (item[0] ends up first in the final prompt — callers spread/unshift at 0):
+ *   1. Task/persona      (if provided, after template resolution)
+ *   2. Skill catalog     (if provided)
+ *   3. Tool hint         (if includeToolHint)
+ *   4. Memory context    (if provided)
  *
- * Callers should unshift these messages onto their conversation array in reverse
- * order, or simply spread them at position 0 — both produce the same result
- * because this function returns them in "prepend" order (item[0] ends up first).
+ * Date/time is deliberately NOT included here: it changes every minute and, as a
+ * leading system message, would invalidate the cached prefix (task context, skill
+ * catalog, history) on every minute boundary. Inject it at the end instead via
+ * appendDateTimeContext(), so the stable prefix stays cacheable.
  */
 export function buildSystemMessages(
   templateContext: ChainTemplateContext,
@@ -57,15 +58,7 @@ export function buildSystemMessages(
   const { taskContextPrompt, agentLabel, memoryContextText, skillCatalogText, includeToolHint } = options;
   const messages: ChatMessage[] = [];
 
-  // 1. Date/time — always first in the final prompt
-  if (templateContext.current_date || templateContext.current_time) {
-    messages.push({
-      role: 'system',
-      content: `TODAY'S DATE: ${templateContext.current_date ?? ''}\nCURRENT TIME: ${templateContext.current_time ?? ''}`
-    });
-  }
-
-  // 2. Task context / persona
+  // 1. Task context / persona
   if (taskContextPrompt) {
     let resolved = applyNamespaceTemplate(taskContextPrompt, templateContext);
     if (agentLabel) {
@@ -74,12 +67,12 @@ export function buildSystemMessages(
     messages.push({ role: 'system', content: resolved });
   }
 
-  // 3. Skill catalog — placed close to the conversation so triggers are fresh
+  // 2. Skill catalog — placed close to the conversation so triggers are fresh
   if (skillCatalogText) {
     messages.push({ role: 'system', content: skillCatalogText });
   }
 
-  // 4. Tool required-properties hint
+  // 3. Tool required-properties hint
   if (includeToolHint) {
     messages.push({
       role: 'system',
@@ -87,7 +80,7 @@ export function buildSystemMessages(
     });
   }
 
-  // 5. Memory context — closest to the conversation turn
+  // 4. Memory context — closest to the conversation turn
   if (memoryContextText) {
     messages.push({
       role: 'system',
@@ -96,4 +89,39 @@ export function buildSystemMessages(
   }
 
   return messages;
+}
+
+/**
+ * Appends the current date/time to the LAST user message, in place.
+ *
+ * Date/time is volatile (minute granularity) and must live in the non-cacheable
+ * suffix, never in the leading system prefix. Anchoring it to the last user
+ * message keeps it at the very end across all provider paths — including the
+ * Anthropic-native runner, which hoists every role:'system' message into the
+ * cached system block regardless of array position.
+ *
+ * The append is transient (run-assembly only) and is not persisted to chat
+ * history. No-op when there is no date/time or no user message to anchor to.
+ */
+export function appendDateTimeContext(
+  messages: ChatMessage[],
+  templateContext: ChainTemplateContext
+): void {
+  if (!templateContext.current_date && !templateContext.current_time) return;
+
+  const parts: string[] = [];
+  if (templateContext.current_date) parts.push(templateContext.current_date);
+  if (templateContext.current_time) parts.push(templateContext.current_time);
+  const note = `[Context — current date/time: ${parts.join(', ')}]`;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'user') continue;
+    const msg = messages[i];
+    if (typeof msg.content === 'string') {
+      messages[i] = { ...msg, content: `${msg.content}\n\n${note}` };
+    } else if (Array.isArray(msg.content)) {
+      messages[i] = { ...msg, content: [...msg.content, { type: 'text', text: note }] };
+    }
+    return;
+  }
 }
