@@ -107,18 +107,29 @@ export async function runAnthropicCompletion(
     const { system, messages } = mapMessagesForAnthropic(conversation);
     const anthropicTools = mapToolsForAnthropic(toolset);
 
+    // Prompt caching (Anthropic only caches with explicit cache_control):
+    //  1. system block — caches tools + system together (render order is
+    //     tools → system → messages), the large stable prefix.
+    //  2. last message — caches the growing conversation incrementally; on the
+    //     next request this breakpoint becomes a cache read. Date/time is in the
+    //     non-cacheable suffix (appendDateTimeContext), so the prefix stays stable.
+    const systemBlocks = system
+      ? [{ type: 'text' as const, text: system, cache_control: { type: 'ephemeral' as const } }]
+      : undefined;
+    markLastMessageForCaching(messages);
+
     emit({ type: 'step_start', step: 'dispatch_provider_request', timestamp: new Date().toISOString() });
 
     try {
       const response = await client.messages.create({
         model: payload.model_id,
         max_tokens: (payload.options?.max_tokens as number) ?? 4096,
-        system: system || undefined,
+        system: systemBlocks as any,
         messages: messages as any,
         tools: anthropicTools.length > 0 ? anthropicTools : undefined,
         temperature: (payload.options?.temperature as number) ?? undefined,
         top_p: (payload.options?.top_p as number) ?? undefined,
-        stream: false 
+        stream: false
       }, {
         signal: options?.signal
       });
@@ -459,6 +470,23 @@ function mapMessagesForAnthropic(messages: ChatMessage[]) {
   }
 
   return { system, messages: fixedMessages };
+}
+
+/**
+ * Adds a cache_control breakpoint to the last content block of the last message,
+ * so the conversation history up to this point is cached and read back on the
+ * next request (incremental prompt caching). String content is promoted to a
+ * single text block to carry the marker.
+ */
+function markLastMessageForCaching(messages: any[]): void {
+  if (messages.length === 0) return;
+  const last = messages[messages.length - 1];
+  if (typeof last.content === 'string') {
+    last.content = [{ type: 'text', text: last.content, cache_control: { type: 'ephemeral' } }];
+  } else if (Array.isArray(last.content) && last.content.length > 0) {
+    const block = last.content[last.content.length - 1];
+    last.content[last.content.length - 1] = { ...block, cache_control: { type: 'ephemeral' } };
+  }
 }
 
 function mapToolsForAnthropic(tools: RunToolDefinition[]): Anthropic.Tool[] {
