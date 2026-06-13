@@ -21,8 +21,8 @@ The task context supports variables in the form `${variable}` or `{{variable}}`.
 | `${user_email}` | Email address of the user | `${user_email}` |
 | `${user_id}` | UUID of the user | `vector.user.${user_id}.preferences` |
 | `${role}` | Role of the user (`admin`, `user`) | |
-| `${current_date}` | Today's date | `Today is ${current_date}.` |
-| `${current_time}` | Current time (HH:mm) | |
+| `${current_date}` | Today's date | see note below |
+| `${current_time}` | Current time (HH:mm) | see note below |
 | `${chat_id}` | UUID of the current chat | |
 | `${agent_id}` | UUID of the executing agent | |
 | `${agent_label}` | Name of the agent | |
@@ -33,6 +33,8 @@ The task context supports variables in the form `${variable}` or `{{variable}}`.
 | `${model_id}` | Active model | |
 
 **Note:** Variables also work in prompt templates (the Composer template icon) — they are substituted client-side when the template is inserted into the Composer.
+
+**Date & time — do not put them in the task context:** Ontheia automatically provides the agent with the current date and time (timezone per system setting) on **every** run — appended to the current user message. So you do **not** need to include `${current_date}`/`${current_time}` in the task context. If you do, the minute-by-minute time ends up in the **cached prefix** and breaks prompt caching every minute (higher cost — see the ⚡ token indicator in chat). The variables remain available for special cases but should be avoided in the task context.
 
 ## 3. Management
 Changes to a Task take effect immediately for all new Runs. Since Tasks are stored in the database (`app.tasks`), they are preserved even if the system is restarted.

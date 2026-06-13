@@ -44,9 +44,10 @@ Wenn ein Agent eine Aktion ausführen möchte (z. B. eine E-Mail senden oder im 
   Weitere Variablen (z. B. `${agent_id}`, `${task_id}`, `${role}`) sind ebenfalls verfügbar — die vollständige Liste findet sich in der Admin-Dokumentation unter *Tasks / Konfiguration*.
 
 ## 5. Token-Anzeige (Nutzung)
-Nachdem der Agent geantwortet hat, erscheint rechtsbündig unter der Nachricht eine kleine Statistik in der Form `↑ 1,2k ↓ 80`.
+Nachdem der Agent geantwortet hat, erscheint rechtsbündig unter der Nachricht eine kleine Statistik in der Form `↑ 1,2k ↓ 80` — bei Cache-Treffern erweitert um `⚡ 7,7k`.
 - **↑ (Eingabe):** Gesamtzahl der Tokens, die für diesen Run an das Modell gesendet wurden — kumuliert über alle Zwischenschritte (z. B. mehrere Tool-Aufrufe, Chain-Schritte oder delegierte Sub-Agenten) inklusive eventuell wiederverwendeter Cache-Tokens.
 - **↓ (Ausgabe):** Gesamtzahl der vom Agenten erzeugten Tokens, ebenfalls kumuliert über alle Zwischenschritte.
+- **⚡ (Cache):** Erscheint nur, wenn das Modell Tokens aus dem Prompt-Cache wiederverwendet hat. Zeigt, wie viele der Eingabe-Tokens (↑) aus dem Cache kamen — diese werden vom Anbieter stark vergünstigt abgerechnet (oft ~10 %). Ein hoher Wert bedeutet also geringere Kosten. Der Tooltip nennt den genauen Anteil (z. B. „7,7k von 28,8k Eingabe-Tokens aus dem Cache"). Caching greift bei wiederholten Anfragen mit stabilem Kontext; fehlt das ⚡, war es ein Cache-Miss (z. B. erste Anfrage oder veränderter Kontext).
 - **Kompaktnotation:** Werte ab 1.000 werden gerundet dargestellt (z. B. `12,4k`, `1,2M`).
 - **Kopierbar:** Wie der Zeitstempel lässt sich auch diese Anzeige markieren und kopieren — praktisch, um Werte für Debugging oder Support weiterzugeben.
 - **Sinn:** Hilft dir, den Token-Verbrauch und damit die Kosten/Last des Runs einzuschätzen — insbesondere bei Chains und Delegation, wo mehrere Modellaufrufe zusammengezählt werden.

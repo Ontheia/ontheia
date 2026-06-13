@@ -21,8 +21,8 @@ Im Task-Kontext können Variablen in der Form `${variable}` oder `{{variable}}` 
 | `${user_email}` | E-Mail-Adresse des Nutzers | `${user_email}` |
 | `${user_id}` | UUID des Nutzers | `vector.user.${user_id}.preferences` |
 | `${role}` | Rolle des Nutzers (`admin`, `user`) | |
-| `${current_date}` | Heutiges Datum | `Heute ist ${current_date}.` |
-| `${current_time}` | Aktuelle Uhrzeit (HH:mm) | |
+| `${current_date}` | Heutiges Datum | siehe Hinweis unten |
+| `${current_time}` | Aktuelle Uhrzeit (HH:mm) | siehe Hinweis unten |
 | `${chat_id}` | UUID des aktuellen Chats | |
 | `${agent_id}` | UUID des ausführenden Agenten | |
 | `${agent_label}` | Name des Agenten | |
@@ -33,6 +33,8 @@ Im Task-Kontext können Variablen in der Form `${variable}` oder `{{variable}}` 
 | `${model_id}` | Aktives Modell | |
 
 **Hinweis:** Variablen funktionieren auch in Prompt-Vorlagen (Composer-Vorlagen-Icon) — sie werden beim Einfügen in den Composer clientseitig ersetzt.
+
+**Datum & Uhrzeit — nicht in den Task-Kontext schreiben:** Ontheia stellt dem Agenten das aktuelle Datum und die Uhrzeit (Zeitzone laut Systemeinstellung) bei **jedem** Run automatisch bereit — angehängt an die aktuelle Nutzernachricht. Du musst `${current_date}`/`${current_time}` also **nicht** in den Task-Kontext aufnehmen. Tust du es doch, landet die minütlich wechselnde Uhrzeit im **gecachten Prefix** und bricht das Prompt-Caching bei jeder Minute (höhere Kosten, siehe Token-Anzeige ⚡ im Chat). Die Variablen bleiben für Sonderfälle verfügbar, sollten aber im Task-Kontext gemieden werden.
 
 ## 3. Verwaltung
 Änderungen an einem Task werden sofort für alle neuen Runs wirksam. Da Tasks in der Datenbank (`app.tasks`) gespeichert werden, bleiben sie auch bei einem Neustart des Systems erhalten.
