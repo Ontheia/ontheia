@@ -73,11 +73,13 @@ export function accumulateUsage(prev: unknown, event: TokensEventLike): MessageU
  */
 export function usageTotals(
   usage: unknown
-): { input: number; output: number } | { sum: number } | null {
+): { input: number; output: number; cacheRead: number } | { sum: number } | null {
   if (!usage || typeof usage !== 'object') return null;
   const u = usage as any;
   if (typeof u.input === 'number' && typeof u.output === 'number') {
-    return { input: u.input, output: u.output };
+    // cacheRead is part of input (input = uncached + cacheRead + cacheCreation);
+    // surfaced separately so the UI can show how much was served from cache.
+    return { input: u.input, output: u.output, cacheRead: typeof u.cacheRead === 'number' ? u.cacheRead : 0 };
   }
   if (typeof u.prompt === 'number' && typeof u.completion === 'number') {
     return { sum: u.prompt + u.completion };

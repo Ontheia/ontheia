@@ -158,12 +158,30 @@ function normalizeMessageContent(data: any): string | undefined {
   return undefined;
 }
 
-function extractUsage(data: any): { prompt: number; completion: number } | undefined {
-  const usage = data?.usage;
-  if (!usage || typeof usage !== 'object') {
-    return undefined;
-  }
-  const prompt =
+export interface NormalizedUsage {
+  /** Uncached prompt tokens only. Total input = prompt + cacheRead + cacheCreation. */
+  prompt: number;
+  completion: number;
+  cacheRead: number;
+  cacheCreation: number;
+}
+
+/**
+ * Normalizes a provider usage object to Anthropic semantics, which is what the
+ * RunService aggregation expects (input = prompt + cacheRead + cacheCreation).
+ *
+ * Two provider conventions are reconciled:
+ *  - OpenAI / xAI / Mistral: `prompt_tokens` INCLUDES cached tokens, and
+ *    `prompt_tokens_details.cached_tokens` is a SUBSET of it. We subtract the
+ *    subset out of `prompt` and report it as cacheRead, so the total is unchanged
+ *    but the cache portion becomes visible.
+ *  - Anthropic-style: `input_tokens` EXCLUDES cache, and
+ *    `cache_read_input_tokens` / `cache_creation_input_tokens` are separate.
+ */
+export function normalizeUsage(usage: any): NormalizedUsage | undefined {
+  if (!usage || typeof usage !== 'object') return undefined;
+
+  const rawPrompt =
     typeof usage.prompt_tokens === 'number'
       ? usage.prompt_tokens
       : typeof usage.input_tokens === 'number'
@@ -175,13 +193,41 @@ function extractUsage(data: any): { prompt: number; completion: number } | undef
       : typeof usage.output_tokens === 'number'
       ? usage.output_tokens
       : undefined;
-  if (typeof prompt === 'number' || typeof completion === 'number') {
-    return {
-      prompt: typeof prompt === 'number' ? prompt : 0,
-      completion: typeof completion === 'number' ? completion : 0
-    };
+
+  if (typeof rawPrompt !== 'number' && typeof completion !== 'number') {
+    return undefined;
   }
-  return undefined;
+
+  // OpenAI-style cached subset (already counted inside prompt_tokens).
+  const cachedSubset =
+    typeof usage.prompt_tokens_details?.cached_tokens === 'number'
+      ? usage.prompt_tokens_details.cached_tokens
+      : typeof usage.cached_tokens === 'number'
+      ? usage.cached_tokens
+      : 0;
+  // Anthropic-style separate cache fields (not part of input_tokens).
+  const cacheReadSeparate =
+    typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
+  const cacheCreation =
+    typeof usage.cache_creation_input_tokens === 'number' ? usage.cache_creation_input_tokens : 0;
+
+  let prompt = typeof rawPrompt === 'number' ? rawPrompt : 0;
+  let cacheRead = cacheReadSeparate;
+  if (cachedSubset > 0) {
+    prompt = Math.max(0, prompt - cachedSubset);
+    cacheRead += cachedSubset;
+  }
+
+  return {
+    prompt,
+    completion: typeof completion === 'number' ? completion : 0,
+    cacheRead,
+    cacheCreation
+  };
+}
+
+function extractUsage(data: any): NormalizedUsage | undefined {
+  return normalizeUsage(data?.usage);
 }
 
 export interface RunOptions {
@@ -309,6 +355,16 @@ async function runCliLoop(
       log.error({ err }, 'CLI provider error');
       emit({ type: 'error', code: 'provider_error', message: err.message ?? 'CLI provider error' });
       return events;
+    }
+
+    if (completion.usage) {
+      emit({
+        type: 'tokens',
+        prompt: completion.usage.prompt,
+        completion: completion.usage.completion,
+        cacheRead: completion.usage.cacheRead,
+        cacheCreation: completion.usage.cacheCreation
+      });
     }
 
     if (completion.finishReason === 'stop' || completion.tool_calls.length === 0) {
@@ -639,8 +695,8 @@ export async function runOpenAiCompletion(
 
       const usage = extractUsage(responseBody);
       if (usage) {
-        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion });
-        if (usage.prompt > MAX_PROMPT_TOKENS) {
+        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion, cacheRead: usage.cacheRead, cacheCreation: usage.cacheCreation });
+        if (usage.prompt + usage.cacheRead + usage.cacheCreation > MAX_PROMPT_TOKENS) {
           emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${usage.prompt.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
           return events;
         }
@@ -748,6 +804,7 @@ async function consumeEventStream(
   let assembledText = '';
   let promptTokens = 0;
   let completionTokens = 0;
+  let lastUsageRaw: any = null;
   
   // Buffering for tool calls during stream
   const toolCallsBuffer = new Map<number, { id?: string; name?: string; arguments: string }>();
@@ -836,6 +893,7 @@ async function consumeEventStream(
           if (parsed?.usage) {
             promptTokens = parsed.usage.prompt_tokens ?? promptTokens;
             completionTokens = parsed.usage.completion_tokens ?? completionTokens;
+            lastUsageRaw = parsed.usage;
           }
         } catch (e) {
           // Silently skip non-json lines
@@ -848,7 +906,9 @@ async function consumeEventStream(
   }
 
   if (promptTokens || completionTokens) {
-    emit({ type: 'tokens', prompt: promptTokens, completion: completionTokens });
+    const norm = normalizeUsage(lastUsageRaw)
+      ?? { prompt: promptTokens, completion: completionTokens, cacheRead: 0, cacheCreation: 0 };
+    emit({ type: 'tokens', prompt: norm.prompt, completion: norm.completion, cacheRead: norm.cacheRead, cacheCreation: norm.cacheCreation });
     if (promptTokens > MAX_PROMPT_TOKENS) {
       emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${promptTokens.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
       return [];

@@ -81,10 +81,19 @@ const CLAUDE_CLI_SYSTEM_PROMPT =
 
 // ── Result type ─────────────────────────────────────────────────────────────
 
+export interface CliUsage {
+  /** Uncached prompt tokens (Anthropic semantics: total = prompt + cacheRead + cacheCreation). */
+  prompt: number;
+  completion: number;
+  cacheRead: number;
+  cacheCreation: number;
+}
+
 export interface CliCompletion {
   content: string | null;
   tool_calls: CliToolCall[];
   finishReason: 'stop' | 'tool_calls';
+  usage?: CliUsage;
 }
 
 export interface CliToolCall {
@@ -288,6 +297,21 @@ function parseGeminiEnvelope(raw: string): string {
   return raw;
 }
 
+// `claude -p --output-format json` reports token usage in the result envelope.
+// Anthropic semantics: input_tokens excludes cache; cache_read/creation separate.
+function extractClaudeUsage(obj: any): CliUsage | undefined {
+  const u = obj?.usage;
+  if (!u || typeof u !== 'object') return undefined;
+  const prompt = typeof u.input_tokens === 'number' ? u.input_tokens : 0;
+  const completion = typeof u.output_tokens === 'number' ? u.output_tokens : 0;
+  const cacheRead = typeof u.cache_read_input_tokens === 'number' ? u.cache_read_input_tokens : 0;
+  const cacheCreation = typeof u.cache_creation_input_tokens === 'number' ? u.cache_creation_input_tokens : 0;
+  if (prompt || completion || cacheRead || cacheCreation) {
+    return { prompt, completion, cacheRead, cacheCreation };
+  }
+  return undefined;
+}
+
 function parseClaudeJson(raw: string): CliCompletion | null {
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -295,16 +319,17 @@ function parseClaudeJson(raw: string): CliCompletion | null {
   try {
     const obj = JSON.parse(raw.slice(start, end + 1));
     if (typeof obj.result === 'string') {
+      const usage = extractClaudeUsage(obj);
       const text = obj.result.trim();
       // Try to parse as ReAct first (for tool calls)
       const react = parseReact(text);
-      if (react) return react;
+      if (react) return { ...react, usage };
 
       // Fallback: strip ANSWER: prefix if present
       let content = text;
       const answerMatch = content.match(/^ANSWER:\s*/i);
       if (answerMatch) content = content.slice(answerMatch[0].length).trim();
-      return { content, tool_calls: [], finishReason: 'stop' };
+      return { content, tool_calls: [], finishReason: 'stop', usage };
     }
   } catch { /* not valid json */ }
   return null;

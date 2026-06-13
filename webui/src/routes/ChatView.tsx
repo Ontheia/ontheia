@@ -221,9 +221,19 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
             </div>
           )}
           {usage !== null && (
-            <div className="message-usage" title={t('tokenUsageTitle')}>
+            <div
+              className="message-usage"
+              title={
+                'input' in usage && usage.cacheRead > 0
+                  ? t('tokenUsageCacheTitle', {
+                      cached: formatTokens(usage.cacheRead, i18n.language),
+                      input: formatTokens(usage.input, i18n.language)
+                    })
+                  : t('tokenUsageTitle')
+              }
+            >
               {'input' in usage
-                ? `↑ ${formatTokens(usage.input, i18n.language)} ↓ ${formatTokens(usage.output, i18n.language)}`
+                ? `↑ ${formatTokens(usage.input, i18n.language)} ↓ ${formatTokens(usage.output, i18n.language)}${usage.cacheRead > 0 ? ` ⚡ ${formatTokens(usage.cacheRead, i18n.language)}` : ''}`
                 : `${formatTokens(usage.sum, i18n.language)} T`}
             </div>
           )}
