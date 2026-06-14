@@ -28,7 +28,7 @@ import { logMemoryAudit, applyNamespaceTemplate, countHitsForNamespace } from '.
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery, deriveNamespaces } from '../routes/run-utils.js';
 import { isGlobalNamespace } from '../memory/namespaces.js';
-import { buildSystemMessages, appendDateTimeContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
   ChatMessage,
@@ -722,11 +722,10 @@ export class ChainRunner {
         this.debug(`Skill catalog built for agent ${profile.id}: ${catalogRows.map((s: any) => s.name).join(', ')}`);
       }
 
-      // Build system messages identically to RunService (date/time + task context + identity note)
+      // Build system messages identically to RunService (task context, identity, skills)
       const agentSystemMsgs = buildSystemMessages(this.templateContext, {
         taskContextPrompt,
         skillCatalogText: subAgentSkillCatalogText,
-        memoryContextText: subAgentMemoryContextText,
         agentLabel: profile.label || undefined
       });
 
@@ -745,9 +744,11 @@ export class ChainRunner {
         messages.push({ role: 'user', content: input });
       }
 
-      // Date/time anchored to the last user message (non-cacheable suffix), so the
-      // system prefix stays cacheable. Called after the input push above so it
-      // targets the final user message.
+      // Volatile context anchored to the last user message (non-cacheable suffix),
+      // so the system prefix stays cacheable. Called after the input push above so
+      // it targets the final user message: memory (query-dependent) first, then
+      // date/time (per-minute).
+      appendMemoryContext(messages, subAgentMemoryContextText);
       appendDateTimeContext(messages, this.templateContext);
 
       // Filter out internal params that should not be sent to the AI provider

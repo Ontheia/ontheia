@@ -17,56 +17,46 @@ Der Kontext besteht aus **zwei Teilen**:
 
 ## 2. Vollständige Nachrichten-Struktur
 
-Das LLM empfängt eine geordnete Liste von Nachrichten. Jeder Block ist eine eigene System-Message. Die Reihenfolge ist festgelegt:
+Das LLM empfängt eine geordnete Liste von Nachrichten. Die Reihenfolge ist festgelegt:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ [system] 1. Datum & Uhrzeit                                     │
-│    "TODAY'S DATE: 08.04.2026"                                   │
-│    "CURRENT TIME: 10:30"                                        │
-│    → Immer vorhanden; kann nicht deaktiviert werden             │
-│    ⚠ Wenn ${current_date} im Agent-System-Prompt                │
-│      verwendet wird, erscheint das Datum doppelt!               │
-├─────────────────────────────────────────────────────────────────┤
-│ [system] 2. Agent-Persona / Task-Kontext                        │
+│ STABILER PREFIX (cachebar — siehe Hinweis unten)                │
+│                                                                 │
+│ [system] 1. Agent-Persona / Task-Kontext                        │
 │    → Aus Agent- oder Task-Konfiguration                         │
-│    → Template-Variablen (${user_name}, ${current_date} …)       │
-│      werden hier aufgelöst                                      │
+│    → Template-Variablen (${user_name} …) werden hier aufgelöst  │
 │    → Bei Sub-Agents: Anti-Selbst-Delegations-Hinweis            │
-├─────────────────────────────────────────────────────────────────┤
-│ [system] 3. Skill-Katalog                                       │
+│ [system] 2. Skill-Katalog                                       │
 │    → Nur wenn dem Agenten Skills zugewiesen sind                │
 │    "SKILLS AVAILABLE — call activate_skill(name) BEFORE         │
-│     answering when the request matches a skill's description:   │
-│     - skill-name: [Beschreibung] [when_to_use]                  │
-│     ..."                                                        │
+│     answering when the request matches a skill's description …" │
 │    → Nach Rolling Summary: aktivierte Skills werden             │
 │      als Re-Attach-Blöcke (bis 5.000 Token/Skill) vorangestellt │
-├─────────────────────────────────────────────────────────────────┤
-│ [system] 4. Tool-Hinweis                                        │
+│ [system] 3. Tool-Hinweis                                        │
 │    → Nur wenn Tools vorhanden sind                              │
-├─────────────────────────────────────────────────────────────────┤
-│ [system] 5. Memory-Kontext                                      │
-│    → Nur wenn Memory-Treffer gefunden wurden                    │
-│    "RELEVANT CONTEXT FROM LONG-TERM MEMORY:                     │
-│     --- MEMORY ENTRY (Stored on ..., Namespace: ...) ---        │
-│     [Gespeicherter Text]"                                       │
 ├─────────────────────────────────────────────────────────────────┤
 │ [user]      Nachricht 1 (älteste Chat-History)                  │
 │ [assistant] Antwort 1                                           │
-│ [user]      Nachricht 2                                         │
-│ [assistant] Antwort 2                                           │
 │  …          (vollständige Chat-History)                         │
 ├─────────────────────────────────────────────────────────────────┤
-│ [user]      Aktuelle Nutzer-Nachricht                           │
+│ VOLATILES SUFFIX (nicht cachebar — ändert sich pro Anfrage)     │
+│                                                                 │
+│ [user]   Aktuelle Nutzer-Nachricht                              │
+│   + Memory-Kontext (nur wenn Auto-Inject-Treffer gefunden)      │
+│     "RELEVANT CONTEXT FROM LONG-TERM MEMORY: …"                 │
+│   + Datum & Uhrzeit                                             │
+│     "[Context — current date/time: …, HH:mm]"                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Die System-Blöcke werden **vor** die bereits bestehenden Chat-History-Messages gesetzt. Das LLM sieht damit immer den vollständigen Gesprächsverlauf.
+Die System-Blöcke (1–3) werden **vor** die bestehende Chat-History gesetzt. Das LLM sieht damit immer den vollständigen Gesprächsverlauf.
+
+> **Datum/Zeit und Memory-Kontext stehen am Ende, nicht im System-Prompt.** Beide sind *volatil*: Die Uhrzeit wechselt jede Minute, die Memory-Treffer hängen von der konkreten Anfrage ab. Stünden sie im System-Prefix, würden sie das **Prompt-Caching** bei jeder Anfrage brechen (der Anbieter cached nur einen byte-identischen Prefix). Deshalb hängt Ontheia sie an die **letzte Nutzer-Nachricht** an — ins nicht-cachebare Suffix —, sodass der große stabile Block (Tools + System + History) cachebar bleibt. Die Information ist für das LLM dort genauso gut lesbar.
 
 ### Template-Variablen im System-Prompt
 
-Im Agent-Persona-Block (Block 2) können folgende Platzhalter verwendet werden — sie werden zur Laufzeit aus dem Sitzungskontext aufgelöst:
+Im Agent-Persona-Block (Block 1) können folgende Platzhalter verwendet werden — sie werden zur Laufzeit aus dem Sitzungskontext aufgelöst:
 
 | Variable | Inhalt |
 |---|---|
@@ -78,7 +68,7 @@ Im Agent-Persona-Block (Block 2) können folgende Platzhalter verwendet werden �
 | `${current_date}` | Lokalisiertes Datum (Sprache + Zeitzone des Nutzers) |
 | `${current_time}` | Lokalisierte Uhrzeit (HH:mm, Zeitzone des Nutzers) |
 
-Da Block 1 Datum und Uhrzeit immer automatisch einfügt, ist `${current_date}` und `${current_time}` im System-Prompt redundant — aber unschädlich.
+> **`${current_date}`/`${current_time}` nicht in den System-Prompt aufnehmen.** Datum und Uhrzeit werden ohnehin automatisch im Suffix bereitgestellt (siehe oben). Schreibst du sie zusätzlich in den Agent-Persona-/Task-Kontext, landet die minütlich wechselnde Uhrzeit im **gecachten Prefix** und bricht das Caching bei jeder Minute (höhere Kosten). Die Variablen bleiben für Sonderfälle verfügbar, sollten im System-Prompt aber gemieden werden.
 
 ---
 
@@ -95,7 +85,7 @@ Bevor das LLM die erste Antwort generiert, durchläuft Ontheia folgende Schritte
          ↓
 4. Semantische Suche: Letzte User-Nachricht als Suchbegriff
          ↓
-5. Top-K Treffer als Text in System-Prompt einfügen (Block 5)
+5. Top-K Treffer an die aktuelle Nutzer-Nachricht anhängen (Suffix)
          ↓
 6. Audit-Log: Wer hat wann welchen Namespace gelesen?
 ```
@@ -108,7 +98,7 @@ Für den Lese-Zugriff auf Memory unterscheidet Ontheia drei Modi, die pro Agent 
 
 | Modus | Konfiguration | Verhalten |
 |---|---|---|
-| **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch als System-Block 5 in den Kontext eingefügt. |
+| **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch an die aktuelle Nutzer-Nachricht angehängt (volatiles Suffix, siehe Struktur oben). |
 | **Tool-Zugriff (aus `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | Die eingetragenen Namespaces sind für das LLM über das Memory-Suche-Tool erreichbar, werden aber **nicht** automatisch injiziert. |
 | **Tool-Zugriff (dediziert)** | `tool_read_namespaces` | Namespaces, die **ausschließlich** per Tool-Aufruf lesbar sind — unabhängig von `auto_read_enabled`. Nützlich für Wissensdatenbanken, die das LLM gezielt abfragen soll. |
 

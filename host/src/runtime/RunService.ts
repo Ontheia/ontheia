@@ -50,7 +50,7 @@ import { loadUserSettings } from '../routes/auth.js';
 import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countMemoryWarning } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
-import { buildSystemMessages, appendDateTimeContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
 import { SkillService, type SkillRecord } from './SkillService.js';
@@ -556,13 +556,14 @@ export class RunService {
 
       const systemMsgs = buildSystemMessages(templateContext, {
         taskContextPrompt,
-        memoryContextText,
         skillCatalogText,
         includeToolHint: hasTools
       });
       enrichedInput.messages.unshift(...systemMsgs);
-      // Date/time lives in the non-cacheable suffix (anchored to the last user
-      // message), so the system prefix stays cacheable across minute boundaries.
+      // Volatile, per-request context lives in the non-cacheable suffix (anchored
+      // to the last user message), so the system+tools prefix stays cacheable:
+      // retrieved memory (query-dependent) first, then date/time (per-minute).
+      appendMemoryContext(enrichedInput.messages, memoryContextText);
       appendDateTimeContext(enrichedInput.messages, templateContext);
 
       // 6. Run Execution

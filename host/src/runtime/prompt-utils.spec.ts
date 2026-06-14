@@ -22,16 +22,44 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSystemMessages, appendDateTimeContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
 import type { ChatMessage } from './types.js';
 
 const ctx = { current_date: 'Samstag, 13. Juni 2026', current_time: '13:34' } as any;
 
-test('buildSystemMessages no longer emits a date/time system message', () => {
+test('buildSystemMessages emits neither date/time nor memory system messages', () => {
   const msgs = buildSystemMessages(ctx, { taskContextPrompt: 'You are a helper.' });
-  // Task context is now first — date/time must not be a leading system message
+  // Task context is now first — date/time and memory must not be system messages
   assert.equal(msgs[0].content, 'You are a helper.');
   assert.ok(!msgs.some((m) => /TODAY'S DATE|CURRENT TIME/.test(String(m.content))));
+  assert.ok(!msgs.some((m) => /LONG-TERM MEMORY/.test(String(m.content))));
+});
+
+test('appendMemoryContext appends retrieved memory to the last user message', () => {
+  const messages: ChatMessage[] = [
+    { role: 'system', content: 'task' },
+    { role: 'user', content: 'older' },
+    { role: 'assistant', content: 'ok' },
+    { role: 'user', content: 'show me the games' }
+  ];
+  appendMemoryContext(messages, 'WM2026 schedule entry');
+  assert.equal(messages[1].content, 'older');
+  assert.match(String(messages[3].content), /show me the games\n\nRELEVANT CONTEXT FROM LONG-TERM MEMORY:\nWM2026 schedule entry/);
+});
+
+test('appendMemoryContext is a no-op without memory text', () => {
+  const messages: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+  appendMemoryContext(messages, undefined);
+  assert.equal(messages[0].content, 'hi');
+});
+
+test('memory then date/time: both land in the suffix, memory before date/time', () => {
+  const messages: ChatMessage[] = [{ role: 'user', content: 'show me the games' }];
+  appendMemoryContext(messages, 'schedule data');
+  appendDateTimeContext(messages, ctx);
+  const content = String(messages[0].content);
+  assert.ok(content.indexOf('LONG-TERM MEMORY') < content.indexOf('current date/time'));
+  assert.ok(content.startsWith('show me the games'));
 });
 
 test('appendDateTimeContext appends to the last user message (string content)', () => {

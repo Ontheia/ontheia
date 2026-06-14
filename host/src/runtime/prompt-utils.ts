@@ -29,8 +29,6 @@ export interface BuildSystemMessagesOptions {
   taskContextPrompt?: string;
   /** Agent label used for the identity/anti-self-delegation note (sub-agents only). */
   agentLabel?: string;
-  /** Pre-formatted memory context text to inject. */
-  memoryContextText?: string;
   /** Skill catalog text listing available skills and when to activate them. */
   skillCatalogText?: string;
   /** Whether to include the tool required-properties hint. */
@@ -44,18 +42,19 @@ export interface BuildSystemMessagesOptions {
  *   1. Task/persona      (if provided, after template resolution)
  *   2. Skill catalog     (if provided)
  *   3. Tool hint         (if includeToolHint)
- *   4. Memory context    (if provided)
  *
- * Date/time is deliberately NOT included here: it changes every minute and, as a
- * leading system message, would invalidate the cached prefix (task context, skill
- * catalog, history) on every minute boundary. Inject it at the end instead via
- * appendDateTimeContext(), so the stable prefix stays cacheable.
+ * Neither date/time nor retrieved memory context are included here: both are
+ * volatile (per-minute / per-query), and as leading system messages they would
+ * invalidate the cached prefix (task context, skill catalog, history) on every
+ * request. They are appended to the last user message instead — see
+ * appendDateTimeContext() / appendMemoryContext() — so the stable prefix stays
+ * cacheable.
  */
 export function buildSystemMessages(
   templateContext: ChainTemplateContext,
   options: BuildSystemMessagesOptions = {}
 ): ChatMessage[] {
-  const { taskContextPrompt, agentLabel, memoryContextText, skillCatalogText, includeToolHint } = options;
+  const { taskContextPrompt, agentLabel, skillCatalogText, includeToolHint } = options;
   const messages: ChatMessage[] = [];
 
   // 1. Task context / persona
@@ -80,48 +79,56 @@ export function buildSystemMessages(
     });
   }
 
-  // 4. Memory context — closest to the conversation turn
-  if (memoryContextText) {
-    messages.push({
-      role: 'system',
-      content: `RELEVANT CONTEXT FROM LONG-TERM MEMORY:\n${memoryContextText}\n\nNOTE: Only use this information if it is relevant to the current request. Pay attention to the storage date!`
-    });
-  }
-
   return messages;
 }
 
 /**
- * Appends the current date/time to the LAST user message, in place.
+ * Appends a text block to the LAST user message, in place.
  *
- * Date/time is volatile (minute granularity) and must live in the non-cacheable
- * suffix, never in the leading system prefix. Anchoring it to the last user
- * message keeps it at the very end across all provider paths — including the
+ * Volatile, per-request content (date/time, retrieved memory) must live in the
+ * non-cacheable suffix, never in the leading system prefix — otherwise it
+ * invalidates the cached prefix on every request. Anchoring it to the last user
+ * message keeps it at the very end across all provider paths, including the
  * Anthropic-native runner, which hoists every role:'system' message into the
  * cached system block regardless of array position.
  *
  * The append is transient (run-assembly only) and is not persisted to chat
- * history. No-op when there is no date/time or no user message to anchor to.
+ * history. No-op when there is no user message to anchor to.
  */
+function appendToLastUserMessage(messages: ChatMessage[], text: string): void {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'user') continue;
+    const msg = messages[i];
+    if (typeof msg.content === 'string') {
+      messages[i] = { ...msg, content: `${msg.content}\n\n${text}` };
+    } else if (Array.isArray(msg.content)) {
+      messages[i] = { ...msg, content: [...msg.content, { type: 'text', text }] };
+    }
+    return;
+  }
+}
+
+/**
+ * Appends auto-injected long-term memory context to the last user message.
+ * Memory hits are query-dependent (volatile), so keeping them in the suffix
+ * preserves the cached system+tools prefix. No-op when there is no context.
+ */
+export function appendMemoryContext(messages: ChatMessage[], memoryContextText?: string): void {
+  if (!memoryContextText) return;
+  appendToLastUserMessage(
+    messages,
+    `RELEVANT CONTEXT FROM LONG-TERM MEMORY:\n${memoryContextText}\n\nNOTE: Only use this information if it is relevant to the current request. Pay attention to the storage date!`
+  );
+}
+
+/** Appends the current date/time to the last user message (volatile, suffix). */
 export function appendDateTimeContext(
   messages: ChatMessage[],
   templateContext: ChainTemplateContext
 ): void {
   if (!templateContext.current_date && !templateContext.current_time) return;
-
   const parts: string[] = [];
   if (templateContext.current_date) parts.push(templateContext.current_date);
   if (templateContext.current_time) parts.push(templateContext.current_time);
-  const note = `[Context — current date/time: ${parts.join(', ')}]`;
-
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role !== 'user') continue;
-    const msg = messages[i];
-    if (typeof msg.content === 'string') {
-      messages[i] = { ...msg, content: `${msg.content}\n\n${note}` };
-    } else if (Array.isArray(msg.content)) {
-      messages[i] = { ...msg, content: [...msg.content, { type: 'text', text: note }] };
-    }
-    return;
-  }
+  appendToLastUserMessage(messages, `[Context — current date/time: ${parts.join(', ')}]`);
 }
