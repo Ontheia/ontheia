@@ -133,7 +133,7 @@ export async function runAnthropicCompletion(
     try {
       const response = await client.messages.create({
         model: payload.model_id,
-        max_tokens: (payload.options?.max_tokens as number) ?? 4096,
+        max_tokens: (payload.options?.max_tokens as number) ?? 8192,
         system: systemBlocks as any,
         messages: messages as any,
         tools: anthropicTools.length > 0 ? anthropicTools : undefined,
@@ -151,6 +151,13 @@ export async function runAnthropicCompletion(
         cacheRead: (response.usage as any).cache_read_input_tokens ?? 0,
         cacheCreation: (response.usage as any).cache_creation_input_tokens ?? 0
       });
+
+      if (response.stop_reason === 'max_tokens') {
+        emit({
+          type: 'warning',
+          message: 'Response truncated at max_tokens — tool call arguments may be incomplete.'
+        });
+      }
 
       let assistantText = '';
       const toolCalls: any[] = [];
