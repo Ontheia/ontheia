@@ -16,6 +16,16 @@
 
 ---
 
+## Abschnitt: Prompt-Caching (Anthropic API)
+
+| Feld | Typ | Beschreibung |
+| --- | --- | --- |
+| Prompt-Caching aktivieren | Schalter | Aktiviert `cache_control` auf dem Anthropic-API-Pfad. Standard: an. Sofort wirksam (kein **[Übernehmen]** nötig). |
+
+> Betrifft **nur** Anthropic — der einzige Anbieter, bei dem Caching durch den Write-Aufschlag teurer sein kann als die Ersparnis. Deaktivieren bei sporadischer Einzelnutzung ohne sichtbare Cache-Ersparnis (⚡). Details: [Laufzeit & UI](/de/admin/general/02_runtime_and_ui/).
+
+---
+
 ## Abschnitt: Prompt-Optimierung
 
 | Feld | Typ | Beschreibung |

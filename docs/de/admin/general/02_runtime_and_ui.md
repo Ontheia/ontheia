@@ -34,3 +34,14 @@ Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
     - **Protokolle (Trace)**: Ereignisse werden für die Anzeige in diese Lokalzeit umgerechnet.
     - **Cron-Jobs**: Zeitpläne werden basierend auf dieser Zeitzone ausgeführt.
     - **Agenten-Kontext**: Die dem Agenten injizierte "Aktuelle Uhrzeit" folgt dieser Einstellung.
+
+## 6. Prompt-Caching (Anthropic API)
+Ein globaler Schalter, der das Prompt-Caching auf dem **Anthropic-API-Pfad** aktiviert oder deaktiviert.
+- **Standard:** aktiviert.
+- **Wirkung:** Ist der Schalter aktiv, setzt Ontheia `cache_control`-Markierungen auf den stabilen Prefix (Tools + System-Prompt) und die wachsende Chat-History. Wiederkehrende Anfragen lesen diesen Prefix dann zum stark reduzierten Cache-Preis (~0,1× Input).
+
+> **Warum nur Anthropic?** Anthropic ist der einzige Anbieter, bei dem Caching teurer sein *kann* als die Ersparnis: Das Schreiben des Caches (`cache_creation`) wird mit ~1,25× des normalen Input-Preises berechnet. Wird der gecachte Prefix **nicht innerhalb der 5-Minuten-TTL wiedergelesen** — etwa bei sporadischen Einzelläufen (Cron-Tasks mit einem einzigen LLM-Aufruf, lange Denkpausen im Chat) — zahlst du den Write-Aufschlag, ohne je den günstigen Read zu kassieren: **+25 % statt Ersparnis**.
+>
+> **OpenAI, xAI und Mistral** cachen automatisch und **ohne Write-Aufschlag** (es gibt nur „Input" und „Cached input", keine dritte Write-Spalte). Dort kann Caching nie teurer sein als kein Caching, und es gibt keinen steuerbaren Parameter — dieser Schalter betrifft sie nicht.
+
+**Wann deaktivieren?** Wenn deine Anthropic-Nutzung überwiegend aus sporadischen Einzelläufen besteht und du im Token-Verbrauch der Antworten **keine Cache-Ersparnis** (das ⚡-Symbol mit Cache-Read-Token) siehst. Für dichte Tool-Schleifen und schnelle Chat-Folgen sollte der Schalter aktiviert bleiben — dort überwiegt der günstige Read klar.

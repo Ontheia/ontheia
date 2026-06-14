@@ -16,6 +16,16 @@
 
 ---
 
+## Section: Prompt Caching (Anthropic API)
+
+| Field | Type | Description |
+| --- | --- | --- |
+| Enable prompt caching | Switch | Enables `cache_control` on the Anthropic API path. Default: on. Takes effect immediately (no **[Apply]** needed). |
+
+> Affects **only** Anthropic — the only provider where caching can cost more than it saves due to the write premium. Disable for sporadic single-shot usage with no visible cache savings (⚡). Details: [Runtime & UI](/en/admin/general/02_runtime_and_ui/).
+
+---
+
 ## Section: Prompt Optimizer
 
 | Field | Type | Description |

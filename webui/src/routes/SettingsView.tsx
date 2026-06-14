@@ -802,15 +802,28 @@ function GeneralSection({
   const [motdDraft, setMotdDraft] = useState('');
   const [motdSaving, setMotdSaving] = useState(false);
   const [motdSaved, setMotdSaved] = useState(false);
+  const [promptCaching, setPromptCaching] = useState(true);
 
   useEffect(() => {
     getSystemSettingsAdmin()
       .then((data) => {
         const motdEntry = data.find((item) => item.key === 'motd');
         setMotdDraft(typeof motdEntry?.value === 'string' ? motdEntry.value : '');
+        const cachingEntry = data.find((item) => item.key === 'anthropic_prompt_caching');
+        setPromptCaching(cachingEntry?.value !== false);
       })
       .catch(() => {});
   }, []);
+
+  const updatePromptCaching = async (value: boolean) => {
+    setPromptCaching(value);
+    try {
+      await updateSystemSettingsAdmin({ anthropic_prompt_caching: value });
+    } catch {
+      setPromptCaching(!value);
+      console.error(t('general.promptCachingSaveError'));
+    }
+  };
 
   const saveMotd = async () => {
     setMotdSaving(true);
@@ -900,6 +913,25 @@ function GeneralSection({
         <p className="settings-hint">
           {t('general.globalNote')}
         </p>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('general.promptCaching')}</h3>
+        <p className="settings-preamble">{t('general.promptCachingDesc')}</p>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              className="app-toggle"
+              checked={promptCaching}
+              onChange={(e) => updatePromptCaching(e.target.checked)}
+            />
+            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+              {t('general.promptCachingToggle')}
+            </span>
+          </label>
+        </div>
+        <p className="settings-hint">{t('general.promptCachingHint')}</p>
       </div>
 
       <div className="settings-section">

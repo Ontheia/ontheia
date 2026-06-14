@@ -34,3 +34,14 @@ Determines the local time for the entire Ontheia host.
     - **Logs (Trace)**: Events are converted to this local time for display.
     - **Cron Jobs**: Schedules are executed based on this timezone.
     - **Agent Context**: The "Current Time" injected into the agent follows this setting.
+
+## 6. Prompt Caching (Anthropic API)
+A global switch that enables or disables prompt caching on the **Anthropic API path**.
+- **Default:** enabled.
+- **Effect:** When enabled, Ontheia places `cache_control` markers on the stable prefix (tools + system prompt) and the growing chat history. Recurring requests then read that prefix at the heavily reduced cache price (~0.1× input).
+
+> **Why Anthropic only?** Anthropic is the only provider where caching *can* cost more than it saves: writing the cache (`cache_creation`) is billed at ~1.25× the normal input price. If the cached prefix is **not re-read within the 5-minute TTL** — e.g. for sporadic single-shot runs (cron tasks with a single LLM call, long thinking pauses in chat) — you pay the write premium without ever collecting the cheap read: **+25% instead of savings**.
+>
+> **OpenAI, xAI and Mistral** cache automatically and **without a write premium** (there is only "Input" and "Cached input", no third write column). Caching can never be more expensive there than no caching, and there is no tunable parameter — this switch does not affect them.
+
+**When to disable?** If your Anthropic usage consists mostly of sporadic single-shot runs and you see **no cache savings** (the ⚡ symbol with cache-read tokens) in the response token usage. For dense tool loops and fast chat sequences the switch should stay enabled — the cheap read clearly dominates there.

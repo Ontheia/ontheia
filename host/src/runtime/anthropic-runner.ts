@@ -93,6 +93,9 @@ export async function runAnthropicCompletion(
 
   let toolCallCounter = 0;
 
+  // Resolve the prompt-caching toggle once per run (Anthropic-only lever).
+  const cachingEnabled = await isPromptCachingEnabled(db);
+
   while (true) {
     if (options?.signal?.aborted) {
       emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
@@ -107,16 +110,23 @@ export async function runAnthropicCompletion(
     const { system, messages } = mapMessagesForAnthropic(conversation);
     const anthropicTools = mapToolsForAnthropic(toolset);
 
-    // Prompt caching (Anthropic only caches with explicit cache_control):
+    // Prompt caching (Anthropic only caches with explicit cache_control), gated
+    // by the global 'anthropic_prompt_caching' toggle:
     //  1. system block — caches tools + system together (render order is
     //     tools → system → messages), the large stable prefix.
     //  2. last message — caches the growing conversation incrementally; on the
     //     next request this breakpoint becomes a cache read. Date/time is in the
     //     non-cacheable suffix (appendDateTimeContext), so the prefix stays stable.
+    // When disabled, system is sent as a plain string (no cache_control) so no
+    // cache_creation write premium is incurred.
     const systemBlocks = system
-      ? [{ type: 'text' as const, text: system, cache_control: { type: 'ephemeral' as const } }]
+      ? cachingEnabled
+        ? [{ type: 'text' as const, text: system, cache_control: { type: 'ephemeral' as const } }]
+        : system
       : undefined;
-    markLastMessageForCaching(messages);
+    if (cachingEnabled) {
+      markLastMessageForCaching(messages);
+    }
 
     emit({ type: 'step_start', step: 'dispatch_provider_request', timestamp: new Date().toISOString() });
 
@@ -487,6 +497,30 @@ function markLastMessageForCaching(messages: any[]): void {
     const block = last.content[last.content.length - 1];
     last.content[last.content.length - 1] = { ...block, cache_control: { type: 'ephemeral' } };
   }
+}
+
+// Global toggle for Anthropic prompt caching (system_settings key
+// 'anthropic_prompt_caching'). Anthropic is the only path where caching can cost
+// more than it saves: cache_creation is billed ~1.25× and, if the prefix is not
+// re-read within the 5-min TTL (e.g. sporadic single-shot runs), the write
+// premium outweighs the read savings. Cached in-process for 30s so we do not hit
+// the DB on every request; the UI toggle takes effect within that window.
+let cachingFlagCache: { value: boolean; expires: number } | null = null;
+
+async function isPromptCachingEnabled(db: Pool | PoolClient): Promise<boolean> {
+  const now = Date.now();
+  if (cachingFlagCache && cachingFlagCache.expires > now) return cachingFlagCache.value;
+  let value = true; // default on (backward-compatible)
+  try {
+    const res = await db.query(
+      `SELECT value FROM app.system_settings WHERE key = 'anthropic_prompt_caching'`
+    );
+    if (res.rows.length > 0) value = res.rows[0].value !== false;
+  } catch {
+    // On any error, fall back to the default (caching on).
+  }
+  cachingFlagCache = { value, expires: now + 30_000 };
+  return value;
 }
 
 function mapToolsForAnthropic(tools: RunToolDefinition[]): Anthropic.Tool[] {
