@@ -211,18 +211,51 @@ export class RollingSummaryService {
     if (overMessages) L('trigger — uncompressed messages exceeded maxMessages');
     if (overTokens) L('trigger — uncompressed tokens exceeded threshold');
 
-    // COMPRESS: summarise only uncompressed messages; existing summary covers the rest
-    // Extract activated skill contents before compression — re-attach after
-    const activatedSkills = extractActivatedSkills(messages);
+    // COMPRESS: summarise the uncompressed window, but keep the tail from the last
+    // user message verbatim. This guarantees the conversation still ends with a
+    // user message (Anthropic rejects an assistant-prefill ending) and the current
+    // request is seen directly by the model rather than only via the summary.
+    let tailOffset = -1;
+    for (let i = uncompressed.length - 1; i >= 0; i--) {
+      if (uncompressed[i].role === 'user') { tailOffset = i; break; }
+    }
+    const retainedTail = tailOffset >= 0 ? uncompressed.slice(tailOffset) : [];
+    const toCompress = tailOffset >= 0 ? uncompressed.slice(0, tailOffset) : uncompressed;
 
-    L('COMPRESS START', { total: messages.length, newMessages: uncompressed.length });
-    const newSummary = await this.runSummarizer(existingSummary, uncompressed, config, logger);
+    // Nothing left to compress once the tail is retained (e.g. a single oversized
+    // user message): reuse the existing summary + tail, or skip entirely.
+    if (toCompress.length === 0) {
+      if (existingSummary && coversUntil > 0) {
+        const reusedSkills = buildSkillReattachMessages(extractActivatedSkills(messages.slice(0, coversUntil)));
+        L('apply — existing summary + retained tail (nothing new to compress)');
+        return {
+          messages: [...buildSummaryMessages(existingSummary), ...reusedSkills, ...retainedTail],
+          applied: true,
+          reused: true,
+          compressedCount: coversUntil,
+          recentCount: retainedTail.length,
+          summary: existingSummary
+        };
+      }
+      L('skip — only the current user message in the uncompressed window');
+      return { messages, applied: false };
+    }
+
+    const coversUntilNew = coversUntil + toCompress.length; // = messages.length - retainedTail.length
+
+    // Extract activated skill contents from the compressed portion before compression —
+    // re-attach after. Skills still present in the retained tail must not be duplicated.
+    const activatedSkills = extractActivatedSkills(messages.slice(0, coversUntilNew));
+
+    L('COMPRESS START', { total: messages.length, compressing: toCompress.length, retainedTail: retainedTail.length });
+    const newSummary = await this.runSummarizer(existingSummary, toCompress, config, logger);
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
     L('COMPRESS DONE', { summaryLen: newSummary.length });
 
-    // Append last RECENT_PAIRS message pairs verbatim before ### Main Topics
+    // Append last RECENT_PAIRS message pairs verbatim before ### Main Topics.
+    // Drawn from the compressed portion only — the live tail stays verbatim anyway.
     const RECENT_PAIRS = 4;
-    let recentMessages = messages.slice(-(RECENT_PAIRS * 2));
+    let recentMessages = toCompress.slice(-(RECENT_PAIRS * 2));
     // Align to start with a user message so pairs read User → Assistant
     const firstUserIdx = recentMessages.findIndex((m) => m.role === 'user');
     if (firstUserIdx > 0) recentMessages = recentMessages.slice(firstUserIdx);
@@ -240,10 +273,10 @@ export class RollingSummaryService {
               SET rolling_summary = $1,
                   rolling_summary_covers_until = $2
             WHERE id = $3`,
-          [finalSummary, String(messages.length), chatId]
+          [finalSummary, String(coversUntilNew), chatId]
         )
       );
-      L('db stored', { coversUntil: messages.length });
+      L('db stored', { coversUntil: coversUntilNew });
     } catch (err) {
       W('db store failed', { err });
       return { messages, applied: false };
@@ -251,11 +284,11 @@ export class RollingSummaryService {
 
     const skillMessages = buildSkillReattachMessages(activatedSkills);
     return {
-      messages: [...buildSummaryMessages(finalSummary), ...skillMessages],
+      messages: [...buildSummaryMessages(finalSummary), ...skillMessages, ...retainedTail],
       applied: true,
       reused: false,
-      compressedCount: messages.length,
-      recentCount: 0,
+      compressedCount: coversUntilNew,
+      recentCount: retainedTail.length,
       summary: finalSummary
     };
   }
