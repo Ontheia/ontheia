@@ -64,7 +64,7 @@ At least one AI provider API key is required to chat (e.g. Anthropic, OpenAI, or
 **Guided setup** (recommended) — one command, configures everything interactively:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ontheia/ontheia/main/scripts/install.sh | bash
+curl -fsSL https://get.ontheia.ai | bash
 ```
 
 This downloads Ontheia to `~/ontheia` and runs the installer, which handles `.env` creation, secret generation, Docker builds, database migrations, and bootstraps the first admin account.
