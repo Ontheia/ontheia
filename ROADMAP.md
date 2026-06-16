@@ -6,21 +6,22 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.2.x — Feature Milestone
+## Current: v0.3.x — Stability & Efficiency
 
-The core feature set is in place and in active use. Shipped with 0.2.0:
+Building on the v0.2.x feature base. Shipped with 0.3.0:
 
 - **Agent Skills system** — skill catalog, admin UI, and a built-in skill-creator that builds and tests new skills directly in chat
 - **Guided onboarding** — the Ontheia Guide walks new users through setup, memory, skills, and automation; example agents work out of the box
 - **Scheduling for agents** — reminders and recurring prompts via agent tools
-- **Per-run token usage** — input/output tokens per run (incl. sub-agents) and live context-size display
+- **Per-run token usage** — input/output tokens per run (incl. sub-agents), live context-size display, and cache read/write breakdown per request
 - **One-line installer** — `curl | bash` setup with preconfigured AI tools (prompt optimizer, summarizer)
+- **Prompt cache control** — global admin toggle to disable Anthropic-specific prompt caching (write premium can cost more than it saves for sporadic single-user setups)
 
 Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.2.x)
+## Near-term (v0.3.x)
 
 | Feature | Description |
 |---|---|
@@ -30,7 +31,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Mid-term (v0.3–v0.x)
+## Mid-term (v0.4+)
 
 | Feature | Description |
 |---|---|
