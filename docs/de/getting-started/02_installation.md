@@ -26,7 +26,7 @@ Mindestens ein API-Key eines KI-Anbieters ist erforderlich (z. B. Anthropic, Ope
 Das Installationsskript übernimmt `.env`-Erstellung, Secret-Generierung, Docker-Builds, Datenbank-Migrationen und die Einrichtung des ersten Admin-Accounts. Ein Befehl — lädt Ontheia nach `~/ontheia` und startet den interaktiven Installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ontheia/ontheia/main/scripts/install.sh | bash
+curl -fsSL https://get.ontheia.ai | bash
 ```
 
 Wer das Skript vorher prüfen möchte, klont das Repository und führt es von dort aus:

@@ -26,7 +26,7 @@ At least one AI provider API key is required (e.g. Anthropic, OpenAI, or a local
 The install script handles `.env` creation, secret generation, Docker builds, database migrations, and bootstraps the first admin account. One command — it downloads Ontheia to `~/ontheia` and starts the interactive installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ontheia/ontheia/main/scripts/install.sh | bash
+curl -fsSL https://get.ontheia.ai | bash
 ```
 
 Prefer to inspect the script first? Clone and run it from the repository:
