@@ -55,6 +55,7 @@ services:
       - .env
     environment:
       DOCKER_HOST: unix://${DOCKER_SOCKET_PATH:-/run/user/1000/docker.sock}
+      LOG_FILE: /app/logs/host_server.log
       ALLOWLIST_IMAGES_PATH: /app/config/allowlist.images
       ALLOWLIST_URLS_PATH: /app/config/allowlist.urls
       ALLOWLIST_PACKAGES_NPM_PATH: /app/config/allowlist.packages.npm
