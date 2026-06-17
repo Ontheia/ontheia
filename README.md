@@ -2,7 +2,11 @@
 
 **Your Data. Your AI. Your Rules.**
 
-**Ontheia** is a self-hosted, open-source AI agent platform. Run AI agents, automate workflows, and connect AI models to any tool — entirely on your own infrastructure, without sending data to external cloud services.
+Every time AI work runs on someone else's infrastructure, you give up more than privacy. You give up control over data, tools, workflows, and the rules that govern how work gets done.
+
+**Ontheia** is a self-hosted, open-source AI agent platform for work that stays under your control. It keeps AI capable and connected — within boundaries you set.
+
+Most AI setups stay fragmented: separate chats, tools, scripts, and automations with no shared memory, no continuity, and no operational boundaries. Ontheia brings specialized agents, tools, memory, scheduling, and delegation into one governed work context — on your own infrastructure.
 
 → **[ontheia.ai](https://ontheia.ai)** · [Documentation](https://docs.ontheia.ai) · [Blog](https://ontheia.ai/blog)
 
@@ -15,20 +19,26 @@
 
 ---
 
-## Why Ontheia?
+## More than the sum of its parts
 
-Every time you send a company document to a cloud AI, your data leaves your building.
-Ontheia keeps AI powerful — and keeps your data yours.
+No single feature is the point. The shift comes from combining them.
 
-- **GDPR-compliant by architecture** — data never leaves your servers
-- **Vendor-agnostic** — Claude, ChatGPT, Gemini, Grok, Ollama, or any OpenAI-compatible model
-- **MCP-native** — connect agents to any external tool or service via open standard
-- **Multi-user** — role-based access control, Row Level Security enforced at the database level
-- **Chain Engine** — visual workflow automation, no code required
-- **Long-term Memory** — built-in RAG with pgvector, isolated per user and namespace
-- **Agent-to-Agent** — complex tasks coordinated across specialized sub-agents
-- **Automation** — time-based and agent-driven scheduling; one-time and recurring jobs with chat continuation
-- **Agent Skills** — reusable capability modules compatible with the open standard, including a built-in skill-creator that builds and tests new skills directly in chat
+An agent in Ontheia can break a request into subtasks and hand them to other specialized agents — each with its own tools, memory, and skills. They coordinate, remember across sessions, and act on their own schedule. A fresh install ships with two agents to start from: the **Ontheia Guide** walks you through setup, and a **Personal Assistant** is ready to work.
+
+This isn't a chat UI with plugins, prompt-based automation, or a bare agent runtime — it's an operational layer for sovereign AI work: agents that use your tools, retain context, coordinate capabilities, and operate over time, all inside one system you control.
+
+---
+
+## What's inside
+
+- **Specialized capabilities** — use agents and Agent Skills instead of one generic assistant. Skills are reusable modules based on the open Agent Skills standard, and the built-in **skill-creator** can build and test new ones directly in chat.
+- **Delegation & coordination** — hand work off across specialists with the `delegate-to-agent` tool, either autonomously or as declarative Chain steps.
+- **Tools & external systems** — Ontheia is **MCP-native**, so agents can connect to tools and services over an open standard instead of proprietary integrations.
+- **Persistent memory** — built-in RAG with **pgvector**, isolated by user and namespace, so agents can remember and reuse knowledge over time.
+- **Workflows** — the visual **Chain Engine** turns multi-step logic into no-code pipelines.
+- **Scheduling** — run recurring or one-time jobs automatically, including jobs that resume an existing chat where it left off.
+- **Vendor-agnostic** — Claude, ChatGPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
+- **Governance & control** — self-hosted and **GDPR-compliant by architecture** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data.
 
 ---
 
@@ -142,6 +152,8 @@ Contributions are welcome.
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
+If Ontheia resonates with you, a ⭐ helps others find it — and helps us build a community around sovereign AI.
+
 ---
 
 ## License
@@ -160,4 +172,4 @@ Ontheia is dual-licensed:
 
 ---
 
-© 2026 Ontheia. All rights reserved.
+© 2026 Ontheia · Open source under AGPL-3.0.
