@@ -42,6 +42,31 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 
 ---
 
+## How it works
+
+```mermaid
+flowchart TB
+    subgraph infra["🔒 Your Infrastructure"]
+        UI[WebUI / Chat] --> A1[Agent]
+        A1 --- SK[Skills]
+        A1 --- MEM[Memory / RAG]
+        MEM --- DB[(PostgreSQL + pgvector)]
+        A1 -->|delegate-to-agent| A2[Sub-Agent]
+        A1 --> CE[Chain Engine]
+        A1 --> SCH[Scheduler]
+        A1 --> TOOLS[MCP Tools / External Systems]
+        A1 --> OLLAMA[Ollama<br/>local models]
+    end
+    A1 -.-> PROV[Cloud AI Providers<br/>Claude · GPT · Gemini · Grok]
+
+    classDef external fill:#fff3cd,stroke:#d4a017,stroke-width:1px,color:#5c4400,font-weight:bold;
+    class PROV external;
+```
+
+Everything that matters — chat history, memory, skills, workflows, schedules, tool connections — stays inside your infrastructure. Only the model inference call crosses the boundary, and you choose which provider gets it.
+
+---
+
 ## Screenshots
 
 | Chat & Agents | MCP Tools in Action |
