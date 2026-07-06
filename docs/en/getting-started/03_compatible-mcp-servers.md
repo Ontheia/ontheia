@@ -17,6 +17,7 @@ The following MCP servers have been tested with Ontheia and work out of the box.
 | **markdown2pdf-mcp** | Convert Markdown to PDF | [github.com/2b3pro/markdown2pdf-mcp](https://github.com/2b3pro/markdown2pdf-mcp) |
 | **mcp_pdf_reader** | Read and analyze PDF files | [github.com/karateboss/mcp_pdf_reader](https://github.com/karateboss/mcp_pdf_reader) |
 | **pdf-reader-mcp** | Read and analyze PDF files | [github.com/SylphxAI/pdf-reader-mcp](https://github.com/SylphxAI/pdf-reader-mcp) |
+| **pdfnative-mcp** | Create, sign (PAdES), verify and transform PDFs — PDF/A, forms, barcodes | [github.com/Nizoka/pdfnative-mcp](https://github.com/Nizoka/pdfnative-mcp) |
 | **filesystem** | Read and write the local file system | [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) |
 | **mcp-server-whisper** | Audio transcription via OpenAI Whisper | [github.com/arcaputo3/mcp-server-whisper](https://github.com/arcaputo3/mcp-server-whisper) |
 | **Markdownify MCP Server** | Convert web pages, PDFs and documents to Markdown | [github.com/zcaceres/markdownify-mcp](https://github.com/zcaceres/markdownify-mcp) |
@@ -131,6 +132,29 @@ M2P_OUTPUT_DIR=/path/to/output/directory
 ```
 
 **Allowlist** (`config/allowlist.packages.npm`): `@sylphx/pdf-reader-mcp`
+
+</details>
+
+<details>
+<summary>⚙ pdfnative-mcp — Configuration</summary>
+
+```json
+{
+  "mcpServers": {
+    "pdfnative": {
+      "command": "npx",
+      "args": ["-y", "pdfnative-mcp"],
+      "env": {
+        "PDFNATIVE_MCP_OUTPUT_DIR": "/path/to/output"
+      }
+    }
+  }
+}
+```
+
+Requires Node.js ≥ 22. `PDFNATIVE_MCP_OUTPUT_DIR` sets where generated PDFs are written. No API keys required — runs fully local.
+
+**Allowlist** (`config/allowlist.packages.npm`): `pdfnative-mcp`
 
 </details>
 
