@@ -35,7 +35,16 @@ Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
     - **Cron-Jobs**: Zeitpläne werden basierend auf dieser Zeitzone ausgeführt.
     - **Agenten-Kontext**: Die dem Agenten injizierte "Aktuelle Uhrzeit" folgt dieser Einstellung.
 
-## 6. Prompt-Caching (Anthropic API)
+## 6. Response-Streaming
+Ein globaler Schalter, der das tokenweise Streaming der LLM-Antworten in den Chat aktiviert oder deaktiviert.
+- **Standard:** aktiviert.
+- **Wirkung:** Ist der Schalter aktiv, erscheinen Agenten-Antworten im Chat, während das Modell sie generiert. Deaktiviert erscheint die vollständige Antwort erst nach Abschluss der Generierung als Block.
+
+> **Geltungsbereich:** Der Schalter wirkt auf den Anthropic-API-Pfad und alle OpenAI-kompatiblen Provider (OpenAI, xAI, Google, Ollama u. a.). **CLI-Provider** (z. B. Claude CLI) liefern die Antwort systembedingt immer als Block. Einzelne OpenAI-kompatible Provider, deren Endpunkt kein SSE unterstützt, können über die Provider- oder Modell-Metadata mit `"stream": false` ausgenommen werden — sie antworten dann weiterhin als Block, unabhängig vom globalen Schalter.
+
+**Wann deaktivieren?** Nur bei Problemen — etwa wenn ein Provider Streaming-Anfragen ablehnt oder ein Reverse-Proxy vor Ontheia SSE-Antworten puffert und das Streaming dadurch ohnehin nicht ankommt.
+
+## 7. Prompt-Caching (Anthropic API)
 Ein globaler Schalter, der das Prompt-Caching auf dem **Anthropic-API-Pfad** aktiviert oder deaktiviert.
 - **Standard:** aktiviert.
 - **Wirkung:** Ist der Schalter aktiv, setzt Ontheia `cache_control`-Markierungen auf den stabilen Prefix (Tools + System-Prompt) und die wachsende Chat-History. Wiederkehrende Anfragen lesen diesen Prefix dann zum stark reduzierten Cache-Preis (~0,1× Input).

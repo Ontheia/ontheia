@@ -16,6 +16,16 @@
 
 ---
 
+## Section: Response Streaming
+
+| Field | Type | Description |
+| --- | --- | --- |
+| Stream responses | Switch | Streams agent responses token by token into the chat while the model generates them. Default: on. Takes effect immediately (no **[Apply]** needed). |
+
+> Applies to the Anthropic API path and all OpenAI-compatible providers. CLI providers always respond as a block. Individual providers without SSE support can be excluded via provider metadata (`"stream": false`). Details: [Runtime & UI](/en/admin/general/02_runtime_and_ui/).
+
+---
+
 ## Section: Prompt Caching (Anthropic API)
 
 | Field | Type | Description |

@@ -31,6 +31,7 @@ import {
   type ProviderAuthMode
 } from './http.js';
 import type { RunRequest, ChatMessage } from '../runtime/types.js';
+import { getSystemFlag } from '../runtime/system-flags.js';
 
 type HttpMethod = 'GET' | 'POST';
 
@@ -262,6 +263,22 @@ export async function buildProviderChatRequest(
         }
       }));
       body.tool_choice = 'auto';
+    }
+
+    // Response streaming: request SSE so tokens reach the chat as they are
+    // generated (global 'response_streaming' toggle, default on). Providers
+    // whose OpenAI-compatible endpoint lacks SSE support can opt out via
+    // provider/model metadata `stream: false`. An explicit stream value in the
+    // run options (e.g. chain steps forcing block responses) is respected.
+    const streamOptOut =
+      providerMetadata['stream'] === false || modelMetadata['stream'] === false;
+    if (
+      isOpenAICompatible &&
+      body.stream === undefined &&
+      !streamOptOut &&
+      (await getSystemFlag(db, 'response_streaming'))
+    ) {
+      body.stream = true;
     }
 
     // Most OpenAI-compatible providers omit token usage entirely when streaming

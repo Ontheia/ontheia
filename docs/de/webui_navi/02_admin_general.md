@@ -16,6 +16,16 @@
 
 ---
 
+## Abschnitt: Response-Streaming
+
+| Feld | Typ | Beschreibung |
+| --- | --- | --- |
+| Antworten streamen | Schalter | Streamt Agenten-Antworten tokenweise in den Chat, während das Modell sie generiert. Standard: an. Sofort wirksam (kein **[Übernehmen]** nötig). |
+
+> Gilt für den Anthropic-API-Pfad und alle OpenAI-kompatiblen Provider. CLI-Provider antworten immer als Block. Einzelne Provider ohne SSE-Unterstützung können per Provider-Metadata (`"stream": false`) ausgenommen werden. Details: [Laufzeit & UI](/de/admin/general/02_runtime_and_ui/).
+
+---
+
 ## Abschnitt: Prompt-Caching (Anthropic API)
 
 | Feld | Typ | Beschreibung |

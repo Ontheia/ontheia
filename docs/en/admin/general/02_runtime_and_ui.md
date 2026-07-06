@@ -35,7 +35,16 @@ Determines the local time for the entire Ontheia host.
     - **Cron Jobs**: Schedules are executed based on this timezone.
     - **Agent Context**: The "Current Time" injected into the agent follows this setting.
 
-## 6. Prompt Caching (Anthropic API)
+## 6. Response Streaming
+A global switch that enables or disables token-by-token streaming of LLM responses into the chat.
+- **Default:** enabled.
+- **Effect:** When enabled, agent responses appear in the chat while the model generates them. When disabled, the full response appears as one block after generation completes.
+
+> **Scope:** The switch applies to the Anthropic API path and all OpenAI-compatible providers (OpenAI, xAI, Google, Ollama, etc.). **CLI providers** (e.g. Claude CLI) always deliver the response as a block by nature. Individual OpenAI-compatible providers whose endpoint does not support SSE can be excluded via provider or model metadata with `"stream": false` — they then keep responding as a block regardless of the global switch.
+
+**When to disable?** Only when something misbehaves — for example if a provider rejects streaming requests, or a reverse proxy in front of Ontheia buffers SSE responses so streaming never reaches the browser anyway.
+
+## 7. Prompt Caching (Anthropic API)
 A global switch that enables or disables prompt caching on the **Anthropic API path**.
 - **Default:** enabled.
 - **Effect:** When enabled, Ontheia places `cache_control` markers on the stable prefix (tools + system prompt) and the growing chat history. Recurring requests then read that prefix at the heavily reduced cache price (~0.1× input).

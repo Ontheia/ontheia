@@ -24,6 +24,7 @@ import type { Pool, PoolClient } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import { loadProviderModel } from '../providers/client.js';
+import { getSystemFlag } from './system-flags.js';
 import type {
   ChatMessage,
   RunEvent,
@@ -95,6 +96,9 @@ export async function runAnthropicCompletion(
 
   // Resolve the prompt-caching toggle once per run (Anthropic-only lever).
   const cachingEnabled = await isPromptCachingEnabled(db);
+  // Response streaming (global 'response_streaming' toggle): emit run_token
+  // deltas while the model generates instead of one block at the end.
+  const streamingEnabled = await getSystemFlag(db, 'response_streaming');
 
   while (true) {
     if (options?.signal?.aborted) {
@@ -131,18 +135,31 @@ export async function runAnthropicCompletion(
     emit({ type: 'step_start', step: 'dispatch_provider_request', timestamp: new Date().toISOString() });
 
     try {
-      const response = await client.messages.create({
+      const requestParams = {
         model: payload.model_id,
         max_tokens: (payload.options?.max_tokens as number) ?? 8192,
         system: systemBlocks as any,
         messages: messages as any,
         tools: anthropicTools.length > 0 ? anthropicTools : undefined,
         temperature: (payload.options?.temperature as number) ?? undefined,
-        top_p: (payload.options?.top_p as number) ?? undefined,
-        stream: false
-      }, {
-        signal: options?.signal
-      });
+        top_p: (payload.options?.top_p as number) ?? undefined
+      };
+
+      let response: Anthropic.Message;
+      if (streamingEnabled) {
+        // SDK stream helper: emits text deltas as they arrive; finalMessage()
+        // resolves to the same Message shape as the non-streaming call, so the
+        // tool-loop below is identical for both paths.
+        const stream = client.messages.stream(requestParams, { signal: options?.signal });
+        stream.on('text', (delta: string) => {
+          if (delta) emit({ type: 'run_token', role: 'assistant', text: delta });
+        });
+        response = await stream.finalMessage();
+      } else {
+        response = await client.messages.create({ ...requestParams, stream: false }, {
+          signal: options?.signal
+        });
+      }
 
       emit({
         type: 'tokens',
@@ -510,24 +527,9 @@ function markLastMessageForCaching(messages: any[]): void {
 // 'anthropic_prompt_caching'). Anthropic is the only path where caching can cost
 // more than it saves: cache_creation is billed ~1.25× and, if the prefix is not
 // re-read within the 5-min TTL (e.g. sporadic single-shot runs), the write
-// premium outweighs the read savings. Cached in-process for 30s so we do not hit
-// the DB on every request; the UI toggle takes effect within that window.
-let cachingFlagCache: { value: boolean; expires: number } | null = null;
-
+// premium outweighs the read savings.
 async function isPromptCachingEnabled(db: Pool | PoolClient): Promise<boolean> {
-  const now = Date.now();
-  if (cachingFlagCache && cachingFlagCache.expires > now) return cachingFlagCache.value;
-  let value = true; // default on (backward-compatible)
-  try {
-    const res = await db.query(
-      `SELECT value FROM app.system_settings WHERE key = 'anthropic_prompt_caching'`
-    );
-    if (res.rows.length > 0) value = res.rows[0].value !== false;
-  } catch {
-    // On any error, fall back to the default (caching on).
-  }
-  cachingFlagCache = { value, expires: now + 30_000 };
-  return value;
+  return getSystemFlag(db, 'anthropic_prompt_caching');
 }
 
 function mapToolsForAnthropic(tools: RunToolDefinition[]): Anthropic.Tool[] {

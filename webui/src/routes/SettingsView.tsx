@@ -803,6 +803,7 @@ function GeneralSection({
   const [motdSaving, setMotdSaving] = useState(false);
   const [motdSaved, setMotdSaved] = useState(false);
   const [promptCaching, setPromptCaching] = useState(true);
+  const [responseStreaming, setResponseStreaming] = useState(true);
 
   useEffect(() => {
     getSystemSettingsAdmin()
@@ -811,6 +812,8 @@ function GeneralSection({
         setMotdDraft(typeof motdEntry?.value === 'string' ? motdEntry.value : '');
         const cachingEntry = data.find((item) => item.key === 'anthropic_prompt_caching');
         setPromptCaching(cachingEntry?.value !== false);
+        const streamingEntry = data.find((item) => item.key === 'response_streaming');
+        setResponseStreaming(streamingEntry?.value !== false);
       })
       .catch(() => {});
   }, []);
@@ -822,6 +825,16 @@ function GeneralSection({
     } catch {
       setPromptCaching(!value);
       console.error(t('general.promptCachingSaveError'));
+    }
+  };
+
+  const updateResponseStreaming = async (value: boolean) => {
+    setResponseStreaming(value);
+    try {
+      await updateSystemSettingsAdmin({ response_streaming: value });
+    } catch {
+      setResponseStreaming(!value);
+      console.error(t('general.responseStreamingSaveError'));
     }
   };
 
@@ -913,6 +926,25 @@ function GeneralSection({
         <p className="settings-hint">
           {t('general.globalNote')}
         </p>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('general.responseStreaming')}</h3>
+        <p className="settings-preamble">{t('general.responseStreamingDesc')}</p>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              className="app-toggle"
+              checked={responseStreaming}
+              onChange={(e) => updateResponseStreaming(e.target.checked)}
+            />
+            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+              {t('general.responseStreamingToggle')}
+            </span>
+          </label>
+        </div>
+        <p className="settings-hint">{t('general.responseStreamingHint')}</p>
       </div>
 
       <div className="settings-section">
