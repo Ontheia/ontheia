@@ -790,9 +790,14 @@ export class OrchestratorService {
       throw new Error(`MCP server "${serverName}" is not running. Available: ${available.join(', ')}`);
     }
     try {
+      // Strip null values before sending — MCP JSON Schema validators (SDK ≥1.10)
+      // reject null for string/number fields even when the field is optional.
+      const args = params.arguments
+        ? Object.fromEntries(Object.entries(params.arguments).filter(([, v]) => v !== null))
+        : {};
       const result = await client.client.callTool({
         name: params.name,
-        arguments: params.arguments ?? {}
+        arguments: args
       });
       const cached = this.toolCache.get(serverName);
       if (cached) {
