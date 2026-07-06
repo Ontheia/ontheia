@@ -47,6 +47,7 @@ type MarkdownMessageComponentProps = MarkdownMessageProps & {
   onCopy?: (content: string) => void;
   showCodeCopyButton?: boolean;
   copyLabel?: string;
+  userInput?: boolean;
 };
 
 // Simple remark plugin to convert ==highlight== to <mark>...</mark>
@@ -85,6 +86,16 @@ function remarkHighlight() {
 
     visit(tree);
   };
+}
+
+// Pasted user text is not authored as markdown: a line followed by "---"
+// becomes a setext heading, and 4-space indentation becomes a code block.
+// Disable both constructs for user messages; explicit markdown (# headings,
+// fenced code, lists, tables) still works. A "---" line renders as <hr>.
+function remarkDisablePasteTraps(this: { data: () => Record<string, any> }) {
+  const data = this.data();
+  const extensions = data.micromarkExtensions ?? (data.micromarkExtensions = []);
+  extensions.push({ disable: { null: ['setextUnderline', 'codeIndented'] } });
 }
 
 const markdownSchema: Schema = {
@@ -263,7 +274,8 @@ export function MarkdownMessage({
   copyIcon,
   onCopy,
   showCodeCopyButton,
-  copyLabel
+  copyLabel,
+  userInput
 }: MarkdownMessageComponentProps) {
   const { t } = useTranslation(['chat', 'common']);
   const [copied, setCopied] = useState(false);
@@ -299,7 +311,7 @@ export function MarkdownMessage({
         </button>
       )}
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkHighlight]}
+        remarkPlugins={userInput ? [remarkDisablePasteTraps, remarkGfm, remarkHighlight] : [remarkGfm, remarkHighlight]}
         rehypePlugins={[[rehypeSanitize, markdownSchema]]}
         components={createMarkdownComponents({
           enableCopy: showCodeCopyButton,

@@ -186,6 +186,7 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
             content={content}
             showCopyButton={false}
             showCodeCopyButton
+            userInput={normalizedRole === 'user'}
             copyIcon={<Copy aria-hidden="true" width={16} height={16} />}
           />
         )}
