@@ -1081,13 +1081,15 @@
 }
 
 .mermaid-diagram-inner {
-  transform-origin: 0 0;
-  width: fit-content;
+  /* Shrink-wraps the svg (which gets an explicit pixel width from
+     MermaidCanvas) so margin:auto centering in fullscreen works. No max-width:
+     when zoomed in, the inner div must grow past the container so the scroll
+     area extends over the whole diagram. */
+  width: max-content;
 }
 
 .mermaid-diagram-inner svg {
   display: block;
-  max-width: none;
 }
 
 .mermaid-fullscreen-backdrop {

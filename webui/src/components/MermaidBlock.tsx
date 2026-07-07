@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, ChartNetwork, Code, Copy, Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -62,6 +62,49 @@ type MermaidBlockProps = {
   code: string;
   onCopy?: (content: string) => void;
 };
+
+// Zoom works via the svg's layout width (natural width × scale) instead of a
+// CSS transform: layout growth extends the scroll area in every direction,
+// while a transform would leave the top-left of a centered, overflowing
+// diagram unreachable. Base width is capped to the container so diagrams
+// start fitted in the bubble and at natural size in fullscreen.
+function MermaidCanvas({ svg, scale, className }: { svg: string; scale: number; className: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [baseWidth, setBaseWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const svgEl = innerRef.current?.querySelector('svg');
+    const container = containerRef.current;
+    if (!svgEl || !container) return;
+    // Mermaid records the diagram's natural width as an inline max-width.
+    const naturalWidth = parseFloat(svgEl.style.maxWidth || '');
+    const fallback = svgEl.getBoundingClientRect().width;
+    const natural = Number.isFinite(naturalWidth) && naturalWidth > 0 ? naturalWidth : fallback;
+    const style = window.getComputedStyle(container);
+    const available =
+      container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    setBaseWidth(Math.min(natural, Math.max(available, 100)));
+  }, [svg]);
+
+  useEffect(() => {
+    const svgEl = innerRef.current?.querySelector('svg');
+    if (!svgEl || baseWidth === null) return;
+    svgEl.style.maxWidth = 'none';
+    svgEl.style.width = `${Math.round(baseWidth * scale)}px`;
+    svgEl.style.height = 'auto';
+  }, [baseWidth, scale, svg]);
+
+  return (
+    <div ref={containerRef} className={className}>
+      <div
+        ref={innerRef}
+        className="mermaid-diagram-inner"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </div>
+  );
+}
 
 export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
   const { t } = useTranslation(['chat']);
@@ -194,13 +237,7 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
         </div>
       </div>
       {showDiagram ? (
-        <div className="mermaid-diagram-container">
-          <div
-            className="mermaid-diagram-inner"
-            style={{ transform: `scale(${scale})` }}
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
-        </div>
+        <MermaidCanvas svg={svg} scale={scale} className="mermaid-diagram-container" />
       ) : (
         <pre className="markdown-code-block">
           <code>{code}</code>
@@ -254,13 +291,7 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
                 <X aria-hidden="true" width={18} height={18} />
               </button>
             </div>
-            <div className="mermaid-fullscreen-content">
-              <div
-                className="mermaid-diagram-inner"
-                style={{ transform: `scale(${fsScale})` }}
-                dangerouslySetInnerHTML={{ __html: svg }}
-              />
-            </div>
+            <MermaidCanvas svg={svg} scale={fsScale} className="mermaid-fullscreen-content" />
           </div>,
           document.body
         )}
