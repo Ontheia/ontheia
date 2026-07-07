@@ -8,7 +8,17 @@ Antworten der KI werden als formatiertes Markdown gerendert. Dies beinhaltet:
 - **Code-Blöcke:** Mit Syntax-Highlighting und einer Schaltfläche zum schnellen Kopieren des Codes.
 - Mathematische Formeln (LaTeX).
 
-## 2. Bilder & grafische Inhalte
+## 2. Diagramme (Mermaid)
+
+Ein ```` ```mermaid ````-Codeblock wird im Chat als Diagramm gerendert — in Agenten-Antworten ebenso wie in eigenen Nachrichten. Bitte einen Agenten einfach: *„Zeichne den Ablauf als Mermaid-Flowchart."*
+
+- **Während des Streamings** bleibt der Quellcode sichtbar; sobald das Diagramm vollständig ist, klappt der Block automatisch in die Grafik um.
+- **Werkzeugleiste** am Block: Vergrößern/Verkleinern/Zurücksetzen, **Vollbild** (Overlay mit eigenem Zoom, schließen per Escape oder Klick auf den Hintergrund), Umschalten Diagramm ↔ Quellcode sowie Kopieren des Quellcodes.
+- **Ungültiger Mermaid-Code** wird unverändert als Codeblock angezeigt.
+
+Unterstützt werden alle Mermaid-Diagrammtypen (Flowchart, Sequenz, Klassen, ER, Gantt u. v. m.). Das Rendering erfolgt vollständig lokal im Browser.
+
+## 3. Bilder & grafische Inhalte
 
 Bilder können direkt im Composer an eine Nachricht angehängt werden. Unterstützte Formate: **JPEG, PNG, GIF, WebP**.
 
@@ -18,14 +28,14 @@ Bilder können direkt im Composer an eine Nachricht angehängt werden. Unterstü
 
 > **Hinweis:** Bildunterstützung erfordert einen Provider mit Vision-Fähigkeit. Unterstützt das gewählte Modell keine Bilder, wird der Anhang ignoriert.
 
-## 3. Tool-Karten (Berechtigungen)
+## 4. Tool-Karten (Berechtigungen)
 Wenn ein Agent ein Werkzeug (z. B. Zugriff auf eine Datei) nutzen möchte, erscheint eine Tool-Karte:
 - **Details:** Zeigt an, welcher Server und welches Tool aufgerufen werden soll und welche Argumente gesendet werden.
 - **Einmalig erlauben:** Führt den aktuellen Aufruf aus.
 - **Immer erlauben:** Der Agent darf dieses Tool für den Rest des Chats ohne Rückfrage nutzen.
 - **Ablehnen:** Verweigert den Zugriff (der Agent erhält eine entsprechende Fehlermeldung).
 
-## 4. Status- & Fehlermeldungen
+## 5. Status- & Fehlermeldungen
 Technische Ereignisse werden kompakt dargestellt:
 - **System-Hinweise:** Informieren über den Start von Chains oder das Laden von Memory.
 - **Fehler:** Falls ein Provider nicht erreichbar ist oder ein Tool abstürzt, wird dies rot markiert dargestellt.
