@@ -1046,6 +1046,20 @@
   background: rgba(15, 23, 42, 0.6);
 }
 
+.mermaid-block {
+  /* Decouple the block's width from its content: without inline-size
+     containment a wide svg propagates its intrinsic width up the flex chain
+     and expands the message bubble itself, so overflow:auto never scrolls and
+     the fit measurement in MermaidCanvas sees an already-expanded container. */
+  contain: inline-size;
+}
+
+.message.message-user:has(.mermaid-block) {
+  /* The user bubble is shrink-to-fit; with inline-size containment a mermaid
+     block contributes no intrinsic width, so give the bubble its full cap. */
+  width: 66%;
+}
+
 .mermaid-toolbar {
   display: inline-flex;
   align-items: center;
