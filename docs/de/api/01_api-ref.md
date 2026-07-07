@@ -475,7 +475,7 @@ Verwendet in den Endpunkten `POST /agents` und `PATCH /agents/:id` (beide admin-
   "tool_approval_mode": "prompt | granted | denied",
   "default_mcp_servers": ["string"],
   "default_tools": [ { "server": "string", "tool": "string" } ],
-  "default_tool_permissions": { "<server>.<tool>": "once | always" },
+  "default_tool_permissions": { "<server>::<tool>": "once | always" },
   "metadata": {},
   "visibility": "private | public",
   "owner_id": "uuid (optional — Besitzer; Standard: anlegender Admin. Bei PATCH: Ownership-Übertragung.)",

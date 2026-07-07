@@ -47,15 +47,18 @@ import {
 import { loadGlobalPromptOptimizer, loadGlobalBuilder } from './settings-utils.js';
 import type { ToolApprovalMode } from '../runtime/types.js';
 
-// Map of tool key (e.g. "server.tool") to a standing approval. Only 'always'
-// makes sense as an agent default, but 'once' is accepted for symmetry with
-// per-run tool_permissions.
+// Map of tool key to a standing approval. The runtime lookup builds keys as
+// `${server}::${tool}` (provider-run/anthropic-runner), so any other format
+// would be stored but never match — reject it here instead of failing
+// silently at approval time. Only 'always' makes sense as an agent default,
+// but 'once' is accepted for symmetry with per-run tool_permissions.
 export const sanitizeToolPermissions = (input: unknown): Record<string, 'once' | 'always'> => {
   if (!isPlainObject(input)) return {};
   const out: Record<string, 'once' | 'always'> = {};
   for (const [key, value] of Object.entries(input)) {
     const trimmed = key.trim();
-    if (trimmed && (value === 'once' || value === 'always')) out[trimmed] = value;
+    if (!trimmed.includes('::')) continue;
+    if (value === 'once' || value === 'always') out[trimmed] = value;
   }
   return out;
 };
