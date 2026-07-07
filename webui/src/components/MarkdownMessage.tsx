@@ -24,6 +24,7 @@ import React, { type ComponentPropsWithoutRef, useCallback, useState } from 'rea
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown, { type Components, type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import rehypeSanitize from 'rehype-sanitize';
 import { defaultSchema, type Schema } from 'hast-util-sanitize';
 import { Check, Copy } from 'lucide-react';
@@ -314,7 +315,10 @@ export function MarkdownMessage({
         </button>
       )}
       <ReactMarkdown
-        remarkPlugins={userInput ? [remarkDisablePasteTraps, remarkGfm, remarkHighlight] : [remarkGfm, remarkHighlight]}
+        // User input is chat text, not authored markdown: remark-breaks keeps
+        // single line breaks visible as typed (agent output stays standard
+        // markdown, where a single newline is a soft break).
+        remarkPlugins={userInput ? [remarkDisablePasteTraps, remarkGfm, remarkBreaks, remarkHighlight] : [remarkGfm, remarkHighlight]}
         rehypePlugins={[[rehypeSanitize, markdownSchema]]}
         components={createMarkdownComponents({
           enableCopy: showCodeCopyButton,
