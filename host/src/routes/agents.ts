@@ -47,6 +47,19 @@ import {
 import { loadGlobalPromptOptimizer, loadGlobalBuilder } from './settings-utils.js';
 import type { ToolApprovalMode } from '../runtime/types.js';
 
+// Map of tool key (e.g. "server.tool") to a standing approval. Only 'always'
+// makes sense as an agent default, but 'once' is accepted for symmetry with
+// per-run tool_permissions.
+export const sanitizeToolPermissions = (input: unknown): Record<string, 'once' | 'always'> => {
+  if (!isPlainObject(input)) return {};
+  const out: Record<string, 'once' | 'always'> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const trimmed = key.trim();
+    if (trimmed && (value === 'once' || value === 'always')) out[trimmed] = value;
+  }
+  return out;
+};
+
 export const mapAgentRow = (row: any): AgentRecord => ({
   id: String(row.id),
   label: typeof row.label === 'string' ? row.label : '',
@@ -57,6 +70,7 @@ export const mapAgentRow = (row: any): AgentRecord => ({
     typeof row.tool_approval_mode === 'string' ? (row.tool_approval_mode as ToolApprovalMode) : 'prompt',
   default_mcp_servers: Array.isArray(row.default_mcp_servers) ? row.default_mcp_servers : [],
   default_tools: Array.isArray(row.default_tools) ? row.default_tools : [],
+  default_tool_permissions: sanitizeToolPermissions(row.default_tool_permissions),
   metadata: isPlainObject(row.metadata) ? (row.metadata as Record<string, unknown>) : {},
   visibility: row.visibility ?? 'private',
   owner_id: row.owner_id ? String(row.owner_id) : '',
@@ -367,7 +381,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       // but standard RLS policy should allow admin to see all.
       // We keep the query consistent with the original.
       const sql = `SELECT id, label, description, provider_id, model_id, tool_approval_mode, default_mcp_servers,
-                        default_tools, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at,
+                        default_tools, default_tool_permissions, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at,
                         EXISTS (
                           SELECT 1 FROM app.agent_permissions ap
                           WHERE ap.agent_id = agents.id
@@ -420,7 +434,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       const result = await withRls(db, session.userId, session.role, async (client) => {
         const dbResult = await client.query(
           `SELECT id, label, description, provider_id, model_id, tool_approval_mode, default_mcp_servers,
-                  default_tools, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at
+                  default_tools, default_tool_permissions, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at
              FROM app.agents
             WHERE id = $1`,
           [agentId]
@@ -474,6 +488,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     const toolApprovalMode: ToolApprovalMode = ['prompt', 'granted', 'denied'].includes(toolApprovalRaw) ? (toolApprovalRaw as ToolApprovalMode) : 'prompt';
     const defaultMcpServers = sanitizeStringArray(body?.default_mcp_servers);
     const defaultTools = sanitizeDefaultTools(body?.default_tools);
+    const defaultToolPermissions = sanitizeToolPermissions(body?.default_tool_permissions);
     const metadata = body?.metadata && typeof body.metadata === 'object' ? body.metadata : {};
     const visibility = typeof body?.visibility === 'string' && ['private', 'public'].includes(body.visibility) ? body.visibility : 'private';
     const active = typeof body?.active === 'boolean' ? body.active : true;
@@ -511,11 +526,11 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
         const insertResult = await client.query(
           `INSERT INTO app.agents
              (label, description, provider_id, model_id, tool_approval_mode, default_mcp_servers,
-              default_tools, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12, $13, now(), now())
+              default_tools, default_tool_permissions, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13, $14, now(), now())
            RETURNING id, label, description, provider_id, model_id, tool_approval_mode, default_mcp_servers,
-                     default_tools, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at`,
-          [label, description, providerId, modelId, toolApprovalMode, defaultMcpServers, JSON.stringify(defaultTools), JSON.stringify(metadata), visibility, ownerId, session.userId, active, showInComposer]
+                     default_tools, default_tool_permissions, metadata, visibility, owner_id, created_by, active, show_in_composer, created_at, updated_at`,
+          [label, description, providerId, modelId, toolApprovalMode, defaultMcpServers, JSON.stringify(defaultTools), JSON.stringify(defaultToolPermissions), JSON.stringify(metadata), visibility, ownerId, session.userId, active, showInComposer]
         );
         const agentRow = insertResult.rows[0];
         const agentId = String(agentRow.id);
@@ -647,6 +662,10 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       }
       updates.push(`default_tools = $${idx++}::jsonb`);
       values.push(JSON.stringify(tools));
+    }
+    if (body && 'default_tool_permissions' in body) {
+      updates.push(`default_tool_permissions = $${idx++}::jsonb`);
+      values.push(JSON.stringify(sanitizeToolPermissions(body.default_tool_permissions)));
     }
     if (body && 'metadata' in body) {
       updates.push(`metadata = $${idx++}::jsonb`);

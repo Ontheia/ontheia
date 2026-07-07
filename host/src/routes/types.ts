@@ -109,6 +109,7 @@ export type AgentRecord = {
   tool_approval_mode: ToolApprovalMode;
   default_mcp_servers: string[];
   default_tools: Array<{ server: string; tool: string }>;
+  default_tool_permissions: Record<string, 'once' | 'always'>;
   metadata: Record<string, unknown>;
   visibility: string;
   owner_id: string;
