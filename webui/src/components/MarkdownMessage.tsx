@@ -28,6 +28,8 @@ import rehypeSanitize from 'rehype-sanitize';
 import { defaultSchema, type Schema } from 'hast-util-sanitize';
 import { Check, Copy } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
+import { CodeCopyButton, COPY_DEFAULT_DELAY_MS } from './CodeCopyButton';
+import { MermaidBlock } from './MermaidBlock';
 
 type MdNode = {
   type?: string;
@@ -212,6 +214,9 @@ const createMarkdownComponents = ({ enableCopy, onCopy }: CodeRendererArgs): Com
     const language = codeClassName?.replace('language-', '') ?? undefined;
     const label = language && language.trim().length > 0 ? language.trim() : 'Code';
     const codeText = String(children).trimEnd();
+    if (language === 'mermaid') {
+      return <MermaidBlock code={codeText} onCopy={onCopy} />;
+    }
     const isSingleLine = !codeText.includes('\n');
     if (isSingleLine) {
       return (
@@ -264,8 +269,6 @@ const createMarkdownComponents = ({ enableCopy, onCopy }: CodeRendererArgs): Com
     );
   }
 });
-
-const COPY_DEFAULT_DELAY_MS = 2000;
 
 export function MarkdownMessage({
   content,
@@ -323,33 +326,3 @@ export function MarkdownMessage({
     </div>
   );
 }
-const CodeCopyButton = ({ onCopy }: { onCopy: () => Promise<void> }) => {
-  const { t } = useTranslation(['chat']);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await onCopy();
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), COPY_DEFAULT_DELAY_MS);
-    } catch (error) {
-      console.warn(t('copyFailed'), error);
-    }
-  }, [onCopy, t]);
-
-  return (
-    <button
-      type="button"
-      className="markdown-copy-button markdown-copy-button--code"
-      aria-label={copied ? t('codeCopied') : t('copyCode')}
-      onClick={handleCopy}
-      data-copied={copied ? 'true' : 'false'}
-    >
-      {copied ? (
-        <Check aria-hidden="true" width={14} height={14} />
-      ) : (
-        <Copy aria-hidden="true" width={14} height={14} />
-      )}
-    </button>
-  );
-};
