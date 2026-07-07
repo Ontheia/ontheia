@@ -777,7 +777,13 @@ export class ChainRunner {
             project_id: this.templateContext.project_id,
             chat_id: this.templateContext.chat_id,
             session_id: this.templateContext.session_id,
-            tool_approval: toolApprovalMode
+            tool_approval: toolApprovalMode,
+            // Identity and date/time for nested delegation (depth >= 2): the
+            // sub-run's template context is built from this metadata.
+            user_name: this.templateContext.user_name,
+            user_email: this.templateContext.user_email,
+            current_date: this.templateContext.current_date,
+            current_time: this.templateContext.current_time
           }
         },
         agent_id: profile.id,

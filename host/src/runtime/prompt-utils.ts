@@ -59,7 +59,13 @@ export function buildSystemMessages(
 
   // 1. Task context / persona
   if (taskContextPrompt) {
-    let resolved = applyNamespaceTemplate(taskContextPrompt, templateContext);
+    // current_date/current_time are deliberately withheld here: substituted
+    // into the system prompt they would invalidate the provider's cached
+    // prefix every minute. Templates get date/time via the volatile suffix
+    // (appendDateTimeContext); an unresolved ${current_time} in a task
+    // context surfaces through the unresolved-key debug log instead.
+    const { current_date: _cd, current_time: _ct, ...prefixSafeContext } = templateContext;
+    let resolved = applyNamespaceTemplate(taskContextPrompt, prefixSafeContext);
     if (agentLabel) {
       resolved += `\n\nIMPORTANT: Your identity in this system is "${agentLabel}". You are the specialist for this task. If you see tools related to your specialty, USE THEM DIRECTLY. Do not delegate tasks to yourself ("${agentLabel}") via delegation tools.`;
     }

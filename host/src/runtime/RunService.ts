@@ -380,6 +380,16 @@ export class RunService {
         current_time: new Date().toLocaleTimeString(userSettings.preferences.language === 'de' ? 'de-DE' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: userSettings.runtime.timezone })
       };
 
+      // Propagate identity and date/time to run metadata so delegated sub-runs
+      // resolve the same template variables (delegation spreads metadata into
+      // the sub-run's template context). Date/time only ever reaches prompts
+      // through appendDateTimeContext (volatile suffix on the last user
+      // message), so this does not touch the cacheable system prefix.
+      if (templateContext.user_name) meta.user_name = templateContext.user_name;
+      if (templateContext.user_email) meta.user_email = templateContext.user_email;
+      meta.current_date = templateContext.current_date;
+      meta.current_time = templateContext.current_time;
+
       let taskContextPrompt: string | undefined;
       let activeMcpServers: string[] = [];
       let agentToolSelection: TaskToolBinding[] = [];

@@ -71,7 +71,16 @@ export function extractTextFromContent(content: ChatMessage['content']): string 
 export const TEMPLATE_PATTERN = /\$\{([a-zA-Z0-9_]+)\}/g;
 
 export function applyNamespaceTemplate(template: string, context: Record<string, string | undefined>): string {
-  return template.replace(TEMPLATE_PATTERN, (_, key) => context[key] ?? '');
+  return template.replace(TEMPLATE_PATTERN, (_, key) => {
+    const value = context[key];
+    if (value === undefined) {
+      // Silent empty-string substitution has hidden real bugs (e.g. missing
+      // user_email in delegated runs) — make unresolved keys visible.
+      logger.debug({ key, template: template.slice(0, 120) }, 'Template variable not resolved — substituting empty string');
+      return '';
+    }
+    return value;
+  });
 }
 
 /**
