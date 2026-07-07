@@ -21,8 +21,9 @@
  * or contact https://ontheia.ai
  */
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, ChartNetwork, Code, Copy, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, ChartNetwork, Code, Copy, Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
 import { COPY_DEFAULT_DELAY_MS } from './CodeCopyButton';
 
@@ -34,11 +35,15 @@ function loadMermaid() {
     mermaidPromise = import('mermaid').then((mod) => {
       // securityLevel strict: diagram source comes from LLM output (and thus
       // indirectly from user/tool input) — no click handlers, no HTML labels.
+      // fontFamily must be an explicit stack: mermaid measures node sizes with
+      // this value as a CSS keyword but emits it quoted into the SVG stylesheet,
+      // so 'inherit' would measure with the app font and render with a fallback
+      // font — clipping labels at the node border.
       mod.default.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
         theme: 'dark',
-        fontFamily: 'inherit'
+        fontFamily: "'Inter', system-ui, sans-serif"
       });
       return mod.default;
     });
@@ -64,6 +69,17 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
   const [view, setView] = useState<'diagram' | 'code'>('diagram');
   const [scale, setScale] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fsScale, setFsScale] = useState(1);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [fullscreen]);
 
   // Debounced parse + render: while the block streams in, the source is
   // incomplete and parsing fails — the code view below stays visible until
@@ -132,6 +148,18 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
               >
                 <ZoomIn aria-hidden="true" width={14} height={14} />
               </button>
+              <button
+                type="button"
+                className="mermaid-toolbar-button"
+                aria-label={t('mermaidFullscreen')}
+                title={t('mermaidFullscreen')}
+                onClick={() => {
+                  setFsScale(1);
+                  setFullscreen(true);
+                }}
+              >
+                <Maximize2 aria-hidden="true" width={14} height={14} />
+              </button>
             </>
           )}
           {svg !== null && (
@@ -178,6 +206,64 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
           <code>{code}</code>
         </pre>
       )}
+      {fullscreen && svg !== null &&
+        createPortal(
+          <div
+            className="mermaid-fullscreen-backdrop"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setFullscreen(false);
+            }}
+          >
+            <div className="mermaid-fullscreen-toolbar">
+              <button
+                type="button"
+                className="mermaid-toolbar-button"
+                aria-label={t('mermaidZoomOut')}
+                title={t('mermaidZoomOut')}
+                onClick={() => setFsScale((s) => Math.max(ZOOM_MIN, s / ZOOM_STEP))}
+              >
+                <ZoomOut aria-hidden="true" width={18} height={18} />
+              </button>
+              <button
+                type="button"
+                className="mermaid-toolbar-button"
+                aria-label={t('mermaidZoomReset')}
+                title={t('mermaidZoomReset')}
+                onClick={() => setFsScale(1)}
+              >
+                <RotateCcw aria-hidden="true" width={18} height={18} />
+              </button>
+              <button
+                type="button"
+                className="mermaid-toolbar-button"
+                aria-label={t('mermaidZoomIn')}
+                title={t('mermaidZoomIn')}
+                onClick={() => setFsScale((s) => Math.min(ZOOM_MAX, s * ZOOM_STEP))}
+              >
+                <ZoomIn aria-hidden="true" width={18} height={18} />
+              </button>
+              <button
+                type="button"
+                className="mermaid-toolbar-button"
+                aria-label={t('mermaidCloseFullscreen')}
+                title={t('mermaidCloseFullscreen')}
+                onClick={() => setFullscreen(false)}
+              >
+                <X aria-hidden="true" width={18} height={18} />
+              </button>
+            </div>
+            <div className="mermaid-fullscreen-content">
+              <div
+                className="mermaid-diagram-inner"
+                style={{ transform: `scale(${fsScale})` }}
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
