@@ -232,6 +232,20 @@ class CliServer:
             tool_name = params.get("name")
             tool_args = params.get("arguments", {})
 
+            # User identity forwarded host-side via MCP request _meta (never
+            # from model output). Exported to skill scripts as ONTHEIA_USER_*
+            # so shipped skills can enforce per-user paths deterministically.
+            req_meta = params.get("_meta") or {}
+            identity_env = {}
+            for meta_key, env_key in (
+                ("ontheia/user_id", "ONTHEIA_USER_ID"),
+                ("ontheia/user_email", "ONTHEIA_USER_EMAIL"),
+                ("ontheia/user_name", "ONTHEIA_USER_NAME"),
+            ):
+                value = req_meta.get(meta_key)
+                if isinstance(value, str) and value:
+                    identity_env[env_key] = value
+
             # ── run_skill_script ─────────────────────────────────────────────
             if tool_name == "run_skill_script":
                 skill_dir   = tool_args.get("skill_dir", "")
@@ -264,7 +278,8 @@ class CliServer:
                                     capture_output=True,
                                     text=True,
                                     timeout=self.timeout,
-                                    cwd=skill_dir
+                                    cwd=skill_dir,
+                                    env={**os.environ, **identity_env}
                                 )
                                 guard_stdout = f"<command_output>\n{p.stdout}\n</command_output>" if p.stdout else ""
                                 guard_stderr = f"<command_error>\n{p.stderr}\n</command_error>" if p.stderr else ""

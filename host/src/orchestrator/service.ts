@@ -795,9 +795,20 @@ export class OrchestratorService {
       const args = params.arguments
         ? Object.fromEntries(Object.entries(params.arguments).filter(([, v]) => v !== null))
         : {};
+      // Forward the run's user identity via MCP _meta (spec-compliant request
+      // metadata, invisible to tool argument schemas). Bundled servers like
+      // cli-tools export it to skill scripts (ONTHEIA_USER_*); other servers
+      // simply ignore it. Values originate host-side (RunService), not from
+      // model output.
+      const runMeta = context?.run?.options?.metadata as Record<string, unknown> | undefined;
+      const identity: Record<string, string> = {};
+      if (typeof context?.userId === 'string' && context.userId) identity['ontheia/user_id'] = context.userId;
+      if (typeof runMeta?.user_email === 'string' && runMeta.user_email) identity['ontheia/user_email'] = runMeta.user_email;
+      if (typeof runMeta?.user_name === 'string' && runMeta.user_name) identity['ontheia/user_name'] = runMeta.user_name;
       const result = await client.client.callTool({
         name: params.name,
-        arguments: args
+        arguments: args,
+        ...(Object.keys(identity).length > 0 ? { _meta: identity } : {})
       });
       const cached = this.toolCache.get(serverName);
       if (cached) {

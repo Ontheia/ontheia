@@ -385,8 +385,13 @@ export class RunService {
       // the sub-run's template context). Date/time only ever reaches prompts
       // through appendDateTimeContext (volatile suffix on the last user
       // message), so this does not touch the cacheable system prefix.
+      // Always overwrite (or remove): identity in metadata must come from the
+      // host-side user record, never from client-supplied run options — it is
+      // also forwarded to MCP servers as trusted _meta (ONTHEIA_USER_*).
       if (templateContext.user_name) meta.user_name = templateContext.user_name;
+      else delete meta.user_name;
       if (templateContext.user_email) meta.user_email = templateContext.user_email;
+      else delete meta.user_email;
       meta.current_date = templateContext.current_date;
       meta.current_time = templateContext.current_time;
 
