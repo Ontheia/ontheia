@@ -61,6 +61,8 @@ if [ "$LANG_CHOICE" = "2" ]; then
     MSG_WARN_TIMEOUT="! Hinweis: Dienste benötigen etwas länger. Bitte manuell prüfen."
     MSG_DONE="Update erfolgreich abgeschlossen!"
     MSG_BACKUP_HINT="Tipp: Backup vor dem Update unter:"
+    MSG_ENV_ADDED="✓ Neue Umgebungsvariable in .env ergänzt:"
+    MSG_SKILLS="Registriere mitgelieferte Skills..."
 else
     MSG_CHECK="Checking prerequisites..."
     MSG_ERR_GIT="Error: 'git' is not installed."
@@ -89,6 +91,8 @@ else
     MSG_WARN_TIMEOUT="! Note: Services are taking longer than expected. Please check manually."
     MSG_DONE="Update completed successfully!"
     MSG_BACKUP_HINT="Tip: Backup stored at:"
+    MSG_ENV_ADDED="✓ New environment variable added to .env:"
+    MSG_SKILLS="Registering bundled skills..."
 fi
 
 # ─── Prerequisites ────────────────────────────────────────────────────────────
@@ -198,6 +202,20 @@ git pull --quiet
 
 NEW_VERSION=$(cat VERSION | tr -d '[:space:]')
 
+# ─── Env migration ────────────────────────────────────────────────────────────
+# Append variables introduced by newer versions to an existing .env (additive
+# only — existing values are never touched). Keep in sync with .env.example.
+if [ -f .env ] && ! grep -q '^FILES_SKILL_ROOTS=' .env; then
+    {
+        echo ""
+        echo "# Directories the bundled files skill may access (colon-separated)."
+        echo "# {user} = per-user isolation; see the files skill's Admin Guide (SKILL.md)."
+        echo "# /data/files is mounted from ./data/files (docker-compose.yml)."
+        echo "FILES_SKILL_ROOTS=/data/files/{user}"
+    } >> .env
+    echo "$MSG_ENV_ADDED FILES_SKILL_ROOTS"
+fi
+
 # ─── Stop ────────────────────────────────────────────────────────────────────
 echo "$MSG_STOPPING"
 docker compose down --timeout 30
@@ -214,6 +232,12 @@ docker compose wait migrator
 # ─── Start ───────────────────────────────────────────────────────────────────
 echo "$MSG_STARTING"
 docker compose up -d
+
+# ─── Bundled skills ──────────────────────────────────────────────────────────
+# Register skills newly bundled with this version and assign them to their
+# default agent (idempotent; does not touch agents, providers, or settings).
+echo "$MSG_SKILLS"
+docker compose exec -T host node dist/scripts/bootstrap.js --skills-only || true
 
 # ─── Health check ────────────────────────────────────────────────────────────
 echo ""

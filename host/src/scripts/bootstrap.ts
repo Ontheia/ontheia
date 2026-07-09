@@ -52,6 +52,66 @@ You are helpful, concise and friendly. You assist with a wide range of tasks: an
 Address \${user_name} by name when it feels natural. Keep responses focused and actionable.`;
 
 
+// ── Bundled skills ──────────────────────────────────────────────────────────
+// The SkillService scanner only runs once the host is up — bootstrap runs
+// before that, so register bundled skills here and assign them to their
+// default agent. The scanner refreshes the same rows later (same unique key:
+// name, scope, owner_id). Also invoked standalone via `--skills-only` by
+// update.sh, so existing installations pick up newly bundled skills without
+// re-running the full bootstrap (which would overwrite agent customizations).
+async function registerBundledSkills(pool: InstanceType<typeof Pool>) {
+  const registerBundledSkill = async (skillDir: string, agentId: string, agentLabel: string) => {
+    const fallbackName = path.basename(skillDir);
+    try {
+      const raw = await fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8');
+      const fmEnd = raw.indexOf('\n---', 3);
+      const fm = raw.startsWith('---') && fmEnd !== -1 ? raw.slice(4, fmEnd) : '';
+      const fmValue = (key: string) =>
+        fm.split('\n').find((l) => l.startsWith(`${key}:`))?.slice(key.length + 1).trim() ?? '';
+      const skillName = fmValue('name') || fallbackName;
+      const skillDescription = fmValue('description');
+      const skillBody = fmEnd !== -1 ? raw.slice(fmEnd + 4).trimStart() : raw;
+      if (!skillDescription) {
+        console.warn(`Bootstrap: ${fallbackName} SKILL.md has no description — skipping registration.`);
+        return;
+      }
+      const skillRes = await pool.query(
+        `INSERT INTO app.skills (name, description, content, skill_dir, scope, owner_id)
+         VALUES ($1, $2, $3, $4, 'global', NULL)
+         ON CONFLICT (name, scope, owner_id) DO UPDATE SET skill_dir = EXCLUDED.skill_dir
+         RETURNING id`,
+        [skillName, skillDescription, skillBody, skillDir]
+      );
+      try {
+        await pool.query(
+          `INSERT INTO app.agent_skills (agent_id, skill_id, active)
+           VALUES ($1, $2, true)
+           ON CONFLICT (agent_id, skill_id) DO NOTHING`,
+          [agentId, skillRes.rows[0].id]
+        );
+        console.log(`Bootstrap: Skill '${skillName}' registered and assigned to ${agentLabel}.`);
+      } catch {
+        // The default agent does not exist on this installation (example
+        // agents disabled or replaced) — the skill itself is registered.
+        console.warn(`Bootstrap: Skill '${skillName}' registered; default agent '${agentLabel}' not found — assign it via Admin → Skills.`);
+      }
+    } catch (err: any) {
+      // Missing skill directory is fine (slim distributions) — warn, never
+      // fail bootstrap.
+      console.warn(`Bootstrap: ${fallbackName} not registered (${err?.code === 'ENOENT' ? 'directory not found' : err?.message}).`);
+    }
+  };
+
+  // skill-creator → Guide (orchestrates skill creation).
+  await registerBundledSkill('/app/host/sources/skills/global/skill-creator', GUIDE_AGENT_ID, 'Ontheia Guide');
+  // files → Personal Assistant (base skill: safe file management; the
+  // assistant already has the cli-tools/run_skill_script binding).
+  await registerBundledSkill('/app/host/sources/skills/global/files', ASSISTANT_AGENT_ID, 'Personal Assistant');
+  // mermaid → Personal Assistant (base skill: diagrams rendered in chat;
+  // pure prompt skill, no scripts).
+  await registerBundledSkill('/app/host/sources/skills/global/mermaid', ASSISTANT_AGENT_ID, 'Personal Assistant');
+}
+
 async function main() {
   // ── Database connection ───────────────────────────────────────────────────
   const dbUser = process.env.FLYWAY_USER || 'postgres';
@@ -64,6 +124,16 @@ async function main() {
   const bootstrapConnString = `postgresql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
   console.log(`Bootstrap: Connecting to database at ${dbHost}:${dbPort} as ${dbUser}...`);
   const pool = new Pool({ connectionString: bootstrapConnString });
+
+  // ── Skills-only mode (used by update.sh) ──────────────────────────────────
+  // Registers newly bundled skills and their default-agent assignments on
+  // existing installations without touching agents, providers, or settings.
+  if (process.argv.includes('--skills-only')) {
+    console.log('Bootstrap: skills-only mode — registering bundled skills.');
+    await registerBundledSkills(pool);
+    await pool.end();
+    return;
+  }
 
   // ── Input variables ───────────────────────────────────────────────────────
   const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@ontheia.local';
@@ -464,54 +534,8 @@ async function main() {
         [ASSISTANT_AGENT_ID]
       );
 
-      // ── Bundled skills ──────────────────────────────────────────────────
-      // The SkillService scanner only runs once the host is up — bootstrap
-      // runs before that, so register bundled skills here and assign them to
-      // their default agent. The scanner refreshes the same rows later
-      // (same unique key: name, scope, owner_id).
-      const registerBundledSkill = async (skillDir: string, agentId: string, agentLabel: string) => {
-        const fallbackName = path.basename(skillDir);
-        try {
-          const raw = await fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8');
-          const fmEnd = raw.indexOf('\n---', 3);
-          const fm = raw.startsWith('---') && fmEnd !== -1 ? raw.slice(4, fmEnd) : '';
-          const fmValue = (key: string) =>
-            fm.split('\n').find((l) => l.startsWith(`${key}:`))?.slice(key.length + 1).trim() ?? '';
-          const skillName = fmValue('name') || fallbackName;
-          const skillDescription = fmValue('description');
-          const skillBody = fmEnd !== -1 ? raw.slice(fmEnd + 4).trimStart() : raw;
-          if (!skillDescription) {
-            console.warn(`Bootstrap: ${fallbackName} SKILL.md has no description — skipping registration.`);
-            return;
-          }
-          const skillRes = await pool.query(
-            `INSERT INTO app.skills (name, description, content, skill_dir, scope, owner_id)
-             VALUES ($1, $2, $3, $4, 'global', NULL)
-             ON CONFLICT (name, scope, owner_id) DO UPDATE SET skill_dir = EXCLUDED.skill_dir
-             RETURNING id`,
-            [skillName, skillDescription, skillBody, skillDir]
-          );
-          await pool.query(
-            `INSERT INTO app.agent_skills (agent_id, skill_id, active)
-             VALUES ($1, $2, true)
-             ON CONFLICT (agent_id, skill_id) DO NOTHING`,
-            [agentId, skillRes.rows[0].id]
-          );
-          console.log(`Bootstrap: Skill '${skillName}' registered and assigned to ${agentLabel}.`);
-        } catch (err: any) {
-          // Missing skill directory is fine (slim distributions) — don't fail bootstrap.
-          console.warn(`Bootstrap: ${fallbackName} not registered (${err?.code === 'ENOENT' ? 'directory not found' : err?.message}).`);
-        }
-      };
-
-      // skill-creator → Guide (orchestrates skill creation).
-      await registerBundledSkill('/app/host/sources/skills/global/skill-creator', GUIDE_AGENT_ID, 'Ontheia Guide');
-      // files → Personal Assistant (base skill: safe file management; the
-      // assistant already has the cli-tools/run_skill_script binding).
-      await registerBundledSkill('/app/host/sources/skills/global/files', ASSISTANT_AGENT_ID, 'Personal Assistant');
-      // mermaid → Personal Assistant (base skill: diagrams rendered in chat;
-      // pure prompt skill, no scripts).
-      await registerBundledSkill('/app/host/sources/skills/global/mermaid', ASSISTANT_AGENT_ID, 'Personal Assistant');
+      // ── Bundled skills (see registerBundledSkills above) ────────────────
+      await registerBundledSkills(pool);
 
       // ── Tasks ───────────────────────────────────────────────────────────
       console.log('Bootstrap: Creating tasks...');

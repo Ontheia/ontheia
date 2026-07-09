@@ -24,12 +24,14 @@ The script performs the following steps:
 | 2. Confirmation | Shows new version and asks for confirmation |
 | 3. Backup | Automatic DB backup + namespaces volume backup into `./backups/` |
 | 4. `git pull` | Download new code |
-| 5. `docker compose down` | Stop all services |
-| 6. `docker compose build` | Rebuild containers (host + webui) |
-| 7. Migrations | `docker compose up -d db migrator` + `docker compose wait migrator` |
-| 8. Start | `docker compose up -d` |
-| 9. Health check | Waits for API `/health` + WebUI availability |
-| 10. Result | Displays old and new version plus URLs |
+| 5. Env migration | Appends environment variables introduced by newer versions to `.env` (additive only — existing values are never changed) |
+| 6. `docker compose down` | Stop all services |
+| 7. `docker compose build` | Rebuild containers (host + webui) |
+| 8. Migrations | `docker compose up -d db migrator` + `docker compose wait migrator` |
+| 9. Start | `docker compose up -d` |
+| 10. Bundled skills | Registers skills newly bundled with this version and assigns them to their default agent (idempotent; if the default agent was removed, the skill is registered without assignment) |
+| 11. Health check | Waits for API `/health` + WebUI availability |
+| 12. Result | Displays old and new version plus URLs |
 
 **Language support:** The script prompts for preferred language (EN/DE) at startup.
 

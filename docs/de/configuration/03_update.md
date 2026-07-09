@@ -24,12 +24,14 @@ Das Script führt folgende Schritte aus:
 | 2. Bestätigung | Zeigt neue Version an und fragt nach Bestätigung |
 | 3. Backup | Automatisches DB-Backup + Namespaces-Volume-Backup in `./backups/` |
 | 4. `git pull` | Neuen Code herunterladen |
-| 5. `docker compose down` | Alle Dienste stoppen |
-| 6. `docker compose build` | Container neu bauen (host + webui) |
-| 7. Migrationen | `docker compose up -d db migrator` + `docker compose wait migrator` |
-| 8. Start | `docker compose up -d` |
-| 9. Health-Check | Wartet auf API `/health` + WebUI-Erreichbarkeit |
-| 10. Ergebnis | Zeigt alte und neue Version sowie URLs an |
+| 5. Env-Migration | Ergänzt in neueren Versionen eingeführte Umgebungsvariablen in der `.env` (nur additiv — bestehende Werte werden nie verändert) |
+| 6. `docker compose down` | Alle Dienste stoppen |
+| 7. `docker compose build` | Container neu bauen (host + webui) |
+| 8. Migrationen | `docker compose up -d db migrator` + `docker compose wait migrator` |
+| 9. Start | `docker compose up -d` |
+| 10. Mitgelieferte Skills | Registriert neu mitgelieferte Skills und weist sie ihrem Standard-Agenten zu (idempotent; wurde der Standard-Agent entfernt, wird der Skill ohne Zuweisung registriert) |
+| 11. Health-Check | Wartet auf API `/health` + WebUI-Erreichbarkeit |
+| 12. Ergebnis | Zeigt alte und neue Version sowie URLs an |
 
 **Sprachunterstützung:** Das Script fragt zu Beginn nach der bevorzugten Sprache (EN/DE).
 
