@@ -1,0 +1,12 @@
+SPDX-License-Identifier: AGPL-3.0-or-later
+Copyright (C) 2026 Wolfgang Brangl <https://ontheia.ai>
+
+This skill is part of Ontheia, released under the GNU Affero General Public
+License v3.0 or later; see the LICENSE file in the repository root for
+details. For commercial licensing see LICENSE-COMMERCIAL.md or contact
+https://ontheia.ai
+
+Note: the license notice lives in this file instead of headers inside the
+markdown files, because SKILL.md and the references/ files are injected into
+the agent context verbatim — an embedded header would become prompt noise on
+every activation.

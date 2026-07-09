@@ -509,6 +509,9 @@ async function main() {
       // files → Personal Assistant (base skill: safe file management; the
       // assistant already has the cli-tools/run_skill_script binding).
       await registerBundledSkill('/app/host/sources/skills/global/files', ASSISTANT_AGENT_ID, 'Personal Assistant');
+      // mermaid → Personal Assistant (base skill: diagrams rendered in chat;
+      // pure prompt skill, no scripts).
+      await registerBundledSkill('/app/host/sources/skills/global/mermaid', ASSISTANT_AGENT_ID, 'Personal Assistant');
 
       // ── Tasks ───────────────────────────────────────────────────────────
       console.log('Bootstrap: Creating tasks...');

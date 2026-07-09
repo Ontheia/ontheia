@@ -117,3 +117,9 @@ Its design principle: every known failure mode of generic file tools is made imp
 - The default root `/data/files/{user}` is backed by the `./data/files` bind mount in `docker-compose.yml`. To expose additional directories (e.g. a Nextcloud mount), add a volume mount there and extend `FILES_SKILL_ROOTS`.
 
 **Prerequisites:** the `cli-tools` MCP server (registered by the installer) — scripts run via `run_skill_script`; file content always travels via stdin, never as an argument.
+
+## Built-in Skill: mermaid
+
+Ontheia ships with the **mermaid** skill (`sources/skills/global/mermaid/`), assigned to the **Personal Assistant** by the installer. It is a pure prompt skill (no scripts): it teaches the agent to reliably produce Mermaid diagram code — flowcharts, sequence, class, ER, state and Gantt diagrams, mindmaps, timelines, kanban boards and more — which the chat renders directly as a diagram (see [Message Types](../../user/chat/03_message_types.md)).
+
+The skill encodes the syntax pitfalls that commonly break LLM-generated diagrams (label quoting, reserved keywords, mindmap grouping rules) and points out that click interactions are disabled in the chat's strict renderer. Detailed per-type syntax references are bundled under `references/` and loaded on demand via `read_skill_resource`.

@@ -117,3 +117,9 @@ Das Designprinzip: Jeder bekannte Fehlermodus generischer Datei-Tools wird per C
 - Der Default-Root `/data/files/{user}` liegt auf dem Bind-Mount `./data/files` aus `docker-compose.yml`. Für weitere Verzeichnisse (z. B. einen Nextcloud-Mount) dort eine Volume-Zeile ergänzen und `FILES_SKILL_ROOTS` erweitern.
 
 **Voraussetzungen:** der `cli-tools`-MCP-Server (wird vom Installer registriert) — die Scripts laufen über `run_skill_script`; Dateiinhalte werden immer über stdin übergeben, nie als Argument.
+
+## Mitgelieferter Skill: mermaid
+
+Ontheia liefert den Skill **mermaid** mit (`sources/skills/global/mermaid/`), vom Installer dem **Personal Assistant** zugewiesen. Er ist ein reiner Prompt-Skill (ohne Scripts): Er bringt dem Agenten bei, zuverlässig Mermaid-Diagrammcode zu erzeugen — Flowcharts, Sequenz-, Klassen-, ER-, Zustands- und Gantt-Diagramme, Mindmaps, Timelines, Kanban-Boards und mehr — den der Chat direkt als Diagramm rendert (siehe [Nachrichtentypen](../../user/chat/03_message_types.md)).
+
+Der Skill kodiert die Syntax-Fallen, an denen LLM-generierte Diagramme typischerweise scheitern (Label-Quoting, reservierte Schlüsselwörter, Mindmap-Gruppierungsregeln), und weist darauf hin, dass Click-Interaktionen im strikten Chat-Renderer deaktiviert sind. Detaillierte Syntax-Referenzen pro Typ liegen unter `references/` und werden bei Bedarf über `read_skill_resource` geladen.
