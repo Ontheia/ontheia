@@ -464,43 +464,51 @@ async function main() {
         [ASSISTANT_AGENT_ID]
       );
 
-      // ── skill-creator skill ─────────────────────────────────────────────
+      // ── Bundled skills ──────────────────────────────────────────────────
       // The SkillService scanner only runs once the host is up — bootstrap
-      // runs before that, so register the bundled skill-creator skill here
-      // and assign it to the Guide. The scanner refreshes the same row later
+      // runs before that, so register bundled skills here and assign them to
+      // their default agent. The scanner refreshes the same rows later
       // (same unique key: name, scope, owner_id).
-      const skillCreatorDir = '/app/host/sources/skills/global/skill-creator';
-      try {
-        const raw = await fs.readFile(path.join(skillCreatorDir, 'SKILL.md'), 'utf8');
-        const fmEnd = raw.indexOf('\n---', 3);
-        const fm = raw.startsWith('---') && fmEnd !== -1 ? raw.slice(4, fmEnd) : '';
-        const fmValue = (key: string) =>
-          fm.split('\n').find((l) => l.startsWith(`${key}:`))?.slice(key.length + 1).trim() ?? '';
-        const skillName = fmValue('name') || 'skill-creator';
-        const skillDescription = fmValue('description');
-        const skillBody = fmEnd !== -1 ? raw.slice(fmEnd + 4).trimStart() : raw;
-        if (skillDescription) {
+      const registerBundledSkill = async (skillDir: string, agentId: string, agentLabel: string) => {
+        const fallbackName = path.basename(skillDir);
+        try {
+          const raw = await fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8');
+          const fmEnd = raw.indexOf('\n---', 3);
+          const fm = raw.startsWith('---') && fmEnd !== -1 ? raw.slice(4, fmEnd) : '';
+          const fmValue = (key: string) =>
+            fm.split('\n').find((l) => l.startsWith(`${key}:`))?.slice(key.length + 1).trim() ?? '';
+          const skillName = fmValue('name') || fallbackName;
+          const skillDescription = fmValue('description');
+          const skillBody = fmEnd !== -1 ? raw.slice(fmEnd + 4).trimStart() : raw;
+          if (!skillDescription) {
+            console.warn(`Bootstrap: ${fallbackName} SKILL.md has no description — skipping registration.`);
+            return;
+          }
           const skillRes = await pool.query(
             `INSERT INTO app.skills (name, description, content, skill_dir, scope, owner_id)
              VALUES ($1, $2, $3, $4, 'global', NULL)
              ON CONFLICT (name, scope, owner_id) DO UPDATE SET skill_dir = EXCLUDED.skill_dir
              RETURNING id`,
-            [skillName, skillDescription, skillBody, skillCreatorDir]
+            [skillName, skillDescription, skillBody, skillDir]
           );
           await pool.query(
             `INSERT INTO app.agent_skills (agent_id, skill_id, active)
              VALUES ($1, $2, true)
              ON CONFLICT (agent_id, skill_id) DO NOTHING`,
-            [GUIDE_AGENT_ID, skillRes.rows[0].id]
+            [agentId, skillRes.rows[0].id]
           );
-          console.log(`Bootstrap: Skill '${skillName}' registered and assigned to Ontheia Guide.`);
-        } else {
-          console.warn('Bootstrap: skill-creator SKILL.md has no description — skipping registration.');
+          console.log(`Bootstrap: Skill '${skillName}' registered and assigned to ${agentLabel}.`);
+        } catch (err: any) {
+          // Missing skill directory is fine (slim distributions) — don't fail bootstrap.
+          console.warn(`Bootstrap: ${fallbackName} not registered (${err?.code === 'ENOENT' ? 'directory not found' : err?.message}).`);
         }
-      } catch (err: any) {
-        // Missing skill directory is fine (slim distributions) — don't fail bootstrap.
-        console.warn(`Bootstrap: skill-creator not registered (${err?.code === 'ENOENT' ? 'directory not found' : err?.message}).`);
-      }
+      };
+
+      // skill-creator → Guide (orchestrates skill creation).
+      await registerBundledSkill('/app/host/sources/skills/global/skill-creator', GUIDE_AGENT_ID, 'Ontheia Guide');
+      // files → Personal Assistant (base skill: safe file management; the
+      // assistant already has the cli-tools/run_skill_script binding).
+      await registerBundledSkill('/app/host/sources/skills/global/files', ASSISTANT_AGENT_ID, 'Personal Assistant');
 
       // ── Tasks ───────────────────────────────────────────────────────────
       console.log('Bootstrap: Creating tasks...');
