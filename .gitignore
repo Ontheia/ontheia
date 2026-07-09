@@ -66,6 +66,9 @@ scripts/content
 # Development artifacts
 docker-compose.override.yml
 
+# Files skill data directory (bind-mounted into the host container)
+/data/
+
 # Docker
 .docker
 

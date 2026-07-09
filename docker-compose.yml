@@ -74,6 +74,10 @@ services:
       - ontheia-host-logs:/app/logs
       - ontheia-host-backup:/app/host/backup
       - ./sources:/app/host/sources
+      # Data directory for the bundled files skill (FILES_SKILL_ROOTS).
+      # Bind mount so files are reachable from the host for backup/sync;
+      # add more mounts here to expose additional directories to the skill.
+      - ./data/files:/data/files
     ports:
       - "8080:8080"
     networks:
