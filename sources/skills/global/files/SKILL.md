@@ -1,0 +1,146 @@
+---
+name: files
+description: Safe file management inside configured directories — list, search (by name and content), read, write, append, edit, move, and soft-delete files. Use whenever the user wants to work with files or folders ("save this to a file", "what's in that directory", "find the note about X", "add this to my journal", "rename/move/delete the file"). Not for Word/Excel documents (docx/xlsx skills), PDFs (pdf skill), or format conversion (konvert2md skill).
+---
+
+# Files — Safe File Management
+
+Deterministic file operations with built-in guarantees. Every known failure
+mode of generic file tools is made impossible by code, not discouraged by
+instructions: appends cannot overwrite, writes refuse existing targets,
+edits require a unique exact match, deletes go to a recoverable trash, and
+escape-damaged content is rejected before it reaches the disk.
+
+## Script Interface
+
+All scripts run via `run_skill_script`. Do **not** read the scripts first —
+this table plus the exit-code catalog is the complete contract.
+File **content is always passed via stdin** (`input_data`), never as an
+argument.
+
+| Script | Arguments | stdin |
+|--------|-----------|-------|
+| `info.py` | `[path]` — no args: show configuration | — |
+| `list.py` | `<dir> [--depth N] [--sizes] [--include-trash]` | — |
+| `search.py` | `<dir> <name-glob> [--content REGEX] [--max N] [--include-trash]` | — |
+| `read.py` | `<file>... [--offset N] [--limit N]` | — |
+| `write.py` | `<file> [--force] [--allow-escapes] [--allow-empty] [--expect-sha256 H]` | content |
+| `append.py` | `<file> [--allow-escapes]` | content |
+| `edit.py` | `<file> [--allow-escapes]` | edit spec (see below) |
+| `move.py` | `<src> <dst> [--force]` | — |
+| `mkdir.py` | `<dir>` | — |
+| `delete.py` | `<path> --confirm [--permanent]` | — |
+
+### Choosing the right write operation
+
+- **New file** → `write.py` (fails if the file exists — that is intentional)
+- **Add to the end of a file** → `append.py` (cannot touch existing content)
+- **Change a specific passage** → `edit.py` (exact match, unique)
+- **Replace a whole file** → `read.py` first (note the sha256), then
+  `write.py --force --expect-sha256 <hash>` — the previous version is
+  archived to `.trash/` automatically.
+
+### edit.py stdin format
+
+Fence lines must stand alone; both blocks are required. An empty NEW block
+deletes the OLD text.
+
+```
+<<<OLD
+exact existing text
+OLD>>>
+<<<NEW
+replacement text
+NEW>>>
+```
+
+If OLD matches zero times you get the closest lines in the file (exit 5);
+if it matches more than once you get the line numbers (exit 6) — extend OLD
+with surrounding context and retry.
+
+## Exit Codes
+
+| Code | Meaning | Typical reaction |
+|------|---------|------------------|
+| 0 | success | — |
+| 1 | usage error / missing --confirm / empty stdin | fix the call |
+| 2 | path outside allowed roots | check `info.py` for the configured roots |
+| 3 | target exists | use `--force` (previous version goes to `.trash/`) or `append.py`/`edit.py` |
+| 4 | not found | check the path with `list.py`/`search.py` |
+| 5 | edit: OLD not found | re-read the file, fix the OLD block |
+| 6 | edit: OLD ambiguous | extend OLD with more context |
+| 7 | escape damage detected | content had literal `\n` but no real newline — fix the content, or `--allow-escapes` if the backslashes are intended |
+| 8 | sha256 conflict | file changed since reading — re-read and retry |
+| 9 | cap exceeded | narrow the operation (offset, subdirectory, tighter glob) |
+
+Errors print one machine-parsable first line: `ERROR[<code>]: <message>`.
+
+## Trash
+
+Every destructive operation is recoverable: `delete.py` (default),
+`write.py --force`, and `move.py --force` archive the affected file to
+`<root>/.trash/<timestamp>_<name>`. `list.py`/`search.py` hide `.trash/`
+unless `--include-trash` is given. On a synced mount the trash syncs too —
+files can be restored from any device. Only `--permanent` removes for good.
+
+---
+
+## Administrator Guide
+
+### Configuration (environment variables)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `FILES_SKILL_ROOTS` | `/tmp` | Colon-separated allowed directories. Supports a `{user}` placeholder. |
+| `FILES_SKILL_MAX_READ` | `15000` | Character cap per read (pagination via `--offset`). |
+| `FILES_SKILL_MAX_SEARCH_RESULTS` | `50` | Result cap for search. |
+| `FILES_SKILL_MAX_CONTENT_SCAN_MB` | `2` | Per-file size cap for content search. |
+
+Example (`.env`):
+```
+FILES_SKILL_ROOTS=/mnt/nextcloud/{user}/Ontheia:/tmp
+```
+
+### Per-user isolation with {user}
+
+`{user}` derives deterministically from `ONTHEIA_USER_EMAIL` (injected by
+the Ontheia host per run). The normalization is a frozen contract:
+
+1. local part of the email (before `@`)
+2. lowercased (`WBrangl@…` and `wbrangl@…` map to the same directory)
+3. restricted to `[a-z0-9._-]` — all other characters removed
+4. leading dots stripped (no hidden directories, no `.trash/` collision)
+
+Examples: `wbrangl@brangl.de` → `wbrangl` · `Max.Muster@firma.de` →
+`max.muster` · `.odd+name@x.y` → `oddname`
+
+**Fail closed:** if the variable is not present, roots containing `{user}`
+are inactive; if no root remains, every script exits 2 with a clear
+message. There is no fallback to "all users". `info.py` (no arguments)
+shows the resolved user and active roots at any time.
+
+### Mounts
+
+The configured roots must be reachable *inside the host container*. For
+directories outside the container add a volume mount, e.g. in
+`docker-compose.override.yml`:
+
+```yaml
+services:
+  host:
+    volumes:
+      - /mnt/nextcloud:/mnt/nextcloud
+```
+
+This is the most common setup mistake: if `info.py` reports a root as
+`MISSING`, the directory is not mounted into the container.
+
+### Security model
+
+- Paths are canonicalized with `realpath` **before** the whitelist check —
+  `..` traversal and symlinks pointing outside a root are rejected.
+- Scripts are pure Python, no shell is ever invoked.
+- Writes are atomic (temp file + `os.replace`) — sync clients never see a
+  partially written file.
+- Read/search output is capped and paginated — a script call cannot flood
+  the model context.
