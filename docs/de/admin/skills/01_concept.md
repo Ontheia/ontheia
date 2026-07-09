@@ -104,3 +104,16 @@ Der Installer weist ihn dem **Ontheia Guide** zu und richtet zwei Rollen ein:
 Beide Rollen lassen sich auf dedizierte Agenten verlagern (z. B. `Skill_Creator` / `Skill_Test`) — das Eval-Script akzeptiert einen `test_agent_label`-Parameter, und der Orchestrator übergibt sein eigenes Label an `analyze`.
 
 **Voraussetzungen:** `DATABASE_URL` in der Host-Container-Umgebung (das Eval-Script `scripts/run_eval_ontheia.py` erbt sie über `run_skill_script` — im Skill selbst sind keine Credentials hinterlegt), der `cli-tools`-MCP-Server (wird vom Installer registriert) sowie `uv` für Python-Script-Abhängigkeiten.
+
+## Mitgelieferter Skill: files
+
+Ontheia liefert den Skill **files** mit (`sources/skills/global/files/`), vom Installer dem **Personal Assistant** zugewiesen. Er bietet sichere Dateiverwaltung innerhalb administrativ konfigurierter Verzeichnisse: Auflisten, Suchen (nach Name und Inhalt), Lesen, Schreiben, Anfügen, Editieren, Verschieben und Soft-Delete.
+
+Das Designprinzip: Jeder bekannte Fehlermodus generischer Datei-Tools wird per Code unmöglich gemacht statt per Anweisung entmutigt — Anfügen kann nicht überschreiben, Schreiben verweigert existierende Ziele, Editieren verlangt einen eindeutigen exakten Match, destruktive Operationen archivieren in einen wiederherstellbaren `.trash/`-Ordner, und JSON-Escape-beschädigter Inhalt wird abgewiesen, bevor er die Platte erreicht. Alle Operationen liefern dokumentierte Exit-Codes, sodass Agenten deterministisch reagieren können.
+
+**Konfiguration:**
+
+- `FILES_SKILL_ROOTS` (`.env`) — doppelpunkt-separierte Verzeichnisse, auf die der Skill zugreifen darf. Unterstützt einen `{user}`-Platzhalter für Nutzer-Trennung, aufgelöst aus der Identität des anfragenden Nutzers (pro Run vom Host injiziert; fail-closed, wenn sie fehlt). Der Normalisierungs-Vertrag und alle Limits sind im Admin Guide des Skills (`SKILL.md`) dokumentiert.
+- Der Default-Root `/data/files/{user}` liegt auf dem Bind-Mount `./data/files` aus `docker-compose.yml`. Für weitere Verzeichnisse (z. B. einen Nextcloud-Mount) dort eine Volume-Zeile ergänzen und `FILES_SKILL_ROOTS` erweitern.
+
+**Voraussetzungen:** der `cli-tools`-MCP-Server (wird vom Installer registriert) — die Scripts laufen über `run_skill_script`; Dateiinhalte werden immer über stdin übergeben, nie als Argument.

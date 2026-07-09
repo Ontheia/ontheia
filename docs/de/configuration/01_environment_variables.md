@@ -58,8 +58,12 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 | Variable | Beschreibung | Standard |
 | :--- | :--- | :--- |
 | `SKILLS_BASE_DIR` | Basisverzeichnis für Skill-Dateien im Container. Der ScanService durchsucht `<SKILLS_BASE_DIR>/global/` und `<SKILLS_BASE_DIR>/user/` beim Start. | `/app/host/sources/skills` |
+| `FILES_SKILL_ROOTS` | Doppelpunkt-separierte Verzeichnisse, auf die der mitgelieferte files-Skill zugreifen darf. Unterstützt einen `{user}`-Platzhalter (Nutzer-Trennung, aufgelöst aus der E-Mail des anfragenden Nutzers — siehe Admin Guide in der `SKILL.md` des Skills). Pfade müssen im Host-Container erreichbar sein. | `/tmp` (Skill); `.env.example` belegt `/data/files/{user}` vor |
+| `FILES_SKILL_MAX_READ` | Zeichen-Limit pro Leseoperation des files-Skills (Pagination via `--offset`). | `15000` |
+| `FILES_SKILL_MAX_SEARCH_RESULTS` | Treffer-Limit für Suchen des files-Skills. | `50` |
+| `FILES_SKILL_MAX_CONTENT_SCAN_MB` | Größenlimit pro Datei (MB) für die Inhaltssuche des files-Skills. | `2` |
 
-Das Host-Verzeichnis `sources/skills/` wird via Volume-Binding `./sources:/app/host/sources` in `docker-compose.yml` in den Container eingebunden.
+Das Host-Verzeichnis `sources/skills/` wird via Volume-Binding `./sources:/app/host/sources` in `docker-compose.yml` in den Container eingebunden. Der Default-Root `/data/files` des files-Skills wird aus `./data/files` gemountet.
 
 ## 6. AI-Dienste & Agenten
 

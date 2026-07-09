@@ -104,3 +104,16 @@ The installer assigns it to the **Ontheia Guide** and wires up two roles:
 Both roles can be moved to dedicated agents (e.g. `Skill_Creator` / `Skill_Test`) — the eval script accepts a `test_agent_label` parameter, and the orchestrator passes its own label to `analyze`.
 
 **Prerequisites:** `DATABASE_URL` in the host container environment (the eval script `scripts/run_eval_ontheia.py` inherits it via `run_skill_script` — no credentials are stored in the skill), the `cli-tools` MCP server (registered by the installer), and `uv` for Python script dependencies.
+
+## Built-in Skill: files
+
+Ontheia ships with the **files** skill (`sources/skills/global/files/`), assigned to the **Personal Assistant** by the installer. It provides safe file management inside administrator-configured directories: list, search (by name and content), read, write, append, edit, move, and soft-delete.
+
+Its design principle: every known failure mode of generic file tools is made impossible by code, not discouraged by instructions — appends cannot overwrite, writes refuse existing targets, edits require a unique exact match, destructive operations archive to a recoverable `.trash/`, and JSON-escape-damaged content is rejected before it reaches the disk. All operations return documented exit codes so agents can react deterministically.
+
+**Configuration:**
+
+- `FILES_SKILL_ROOTS` (`.env`) — colon-separated directories the skill may access. Supports a `{user}` placeholder for per-user isolation, resolved from the requesting user's identity (injected by the host per run; fail-closed when absent). The normalization contract and all limits are documented in the skill's own Admin Guide (`SKILL.md`).
+- The default root `/data/files/{user}` is backed by the `./data/files` bind mount in `docker-compose.yml`. To expose additional directories (e.g. a Nextcloud mount), add a volume mount there and extend `FILES_SKILL_ROOTS`.
+
+**Prerequisites:** the `cli-tools` MCP server (registered by the installer) — scripts run via `run_skill_script`; file content always travels via stdin, never as an argument.
