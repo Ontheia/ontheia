@@ -281,6 +281,18 @@ export async function buildProviderChatRequest(
       body.stream = true;
     }
 
+    // Reasoning effort: opt-in via model/provider metadata. Newer OpenAI
+    // reasoning models (gpt-5.6+) reject function tools on
+    // /v1/chat/completions unless reasoning_effort is 'none' — set
+    // "reasoning_effort": "none" in the model metadata to keep tool-calling
+    // agents working. An explicit value in the run options wins.
+    const reasoningEffort =
+      extractMetadataString(modelMetadata, ['reasoning_effort', 'reasoningEffort']) ??
+      extractMetadataString(providerMetadata, ['reasoning_effort', 'reasoningEffort']);
+    if (reasoningEffort && body.reasoning_effort === undefined) {
+      body.reasoning_effort = reasoningEffort;
+    }
+
     // Most OpenAI-compatible providers omit token usage entirely when streaming
     // unless stream_options.include_usage is requested. Providers that reject the
     // field can opt out via metadata `stream_include_usage: false`.

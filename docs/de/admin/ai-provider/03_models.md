@@ -57,6 +57,24 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 
 > **Hinweis zum `endpoint`-Feld:** Ontheia konstruiert den Embedding-Endpunkt automatisch aus der `baseUrl` des Providers. Wenn die `baseUrl` kein `/v1` enthält (z. B. `https://api.openai.com`), sollte `endpoint` explizit gesetzt werden, um 404-Fehler zu vermeiden.
 
+### Chat-Modell-Metadaten
+
+| Feld | Typ | Beschreibung | Beispiel |
+| :--- | :--- | :--- | :--- |
+| `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. | `"none"` |
+| `chat_path` | string | Überschreibt den Chat-Endpunkt-Pfad relativ zur `baseUrl` des Providers. | `"v1/chat/completions"` |
+| `stream_include_usage` | boolean | Auf `false` setzen bei Providern, die `stream_options.include_usage` in Streaming-Requests ablehnen. | `false` |
+| `stream` | boolean | Auf `false` setzen, um dieses Modell vom Response-Streaming auszunehmen (immer Block-Antworten anfordern). | `false` |
+
+**Beispiel für `gpt-5.6-terra` (Tool-Calling auf Chat Completions):**
+```json
+{
+  "reasoning_effort": "none"
+}
+```
+
+Diese Felder können auch in den **Provider**-Metadaten gesetzt werden und gelten dann für alle seine Modelle; Modell-Metadaten haben Vorrang.
+
 ### CLI-Modell-Metadaten
 
 | Feld | Typ | Beschreibung |

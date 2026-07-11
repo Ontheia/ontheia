@@ -57,6 +57,24 @@ Additional technical parameters can be stored per model as a JSON object. This i
 
 > **Note on the `endpoint` field:** Ontheia constructs the embedding endpoint automatically from `baseUrl` of the provider. For OpenAI-compatible providers where `baseUrl` does not include `/v1`, the `endpoint` field should be set explicitly to avoid 404 errors.
 
+### Chat Model Metadata
+
+| Field | Type | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `reasoning_effort` | string | Sent as `reasoning_effort` with every chat request for this model. Newer OpenAI reasoning models (gpt-5.6 family) reject function tools on `/v1/chat/completions` unless this is `"none"` — set it to keep tool-calling agents working. Only set it on models that support the parameter. | `"none"` |
+| `chat_path` | string | Overrides the chat endpoint path relative to the provider `baseUrl`. | `"v1/chat/completions"` |
+| `stream_include_usage` | boolean | Set to `false` for providers that reject `stream_options.include_usage` in streaming requests. | `false` |
+| `stream` | boolean | Set to `false` to exclude this model from response streaming (always request block responses). | `false` |
+
+**Example for `gpt-5.6-terra` (tool calling on chat completions):**
+```json
+{
+  "reasoning_effort": "none"
+}
+```
+
+These fields can also be set in the **provider** metadata to apply to all of its models; model metadata takes precedence.
+
 ### CLI Model Metadata
 
 | Field | Type | Description |
