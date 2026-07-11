@@ -36,9 +36,11 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 - **Tools & external systems** — Ontheia is **MCP-native**, so agents can connect to tools and services over an open standard instead of proprietary integrations.
 - **Persistent memory** — built-in RAG with **pgvector**, isolated by user and namespace, so agents can remember and reuse knowledge over time.
 - **Workflows** — the visual **Chain Engine** turns multi-step logic into no-code pipelines.
+- **Diagrams in chat** — the agent writes Mermaid, the chat renders it live: flowcharts, sequence, class, ER, Gantt, state, mind maps, and more (12+ types). No render server, no export detour — a built-in skill keeps the syntax and layout clean.
 - **Scheduling** — run recurring or one-time jobs automatically, including jobs that resume an existing chat where it left off.
 - **Vendor-agnostic** — Claude, ChatGPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
-- **Governance & control** — self-hosted and **GDPR-compliant by architecture** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data.
+- **Safe file handling** — a built-in `files` skill lets agents search, read, write, edit and move files with guarantees that make mistakes impossible, not just discouraged: writes never clobber (recoverable trash), edits need an exact match, and concurrent changes are caught by content hash. No config needed.
+- **Governance & control** — self-hosted and **GDPR-compliant by architecture** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data. In multi-user setups, per-user file access is enforced server-side — one user's agents can't reach another's files.
 
 ---
 
@@ -69,10 +71,12 @@ Everything that matters — chat history, memory, skills, workflows, schedules, 
 
 ## Screenshots
 
-| Chat & Agents | MCP Tools in Action |
+|  |  |
 |---|---|
-|![Chat](https://ontheia.ai/screenshots/ontheia_chat_en.png) | ![MCP](https://ontheia.ai/screenshots/ontheia_exa_en.png) |
+| ![Chat & agents](https://ontheia.ai/screenshots/ontheia_chat_en.png) | ![MCP tools](https://ontheia.ai/screenshots/ontheia_exa_en.png) |
 | *What can I use Ontheia for?* | *Exa search → PDF summary → email — in one step.* |
+| ![Flowchart from a prompt](https://ontheia.ai/screenshots/ontheia_flowchart_en.png) | ![Mind map from a prompt](https://ontheia.ai/screenshots/ontheia_mindmap_en.png) |
+| *Describe a process — Ontheia renders it as a flowchart.* | *Turn a project brief into a structured mind map.* |
 
 ---
 
