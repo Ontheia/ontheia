@@ -3,6 +3,11 @@ set -e
 
 trap 'stty echo 2>/dev/null' EXIT INT TERM
 
+# The entire script body lives in a function: bash parses it completely before
+# executing, so the `git pull` inside — which replaces this very file — cannot
+# make the running interpreter continue reading a newer version mid-execution.
+ontheia_update_main() {
+
 # ─── Colors ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -289,3 +294,7 @@ echo ""
 echo -e "  ${YELLOW}$MSG_BACKUP_HINT${NC}"
 echo -e "  ${BOLD}$(pwd)/backups/${NC}"
 echo -e "${GREEN}${BOLD}====================================================${NC}"
+}
+
+ontheia_update_main "$@"
+exit $?
