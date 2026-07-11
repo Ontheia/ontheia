@@ -126,5 +126,12 @@ export async function handleDelegation(
   // Extract output from the last step of the delegation chain
   const stepEntries = Object.entries(result.steps || {});
   const lastStep = stepEntries.length > 0 ? stepEntries[stepEntries.length - 1][1] : null;
+  // A failed sub-run only marks its step (chainContext top-level status stays
+  // untouched). Surface it as a tool error — otherwise the parent agent gets
+  // "completed without output" for a run that never happened and hallucinates
+  // a result.
+  if ((lastStep as any)?.status === 'error') {
+    throw new Error(`Delegation failed: sub-agent run errored: ${(lastStep as any).error || 'unknown error'}`);
+  }
   return lastStep?.output || 'Task completed without explicit output.';
 }
