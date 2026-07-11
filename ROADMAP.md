@@ -25,6 +25,7 @@ Focus now: stability, packaging, and community foundation.
 
 | Feature | Description |
 |---|---|
+| **OpenAI Responses API** | Second OpenAI request path (`/v1/responses`) so reasoning models can combine reasoning with function tools — chat completions no longer supports that combination as of GPT-5.6 (interim: `reasoning_effort` model metadata). Opt-in per model; chat completions stays the default for OpenAI-compatible providers. |
 | **Provider Fallback Hint** | Clear message in chat when no AI provider is configured yet |
 | **CI Pipeline** | Automated lint and test runs on every pull request |
 | **Embedding Fallback** | Documents are embedded with a primary and a backup provider simultaneously (e.g. OpenAI + Ollama). If the primary provider is unavailable, the backup takes over automatically. |
