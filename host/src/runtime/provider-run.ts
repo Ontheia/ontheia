@@ -26,6 +26,7 @@ import Ajv from 'ajv';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import { buildProviderChatRequest, loadProviderModel } from '../providers/client.js';
 import { runAnthropicCompletion } from './anthropic-runner.js';
+import { runResponsesCompletion } from './responses-runner.js';
 import { runCliCompletion } from '../providers/cli-runner.js';
 import { logger as rootLogger } from '../logger.js';
 
@@ -45,7 +46,7 @@ export const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
 // Abort a run if the prompt exceeds this many tokens — prevents context explosion
 // (e.g. binary file accidentally loaded into conversation history).
 // Configurable via MAX_PROMPT_TOKENS env var; default 200k.
-const MAX_PROMPT_TOKENS = process.env.MAX_PROMPT_TOKENS
+export const MAX_PROMPT_TOKENS = process.env.MAX_PROMPT_TOKENS
   ? parseInt(process.env.MAX_PROMPT_TOKENS, 10)
   : 200_000;
 const debugTools = process.env.DEBUG_TOOLS === 'true';
@@ -198,10 +199,14 @@ export function normalizeUsage(usage: any): NormalizedUsage | undefined {
     return undefined;
   }
 
-  // OpenAI-style cached subset (already counted inside prompt_tokens).
+  // OpenAI-style cached subset (already counted inside prompt_tokens /
+  // input_tokens). Chat Completions reports it under prompt_tokens_details,
+  // the Responses API under input_tokens_details.
   const cachedSubset =
     typeof usage.prompt_tokens_details?.cached_tokens === 'number'
       ? usage.prompt_tokens_details.cached_tokens
+      : typeof usage.input_tokens_details?.cached_tokens === 'number'
+      ? usage.input_tokens_details.cached_tokens
       : typeof usage.cached_tokens === 'number'
       ? usage.cached_tokens
       : 0;
@@ -253,11 +258,18 @@ export async function runProviderCompletion(
   if (payload.provider_id === 'anthropic') {
     return runAnthropicCompletion(db, orchestrator, payload, options);
   }
-  // Check if provider is a CLI type
+  // Check for CLI providers and the opt-in Responses API path
   try {
     const record = await loadProviderModel(db, payload.provider_id, payload.model_id);
     if (record.provider.providerType === 'cli') {
       return runCliLoop(db, orchestrator, payload, options, record.provider, record.model);
+    }
+    // Opt-in per model/provider metadata `chat_api: "responses"` — model wins.
+    const metaOf = (m: unknown) =>
+      m && typeof m === 'object' ? (m as Record<string, unknown>)['chat_api'] : undefined;
+    const chatApi = metaOf(record.model.metadata) ?? metaOf(record.provider.metadata);
+    if (chatApi === 'responses') {
+      return runResponsesCompletion(db, orchestrator, payload, options, record);
     }
   } catch {
     // If provider lookup fails, fall through to OpenAI-compatible handler which will give a proper error

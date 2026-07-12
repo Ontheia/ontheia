@@ -51,6 +51,22 @@ test('normalizeUsage: OpenAI without cache details', () => {
   assert.equal(total(u), 500);
 });
 
+test('normalizeUsage: Responses API cached subset (input_tokens_details)', () => {
+  // Responses API: input_tokens (900) INCLUDES the 600 cached tokens,
+  // reported under input_tokens_details instead of prompt_tokens_details.
+  const u = normalizeUsage({
+    input_tokens: 900,
+    output_tokens: 150,
+    input_tokens_details: { cached_tokens: 600 },
+    output_tokens_details: { reasoning_tokens: 40 }
+  })!;
+  assert.equal(u.prompt, 300);        // uncached remainder
+  assert.equal(u.cacheRead, 600);
+  assert.equal(u.cacheCreation, 0);
+  assert.equal(total(u), 900);        // total unchanged → no double count
+  assert.equal(u.completion, 150);    // reasoning tokens stay inside output
+});
+
 test('normalizeUsage: Anthropic-style separate cache fields are additive', () => {
   // Anthropic: input_tokens (200) EXCLUDES cache; cache_read is separate.
   const u = normalizeUsage({
