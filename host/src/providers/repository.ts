@@ -354,10 +354,26 @@ export async function createOrUpdateProvider(db: Pool, payload: ProviderUpsertPa
     const providerId: string = upsertResult.rows[0].id;
 
     if (payload.models) {
+      // The model list is replaced wholesale on every provider save. Preserve
+      // fields the payload does not explicitly provide for models that already
+      // exist — clients that do not know a field (older UI bundles, partial
+      // API calls) would otherwise silently reset it to the column default.
+      // This is exactly how embedding models lost their capability (falling
+      // back to 'chat'), which broke memory search instance-wide, and the
+      // same hazard applies to model metadata (chat_api, reasoning_effort).
+      const previous = await client.query(
+        'SELECT model_key, capability, metadata, active, show_in_composer FROM app.provider_models WHERE provider_id = $1',
+        [providerId]
+      );
+      const prevByKey = new Map<string, any>(previous.rows.map((r: any) => [r.model_key, r]));
+
       await client.query('DELETE FROM app.provider_models WHERE provider_id = $1', [providerId]);
 
       for (const model of payload.models) {
-        const model_show_in_composer = model.show_in_composer !== undefined ? model.show_in_composer : model.showInComposer;
+        const prev = prevByKey.get(model.id);
+        const explicitShow = model.show_in_composer !== undefined ? model.show_in_composer : model.showInComposer;
+        const show_in_composer =
+          explicitShow !== undefined ? explicitShow === true : prev ? prev.show_in_composer === true : true;
         await client.query(
           `
           INSERT INTO app.provider_models (
@@ -369,10 +385,10 @@ export async function createOrUpdateProvider(db: Pool, payload: ProviderUpsertPa
             providerId,
             model.id,
             model.label,
-            JSON.stringify(model.metadata ?? {}),
-            model.active ?? true,
-            model.capability ?? null,
-            model_show_in_composer === false ? false : true
+            JSON.stringify(model.metadata ?? prev?.metadata ?? {}),
+            model.active ?? prev?.active ?? true,
+            model.capability ?? prev?.capability ?? null,
+            show_in_composer
           ]
         );
       }
