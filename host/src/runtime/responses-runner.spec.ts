@@ -22,8 +22,20 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mapMessagesForResponses, mapToolsForResponses, extractOutputText } from './responses-runner.js';
+import { mapMessagesForResponses, mapToolsForResponses, extractOutputText, consumeResponsesStream } from './responses-runner.js';
 import type { ChatMessage, RunToolDefinition } from './types.js';
+import type { RunEvent } from './types.js';
+
+/** Builds a ReadableStream that yields the given chunks (UTF-8 encoded). */
+function chunkedStream(chunks: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    }
+  });
+}
 
 test('mapMessagesForResponses: system messages become instructions, rest becomes items', () => {
   const messages: ChatMessage[] = [
@@ -96,4 +108,56 @@ test('extractOutputText: concatenates output_text parts, ignores reasoning/funct
     { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Hallo ' }, { type: 'output_text', text: 'Welt' }] }
   ];
   assert.equal(extractOutputText(output as any), 'Hallo Welt');
+});
+
+test('consumeResponsesStream: emits run_token deltas and returns the final response object', async () => {
+  const finalResponse = {
+    status: 'completed',
+    output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Hallo, Welt' }] }],
+    usage: { input_tokens: 18, output_tokens: 10 }
+  };
+  const sse = [
+    'event: response.created\n',
+    'data: {"type":"response.created","response":{"status":"in_progress"}}\n\n',
+    'event: response.output_text.delta\n',
+    'data: {"type":"response.output_text.delta","delta":"Hallo"}\n\n',
+    'data: {"type":"response.output_text.delta","delta":", Welt"}\n\n',
+    `data: ${JSON.stringify({ type: 'response.completed', response: finalResponse })}\n\n`
+  ].join('');
+
+  const emitted: RunEvent[] = [];
+  const result = await consumeResponsesStream(chunkedStream([sse]), (e) => emitted.push(e));
+
+  assert.deepEqual(
+    emitted.map((e: any) => e.text),
+    ['Hallo', ', Welt']
+  );
+  assert.ok(emitted.every((e) => e.type === 'run_token'));
+  assert.deepEqual(result, finalResponse);
+});
+
+test('consumeResponsesStream: buffers lines split across chunk boundaries', async () => {
+  const completed = `data: ${JSON.stringify({ type: 'response.completed', response: { status: 'completed', output: [] } })}\n\n`;
+  // The delta line is torn in the middle of the JSON payload.
+  const part1 = 'data: {"type":"response.output_text.del';
+  const part2 = 'ta","delta":"Zusammengesetzt"}\n\n' + completed;
+
+  const emitted: any[] = [];
+  const result = await consumeResponsesStream(chunkedStream([part1, part2]), (e) => emitted.push(e));
+
+  assert.deepEqual(emitted.map((e) => e.text), ['Zusammengesetzt']);
+  assert.equal(result.status, 'completed');
+});
+
+test('consumeResponsesStream: throws when the stream ends without a final event', async () => {
+  const sse = 'data: {"type":"response.output_text.delta","delta":"abgeschnitten"}\n\n';
+  await assert.rejects(
+    consumeResponsesStream(chunkedStream([sse]), () => {}),
+    /without a final response event/
+  );
+});
+
+test('consumeResponsesStream: error event raises', async () => {
+  const sse = 'data: {"type":"error","message":"boom"}\n\n';
+  await assert.rejects(consumeResponsesStream(chunkedStream([sse]), () => {}), /boom/);
 });

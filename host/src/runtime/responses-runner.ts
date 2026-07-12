@@ -49,6 +49,7 @@ import type { OrchestratorService } from '../orchestrator/service.js';
 import type { ProviderRecord, ProviderModelRecord } from '../providers/repository.js';
 import { buildAuthHeaders, appendQueryAuth, sanitizeUrl } from '../providers/http.js';
 import { normalizeUsage, MAX_PROMPT_TOKENS, type RunOptions } from './provider-run.js';
+import { getSystemFlag } from './system-flags.js';
 import type {
   ChatMessage,
   RunEvent,
@@ -154,6 +155,63 @@ export function extractOutputText(output: ResponseItem[]): string {
   return text;
 }
 
+/**
+ * Consumes a Responses API SSE stream. Emits `run_token` for every
+ * `response.output_text.delta` and returns the FULL final response object
+ * carried by `response.completed` / `response.incomplete` / `response.failed`
+ * — identical in shape to the non-streaming JSON body, so the tool loop
+ * downstream is byte-for-byte the same for both modes. No function-call
+ * delta buffering needed (unlike chat completions): the final event already
+ * contains the complete output item list.
+ */
+export async function consumeResponsesStream(
+  body: ReadableStream<Uint8Array>,
+  emit: (event: RunEvent) => void
+): Promise<any> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let final: any = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      let parsed: any;
+      try {
+        parsed = JSON.parse(payload);
+      } catch {
+        continue;
+      }
+      switch (parsed?.type) {
+        case 'response.output_text.delta':
+          if (typeof parsed.delta === 'string' && parsed.delta) {
+            emit({ type: 'run_token', role: 'assistant', text: parsed.delta });
+          }
+          break;
+        case 'response.completed':
+        case 'response.incomplete':
+        case 'response.failed':
+          final = parsed.response ?? null;
+          break;
+        case 'error':
+          throw new Error(parsed?.message || parsed?.error?.message || 'Responses stream error.');
+      }
+    }
+  }
+
+  if (!final) {
+    throw new Error('Responses stream ended without a final response event.');
+  }
+  return final;
+}
+
 export async function runResponsesCompletion(
   db: Pool | PoolClient,
   orchestrator: OrchestratorService,
@@ -196,6 +254,16 @@ export async function runResponsesCompletion(
   appendQueryAuth(url, provider.authMode ?? 'bearer', apiKey, provider.queryName ?? undefined);
 
   const reasoningEffort = metaString('reasoning_effort');
+
+  // Streaming decision — same semantics as the chat-completions path:
+  // an explicit stream value in the run options wins (sub-runs force false),
+  // then the provider/model metadata opt-out, then the global toggle.
+  const explicitStream = (payload.options as Record<string, unknown> | undefined)?.stream;
+  const streamOptOut = providerMetadata['stream'] === false || modelMetadata['stream'] === false;
+  const streamingEnabled =
+    explicitStream === false ? false
+    : explicitStream === true ? true
+    : !streamOptOut && (await getSystemFlag(db, 'response_streaming'));
 
   const startedAt = Date.now();
   const timeoutAt = startedAt + (options?.toolLoopTimeoutMs ?? DEFAULT_TOOL_LOOP_TIMEOUT_MS);
@@ -249,6 +317,7 @@ export async function runResponsesCompletion(
       body.max_output_tokens = payload.options.max_tokens;
     }
     if (reasoningEffort) body.reasoning = { effort: reasoningEffort };
+    if (streamingEnabled) body.stream = true;
 
     try {
       const response = await fetch(url.toString(), {
@@ -269,7 +338,21 @@ export async function runResponsesCompletion(
         return events;
       }
 
-      const responseBody: any = await response.json();
+      // Streaming: text deltas are emitted as run_token while consuming; the
+      // final event carries the same full response object as the block body,
+      // so everything below is identical for both modes.
+      const responseBody: any = streamingEnabled && response.body
+        ? await consumeResponsesStream(response.body, emit)
+        : await response.json();
+
+      if (responseBody?.status === 'failed') {
+        emit({
+          type: 'error',
+          code: 'provider_request_failed',
+          message: responseBody?.error?.message || 'Responses request failed.'
+        });
+        return events;
+      }
 
       const usage = normalizeUsage(responseBody?.usage);
       if (usage) {
