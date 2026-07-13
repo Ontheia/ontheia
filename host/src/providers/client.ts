@@ -316,7 +316,7 @@ export async function buildProviderChatRequest(
   };
 }
 
-function detectOpenAiCompatibility(params: {
+export function detectOpenAiCompatibility(params: {
   providerId: string;
   providerType?: string;
   providerMetadata: Record<string, unknown>;

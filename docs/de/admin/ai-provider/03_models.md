@@ -62,7 +62,7 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 | Feld | Typ | Beschreibung | Beispiel |
 | :--- | :--- | :--- | :--- |
 | `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. Auf dem Responses-API-Pfad wird der Wert als `reasoning: { effort }` gesendet — dort funktionieren Reasoning-Stufen zusammen mit Tools. | `"none"` |
-| `chat_api` | string | Auf `"responses"` setzen, um dieses Modell über die OpenAI Responses API (`/v1/responses`) statt Chat Completions zu leiten — nötig, um bei gpt-5.6-Modellen Reasoning mit Function Tools zu kombinieren. Requests sind stateless (`store: false`); Reasoning bleibt über Tool-Iterationen via verschlüsselter Reasoning-Items erhalten. | `"responses"` |
+| `chat_api` | string | Auf `"responses"` setzen, um dieses Modell über die OpenAI Responses API (`/v1/responses`) statt Chat Completions zu leiten — nötig, um bei gpt-5.6-Modellen Reasoning mit Function Tools zu kombinieren. Requests sind stateless (`store: false`); Reasoning bleibt über Tool-Iterationen via verschlüsselter Reasoning-Items erhalten. Nur für OpenAI-kompatible Provider wirksam (siehe Hinweis unten). | `"responses"` |
 | `responses_path` | string | Überschreibt den Responses-API-Endpunkt-Pfad relativ zur `baseUrl` des Providers. | `"v1/responses"` |
 | `chat_path` | string | Überschreibt den Chat-Endpunkt-Pfad relativ zur `baseUrl` des Providers. | `"v1/chat/completions"` |
 | `stream_include_usage` | boolean | Auf `false` setzen bei Providern, die `stream_options.include_usage` in Streaming-Requests ablehnen. | `false` |
@@ -76,6 +76,8 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 ```
 
 Diese Felder können auch in den **Provider**-Metadaten gesetzt werden und gelten dann für alle seine Modelle; Modell-Metadaten haben Vorrang.
+
+> **Hinweis zu `chat_api: "responses"`:** Wird nur beachtet, wenn der Provider als OpenAI-kompatibel erkannt wird (bekannte Provider-ID wie `openai`/`xai`, passender Hostname, explizites `openai_compatible: true` in den Metadaten, oder ein lokaler/privater Host). Bei nicht-kompatiblen Providern (z. B. Anthropic) wird die Einstellung ignoriert und ein Warning im Trace angezeigt — der Chat läuft dann normal über Chat Completions weiter.
 
 ### CLI-Modell-Metadaten
 

@@ -62,7 +62,7 @@ Additional technical parameters can be stored per model as a JSON object. This i
 | Field | Type | Description | Example |
 | :--- | :--- | :--- | :--- |
 | `reasoning_effort` | string | Sent as `reasoning_effort` with every chat request for this model. Newer OpenAI reasoning models (gpt-5.6 family) reject function tools on `/v1/chat/completions` unless this is `"none"` — set it to keep tool-calling agents working. Only set it on models that support the parameter. On the Responses API path it is sent as `reasoning: { effort }`, where reasoning levels work together with tools. | `"none"` |
-| `chat_api` | string | Set to `"responses"` to route this model through the OpenAI Responses API (`/v1/responses`) instead of chat completions — required to combine reasoning with function tools on gpt-5.6 models. Requests are stateless (`store: false`); reasoning is preserved across tool iterations via encrypted reasoning items. | `"responses"` |
+| `chat_api` | string | Set to `"responses"` to route this model through the OpenAI Responses API (`/v1/responses`) instead of chat completions — required to combine reasoning with function tools on gpt-5.6 models. Requests are stateless (`store: false`); reasoning is preserved across tool iterations via encrypted reasoning items. Only takes effect for OpenAI-compatible providers (see note below). | `"responses"` |
 | `responses_path` | string | Overrides the Responses API endpoint path relative to the provider `baseUrl`. | `"v1/responses"` |
 | `chat_path` | string | Overrides the chat endpoint path relative to the provider `baseUrl`. | `"v1/chat/completions"` |
 | `stream_include_usage` | boolean | Set to `false` for providers that reject `stream_options.include_usage` in streaming requests. | `false` |
@@ -76,6 +76,8 @@ Additional technical parameters can be stored per model as a JSON object. This i
 ```
 
 These fields can also be set in the **provider** metadata to apply to all of its models; model metadata takes precedence.
+
+> **Note on `chat_api: "responses"`:** Only honored when the provider is detected as OpenAI-compatible (known provider ID such as `openai`/`xai`, a matching hostname, explicit `openai_compatible: true` in metadata, or a local/private host). On non-compatible providers (e.g. Anthropic) the setting is ignored and a warning appears in the trace — the chat continues normally over chat completions.
 
 ### CLI Model Metadata
 

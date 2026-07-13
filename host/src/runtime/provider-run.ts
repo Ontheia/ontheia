@@ -24,7 +24,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { Logger } from 'pino';
 import Ajv from 'ajv';
 import type { OrchestratorService } from '../orchestrator/service.js';
-import { buildProviderChatRequest, loadProviderModel } from '../providers/client.js';
+import { buildProviderChatRequest, loadProviderModel, detectOpenAiCompatibility } from '../providers/client.js';
 import { runAnthropicCompletion } from './anthropic-runner.js';
 import { runResponsesCompletion } from './responses-runner.js';
 import { runCliCompletion } from '../providers/cli-runner.js';
@@ -269,7 +269,30 @@ export async function runProviderCompletion(
       m && typeof m === 'object' ? (m as Record<string, unknown>)['chat_api'] : undefined;
     const chatApi = metaOf(record.model.metadata) ?? metaOf(record.provider.metadata);
     if (chatApi === 'responses') {
-      return runResponsesCompletion(db, orchestrator, payload, options, record);
+      // Guard against misconfiguration: chat_api: "responses" only makes sense
+      // for providers that speak the OpenAI dialect (the Responses API is an
+      // OpenAI-specific extension of it). Anthropic is already intercepted
+      // above; this catches e.g. a Mistral or custom HTTP provider mistakenly
+      // tagged with chat_api. Fall back to chat completions with a visible
+      // warning rather than firing a request at an endpoint that is almost
+      // certainly wrong for that provider.
+      const providerMetadata = (record.provider.metadata ?? {}) as Record<string, unknown>;
+      const modelMetadata = (record.model.metadata ?? {}) as Record<string, unknown>;
+      const isCompatible = detectOpenAiCompatibility({
+        providerId: record.provider.id,
+        providerType: record.provider.providerType,
+        providerMetadata,
+        modelMetadata,
+        baseUrl: record.provider.baseUrl ?? ''
+      });
+      if (isCompatible) {
+        return runResponsesCompletion(db, orchestrator, payload, options, record);
+      }
+      options?.onEvent?.({
+        type: 'warning',
+        code: 'chat_api_responses_ignored',
+        message: `Model metadata sets chat_api: "responses", but provider "${record.provider.id}" is not OpenAI-compatible — ignoring and using chat completions instead.`
+      });
     }
   } catch {
     // If provider lookup fails, fall through to OpenAI-compatible handler which will give a proper error
