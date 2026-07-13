@@ -373,6 +373,12 @@ export async function runResponsesCompletion(
       const output: ResponseItem[] = Array.isArray(responseBody?.output) ? responseBody.output : [];
       // Feed the model's items (reasoning, function calls, messages) back
       // verbatim — order and ids preserved, encrypted reasoning included.
+      // Do NOT filter out reasoning items: carrying the encrypted reasoning
+      // forward lets the model reuse its prior thinking instead of redoing it.
+      // Measured (gpt-5.6-terra, effort high, .13): a tool loop whose first
+      // turn spent 136 reasoning tokens needed 0 in the next turn WITH the
+      // reasoning item vs. 113 WITHOUT — the whole derivation re-run. Dropping
+      // the reasoning here would silently forfeit that saving.
       input.push(...output);
 
       const functionCalls = output.filter((item) => item.type === 'function_call');
