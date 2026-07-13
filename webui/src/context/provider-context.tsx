@@ -98,6 +98,7 @@ function mapResponseToEntry(response: ProviderResponse): ProviderEntry {
     connectionWarnings: response.connectionWarnings,
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
+    isOpenAiCompatible: response.isOpenAiCompatible === true,
     models: response.models.map((model) => ({
       id: model.id,
       label: model.label,

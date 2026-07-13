@@ -21,6 +21,7 @@
  * or contact https://ontheia.ai
  */
 import type { Pool, PoolClient, QueryResult } from 'pg';
+import { detectOpenAiCompatibility } from './compat.js';
 
 export type Queryable = {
   query: (queryText: string, values?: any[]) => Promise<QueryResult<any>>;
@@ -62,6 +63,11 @@ export interface ProviderRecord {
   updatedAt: string;
   show_in_composer: boolean; // Using snake_case for JSON compatibility
   models: ProviderModelRecord[];
+  // Whether this provider speaks the OpenAI dialect (same detection used by
+  // the request builder and the chat_api: "responses" dispatch guard).
+  // Model-level metadata can override this per model at request time; this
+  // field reflects the provider-level signal only, for admin UI gating.
+  isOpenAiCompatible: boolean;
 }
 
 export interface ProviderUpsertPayload {
@@ -102,10 +108,11 @@ export interface ProviderConnectionUpdate {
 
 function mapRowToProvider(row: any): ProviderRecord {
   const val = row.provider_show_in_composer !== undefined ? row.provider_show_in_composer : row.show_in_composer;
+  const providerType: ProviderType = (row.provider_type as ProviderType) ?? 'http';
   return {
     id: row.slug,
     label: row.label,
-    providerType: (row.provider_type as ProviderType) ?? 'http',
+    providerType,
     baseUrl: row.base_url,
     authMode: row.auth_mode,
     apiKeyRef: row.api_key_ref,
@@ -124,6 +131,13 @@ function mapRowToProvider(row: any): ProviderRecord {
     connectionWarnings: Array.isArray(row.warnings) ? row.warnings : [],
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    isOpenAiCompatible: detectOpenAiCompatibility({
+      providerId: row.slug,
+      providerType,
+      providerMetadata: (row.metadata ?? {}) as Record<string, unknown>,
+      modelMetadata: {},
+      baseUrl: row.base_url ?? ''
+    }),
     show_in_composer: val === true,
     models: []
   };

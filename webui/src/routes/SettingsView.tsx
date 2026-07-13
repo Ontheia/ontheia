@@ -136,6 +136,39 @@ type AdminSectionMeta = {
   description: string;
 };
 
+// chat_api / reasoning_effort are structured form fields but stored as plain
+// keys inside the model's free-form metadata JSON (matches what the host
+// reads). Splitting them out avoids two sources of truth for the same key
+// in the model edit form: the dropdown owns them, the textarea shows the rest.
+const REASONING_EFFORT_VALUES = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
+
+function splitStructuredModelMetadata(metadata: Record<string, unknown> | undefined): {
+  chatApi: string;
+  reasoningEffort: string;
+  rest: Record<string, unknown>;
+} {
+  const rest = { ...(metadata ?? {}) };
+  const chatApi = rest.chat_api === 'responses' ? 'responses' : '';
+  const reasoningEffort =
+    typeof rest.reasoning_effort === 'string' && REASONING_EFFORT_VALUES.has(rest.reasoning_effort)
+      ? rest.reasoning_effort
+      : '';
+  delete rest.chat_api;
+  delete rest.reasoning_effort;
+  return { chatApi, reasoningEffort, rest };
+}
+
+function mergeStructuredModelMetadata(
+  rest: Record<string, unknown> | undefined,
+  chatApi: string,
+  reasoningEffort: string
+): Record<string, unknown> | undefined {
+  const merged: Record<string, unknown> = { ...(rest ?? {}) };
+  if (chatApi) merged.chat_api = chatApi; else delete merged.chat_api;
+  if (reasoningEffort) merged.reasoning_effort = reasoningEffort; else delete merged.reasoning_effort;
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -6825,7 +6858,12 @@ function ProvidersSection({
     label: '',
     capability: 'chat' as import('../types/providers').ModelCapability,
     showInComposer: true,
-    metadata: ''
+    metadata: '',
+    // chat_api / reasoning_effort: structured out of `metadata` for editing
+    // (see splitStructuredModelMetadata) so the dropdowns are the single
+    // source of truth for these two keys — '' means "not set".
+    chatApi: '',
+    reasoningEffort: ''
   });
   const [modelMetaError, setModelMetaError] = useState<string | null>(null);
   const [testState, setTestState] = useState<{
@@ -6855,12 +6893,12 @@ function ProvidersSection({
 
   useEffect(() => {
     if (providerOptions.length === 0) {
-      setModelDraft({ providerId: '', modelId: '', label: '', capability: 'chat', showInComposer: true, metadata: '' });
+      setModelDraft({ providerId: '', modelId: '', label: '', capability: 'chat', showInComposer: true, metadata: '', chatApi: '', reasoningEffort: '' });
       return;
     }
     setModelDraft((prev) => {
       if (!prev.providerId || !providerOptions.some((option) => option.id === prev.providerId)) {
-        return { ...prev, providerId: providerOptions[0].id, metadata: '' };
+        return { ...prev, providerId: providerOptions[0].id, metadata: '', chatApi: '', reasoningEffort: '' };
       }
       return prev;
     });
@@ -7043,18 +7081,19 @@ function ProvidersSection({
         return;
       }
     }
+    const mergedMetadata = mergeStructuredModelMetadata(parsedMetadata, modelDraft.chatApi, modelDraft.reasoningEffort);
 
     const nextModels = target.models.filter((model) => model.id !== trimmedModelId);
     nextModels.push({
       id: trimmedModelId,
       label: trimmedLabel,
       capability: modelDraft.capability,
-      ...(parsedMetadata ? { metadata: parsedMetadata } : {})
+      ...(mergedMetadata ? { metadata: mergedMetadata } : {})
     });
     setSavingModel(true);
     try {
       await updateProvider({ ...target, models: nextModels });
-      setModelDraft({ providerId: trimmedProviderId, modelId: '', label: '', capability: 'chat', showInComposer: true, metadata: '' });
+      setModelDraft({ providerId: trimmedProviderId, modelId: '', label: '', capability: 'chat', showInComposer: true, metadata: '', chatApi: '', reasoningEffort: '' });
       setModelMetaError(null);
     } catch (error) {
       console.error(t('providers.saveModelError'), error);
@@ -7424,6 +7463,38 @@ function ProvidersSection({
               <option value="image">{t('providers.capabilityImage')}</option>
             </select>
           </label>
+          {modelDraft.capability === 'chat' &&
+            providers.find((p) => p.id === modelDraft.providerId)?.isOpenAiCompatible && (
+            <>
+              <label className="settings-field">
+                <span>{t('providers.modelChatApi')}</span>
+                <select
+                  value={modelDraft.chatApi}
+                  onChange={(event) => setModelDraft((prev) => ({ ...prev, chatApi: event.target.value }))}
+                >
+                  <option value="">{t('providers.chatApiDefault')}</option>
+                  <option value="responses">{t('providers.chatApiResponses')}</option>
+                </select>
+                <span className="settings-hint">{t('providers.modelChatApiHint')}</span>
+              </label>
+              <label className="settings-field">
+                <span>{t('providers.modelReasoningEffort')}</span>
+                <select
+                  value={modelDraft.reasoningEffort}
+                  onChange={(event) => setModelDraft((prev) => ({ ...prev, reasoningEffort: event.target.value }))}
+                >
+                  <option value="">{t('providers.reasoningEffortDefault')}</option>
+                  <option value="none">{t('providers.reasoningEffortNone')}</option>
+                  <option value="low">{t('providers.reasoningEffortLow')}</option>
+                  <option value="medium">{t('providers.reasoningEffortMedium')}</option>
+                  <option value="high">{t('providers.reasoningEffortHigh')}</option>
+                  <option value="xhigh">{t('providers.reasoningEffortXhigh')}</option>
+                  <option value="max">{t('providers.reasoningEffortMax')}</option>
+                </select>
+                <span className="settings-hint">{t('providers.modelReasoningEffortHint')}</span>
+              </label>
+            </>
+          )}
           <label className="settings-field settings-field-wide">
             <span>{t('providers.modelMetadata')}</span>
             <textarea
@@ -7684,13 +7755,16 @@ function ProvidersSection({
                                         type="button"
                                         className="p-2 hover:bg-white/5 rounded-md text-white/60 transition-colors"
                                         onClick={() => {
+                                          const { chatApi, reasoningEffort, rest } = splitStructuredModelMetadata(model.metadata);
                                           setModelDraft({
                                             providerId: provider.id,
                                             modelId: model.id,
                                             label: model.label,
                                             capability: model.capability ?? 'chat',
                                             showInComposer: model.showInComposer !== false,
-                                            metadata: model.metadata ? JSON.stringify(model.metadata, null, 2) : ''
+                                            metadata: Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '',
+                                            chatApi,
+                                            reasoningEffort
                                           });
                                           setProviderTab('model');
                                         }}

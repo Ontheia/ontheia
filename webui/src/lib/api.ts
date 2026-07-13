@@ -1178,6 +1178,10 @@ export interface ProviderResponse {
   createdAt: string;
   updatedAt: string;
   show_in_composer: boolean;
+  // Whether this provider speaks the OpenAI dialect (same detection the
+  // host uses to gate chat_api: "responses"). Used to show/hide the
+  // Chat API / Reasoning Effort fields in the model form.
+  isOpenAiCompatible?: boolean;
   models: Array<{
     id: string;
     label: string;

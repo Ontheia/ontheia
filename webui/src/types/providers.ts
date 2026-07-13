@@ -57,4 +57,7 @@ export type ProviderEntry = {
   connectionWarnings?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
+  // Whether this provider speaks the OpenAI dialect — gates the Chat API /
+  // Reasoning Effort fields in the model form (only meaningful there).
+  isOpenAiCompatible?: boolean;
 };

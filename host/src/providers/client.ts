@@ -32,6 +32,7 @@ import {
 } from './http.js';
 import type { RunRequest, ChatMessage } from '../runtime/types.js';
 import { getSystemFlag } from '../runtime/system-flags.js';
+import { extractMetadataString, extractMetadataBoolean, detectOpenAiCompatibility } from './compat.js';
 
 type HttpMethod = 'GET' | 'POST';
 
@@ -55,25 +56,9 @@ export interface ProviderChatRequest {
 
 const DEFAULT_CHAT_PATH = '/v1/chat/completions';
 const DEFAULT_CHAT_METHOD: HttpMethod = 'POST';
-const OPENAI_COMPATIBLE_PROVIDER_IDS = new Set(['openai', 'ollama', 'xia', 'xai', 'grok']);
-const OPENAI_COMPATIBLE_HOST_SUFFIXES = ['api.openai.com', 'api.x.ai', 'generativelanguage.googleapis.com'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function extractMetadataString(
-  source: Record<string, unknown> | undefined,
-  keys: string[]
-): string | undefined {
-  if (!source) return undefined;
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-  return undefined;
 }
 
 function extractMetadataMethod(
@@ -84,20 +69,6 @@ function extractMetadataMethod(
   if (!value) return undefined;
   const upper = value.toUpperCase();
   return upper === 'GET' ? 'GET' : upper === 'POST' ? 'POST' : undefined;
-}
-
-function extractMetadataBoolean(
-  source: Record<string, unknown> | undefined,
-  keys: string[]
-): boolean | undefined {
-  if (!source) return undefined;
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'boolean') {
-      return value;
-    }
-  }
-  return undefined;
 }
 
 function sanitizeRunOptions(options: Record<string, unknown> | undefined) {
@@ -314,75 +285,4 @@ export async function buildProviderChatRequest(
     model,
     isOpenAICompatible
   };
-}
-
-export function detectOpenAiCompatibility(params: {
-  providerId: string;
-  providerType?: string;
-  providerMetadata: Record<string, unknown>;
-  modelMetadata: Record<string, unknown>;
-  baseUrl: string;
-}) {
-  const { providerId, providerType, providerMetadata, modelMetadata, baseUrl } = params;
-
-  // Explicit type: CLI providers are never OpenAI-compatible (they go through cli-runner)
-  if (providerType === 'cli') return false;
-
-  const normalizedProviderId =
-    typeof providerId === 'string' ? providerId.trim().toLowerCase() : '';
-  if (OPENAI_COMPATIBLE_PROVIDER_IDS.has(normalizedProviderId)) {
-    return true;
-  }
-
-  const compatHint =
-    extractMetadataString(providerMetadata, [
-      'api_compat',
-      'apiCompat',
-      'apiCompatibility',
-      'compatibility'
-    ]) ??
-    extractMetadataString(modelMetadata, [
-      'api_compat',
-      'apiCompat',
-      'apiCompatibility',
-      'compatibility'
-    ]);
-  if (compatHint && compatHint.toLowerCase() === 'openai') {
-    return true;
-  }
-
-  const booleanHint =
-    extractMetadataBoolean(providerMetadata, ['openai_compatible', 'openAICompatible']) ??
-    extractMetadataBoolean(modelMetadata, ['openai_compatible', 'openAICompatible']);
-  if (booleanHint === true) {
-    return true;
-  }
-
-  try {
-    const parsedUrl = new URL(baseUrl);
-    const host = parsedUrl.hostname.toLowerCase();
-    if (OPENAI_COMPATIBLE_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
-      return true;
-    }
-    if (parsedUrl.port === '11434') {
-      return true;
-    }
-    // Local and private-network providers are custom deployments and assumed OpenAI-compatible
-    if (isLocalOrPrivateHost(host)) {
-      return true;
-    }
-  } catch {
-    // ignore invalid URLs
-  }
-
-  return false;
-}
-
-function isLocalOrPrivateHost(host: string): boolean {
-  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
-  const parts = host.split('.').map(Number);
-  if (parts.length !== 4 || parts.some(isNaN)) return false;
-  const [a, b] = parts;
-  // RFC-1918: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
-  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }

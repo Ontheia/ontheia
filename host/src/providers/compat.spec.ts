@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectOpenAiCompatibility } from './client.js';
+import { detectOpenAiCompatibility } from './compat.js';
 
 // This is the guard that decides whether chat_api: "responses" is honored
 // (runProviderCompletion in provider-run.ts) — these cases mirror the
