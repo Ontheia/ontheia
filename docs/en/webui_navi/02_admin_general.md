@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | Enable prompt caching | Switch | Enables `cache_control` on the Anthropic API path. Default: on. Takes effect immediately (no **[Apply]** needed). |
 
-> Affects **only** Anthropic — the only provider where caching can cost more than it saves due to the write premium. Disable for sporadic single-shot usage with no visible cache savings (⚡). Details: [Runtime & UI](/en/admin/general/02_runtime_and_ui/).
+> Controls **only** the Anthropic API path. Disable for sporadic single-shot usage with no visible cache savings (⚡). **Since gpt-5.6, OpenAI also bills a cache-write premium (1.25×)** — but caching there is implicit and this switch has no effect on it; watch the cost via the ⚡ badge in the trace. Details: [Runtime & UI](/en/admin/general/02_runtime_and_ui/).
 
 ---
 

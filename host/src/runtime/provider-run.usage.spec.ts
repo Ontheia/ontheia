@@ -67,6 +67,21 @@ test('normalizeUsage: Responses API cached subset (input_tokens_details)', () =>
   assert.equal(u.completion, 150);    // reasoning tokens stay inside output
 });
 
+test('normalizeUsage: Responses API cache write subset (gpt-5.6, 1.25x-billed)', () => {
+  // gpt-5.6 family: input_tokens (1000) INCLUDES 200 cache-write tokens
+  // (billed 1.25x, first time a prefix is cached) alongside 300 cache-read
+  // tokens (billed at the usual discount) — both subsets of input_tokens.
+  const u = normalizeUsage({
+    input_tokens: 1000,
+    output_tokens: 80,
+    input_tokens_details: { cached_tokens: 300, cache_write_tokens: 200 }
+  })!;
+  assert.equal(u.prompt, 500);        // uncached, full-price remainder
+  assert.equal(u.cacheRead, 300);
+  assert.equal(u.cacheCreation, 200);
+  assert.equal(total(u), 1000);       // total unchanged → no double count
+});
+
 test('normalizeUsage: Anthropic-style separate cache fields are additive', () => {
   // Anthropic: input_tokens (200) EXCLUDES cache; cache_read is separate.
   const u = normalizeUsage({

@@ -214,14 +214,26 @@ export function normalizeUsage(usage: any): NormalizedUsage | undefined {
   // Anthropic-style separate cache fields (not part of input_tokens).
   const cacheReadSeparate =
     typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
-  const cacheCreation =
+  let cacheCreation =
     typeof usage.cache_creation_input_tokens === 'number' ? usage.cache_creation_input_tokens : 0;
+  // Responses API (gpt-5.6 family): cache writes are billed at 1.25x but,
+  // like cached_tokens, reported as a subset of input_tokens rather than
+  // additive like Anthropic's cache_creation_input_tokens — must be
+  // subtracted from prompt the same way, or the total would double-count.
+  const cacheWriteSubset =
+    typeof usage.input_tokens_details?.cache_write_tokens === 'number'
+      ? usage.input_tokens_details.cache_write_tokens
+      : 0;
 
   let prompt = typeof rawPrompt === 'number' ? rawPrompt : 0;
   let cacheRead = cacheReadSeparate;
   if (cachedSubset > 0) {
     prompt = Math.max(0, prompt - cachedSubset);
     cacheRead += cachedSubset;
+  }
+  if (cacheWriteSubset > 0) {
+    prompt = Math.max(0, prompt - cacheWriteSubset);
+    cacheCreation += cacheWriteSubset;
   }
 
   return {

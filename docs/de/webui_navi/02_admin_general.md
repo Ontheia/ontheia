@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | Prompt-Caching aktivieren | Schalter | Aktiviert `cache_control` auf dem Anthropic-API-Pfad. Standard: an. Sofort wirksam (kein **[Übernehmen]** nötig). |
 
-> Betrifft **nur** Anthropic — der einzige Anbieter, bei dem Caching durch den Write-Aufschlag teurer sein kann als die Ersparnis. Deaktivieren bei sporadischer Einzelnutzung ohne sichtbare Cache-Ersparnis (⚡). Details: [Laufzeit & UI](/de/admin/general/02_runtime_and_ui/).
+> Steuert **nur** den Anthropic-API-Pfad. Deaktivieren bei sporadischer Einzelnutzung ohne sichtbare Cache-Ersparnis (⚡). **Seit gpt-5.6 berechnet auch OpenAI einen Cache-Write-Aufschlag (1,25×)** — dort ist Caching aber implizit und dieser Schalter greift nicht; Kosten via ⚡-Badge im Trace beobachten. Details: [Laufzeit & UI](/de/admin/general/02_runtime_and_ui/).
 
 ---
 
