@@ -47,9 +47,13 @@ Form for manually adding a model to an existing provider.
 | Model ID | Text | Exact model identifier as used by the API (e.g. `gpt-5.4`). |
 | Model Label | Text | Human-readable name displayed in the interface. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text`, or `Image`. |
-| Metadata (JSON) | Textarea | Optional JSON for model-specific settings (e.g. `{"dimension": 1536}` for embedding models). |
+| Chat API | Dropdown | Only shown for capability `Chat` **and** an OpenAI-compatible provider. `Default (Chat Completions)` or `Responses API`. |
+| Reasoning Effort | Dropdown | Only shown for capability `Chat` **and** an OpenAI-compatible provider. `(not set)`, `None`, `Low`, `Medium`, `High`, `X-High`, `Max`. |
+| Metadata (JSON) | Textarea | Optional JSON for model-specific settings (e.g. `{"dimension": 1536}` for embedding models). `chat_api` and `reasoning_effort` are managed by the dropdowns above and do not appear here twice. |
 
 Button: **[Save Model]**
+
+> **Chat API / Reasoning Effort:** These two dropdowns are a guided interface for the metadata keys of the same name (see [Manage Models](/en/admin/ai-provider/03_models/)) — they write to the same field as a manual JSON entry, just structured. Whether a provider counts as "OpenAI-compatible" is detected automatically (known provider ID, matching hostname, explicit metadata hint, or a local/private host); on providers that aren't recognized (e.g. Anthropic) the fields stay hidden, since the setting would have no effect there anyway.
 
 ---
 

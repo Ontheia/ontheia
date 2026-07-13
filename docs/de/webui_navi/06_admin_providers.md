@@ -47,9 +47,13 @@ Formular zum manuellen Hinzufügen eines Modells zu einem bestehenden Provider.
 | Modell-ID | Text | Exakte Modell-Kennung wie von der API verwendet (z. B. `gpt-5.4`). |
 | Modell-Label | Text | Lesbarer Name, der in der Oberfläche angezeigt wird. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text` oder `Image`. |
-| Metadaten (JSON) | Textarea | Optionales JSON für modellspezifische Einstellungen (z. B. `{"dimension": 1536}` für Embedding-Modelle). |
+| Chat API | Dropdown | Nur sichtbar bei Capability `Chat` **und** OpenAI-kompatiblem Provider. `Standard (Chat Completions)` oder `Responses API`. |
+| Reasoning Effort | Dropdown | Nur sichtbar bei Capability `Chat` **und** OpenAI-kompatiblem Provider. `(nicht gesetzt)`, `Keins`, `Niedrig`, `Mittel`, `Hoch`, `Sehr hoch`, `Maximal`. |
+| Metadaten (JSON) | Textarea | Optionales JSON für modellspezifische Einstellungen (z. B. `{"dimension": 1536}` für Embedding-Modelle). `chat_api` und `reasoning_effort` werden über die Dropdowns oben verwaltet und erscheinen hier nicht doppelt. |
 
 Button: **[Modell speichern]**
+
+> **Chat API / Reasoning Effort:** Diese beiden Dropdowns sind eine geführte Oberfläche für die gleichnamigen Metadaten-Schlüssel (siehe [Modelle verwalten](/de/admin/ai-provider/03_models/)) — sie schreiben in dasselbe Feld wie eine manuelle JSON-Eingabe, nur strukturiert. Ob ein Provider als „OpenAI-kompatibel" gilt, wird automatisch erkannt (bekannte Provider-ID, passender Hostname, expliziter Metadaten-Hinweis oder lokaler/privater Host) — bei nicht erkannten Providern (z. B. Anthropic) bleiben die Felder ausgeblendet, da die Einstellung dort ohnehin wirkungslos wäre.
 
 ---
 

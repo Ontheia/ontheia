@@ -59,6 +59,8 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 
 ### Chat-Modell-Metadaten
 
+> `reasoning_effort` und `chat_api` haben eigene Dropdowns im Modell-Formular (Tab **Modell**, sichtbar bei Capability `Chat` und OpenAI-kompatiblem Provider) — siehe [Admin-Konsole › AI-Provider](/de/webui_navi/06_admin_providers/). Die Angabe hier als JSON bleibt für alle übrigen Felder sowie für Skripting/API-Zugriff relevant.
+
 | Feld | Typ | Beschreibung | Beispiel |
 | :--- | :--- | :--- | :--- |
 | `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. Auf dem Responses-API-Pfad wird der Wert als `reasoning: { effort }` gesendet — dort funktionieren Reasoning-Stufen zusammen mit Tools. | `"none"` |
