@@ -7492,6 +7492,11 @@ function ProvidersSection({
                   <option value="max">{t('providers.reasoningEffortMax')}</option>
                 </select>
                 <span className="settings-hint">{t('providers.modelReasoningEffortHint')}</span>
+                {modelDraft.reasoningEffort && modelDraft.reasoningEffort !== 'none' && modelDraft.chatApi !== 'responses' && (
+                  <span style={{ color: 'var(--color-error, red)', fontSize: '0.75rem' }}>
+                    {t('providers.modelReasoningEffortWarning')}
+                  </span>
+                )}
               </label>
             </>
           )}
