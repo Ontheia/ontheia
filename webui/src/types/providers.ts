@@ -60,4 +60,7 @@ export type ProviderEntry = {
   // Whether this provider speaks the OpenAI dialect — gates the Chat API /
   // Reasoning Effort fields in the model form (only meaningful there).
   isOpenAiCompatible?: boolean;
+  // Whether reasoning_effort + tools is known to break on this provider's
+  // Chat Completions endpoint. Scopes the reasoning-effort warning.
+  reasoningToolsRestricted?: boolean;
 };

@@ -236,9 +236,32 @@ export function normalizeUsage(usage: any): NormalizedUsage | undefined {
     cacheCreation += cacheWriteSubset;
   }
 
+  let finalCompletion = typeof completion === 'number' ? completion : 0;
+
+  // Google's OpenAI-compatible endpoint (Gemini via generativelanguage.
+  // googleapis.com) bills thinking/reasoning tokens but does not expose them
+  // in any named field — no completion_tokens_details.reasoning_tokens like
+  // OpenAI, no separate cache-style field. They only show up baked into
+  // total_tokens, which otherwise goes unread by this function entirely.
+  // Verified live 2026-07-13: a call with prompt_tokens=61,
+  // completion_tokens=3 reported total_tokens=975 — ~900 tokens were
+  // real, billed, but were invisible in the ⚡ badge. Recover them into
+  // `completion` (reasoning tokens are an output-side cost, matching how
+  // OpenAI itself counts reasoning_tokens as a subset of completion_tokens)
+  // whenever a provider's total exceeds what we already accounted for.
+  // No-op for OpenAI/Anthropic, whose totals already equal the sum (OpenAI
+  // has no gap; Anthropic sends no total_tokens field at all).
+  if (typeof usage.total_tokens === 'number') {
+    const accountedFor = prompt + cacheRead + cacheCreation + finalCompletion;
+    const hiddenReasoning = usage.total_tokens - accountedFor;
+    if (hiddenReasoning > 0) {
+      finalCompletion += hiddenReasoning;
+    }
+  }
+
   return {
     prompt,
-    completion: typeof completion === 'number' ? completion : 0,
+    completion: finalCompletion,
     cacheRead,
     cacheCreation
   };

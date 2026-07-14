@@ -140,3 +140,31 @@ export function detectOpenAiCompatibility(params: {
 
   return false;
 }
+
+// Verified permissive 2026-07-13 (live API test against gemini-3-flash-preview
+// and gemini-2.5-flash): reasoning_effort changes output quality/token usage
+// and works fine together with function tools — unlike OpenAI's own Chat
+// Completions endpoint, which rejects the combination outright (HTTP 400,
+// verified live 2026-07-13 against gpt-5.6-terra).
+const REASONING_TOOLS_PERMISSIVE_HOST_SUFFIXES = ['generativelanguage.googleapis.com'];
+
+/**
+ * Whether this provider's Chat Completions endpoint is known to reject a
+ * non-"none" `reasoning_effort` combined with function tools on
+ * reasoning-capable models. Only Google is verified permissive so far;
+ * every other OpenAI-compatible provider (OpenAI itself, xAI, Ollama, local
+ * deployments, custom relays) defaults to "restricted" — an unnecessary
+ * warning is a minor annoyance, a missing one is a silently broken tool
+ * call.
+ */
+export function reasoningToolsRestricted(params: { baseUrl: string }): boolean {
+  try {
+    const host = new URL(params.baseUrl).hostname.toLowerCase();
+    if (REASONING_TOOLS_PERMISSIVE_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+      return false;
+    }
+  } catch {
+    // ignore invalid URLs — fall through to the safe default
+  }
+  return true;
+}

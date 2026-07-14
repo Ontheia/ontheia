@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectOpenAiCompatibility } from './compat.js';
+import { detectOpenAiCompatibility, reasoningToolsRestricted } from './compat.js';
 
 // This is the guard that decides whether chat_api: "responses" is honored
 // (runProviderCompletion in provider-run.ts) — these cases mirror the
@@ -117,4 +117,24 @@ test('detectOpenAiCompatibility: local/private hosts are assumed compatible (sel
     }),
     true
   );
+});
+
+// reasoningToolsRestricted: scopes the admin UI's reasoning-effort warning.
+// Verified live 2026-07-13 — see the function's doc comment.
+
+test('reasoningToolsRestricted: OpenAI is restricted (verified: HTTP 400 with tools)', () => {
+  assert.equal(reasoningToolsRestricted({ baseUrl: 'https://api.openai.com' }), true);
+});
+
+test('reasoningToolsRestricted: Google is not restricted (verified permissive)', () => {
+  assert.equal(
+    reasoningToolsRestricted({ baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/' }),
+    false
+  );
+});
+
+test('reasoningToolsRestricted: unverified providers default to restricted (xAI, local, custom)', () => {
+  assert.equal(reasoningToolsRestricted({ baseUrl: 'https://api.x.ai' }), true);
+  assert.equal(reasoningToolsRestricted({ baseUrl: 'http://192.168.2.9:11434' }), true);
+  assert.equal(reasoningToolsRestricted({ baseUrl: 'not-a-valid-url' }), true);
 });

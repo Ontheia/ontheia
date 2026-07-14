@@ -1182,6 +1182,10 @@ export interface ProviderResponse {
   // host uses to gate chat_api: "responses"). Used to show/hide the
   // Chat API / Reasoning Effort fields in the model form.
   isOpenAiCompatible?: boolean;
+  // Whether reasoning_effort + tools is known to break on this provider's
+  // Chat Completions endpoint (verified: true for OpenAI, false for Google).
+  // Scopes the reasoning-effort warning in the model form.
+  reasoningToolsRestricted?: boolean;
   models: Array<{
     id: string;
     label: string;

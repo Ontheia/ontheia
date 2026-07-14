@@ -82,6 +82,25 @@ test('normalizeUsage: Responses API cache write subset (gpt-5.6, 1.25x-billed)',
   assert.equal(total(u), 1000);       // total unchanged → no double count
 });
 
+test('normalizeUsage: Google hidden reasoning tokens recovered from total_tokens', () => {
+  // Live-verified 2026-07-13 (gemini-3-flash-preview): Google's OpenAI-compat
+  // usage object has no reasoning-token field at all — prompt_tokens (61) +
+  // completion_tokens (3) = 64, but total_tokens is 975. The ~900 gap is real,
+  // billed thinking tokens only visible via the total.
+  const u = normalizeUsage({ prompt_tokens: 61, completion_tokens: 3, total_tokens: 975 })!;
+  assert.equal(u.prompt, 61);
+  assert.equal(u.cacheRead, 0);
+  assert.equal(u.cacheCreation, 0);
+  assert.equal(u.completion, 3 + (975 - 64)); // hidden reasoning folded into completion
+  assert.equal(total(u) + u.completion, 975); // full total (input + output) matches the provider's total_tokens
+});
+
+test('normalizeUsage: total_tokens matching the sum is a no-op (OpenAI has no gap)', () => {
+  const u = normalizeUsage({ prompt_tokens: 500, completion_tokens: 120, total_tokens: 620 })!;
+  assert.equal(u.completion, 120);
+  assert.equal(total(u) + u.completion, 620);
+});
+
 test('normalizeUsage: Anthropic-style separate cache fields are additive', () => {
   // Anthropic: input_tokens (200) EXCLUDES cache; cache_read is separate.
   const u = normalizeUsage({

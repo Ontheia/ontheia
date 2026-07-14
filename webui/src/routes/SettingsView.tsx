@@ -7463,43 +7463,51 @@ function ProvidersSection({
               <option value="image">{t('providers.capabilityImage')}</option>
             </select>
           </label>
-          {modelDraft.capability === 'chat' &&
-            providers.find((p) => p.id === modelDraft.providerId)?.isOpenAiCompatible && (
-            <>
-              <label className="settings-field">
-                <span>{t('providers.modelChatApi')}</span>
-                <select
-                  value={modelDraft.chatApi}
-                  onChange={(event) => setModelDraft((prev) => ({ ...prev, chatApi: event.target.value }))}
-                >
-                  <option value="">{t('providers.chatApiDefault')}</option>
-                  <option value="responses">{t('providers.chatApiResponses')}</option>
-                </select>
-                <span className="settings-hint">{t('providers.modelChatApiHint')}</span>
-              </label>
-              <label className="settings-field">
-                <span>{t('providers.modelReasoningEffort')}</span>
-                <select
-                  value={modelDraft.reasoningEffort}
-                  onChange={(event) => setModelDraft((prev) => ({ ...prev, reasoningEffort: event.target.value }))}
-                >
-                  <option value="">{t('providers.reasoningEffortDefault')}</option>
-                  <option value="none">{t('providers.reasoningEffortNone')}</option>
-                  <option value="low">{t('providers.reasoningEffortLow')}</option>
-                  <option value="medium">{t('providers.reasoningEffortMedium')}</option>
-                  <option value="high">{t('providers.reasoningEffortHigh')}</option>
-                  <option value="xhigh">{t('providers.reasoningEffortXhigh')}</option>
-                  <option value="max">{t('providers.reasoningEffortMax')}</option>
-                </select>
-                <span className="settings-hint">{t('providers.modelReasoningEffortHint')}</span>
-                {modelDraft.reasoningEffort && modelDraft.reasoningEffort !== 'none' && modelDraft.chatApi !== 'responses' && (
-                  <span style={{ color: 'var(--color-error, red)', fontSize: '0.75rem' }}>
-                    {t('providers.modelReasoningEffortWarning')}
-                  </span>
-                )}
-              </label>
-            </>
-          )}
+          {(() => {
+            const selectedProvider = providers.find((p) => p.id === modelDraft.providerId);
+            if (modelDraft.capability !== 'chat' || !selectedProvider?.isOpenAiCompatible) return null;
+            const showReasoningToolsWarning =
+              selectedProvider.reasoningToolsRestricted !== false &&
+              !!modelDraft.reasoningEffort &&
+              modelDraft.reasoningEffort !== 'none' &&
+              modelDraft.chatApi !== 'responses';
+            return (
+              <>
+                <label className="settings-field">
+                  <span>{t('providers.modelChatApi')}</span>
+                  <select
+                    value={modelDraft.chatApi}
+                    onChange={(event) => setModelDraft((prev) => ({ ...prev, chatApi: event.target.value }))}
+                  >
+                    <option value="">{t('providers.chatApiDefault')}</option>
+                    <option value="responses">{t('providers.chatApiResponses')}</option>
+                  </select>
+                  <span className="settings-hint">{t('providers.modelChatApiHint')}</span>
+                </label>
+                <label className="settings-field">
+                  <span>{t('providers.modelReasoningEffort')}</span>
+                  <select
+                    value={modelDraft.reasoningEffort}
+                    onChange={(event) => setModelDraft((prev) => ({ ...prev, reasoningEffort: event.target.value }))}
+                  >
+                    <option value="">{t('providers.reasoningEffortDefault')}</option>
+                    <option value="none">{t('providers.reasoningEffortNone')}</option>
+                    <option value="low">{t('providers.reasoningEffortLow')}</option>
+                    <option value="medium">{t('providers.reasoningEffortMedium')}</option>
+                    <option value="high">{t('providers.reasoningEffortHigh')}</option>
+                    <option value="xhigh">{t('providers.reasoningEffortXhigh')}</option>
+                    <option value="max">{t('providers.reasoningEffortMax')}</option>
+                  </select>
+                  <span className="settings-hint">{t('providers.modelReasoningEffortHint')}</span>
+                  {showReasoningToolsWarning && (
+                    <span style={{ color: 'var(--color-error, red)', fontSize: '0.75rem' }}>
+                      {t('providers.modelReasoningEffortWarning')}
+                    </span>
+                  )}
+                </label>
+              </>
+            );
+          })()}
           <label className="settings-field settings-field-wide">
             <span>{t('providers.modelMetadata')}</span>
             <textarea

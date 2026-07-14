@@ -99,6 +99,10 @@ function mapResponseToEntry(response: ProviderResponse): ProviderEntry {
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
     isOpenAiCompatible: response.isOpenAiCompatible === true,
+    // Opposite default direction from isOpenAiCompatible on purpose: a
+    // missing/older-backend value should default to "show the warning",
+    // not "hide it" — the safer failure mode.
+    reasoningToolsRestricted: response.reasoningToolsRestricted !== false,
     models: response.models.map((model) => ({
       id: model.id,
       label: model.label,

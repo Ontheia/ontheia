@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import type { Pool, PoolClient, QueryResult } from 'pg';
-import { detectOpenAiCompatibility } from './compat.js';
+import { detectOpenAiCompatibility, reasoningToolsRestricted } from './compat.js';
 
 export type Queryable = {
   query: (queryText: string, values?: any[]) => Promise<QueryResult<any>>;
@@ -68,6 +68,11 @@ export interface ProviderRecord {
   // Model-level metadata can override this per model at request time; this
   // field reflects the provider-level signal only, for admin UI gating.
   isOpenAiCompatible: boolean;
+  // Whether reasoning_effort together with function tools is known to break
+  // on this provider's Chat Completions endpoint (see compat.ts). Used to
+  // scope the admin UI's reasoning-effort warning to providers where it is
+  // actually a real risk instead of showing it universally.
+  reasoningToolsRestricted: boolean;
 }
 
 export interface ProviderUpsertPayload {
@@ -138,6 +143,7 @@ function mapRowToProvider(row: any): ProviderRecord {
       modelMetadata: {},
       baseUrl: row.base_url ?? ''
     }),
+    reasoningToolsRestricted: reasoningToolsRestricted({ baseUrl: row.base_url ?? '' }),
     show_in_composer: val === true,
     models: []
   };
