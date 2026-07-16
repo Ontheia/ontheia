@@ -531,6 +531,80 @@ export function ChatView({
   // Current context size (prompt tokens incl. cache of the latest non-delegated
   // request) — shown in the composer bar; null until a value is known.
   const [contextTokens, setContextTokens] = useState<number | null>(null);
+  // Live activity line shown left of the stop button while a run is active:
+  // what the run is doing right now (thinking / memory / tool / delegation).
+  const [composerStatus, setComposerStatus] = useState<{
+    kind: 'thinking' | 'memory' | 'tool' | 'delegation';
+    text: string;
+  } | null>(null);
+
+  // Maps a stream event to the composer activity line. Returns undefined when
+  // the event says nothing about current activity (leave the line unchanged);
+  // null clears it. Events forwarded from delegated sub-runs carry agentLabel
+  // and are prefixed so the user sees who is acting.
+  const deriveComposerStatus = useCallback(
+    (event: any): { kind: 'thinking' | 'memory' | 'tool' | 'delegation'; text: string } | null | undefined => {
+      const prefix =
+        typeof event?.agentLabel === 'string' && event.agentLabel ? `${event.agentLabel} · ` : '';
+      // Delegated sub-run lifecycle: whenever a sub-step finishes (memory hits
+      // arrived, tool call done, answer streaming), fall back to the
+      // "Delegating to X…" line instead of leaving the last sub-step standing.
+      // The delegation line is the stable state for the whole sub-run, briefly
+      // interrupted by the sub-agent's concrete activities.
+      if (event?.delegated && typeof event.agentLabel === 'string' && event.agentLabel) {
+        const restore = {
+          kind: 'delegation' as const,
+          text: t('statusDelegation', { agent: event.agentLabel })
+        };
+        if (event.type === 'memory_hits') return restore;
+        if (event.type === 'tool_call' && (event.status === 'success' || event.status === 'error')) {
+          return restore;
+        }
+        if (event.type === 'run_token' && event.role === 'assistant') return restore;
+      }
+      if (event?.type === 'step_start') {
+        if (event.step === 'dispatch_provider_request') {
+          return { kind: 'thinking', text: `${prefix}${t('statusThinking')}` };
+        }
+        if (event.step === 'memory_context') {
+          return { kind: 'memory', text: `${prefix}${t('statusMemory')}` };
+        }
+        return undefined;
+      }
+      if (event?.type === 'tool_call' && (event.status === 'requested' || event.status === 'awaiting_approval')) {
+        if (event.tool === 'memory-search') {
+          return { kind: 'memory', text: `${prefix}${t('statusMemory')}` };
+        }
+        return { kind: 'tool', text: `${prefix}${t('statusTool', { tool: event.tool || 'tool' })}` };
+      }
+      if (event?.type === 'info' && event.code === 'chain_debug' && event.metadata?.agent) {
+        return { kind: 'delegation', text: `${prefix}${t('statusDelegation', { agent: event.metadata.agent })}` };
+      }
+      if (event?.type === 'complete' && !event.delegated) {
+        return null;
+      }
+      // The model has moved from thinking to answering: clear "Thinking…" as
+      // soon as the (non-delegated) assistant response starts streaming.
+      if (event?.type === 'run_token' && event.role === 'assistant' && !event.delegated) {
+        return null;
+      }
+      return undefined;
+    },
+    [t]
+  );
+
+  const applyComposerStatus = useCallback(
+    (event: any) => {
+      const next = deriveComposerStatus(event);
+      if (next === undefined) return;
+      // Keep the previous object when nothing changed — delegated run_token
+      // events arrive per streamed token and would re-render otherwise.
+      setComposerStatus((prev) =>
+        next !== null && prev && prev.kind === next.kind && prev.text === next.text ? prev : next
+      );
+    },
+    [deriveComposerStatus]
+  );
 
   useEffect(() => {
     setTemplateScope(defaultTemplateScope);
@@ -1263,6 +1337,7 @@ export function ChatView({
         });
         setLoading(false);
         setIsProcessing(false);
+        setComposerStatus(null);
         streamCancelRef.current?.();
         streamCancelRef.current = null;
         activeRunIdRef.current = null;
@@ -1281,6 +1356,7 @@ export function ChatView({
           setActiveRunForChat(effectiveChatId, hostRunId);
         },
         onEvent: (event: any) => {
+          applyComposerStatus(event);
           if (event.type === 'run_token') {
             const text = typeof event.text === 'string' ? event.text : '';
             if (!text) return;
@@ -1445,6 +1521,7 @@ export function ChatView({
     finishRunRef.current?.('error', t('runStoppedByUser'));
     setLoading(false);
     setIsProcessing(false);
+    setComposerStatus(null);
   };
 
   const resumeActiveRun = useCallback(
@@ -1488,6 +1565,7 @@ export function ChatView({
         }
         setLoading(false);
         setIsProcessing(false);
+        setComposerStatus(null);
         streamCancelRef.current?.();
         streamCancelRef.current = null;
         activeRunIdRef.current = null;
@@ -1503,6 +1581,7 @@ export function ChatView({
           runUsageRef.current = null;
         },
         onEvent: (event: any) => {
+          applyComposerStatus(event);
           if (event.type === 'warning') {
             const warningEntry: WarningEntry = {
               id: `${runId}-warn-${Date.now().toString(36)}`,
@@ -1666,7 +1745,8 @@ export function ChatView({
       setLoading,
       setError,
       upsertRunStatus,
-      setActiveRunForChat
+      setActiveRunForChat,
+      applyComposerStatus
     ]
   );
 
@@ -2252,7 +2332,16 @@ export function ChatView({
               </Tooltip>
               <textarea
                 ref={composerTextareaRef}
-                placeholder={t('typeMessage')}
+                placeholder={
+                  (isProcessing || isRunActive) && composerStatus
+                    ? composerStatus.text
+                    : t('typeMessage')
+                }
+                className={
+                  (isProcessing || isRunActive) && composerStatus
+                    ? `composer-status-${composerStatus.kind}`
+                    : undefined
+                }
                 rows={2}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}

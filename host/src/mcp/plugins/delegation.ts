@@ -98,9 +98,15 @@ export async function handleDelegation(
       client,
       orchestrator,
       templateContext as any,
-      // Token events from delegated runs count into the parent run's cumulative
-      // usage but must not drive the chat's context-size display (lastPrompt).
-      (ev) => { if (context?.onEvent) context.onEvent(ev.type === 'tokens' ? { ...ev, delegated: true } : ev); },
+      // Tag every forwarded sub-run event: `delegated` keeps token events out
+      // of the chat's context-size display (lastPrompt), `agentLabel` lets the
+      // UI attribute the event to the sub-agent. Nested delegations keep the
+      // innermost agent's label (ev.agentLabel wins over ours).
+      (ev) => {
+        if (context?.onEvent) {
+          context.onEvent({ ...ev, delegated: true, agentLabel: ev.agentLabel ?? String(agent) });
+        }
+      },
       memoryAdapter,
       dummySpec as any,
       context?.history || [],

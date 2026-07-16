@@ -1289,6 +1289,35 @@
   position: relative;
 }
 
+/* Live run activity shown as the textarea placeholder while a run is active
+   (replaces the "Type a message…" placeholder until the run finishes).
+   -webkit-text-fill-color is needed because the textarea is disabled during
+   runs and .chat-composer textarea:disabled sets a fill color that would
+   otherwise override the placeholder color in Chrome/WebKit. */
+.composer-textarea textarea.composer-status-thinking::placeholder {
+  color: #facc15;
+  -webkit-text-fill-color: #facc15;
+  opacity: 1;
+}
+
+.composer-textarea textarea.composer-status-memory::placeholder {
+  color: #4ade80;
+  -webkit-text-fill-color: #4ade80;
+  opacity: 1;
+}
+
+.composer-textarea textarea.composer-status-tool::placeholder {
+  color: #c084fc;
+  -webkit-text-fill-color: #c084fc;
+  opacity: 1;
+}
+
+.composer-textarea textarea.composer-status-delegation::placeholder {
+  color: #fb923c;
+  -webkit-text-fill-color: #fb923c;
+  opacity: 1;
+}
+
 .composer-paste-button {
   position: absolute;
   right: 0.4rem;

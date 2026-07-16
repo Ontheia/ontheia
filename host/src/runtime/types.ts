@@ -90,7 +90,7 @@ export interface MemoryHitEvent {
   created_at?: string;
 }
 
-export type RunEvent =
+export type RunEvent = (
   | {
       type: 'step_start';
       step: string;
@@ -103,9 +103,6 @@ export type RunEvent =
       // Anthropic prompt-cache tokens; not included in `prompt`.
       cacheRead?: number;
       cacheCreation?: number;
-      // Set when emitted by a delegated sub-agent run: counts into the run's
-      // cumulative usage but must not drive the chat's context-size display.
-      delegated?: boolean;
       timestamp?: string;
     }
   | {
@@ -171,4 +168,12 @@ export type RunEvent =
       message: string;
       metadata?: Record<string, unknown>;
       timestamp?: string;
-    };
+    }
+) & {
+  // Set on events forwarded from a delegated sub-agent run (delegation.ts).
+  // `delegated` keeps token events out of the chat's context-size display;
+  // `agentLabel` lets the UI attribute the event to the sub-agent. Nested
+  // delegations keep the innermost agent's label.
+  delegated?: boolean;
+  agentLabel?: string;
+};
