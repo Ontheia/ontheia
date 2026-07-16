@@ -49,6 +49,7 @@ import type { OrchestratorService } from '../orchestrator/service.js';
 import type { ProviderRecord, ProviderModelRecord } from '../providers/repository.js';
 import { buildAuthHeaders, appendQueryAuth, sanitizeUrl } from '../providers/http.js';
 import { normalizeUsage, MAX_PROMPT_TOKENS, type RunOptions } from './provider-run.js';
+import { fetchWithRetry, describeFetchError } from './fetch-retry.js';
 import { getSystemFlag } from './system-flags.js';
 import type {
   ChatMessage,
@@ -345,12 +346,12 @@ export async function runResponsesCompletion(
     if (streamingEnabled) body.stream = true;
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await fetchWithRetry(url.toString(), {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
         signal: options?.signal
-      });
+      }, emit);
 
       if (!response.ok) {
         let message = response.statusText || 'Provider responded with an error.';
@@ -557,7 +558,7 @@ export async function runResponsesCompletion(
         emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
         break;
       }
-      const message = error instanceof Error ? error.message : 'Error communicating with the Responses API.';
+      const message = describeFetchError(error, 'Error communicating with the Responses API.');
       emit({ type: 'error', code: 'provider_request_failed', message });
       break;
     }

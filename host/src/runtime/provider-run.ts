@@ -29,6 +29,7 @@ import { detectOpenAiCompatibility } from '../providers/compat.js';
 import { runAnthropicCompletion } from './anthropic-runner.js';
 import { runResponsesCompletion } from './responses-runner.js';
 import { runCliCompletion } from '../providers/cli-runner.js';
+import { fetchWithRetry, describeFetchError } from './fetch-retry.js';
 import { logger as rootLogger } from '../logger.js';
 
 const toolArgValidator = new (Ajv as any)({ allErrors: true, strict: false });
@@ -710,7 +711,7 @@ export async function runOpenAiCompletion(
       }
 
       if (debugTools) log.debug({ url: request.url, model: requestPayload.model_id }, 'Fetching from provider');
-      const response = await fetch(request.url, fetchInit).catch(err => {
+      const response = await fetchWithRetry(request.url, fetchInit, emit).catch(err => {
         log.error({ err, url: request.url }, 'Provider fetch failed');
         throw err;
       });
@@ -832,7 +833,7 @@ export async function runOpenAiCompletion(
       return events;
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Provider error.';
+      const message = describeFetchError(error, 'Provider error.');
       if (error instanceof Error && error.name === 'AbortError') {
         log.warn({ model: requestPayload.model_id }, 'Provider fetch aborted by client');
       } else {
