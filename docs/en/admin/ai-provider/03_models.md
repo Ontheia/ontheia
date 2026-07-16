@@ -59,11 +59,11 @@ Additional technical parameters can be stored per model as a JSON object. This i
 
 ### Chat Model Metadata
 
-> `reasoning_effort` and `chat_api` have dedicated dropdowns in the model form (tab **Model**, shown for capability `Chat` on an OpenAI-compatible provider) — see [Admin Console › AI Provider](/en/webui_navi/06_admin_providers/). The JSON entry below still applies to all other fields and to scripting/API access.
+> `reasoning_effort` and `chat_api` have dedicated dropdowns in the model form (tab **Model**) — see [Admin Console › AI Provider](/en/webui_navi/06_admin_providers/). `chat_api` is shown for OpenAI-compatible providers, `reasoning_effort` additionally for Anthropic. The JSON entry below still applies to all other fields and to scripting/API access.
 
 | Field | Type | Description | Example |
 | :--- | :--- | :--- | :--- |
-| `reasoning_effort` | string | Sent as `reasoning_effort` with every chat request for this model. Newer OpenAI reasoning models (gpt-5.6 family) reject function tools on `/v1/chat/completions` unless this is `"none"` — set it to keep tool-calling agents working. Only set it on models that support the parameter. On the Responses API path it is sent as `reasoning: { effort }`, where reasoning levels work together with tools. | `"none"` |
+| `reasoning_effort` | string | Sent as `reasoning_effort` with every chat request for this model. Newer OpenAI reasoning models (gpt-5.6 family) reject function tools on `/v1/chat/completions` unless this is `"none"` — set it to keep tool-calling agents working. Only set it on models that support the parameter. On the Responses API path it is sent as `reasoning: { effort }`, where reasoning levels work together with tools. For Anthropic providers the value maps to Extended Thinking (adaptive thinking depth) and likewise works together with tools. | `"none"` |
 | `chat_api` | string | Set to `"responses"` to route this model through the OpenAI Responses API (`/v1/responses`) instead of chat completions — required to combine reasoning with function tools on gpt-5.6 models. Requests are stateless (`store: false`); reasoning is preserved across tool iterations via encrypted reasoning items. Only takes effect for OpenAI-compatible providers (see note below). | `"responses"` |
 | `responses_path` | string | Overrides the Responses API endpoint path relative to the provider `baseUrl`. | `"v1/responses"` |
 | `chat_path` | string | Overrides the chat endpoint path relative to the provider `baseUrl`. | `"v1/chat/completions"` |

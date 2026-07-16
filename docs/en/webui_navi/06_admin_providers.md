@@ -48,12 +48,12 @@ Form for manually adding a model to an existing provider.
 | Model Label | Text | Human-readable name displayed in the interface. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text`, or `Image`. |
 | Chat API | Dropdown | Only shown for capability `Chat` **and** an OpenAI-compatible provider. `Default (Chat Completions)` or `Responses API`. |
-| Reasoning Effort | Dropdown | Only shown for capability `Chat` **and** an OpenAI-compatible provider. `(not set)`, `None`, `Low`, `Medium`, `High`, `X-High`, `Max`. |
+| Reasoning Effort | Dropdown | Shown for capability `Chat` on OpenAI-compatible **or** Anthropic providers. `(not set)`, `None`, `Low`, `Medium`, `High`, `X-High`, `Max`. |
 | Metadata (JSON) | Textarea | Optional JSON for model-specific settings (e.g. `{"dimension": 1536}` for embedding models). `chat_api` and `reasoning_effort` are managed by the dropdowns above and do not appear here twice. |
 
 Button: **[Save Model]**
 
-> **Chat API / Reasoning Effort:** These two dropdowns are a guided interface for the metadata keys of the same name (see [Manage Models](/en/admin/ai-provider/03_models/)) — they write to the same field as a manual JSON entry, just structured. Whether a provider counts as "OpenAI-compatible" is detected automatically (known provider ID, matching hostname, explicit metadata hint, or a local/private host); on providers that aren't recognized (e.g. Anthropic) the fields stay hidden, since the setting would have no effect there anyway.
+> **Chat API / Reasoning Effort:** These dropdowns are a guided interface for the metadata keys of the same name (see [Manage Models](/en/admin/ai-provider/03_models/)) — they write to the same field as a manual JSON entry, just structured. **Chat API** is only shown for OpenAI-compatible providers (detected automatically via known provider ID, matching hostname, explicit metadata hint, or a local/private host). **Reasoning Effort** is additionally shown for Anthropic providers, where it drives the adaptive thinking depth (Extended Thinking) — tool use included.
 
 ---
 

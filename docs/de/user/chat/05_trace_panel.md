@@ -10,7 +10,7 @@ Das Trace-Panel wird über das **Augen-Icon** oben rechts im Chat-Fenster gesteu
 
 ## Aufbau & Tabs
 
-Das Panel ist in drei spezialisierte Bereiche unterteilt:
+Das Panel ist in vier spezialisierte Bereiche unterteilt:
 
 ### 1. Memory (Gedächtnis)
 Hier werden alle Informationen aufgelistet, die der Agent aus dem Langzeitgedächtnis abgerufen hat.
@@ -24,10 +24,23 @@ Verfolge jede Aktion, die der Agent über MCP-Server (Model Context Protocol) au
 - **Transparenz:** Du siehst die exakten Argumente, die an das Tool gesendet wurden, sowie das Ergebnis oder Fehlermeldungen des Servers.
 - **Status-Indikatoren:** Farbpunkte signalisieren sofort den Erfolg (Grün), laufende Prozesse (Gelb) oder Fehler (Rot).
 
-### 3. Events (Ereigniskette)
+### 3. Reasoning (Denkprozess)
+Zeigt die Zwischenüberlegungen des Modells, sofern der Provider sie liefert (z. B. Anthropic Extended Thinking oder die Reasoning-Summaries der OpenAI-Responses-API).
+- **Herkunft:** Jeder Eintrag ist mit dem Agenten beschriftet, der ihn erzeugt hat. Bei delegierten Läufen erscheint das Label des jeweiligen Sub-Agenten, sonst „Reasoning".
+- **Vorschau & Details:** Längere Gedankengänge werden auf fünf Zeilen gekürzt und lassen sich per „Mehr anzeigen" vollständig aufklappen.
+- **Zurückgehaltene Inhalte:** Gibt der Provider nur Teile des Reasonings frei, weist ein kursiver Hinweis darauf hin.
+- **Voraussetzung:** Der Tab füllt sich nur, wenn am Modell ein Reasoning-Effort gesetzt ist und der Lauf tatsächlich eine Denkphase hatte. Bei einfachen Anfragen kann er leer bleiben.
+
+### 4. Events (Ereigniskette)
 Die chronologische Liste aller technischen Hintergrundereignisse eines Runs.
 - **Timing:** Zeitstempel für den Start der Anfrage, den Empfang von Tokens und den Abschluss.
+- **Provider-Wiederholungen:** Schlägt eine Anfrage an den Provider vorübergehend fehl (Netzwerk-Aussetzer oder HTTP 429/5xx), erscheint eine `provider_retry`-Warnung mit der tatsächlichen Fehlerursache. Der Lauf wird automatisch bis zu zweimal wiederholt, statt die bereits geleistete Arbeit zu verwerfen.
 - **JSON-Deep-Dive:** Für Experten lassen sich die Rohdaten jedes Ereignisses einzeln ausklappen.
+
+## JSON exportieren
+Über die Schaltfläche **„JSON kopieren"** oben im Panel lässt sich der gesamte Trace als JSON in die Zwischenablage übernehmen. Das Menü bietet zwei Varianten:
+- **Ohne Reasoning kopieren:** Exportiert den Trace ohne die internen Denkprozesse des Modells – geeignet zum Teilen und für Fehlerberichte.
+- **Mit Reasoning kopieren:** Enthält zusätzlich die vollständigen Reasoning-Einträge.
 
 ## Warum das Trace-Panel nutzen?
 Das Trace-Panel hilft dir dabei, die "Blackbox" der KI zu durchleuchten. Es ist unverzichtbar, um zu verstehen, auf welcher Faktenbasis der Agent antwortet, warum er bestimmte Werkzeuge wählt oder an welcher Stelle ein komplexer Arbeitsablauf (Chain) hakt.

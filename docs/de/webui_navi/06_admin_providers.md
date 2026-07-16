@@ -48,12 +48,12 @@ Formular zum manuellen Hinzufügen eines Modells zu einem bestehenden Provider.
 | Modell-Label | Text | Lesbarer Name, der in der Oberfläche angezeigt wird. |
 | Capability | Dropdown | `Chat`, `Embedding`, `Text-to-Speech`, `Speech-to-Text` oder `Image`. |
 | Chat API | Dropdown | Nur sichtbar bei Capability `Chat` **und** OpenAI-kompatiblem Provider. `Standard (Chat Completions)` oder `Responses API`. |
-| Reasoning Effort | Dropdown | Nur sichtbar bei Capability `Chat` **und** OpenAI-kompatiblem Provider. `(nicht gesetzt)`, `Keins`, `Niedrig`, `Mittel`, `Hoch`, `Sehr hoch`, `Maximal`. |
+| Reasoning Effort | Dropdown | Sichtbar bei Capability `Chat` und OpenAI-kompatiblen **oder** Anthropic-Providern. `(nicht gesetzt)`, `Keins`, `Niedrig`, `Mittel`, `Hoch`, `Sehr hoch`, `Maximal`. |
 | Metadaten (JSON) | Textarea | Optionales JSON für modellspezifische Einstellungen (z. B. `{"dimension": 1536}` für Embedding-Modelle). `chat_api` und `reasoning_effort` werden über die Dropdowns oben verwaltet und erscheinen hier nicht doppelt. |
 
 Button: **[Modell speichern]**
 
-> **Chat API / Reasoning Effort:** Diese beiden Dropdowns sind eine geführte Oberfläche für die gleichnamigen Metadaten-Schlüssel (siehe [Modelle verwalten](/de/admin/ai-provider/03_models/)) — sie schreiben in dasselbe Feld wie eine manuelle JSON-Eingabe, nur strukturiert. Ob ein Provider als „OpenAI-kompatibel" gilt, wird automatisch erkannt (bekannte Provider-ID, passender Hostname, expliziter Metadaten-Hinweis oder lokaler/privater Host) — bei nicht erkannten Providern (z. B. Anthropic) bleiben die Felder ausgeblendet, da die Einstellung dort ohnehin wirkungslos wäre.
+> **Chat API / Reasoning Effort:** Diese Dropdowns sind eine geführte Oberfläche für die gleichnamigen Metadaten-Schlüssel (siehe [Modelle verwalten](/de/admin/ai-provider/03_models/)) — sie schreiben in dasselbe Feld wie eine manuelle JSON-Eingabe, nur strukturiert. **Chat API** erscheint nur bei OpenAI-kompatiblen Providern (automatisch erkannt über bekannte Provider-ID, passenden Hostname, expliziten Metadaten-Hinweis oder lokalen/privaten Host). **Reasoning Effort** erscheint zusätzlich bei Anthropic-Providern und steuert dort die adaptive Denktiefe (Extended Thinking) — inklusive Tool-Nutzung.
 
 ---
 

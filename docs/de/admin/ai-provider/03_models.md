@@ -59,11 +59,11 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 
 ### Chat-Modell-Metadaten
 
-> `reasoning_effort` und `chat_api` haben eigene Dropdowns im Modell-Formular (Tab **Modell**, sichtbar bei Capability `Chat` und OpenAI-kompatiblem Provider) — siehe [Admin-Konsole › AI-Provider](/de/webui_navi/06_admin_providers/). Die Angabe hier als JSON bleibt für alle übrigen Felder sowie für Skripting/API-Zugriff relevant.
+> `reasoning_effort` und `chat_api` haben eigene Dropdowns im Modell-Formular (Tab **Modell**) — siehe [Admin-Konsole › AI-Provider](/de/webui_navi/06_admin_providers/). `chat_api` erscheint bei OpenAI-kompatiblen Providern, `reasoning_effort` zusätzlich bei Anthropic. Die Angabe hier als JSON bleibt für alle übrigen Felder sowie für Skripting/API-Zugriff relevant.
 
 | Feld | Typ | Beschreibung | Beispiel |
 | :--- | :--- | :--- | :--- |
-| `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. Auf dem Responses-API-Pfad wird der Wert als `reasoning: { effort }` gesendet — dort funktionieren Reasoning-Stufen zusammen mit Tools. | `"none"` |
+| `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. Auf dem Responses-API-Pfad wird der Wert als `reasoning: { effort }` gesendet — dort funktionieren Reasoning-Stufen zusammen mit Tools. Bei Anthropic-Providern wird der Wert auf Extended Thinking (adaptive Denktiefe) abgebildet und funktioniert ebenfalls zusammen mit Tools. | `"none"` |
 | `chat_api` | string | Auf `"responses"` setzen, um dieses Modell über die OpenAI Responses API (`/v1/responses`) statt Chat Completions zu leiten — nötig, um bei gpt-5.6-Modellen Reasoning mit Function Tools zu kombinieren. Requests sind stateless (`store: false`); Reasoning bleibt über Tool-Iterationen via verschlüsselter Reasoning-Items erhalten. Nur für OpenAI-kompatible Provider wirksam (siehe Hinweis unten). | `"responses"` |
 | `responses_path` | string | Überschreibt den Responses-API-Endpunkt-Pfad relativ zur `baseUrl` des Providers. | `"v1/responses"` |
 | `chat_path` | string | Überschreibt den Chat-Endpunkt-Pfad relativ zur `baseUrl` des Providers. | `"v1/chat/completions"` |
