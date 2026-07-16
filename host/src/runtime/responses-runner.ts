@@ -139,6 +139,28 @@ export function mapToolsForResponses(tools: RunToolDefinition[]): ResponseItem[]
   }));
 }
 
+/**
+ * Concatenated summary text of all reasoning output items. The Responses API
+ * returns readable reasoning only as summaries (`summary: [{type:
+ * "summary_text", text}]`, requested via `reasoning.summary`); the raw chain
+ * of thought stays encrypted. Summaries can legitimately be empty — short
+ * thinking phases often produce none.
+ */
+export function extractReasoningSummary(output: ResponseItem[]): string {
+  const parts: string[] = [];
+  for (const item of output) {
+    if (item.type !== 'reasoning') continue;
+    const summary = (item as any).summary;
+    if (!Array.isArray(summary)) continue;
+    for (const entry of summary) {
+      if (entry?.type === 'summary_text' && typeof entry.text === 'string' && entry.text.length > 0) {
+        parts.push(entry.text);
+      }
+    }
+  }
+  return parts.join('\n\n');
+}
+
 /** Concatenated text of all output_text parts across message output items. */
 export function extractOutputText(output: ResponseItem[]): string {
   let text = '';
@@ -316,7 +338,10 @@ export async function runResponsesCompletion(
     if (typeof payload.options?.max_tokens === 'number') {
       body.max_output_tokens = payload.options.max_tokens;
     }
-    if (reasoningEffort) body.reasoning = { effort: reasoningEffort };
+    // summary: "auto" additionally returns readable reasoning summaries in
+    // the output items — visibility only, the sovereignty contract above is
+    // untouched (store: false, encrypted reasoning carried by us).
+    if (reasoningEffort) body.reasoning = { effort: reasoningEffort, summary: 'auto' };
     if (streamingEnabled) body.stream = true;
 
     try {
@@ -380,6 +405,11 @@ export async function runResponsesCompletion(
       // reasoning item vs. 113 WITHOUT — the whole derivation re-run. Dropping
       // the reasoning here would silently forfeit that saving.
       input.push(...output);
+
+      const reasoningSummary = extractReasoningSummary(output);
+      if (reasoningSummary) {
+        emit({ type: 'reasoning', text: reasoningSummary, timestamp: new Date().toISOString() });
+      }
 
       const functionCalls = output.filter((item) => item.type === 'function_call');
       const assistantText = extractOutputText(output);

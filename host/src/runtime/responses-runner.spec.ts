@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mapMessagesForResponses, mapToolsForResponses, extractOutputText, consumeResponsesStream } from './responses-runner.js';
+import { mapMessagesForResponses, mapToolsForResponses, extractOutputText, extractReasoningSummary, consumeResponsesStream } from './responses-runner.js';
 import type { ChatMessage, RunToolDefinition } from './types.js';
 import type { RunEvent } from './types.js';
 
@@ -108,6 +108,23 @@ test('extractOutputText: concatenates output_text parts, ignores reasoning/funct
     { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Hallo ' }, { type: 'output_text', text: 'Welt' }] }
   ];
   assert.equal(extractOutputText(output as any), 'Hallo Welt');
+});
+
+test('extractReasoningSummary: joins summary_text entries across reasoning items', () => {
+  const output = [
+    { type: 'reasoning', id: 'rs_1', encrypted_content: 'gAAA…', summary: [{ type: 'summary_text', text: 'Erst A prüfen.' }] },
+    { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Antwort' }] },
+    { type: 'reasoning', id: 'rs_2', encrypted_content: 'gBBB…', summary: [{ type: 'summary_text', text: 'Dann B.' }] }
+  ];
+  assert.equal(extractReasoningSummary(output as any), 'Erst A prüfen.\n\nDann B.');
+});
+
+test('extractReasoningSummary: empty for reasoning items without summaries', () => {
+  const output = [
+    { type: 'reasoning', id: 'rs_1', encrypted_content: 'gAAA…' },
+    { type: 'reasoning', id: 'rs_2', encrypted_content: 'gBBB…', summary: [] }
+  ];
+  assert.equal(extractReasoningSummary(output as any), '');
 });
 
 test('consumeResponsesStream: emits run_token deltas and returns the final response object', async () => {
