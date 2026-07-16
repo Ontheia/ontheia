@@ -490,7 +490,7 @@ export class ChainRunner {
         this.orchestrator,
         { ...this.templateContext, input, agent_id: profile.id, task_id: profile.task_id ?? undefined },
         (event) => {
-          if (['run_token', 'tool_call', 'error', 'warning', 'info', 'tokens', 'memory_hits', 'memory_write'].includes(event.type)) {
+          if (['run_token', 'tool_call', 'error', 'warning', 'info', 'tokens', 'memory_hits', 'memory_write', 'reasoning'].includes(event.type)) {
             this.emit(event);
           }
         },
@@ -808,7 +808,7 @@ export class ChainRunner {
         userId: this.templateContext.user_id,
         role: this.templateContext.role,
         onEvent: (event) => {
-          if (['run_token', 'tool_call', 'error', 'warning', 'info', 'tokens', 'memory_hits', 'memory_write'].includes(event.type)) {
+          if (['run_token', 'tool_call', 'error', 'warning', 'info', 'tokens', 'memory_hits', 'memory_write', 'reasoning'].includes(event.type)) {
             if (event.type === 'run_token') {
               finalOutput += event.text;
               if (!step.params?.silent) this.emit(event);

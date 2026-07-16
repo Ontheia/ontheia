@@ -32,6 +32,11 @@ export interface ChatMessage {
   name?: string;
   tool_call_id?: string;
   tool_calls?: ToolCallReference[];
+  // Anthropic thinking/redacted_thinking blocks from an assistant response.
+  // Kept verbatim (incl. signature) because the API requires them to be
+  // replayed unchanged in follow-up requests within the same tool loop.
+  // Only used run-internally by the Anthropic runner; never persisted.
+  reasoning_blocks?: unknown[];
 }
 
 export interface ToolCallReference {
@@ -167,6 +172,17 @@ export type RunEvent = (
       code: string;
       message: string;
       metadata?: Record<string, unknown>;
+      timestamp?: string;
+    }
+  | {
+      // One event per completed provider "thinking" phase (Anthropic extended
+      // thinking / OpenAI reasoning summaries). Emitted after the response is
+      // received, not as token deltas — meant for the trace panel, not chat.
+      type: 'reasoning';
+      text: string;
+      // True when the provider withheld (part of) the reasoning content
+      // (e.g. Anthropic redacted_thinking blocks).
+      redacted?: boolean;
       timestamp?: string;
     }
 ) & {

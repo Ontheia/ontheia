@@ -24,6 +24,7 @@ import type { Pool, PoolClient } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import { loadProviderModel } from '../providers/client.js';
+import { extractMetadataString } from '../providers/compat.js';
 import { getSystemFlag } from './system-flags.js';
 import type {
   ChatMessage,
@@ -57,10 +58,22 @@ export async function runAnthropicCompletion(
     options?.onEvent?.(event);
   };
 
-  const { provider, apiKey, warnings } = await loadProviderModel(db, payload.provider_id, payload.model_id);
+  const { provider, model, apiKey, warnings } = await loadProviderModel(db, payload.provider_id, payload.model_id);
   for (const warning of warnings) {
     emit({ type: 'warning', message: warning });
   }
+
+  // Extended thinking: the model's reasoning_effort metadata (same field the
+  // OpenAI paths use) maps 1:1 onto Anthropic's output_config.effort levels.
+  // Current models (4.6+) use adaptive thinking; the legacy budget_tokens
+  // mechanism is rejected with 400 on 4.7+ and is not supported here.
+  // display: "summarized" is required for readable thinking text — the default
+  // on 4.7+/Sonnet 5 is "omitted" (empty text, billed the same).
+  const reasoningEffort = extractMetadataString(
+    (model.metadata ?? {}) as Record<string, unknown>,
+    ['reasoning_effort', 'reasoningEffort']
+  );
+  const thinkingEnabled = !!reasoningEffort && reasoningEffort !== 'none';
 
   if (!apiKey) {
     throw new Error(`API key for provider ${payload.provider_id} could not be resolved.`);
@@ -141,9 +154,17 @@ export async function runAnthropicCompletion(
         system: systemBlocks as any,
         messages: messages as any,
         tools: anthropicTools.length > 0 ? anthropicTools : undefined,
-        temperature: (payload.options?.temperature as number) ?? undefined,
-        top_p: (payload.options?.top_p as number) ?? undefined
-      };
+        // Sampling params are rejected alongside thinking (and removed
+        // entirely on Opus 4.7+), so they are only sent with thinking off.
+        temperature: thinkingEnabled ? undefined : ((payload.options?.temperature as number) ?? undefined),
+        top_p: thinkingEnabled ? undefined : ((payload.options?.top_p as number) ?? undefined),
+        ...(thinkingEnabled
+          ? {
+              thinking: { type: 'adaptive', display: 'summarized' },
+              output_config: { effort: reasoningEffort }
+            }
+          : {})
+      } as any;
 
       let response: Anthropic.Message;
       if (streamingEnabled) {
@@ -178,13 +199,31 @@ export async function runAnthropicCompletion(
 
       let assistantText = '';
       const toolCalls: any[] = [];
+      // thinking / redacted_thinking blocks — kept verbatim (incl. signature)
+      // for replay in follow-up requests within this tool loop.
+      const reasoningBlocks: any[] = [];
+      let reasoningText = '';
 
       for (const content of response.content) {
         if (content.type === 'text') {
           assistantText += content.text;
         } else if (content.type === 'tool_use') {
           toolCalls.push(content);
+        } else if ((content as any).type === 'thinking') {
+          reasoningBlocks.push(content);
+          reasoningText += (content as any).thinking ?? '';
+        } else if ((content as any).type === 'redacted_thinking') {
+          reasoningBlocks.push(content);
         }
+      }
+
+      if (reasoningBlocks.length > 0) {
+        emit({
+          type: 'reasoning',
+          text: reasoningText,
+          redacted: reasoningBlocks.some((b) => b.type === 'redacted_thinking') || undefined,
+          timestamp: new Date().toISOString()
+        });
       }
 
       // Add assistant response to conversation
@@ -198,7 +237,8 @@ export async function runAnthropicCompletion(
             name: tc.name,
             arguments: JSON.stringify(tc.input)
           }
-        }))
+        })),
+        ...(reasoningBlocks.length > 0 ? { reasoning_blocks: reasoningBlocks } : {})
       };
       conversation.push(assistantMessage);
 
@@ -418,7 +458,7 @@ function parseMcpToolResultContent(raw: string | { text: string }[] | undefined)
   return blocks.length > 0 ? blocks : raw;
 }
 
-function mapMessagesForAnthropic(messages: ChatMessage[]) {
+export function mapMessagesForAnthropic(messages: ChatMessage[]) {
   let system = '';
   const anthropicMessages: any[] = [];
 
@@ -446,6 +486,11 @@ function mapMessagesForAnthropic(messages: ChatMessage[]) {
 
     if (msg.role === 'assistant') {
       const content: any[] = [];
+      // Thinking blocks must be replayed verbatim and must precede text and
+      // tool_use blocks — the API validates order and signatures.
+      if (Array.isArray(msg.reasoning_blocks) && msg.reasoning_blocks.length > 0) {
+        content.push(...msg.reasoning_blocks);
+      }
       if (msg.content) {
         content.push({ type: 'text', text: typeof msg.content === 'string' ? msg.content : msg.content.map(c => c.text).join(' ') });
       }
