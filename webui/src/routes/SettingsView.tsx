@@ -2917,14 +2917,14 @@ function MemorySection({
               </label>
               <label className="settings-field">
                 <span>{t('memory.chunkMode')}</span>
-                <select
+                <AppSelect
                   value={ingestChunkMode}
-                  onChange={e => setIngestChunkMode(e.target.value as 'semantic' | 'sliding-window')}
-                  style={{ backgroundColor: '#121B2B', color: 'inherit', border: '1px solid #1E293B', borderRadius: 4, padding: '6px 8px', fontSize: 13 }}
-                >
-                  <option value="sliding-window">{t('memory.chunkModeSlidingWindow')}</option>
-                  <option value="semantic">{t('memory.chunkModeSemantic')}</option>
-                </select>
+                  onValueChange={(val) => setIngestChunkMode(val as 'semantic' | 'sliding-window')}
+                  options={[
+                    { value: 'sliding-window', label: t('memory.chunkModeSlidingWindow') },
+                    { value: 'semantic', label: t('memory.chunkModeSemantic') }
+                  ]}
+                />
               </label>
               <label className="settings-field" style={{ cursor: 'pointer' }}>
                 <span>{t('memory.filterToC')}</span>
@@ -2932,14 +2932,14 @@ function MemorySection({
               </label>
               <label className="settings-field">
                 <span>{t('memory.mdConflict')}</span>
-                <select
+                <AppSelect
                   value={ingestOnConflict}
-                  onChange={e => setIngestOnConflict(e.target.value as 'replace' | 'skip')}
-                  style={{ backgroundColor: '#121B2B', color: 'inherit', border: '1px solid #1E293B', borderRadius: 4, padding: '6px 8px', fontSize: 13 }}
-                >
-                  <option value="replace">{t('memory.conflictReplace')}</option>
-                  <option value="skip">{t('memory.conflictSkip')}</option>
-                </select>
+                  onValueChange={(val) => setIngestOnConflict(val as 'replace' | 'skip')}
+                  options={[
+                    { value: 'replace', label: t('memory.conflictReplace') },
+                    { value: 'skip', label: t('memory.conflictSkip') }
+                  ]}
+                />
               </label>
             </div>
             <div className="admin-form-actions justify-start mt-4">
@@ -2977,14 +2977,14 @@ function MemorySection({
               </label>
               <label className="settings-field">
                 <span>{t('memory.pdfMdConflict')}</span>
-                <select
+                <AppSelect
                   value={pdfConvertOnConflict}
-                  onChange={e => setPdfConvertOnConflict(e.target.value as 'replace' | 'skip')}
-                  style={{ backgroundColor: '#121B2B', color: 'inherit', border: '1px solid #1E293B', borderRadius: 4, padding: '6px 8px', fontSize: 13 }}
-                >
-                  <option value="replace">{t('memory.conflictReplace')}</option>
-                  <option value="skip">{t('memory.conflictSkip')}</option>
-                </select>
+                  onValueChange={(val) => setPdfConvertOnConflict(val as 'replace' | 'skip')}
+                  options={[
+                    { value: 'replace', label: t('memory.conflictReplace') },
+                    { value: 'skip', label: t('memory.conflictSkip') }
+                  ]}
+                />
               </label>
             </div>
             <div className="admin-form-actions justify-start mt-4">
@@ -7272,14 +7272,14 @@ function ProvidersSection({
           </label>
           <label className="settings-field">
             <span>{t('providers.providerType')}</span>
-            <select
-              className="settings-input"
+            <AppSelect
               value={draft.providerType}
-              onChange={handleDraftChange('providerType')}
-            >
-              <option value="http">{t('providers.typeHttp')}</option>
-              <option value="cli">{t('providers.typeCli')}</option>
-            </select>
+              onValueChange={(val) => setDraft((prev) => ({ ...prev, providerType: val as ProviderDraftState['providerType'] }))}
+              options={[
+                { value: 'http', label: t('providers.typeHttp') },
+                { value: 'cli', label: t('providers.typeCli') }
+              ]}
+            />
           </label>
 
           {draft.providerType === 'cli' ? (
@@ -7294,15 +7294,15 @@ function ProvidersSection({
               </label>
               <label className="settings-field">
                 <span>{t('providers.cliFormat')}</span>
-                <select
-                  className="settings-input"
+                <AppSelect
                   value={draft.cliFormat}
-                  onChange={handleDraftChange('cliFormat')}
-                >
-                  <option value="gemini">{t('providers.cliFormatGemini')}</option>
-                  <option value="claude">{t('providers.cliFormatClaude')}</option>
-                  <option value="generic">{t('providers.cliFormatGeneric')}</option>
-                </select>
+                  onValueChange={(val) => setDraft((prev) => ({ ...prev, cliFormat: val as ProviderDraftState['cliFormat'] }))}
+                  options={[
+                    { value: 'gemini', label: t('providers.cliFormatGemini') },
+                    { value: 'claude', label: t('providers.cliFormatClaude') },
+                    { value: 'generic', label: t('providers.cliFormatGeneric') }
+                  ]}
+                />
               </label>
             </>
           ) : (
@@ -7325,27 +7325,27 @@ function ProvidersSection({
               </label>
               <label className="settings-field">
                 <span>{t('providers.testMethod')}</span>
-                <select
-                  className="settings-input"
+                <AppSelect
                   value={draft.method}
-                  onChange={handleDraftChange('method')}
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                </select>
+                  onValueChange={(val) => setDraft((prev) => ({ ...prev, method: val as ProviderDraftState['method'] }))}
+                  options={[
+                    { value: 'GET', label: 'GET' },
+                    { value: 'POST', label: 'POST' }
+                  ]}
+                />
               </label>
               <label className="settings-field">
                 <span>{t('providers.authentication')}</span>
-                <select
-                  className="settings-input"
+                <AppSelect
                   value={draft.authMode}
-                  onChange={handleDraftChange('authMode')}
-                >
-                  <option value="bearer">{t('providers.bearerToken')}</option>
-                  <option value="header">{t('providers.customHeader')}</option>
-                  <option value="query">{t('providers.queryParam')}</option>
-                  <option value="none">{t('none', { ns: 'common' })}</option>
-                </select>
+                  onValueChange={(val) => setDraft((prev) => ({ ...prev, authMode: val as ProviderDraftState['authMode'] }))}
+                  options={[
+                    { value: 'bearer', label: t('providers.bearerToken') },
+                    { value: 'header', label: t('providers.customHeader') },
+                    { value: 'query', label: t('providers.queryParam') },
+                    { value: 'none', label: t('none', { ns: 'common' }) }
+                  ]}
+                />
               </label>
               <label className="settings-field">
                 <span>{t('providers.apiKeySecret')}</span>
@@ -7452,53 +7452,69 @@ function ProvidersSection({
           </label>
           <label className="settings-field">
             <span>{t('providers.modelCapability')}</span>
-            <select
+            <AppSelect
               value={modelDraft.capability}
-              onChange={(event) => setModelDraft((prev) => ({ ...prev, capability: event.target.value as import('../types/providers').ModelCapability }))}
-            >
-              <option value="chat">{t('providers.capabilityChat')}</option>
-              <option value="embedding">{t('providers.capabilityEmbedding')}</option>
-              <option value="tts">{t('providers.capabilityTts')}</option>
-              <option value="stt">{t('providers.capabilityStt')}</option>
-              <option value="image">{t('providers.capabilityImage')}</option>
-            </select>
+              onValueChange={(val) => setModelDraft((prev) => ({ ...prev, capability: val as import('../types/providers').ModelCapability }))}
+              options={[
+                { value: 'chat', label: t('providers.capabilityChat') },
+                { value: 'embedding', label: t('providers.capabilityEmbedding') },
+                { value: 'tts', label: t('providers.capabilityTts') },
+                { value: 'stt', label: t('providers.capabilityStt') },
+                { value: 'image', label: t('providers.capabilityImage') }
+              ]}
+            />
           </label>
           {(() => {
             const selectedProvider = providers.find((p) => p.id === modelDraft.providerId);
-            if (modelDraft.capability !== 'chat' || !selectedProvider?.isOpenAiCompatible) return null;
+            // Anthropic is dispatched by provider id in the runtime
+            // (provider-run.ts); the same check gates the form. Reasoning
+            // effort maps to adaptive thinking + output_config.effort there.
+            const isAnthropic = selectedProvider?.id === 'anthropic';
+            if (modelDraft.capability !== 'chat' || !(selectedProvider?.isOpenAiCompatible || isAnthropic)) return null;
+            // The tools warning only applies to OpenAI Chat Completions —
+            // Anthropic supports thinking together with tools.
             const showReasoningToolsWarning =
-              selectedProvider.reasoningToolsRestricted !== false &&
+              !isAnthropic &&
+              selectedProvider?.reasoningToolsRestricted !== false &&
               !!modelDraft.reasoningEffort &&
               modelDraft.reasoningEffort !== 'none' &&
               modelDraft.chatApi !== 'responses';
             return (
               <>
-                <label className="settings-field">
-                  <span>{t('providers.modelChatApi')}</span>
-                  <select
-                    value={modelDraft.chatApi}
-                    onChange={(event) => setModelDraft((prev) => ({ ...prev, chatApi: event.target.value }))}
-                  >
-                    <option value="">{t('providers.chatApiDefault')}</option>
-                    <option value="responses">{t('providers.chatApiResponses')}</option>
-                  </select>
-                  <span className="settings-hint">{t('providers.modelChatApiHint')}</span>
-                </label>
+                {selectedProvider?.isOpenAiCompatible && (
+                  <label className="settings-field">
+                    <span>{t('providers.modelChatApi')}</span>
+                    <AppSelect
+                      value={modelDraft.chatApi || APP_SELECT_EMPTY_VALUE}
+                      onValueChange={(val) => setModelDraft((prev) => ({ ...prev, chatApi: val === APP_SELECT_EMPTY_VALUE ? '' : val }))}
+                      options={[
+                        { value: APP_SELECT_EMPTY_VALUE, label: t('providers.chatApiDefault') },
+                        { value: 'responses', label: t('providers.chatApiResponses') }
+                      ]}
+                    />
+                    <span className="settings-hint">{t('providers.modelChatApiHint')}</span>
+                  </label>
+                )}
                 <label className="settings-field">
                   <span>{t('providers.modelReasoningEffort')}</span>
-                  <select
-                    value={modelDraft.reasoningEffort}
-                    onChange={(event) => setModelDraft((prev) => ({ ...prev, reasoningEffort: event.target.value }))}
-                  >
-                    <option value="">{t('providers.reasoningEffortDefault')}</option>
-                    <option value="none">{t('providers.reasoningEffortNone')}</option>
-                    <option value="low">{t('providers.reasoningEffortLow')}</option>
-                    <option value="medium">{t('providers.reasoningEffortMedium')}</option>
-                    <option value="high">{t('providers.reasoningEffortHigh')}</option>
-                    <option value="xhigh">{t('providers.reasoningEffortXhigh')}</option>
-                    <option value="max">{t('providers.reasoningEffortMax')}</option>
-                  </select>
-                  <span className="settings-hint">{t('providers.modelReasoningEffortHint')}</span>
+                  <AppSelect
+                    value={modelDraft.reasoningEffort || APP_SELECT_EMPTY_VALUE}
+                    onValueChange={(val) => setModelDraft((prev) => ({ ...prev, reasoningEffort: val === APP_SELECT_EMPTY_VALUE ? '' : val }))}
+                    options={[
+                      { value: APP_SELECT_EMPTY_VALUE, label: t('providers.reasoningEffortDefault') },
+                      { value: 'none', label: t('providers.reasoningEffortNone') },
+                      { value: 'low', label: t('providers.reasoningEffortLow') },
+                      { value: 'medium', label: t('providers.reasoningEffortMedium') },
+                      { value: 'high', label: t('providers.reasoningEffortHigh') },
+                      { value: 'xhigh', label: t('providers.reasoningEffortXhigh') },
+                      { value: 'max', label: t('providers.reasoningEffortMax') }
+                    ]}
+                  />
+                  <span className="settings-hint">
+                    {isAnthropic
+                      ? t('providers.modelReasoningEffortHintAnthropic')
+                      : t('providers.modelReasoningEffortHint')}
+                  </span>
                   {showReasoningToolsWarning && (
                     <span style={{ color: 'var(--color-error, red)', fontSize: '0.75rem' }}>
                       {t('providers.modelReasoningEffortWarning')}

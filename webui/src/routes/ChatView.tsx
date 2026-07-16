@@ -1696,6 +1696,10 @@ export function ChatView({
             });
             return;
           }
+          if (event.type === 'reasoning') {
+            setEvents(prev => [...prev, event]);
+            return;
+          }
           if (event.type === 'memory_hits') {
             setEvents(prev => [...prev, event]);
             try {

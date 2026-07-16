@@ -22,7 +22,7 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, Wrench, Activity, ChevronRight, Copy, Check } from 'lucide-react';
+import { Database, Wrench, Activity, Brain, ChevronRight, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
 import {
@@ -30,6 +30,12 @@ import {
   TooltipTrigger,
   TooltipContent
 } from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from './ui/dropdown-menu';
 
 type TracePanelProps = {
   memoryHits: any[];
@@ -41,10 +47,12 @@ type TracePanelProps = {
 
 export function TracePanel({ memoryHits, toolCalls, events, timezone, className }: TracePanelProps) {
   const { t } = useTranslation(['chat', 'common']);
-  const [activeTab, setActiveTab] = useState<'memory' | 'tools' | 'events'>('memory');
+  const [activeTab, setActiveTab] = useState<'memory' | 'tools' | 'reasoning' | 'events'>('memory');
   const [expandedMemory, setExpandedMemory] = useState<Set<number>>(new Set());
+  const [expandedReasoning, setExpandedReasoning] = useState<Set<number>>(new Set());
 
   const memoryWrites = events.filter((e: any) => e.type === 'memory_write');
+  const reasoningEvents = events.filter((e: any) => e.type === 'reasoning');
   const rollingSummaryEvent = [...events].reverse().find((e: any) => e.type === 'info' && e.code === 'rolling_summary');
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -58,11 +66,22 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
     });
   };
 
-  const handleCopyAll = async () => {
+  const toggleReasoningExpand = (index: number) => {
+    setExpandedReasoning((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  // Reasoning text can dwarf the rest of the trace by an order of magnitude —
+  // the default copy excludes it so pasted traces stay LLM-context-friendly.
+  const handleCopy = async (includeReasoning: boolean) => {
     const data = {
       memoryHits,
       toolCalls,
-      events
+      events: includeReasoning ? events : events.filter((e: any) => e.type !== 'reasoning')
     };
     const ok = await copyText(JSON.stringify(data, null, 2));
     if (ok) {
@@ -74,6 +93,7 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
   const tabs = [
     { id: 'memory', label: t('memory'), icon: Database, count: memoryHits.length + memoryWrites.length + (rollingSummaryEvent ? 1 : 0) },
     { id: 'tools', label: t('tools'), icon: Wrench, count: toolCalls.length },
+    { id: 'reasoning', label: t('reasoningTab'), icon: Brain, count: reasoningEvents.length },
     { id: 'events', label: t('events'), icon: Activity, count: events.length },
   ] as const;
 
@@ -96,18 +116,41 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
             </button>
           ))}
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleCopyAll}
-              className="trace-copy-all-btn"
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <button className="trace-copy-all-btn">
+                  {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  <span>{t('copyJson')}</span>
+                </button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{t('copyTraceJson')}</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="composer-select-content">
+            {/* onSelect, not onClick: Radix unmounts the item on pointer-up,
+                so a click handler may never fire. The copy itself is deferred
+                one tick: while the menu is open its focus trap synchronously
+                steals focus back from the execCommand fallback's hidden
+                textarea (needed on plain-HTTP hosts, where
+                navigator.clipboard is unavailable), leaving nothing selected
+                to copy. After the menu has closed the fallback works; the
+                user activation required by execCommand survives the tick. */}
+            <DropdownMenuItem
+              className="composer-select-item"
+              onSelect={() => { window.setTimeout(() => void handleCopy(false), 0); }}
             >
-              {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-              <span>{t('copyJson')}</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('copyTraceJson')}</TooltipContent>
-        </Tooltip>
+              {t('copyJsonWithoutReasoning')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="composer-select-item"
+              onSelect={() => { window.setTimeout(() => void handleCopy(true), 0); }}
+            >
+              {t('copyJsonWithReasoning')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="trace-panel-content">
@@ -228,6 +271,48 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'reasoning' && (
+          <div className="trace-list">
+            {reasoningEvents.length === 0 ? (
+              <p className="trace-empty">{t('noReasoning')}</p>
+            ) : (
+              reasoningEvents.map((evt: any, i: number) => {
+                const isExpanded = expandedReasoning.has(i);
+                const text = typeof evt.text === 'string' ? evt.text : '';
+                return (
+                  <div key={i} className="trace-item-modern">
+                    <div className="trace-item-header">
+                      <span className="trace-item-title">
+                        {evt.agentLabel ? `${evt.agentLabel}` : t('reasoningTab')}
+                      </span>
+                      <span className="trace-item-meta">
+                        {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: timezone || 'Europe/Berlin' }) : '—'}
+                      </span>
+                    </div>
+                    {evt.redacted && (
+                      <p className="trace-item-meta" style={{ fontStyle: 'italic' }}>{t('reasoningRedacted')}</p>
+                    )}
+                    <div
+                      className={cn('trace-item-body snippet', !isExpanded && 'line-clamp-5')}
+                      style={{ whiteSpace: 'pre-wrap' }}
+                    >
+                      {text}
+                    </div>
+                    {text.split('\n').length > 5 || text.length > 400 ? (
+                      <button
+                        onClick={() => toggleReasoningExpand(i)}
+                        className="trace-expand-btn"
+                      >
+                        {isExpanded ? t('showLess') : t('showMore')}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })
             )}
           </div>
         )}

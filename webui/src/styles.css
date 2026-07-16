@@ -2265,6 +2265,10 @@
 .settings-field {
   display: grid;
   gap: 0.5rem;
+  /* Keep rows packed at the top: without this, a field stretched to match a
+     taller grid neighbour (e.g. one with a longer hint) distributes the extra
+     height between label and control, visibly shifting the control down. */
+  align-content: start;
   font-size: 0.85rem;
   color: rgba(226, 232, 240, 0.9);
   max-width: 100%;

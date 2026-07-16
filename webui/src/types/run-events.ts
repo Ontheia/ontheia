@@ -30,6 +30,7 @@ export type RunEvent = (
   | { type: 'error'; code: string; message: string; metadata?: Record<string, unknown>; timestamp?: string }
   | { type: 'warning'; code?: string; message: string; timestamp?: string }
   | { type: 'info'; code: string; message: string; metadata?: Record<string, unknown>; timestamp?: string }
+  | { type: 'reasoning'; text: string; redacted?: boolean; timestamp?: string }
   | { type: 'memory_hits'; hits: MemoryHit[]; timestamp?: string }
   | { type: 'memory_write'; namespace: string; items: number; timestamp?: string }
   | { type: 'memory_warning'; message: string; code?: string; timestamp?: string }
