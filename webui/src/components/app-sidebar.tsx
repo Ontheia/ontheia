@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { useMemo, useState, useEffect, useCallback } from "react"
+import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import {
@@ -116,6 +116,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [createProjectName, setCreateProjectName] = useState("")
   const [showBrandingSubtext, setShowBrandingSubtext] = useState(true)
+
+  const createProjectInputRef = useRef<HTMLInputElement>(null)
+  const renameProjectInputRef = useRef<HTMLInputElement>(null)
+  const renameChatInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -312,6 +316,78 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const handleRenameProject = async (name: string, id: string) => {
     setRenameProjectState({ id, name })
     setRenameProjectName(name)
+  }
+
+  // Save handlers for the sidebar text-input modals, shared by the dialog's
+  // action button and the input's Enter key so they can be confirmed without
+  // reaching for the mouse.
+  const submitCreateProject = async () => {
+    const name = createProjectName.trim()
+    if (!name) {
+      setCreateProjectOpen(false)
+      return
+    }
+    try {
+      await createProject({ name })
+      const updated = await listProjects()
+      setProjects(updated)
+      await refreshChats()
+    } catch (error) {
+      console.error(t('projectCreateError', { ns: 'sidebar' }), error)
+    } finally {
+      setCreateProjectOpen(false)
+      setCreateProjectName("")
+    }
+  }
+
+  const submitRenameProject = async () => {
+    if (!renameProjectState) return
+    const next = renameProjectName.trim()
+    if (!next) {
+      setRenameProjectState(null)
+      return
+    }
+    try {
+      await updateProject(renameProjectState.id, { name: next })
+      const updated = await listProjects()
+      setProjects(updated)
+    } catch (error) {
+      console.error(t('projectRenameError', { ns: 'sidebar' }), error)
+    } finally {
+      setRenameProjectState(null)
+    }
+  }
+
+  const submitRenameChat = async () => {
+    if (!renameChatState) return
+    const next = renameChatName.trim()
+    if (!next) {
+      setRenameChatState(null)
+      return
+    }
+    try {
+      await renameChat(renameChatState.id, next)
+      await refreshChats()
+    } catch (error) {
+      console.error(t('chatRenameError', { ns: 'sidebar' }), error)
+    } finally {
+      setRenameChatState(null)
+    }
+  }
+
+  // Confirms a modal on Enter, unless an IME composition is in progress.
+  const submitOnEnter = (submit: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      submit()
+    }
+  }
+
+  // Focus the text input when a modal opens; Radix AlertDialog would otherwise
+  // default focus to the Cancel button.
+  const focusInputOnOpen = (ref: React.RefObject<HTMLInputElement | null>) => (e: Event) => {
+    e.preventDefault()
+    ref.current?.focus()
   }
 
   const handleMoveProject = async (name: string, id: string, targetId: string | null) => {
@@ -628,7 +704,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </AlertDialog>
 
       <AlertDialog open={createProjectOpen} onOpenChange={(open) => { setCreateProjectOpen(open); if (!open) setCreateProjectName(""); }}>
-        <AlertDialogContent>
+        <AlertDialogContent onOpenAutoFocus={focusInputOnOpen(createProjectInputRef)}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('createProject', { ns: 'sidebar' })}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -640,9 +716,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   id="create-project-input"
                   type="text"
                   className="w-full"
+                  ref={createProjectInputRef}
                   value={createProjectName}
                   onChange={(e) => setCreateProjectName(e.target.value)}
-                  autoFocus
+                  onKeyDown={submitOnEnter(submitCreateProject)}
                 />
               </div>
             </AlertDialogDescription>
@@ -651,24 +728,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             <AlertDialogCancel className="ghost" onClick={() => setCreateProjectOpen(false)}>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
             <AlertDialogAction
               className="btn-default border-none"
-              onClick={async () => {
-                const name = createProjectName.trim()
-                if (!name) {
-                  setCreateProjectOpen(false)
-                  return
-                }
-                try {
-                  await createProject({ name })
-                  const updated = await listProjects()
-                  setProjects(updated)
-                  await refreshChats()
-                } catch (error) {
-                  console.error(t('projectCreateError', { ns: 'sidebar' }), error)
-                } finally {
-                  setCreateProjectOpen(false)
-                  setCreateProjectName("")
-                }
-              }}
+              onClick={() => void submitCreateProject()}
             >
               {t('add', { ns: 'common' })}
             </AlertDialogAction>
@@ -677,7 +737,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </AlertDialog>
 
       <AlertDialog open={Boolean(renameProjectState)} onOpenChange={(open) => !open && setRenameProjectState(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent onOpenAutoFocus={focusInputOnOpen(renameProjectInputRef)}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('renameProject', { ns: 'sidebar' })}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -689,9 +749,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   id="rename-project-input"
                   type="text"
                   className="w-full"
+                  ref={renameProjectInputRef}
                   value={renameProjectName}
                   onChange={(e) => setRenameProjectName(e.target.value)}
-                  autoFocus
+                  onKeyDown={submitOnEnter(submitRenameProject)}
                 />
               </div>
             </AlertDialogDescription>
@@ -700,23 +761,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             <AlertDialogCancel className="ghost" onClick={() => setRenameProjectState(null)}>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
             <AlertDialogAction
               className="btn-default border-none"
-              onClick={async () => {
-                if (!renameProjectState) return
-                const next = renameProjectName.trim()
-                if (!next) {
-                  setRenameProjectState(null)
-                  return
-                }
-                try {
-                  await updateProject(renameProjectState.id, { name: next })
-                  const updated = await listProjects()
-                  setProjects(updated)
-                } catch (error) {
-                  console.error(t('projectRenameError', { ns: 'sidebar' }), error)
-                } finally {
-                  setRenameProjectState(null)
-                }
-              }}
+              onClick={() => void submitRenameProject()}
             >
               {t('save', { ns: 'common' })}
             </AlertDialogAction>
@@ -725,7 +770,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </AlertDialog>
 
       <AlertDialog open={Boolean(renameChatState)} onOpenChange={(open) => !open && setRenameChatState(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent onOpenAutoFocus={focusInputOnOpen(renameChatInputRef)}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('renameChat', { ns: 'sidebar' })}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -737,9 +782,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   id="rename-chat-input"
                   type="text"
                   className="w-full"
+                  ref={renameChatInputRef}
                   value={renameChatName}
                   onChange={(e) => setRenameChatName(e.target.value)}
-                  autoFocus
+                  onKeyDown={submitOnEnter(submitRenameChat)}
                 />
               </div>
             </AlertDialogDescription>
@@ -748,22 +794,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             <AlertDialogCancel className="ghost" onClick={() => setRenameChatState(null)}>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
             <AlertDialogAction
               className="btn-default border-none"
-              onClick={async () => {
-                if (!renameChatState) return
-                const next = renameChatName.trim()
-                if (!next) {
-                  setRenameChatState(null)
-                  return
-                }
-                try {
-                  await renameChat(renameChatState.id, next)
-                  await refreshChats()
-                } catch (error) {
-                  console.error(t('chatRenameError', { ns: 'sidebar' }), error)
-                } finally {
-                  setRenameChatState(null)
-                }
-              }}
+              onClick={() => void submitRenameChat()}
             >
               {t('save', { ns: 'common' })}
             </AlertDialogAction>
