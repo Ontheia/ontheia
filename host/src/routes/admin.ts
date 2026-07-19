@@ -177,6 +177,14 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     } catch (error: any) {
       if (error?.code === '23505') {
         reply.code(409);
+        // See V70: the normalized email local part is unique because it maps to
+        // the files skill's per-user root directory.
+        if (error?.constraint === 'users_email_local_uidx') {
+          return {
+            error: 'email_local_taken',
+            message: 'The part before the "@" is already taken by another account.'
+          };
+        }
         return { error: 'conflict' };
       }
       throw error;

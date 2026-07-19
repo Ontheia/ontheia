@@ -58,7 +58,7 @@ These variables control API access and browser security.
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `SKILLS_BASE_DIR` | Base directory for skill files inside the container. The ScanService scans `<SKILLS_BASE_DIR>/global/` and `<SKILLS_BASE_DIR>/user/` on startup. | `/app/host/sources/skills` |
-| `FILES_SKILL_ROOTS` | Colon-separated directories the bundled files skill may access. Supports a `{user}` placeholder (per-user isolation, resolved from the requesting user's email — see the skill's Admin Guide in its `SKILL.md`). Paths must be reachable inside the host container. | `/tmp` (skill); `.env.example` presets `/data/files/{user}` |
+| `FILES_SKILL_ROOTS` | Colon-separated directories the bundled files skill may access. Supports a `{user}` placeholder (per-user isolation, resolved from the requesting user's email — see the skill's Admin Guide in its `SKILL.md`). The email local part (before the `@`) is unique instance-wide so two accounts can never share a directory. Paths must be reachable inside the host container. | `/tmp` (skill); `.env.example` presets `/data/files/{user}` |
 | `FILES_SKILL_MAX_READ` | Character cap per read operation of the files skill (pagination via `--offset`). | `15000` |
 | `FILES_SKILL_MAX_SEARCH_RESULTS` | Result cap for files-skill searches. | `50` |
 | `FILES_SKILL_MAX_CONTENT_SCAN_MB` | Per-file size cap (MB) for content search in the files skill. | `2` |

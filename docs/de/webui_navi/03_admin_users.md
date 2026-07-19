@@ -27,7 +27,7 @@ Button **[Benutzer anlegen]** öffnet einen modalen Dialog.
 
 | Feld | Typ | Pflicht | Hinweise |
 | --- | --- | --- | --- |
-| E-Mail | Text | ✓ (nur Anlegen) | Beim Bearbeiten eines bestehenden Benutzers deaktiviert. |
+| E-Mail | Text | ✓ (nur Anlegen) | Beim Bearbeiten eines bestehenden Benutzers deaktiviert. Der Teil vor dem `@` muss instanzweit eindeutig sein — er bestimmt das Dateiverzeichnis des Benutzers (files-Skill, `{user}`). Kollidiert er mit einem bestehenden Konto, wird das Anlegen mit einem Hinweis abgelehnt, auch wenn die E-Mail insgesamt neu ist. |
 | Anzeigename | Text | | Sichtbarer Name in der Oberfläche. |
 | Passwort | Passwort | ✓ (nur Anlegen) | Mind. 8 Zeichen. Beim Bearbeiten nicht angezeigt. |
 | Rolle | Dropdown | ✓ | `Benutzer` oder `Administrator`. Am eigenen Konto nicht änderbar. |

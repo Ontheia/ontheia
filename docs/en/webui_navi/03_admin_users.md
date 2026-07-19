@@ -27,7 +27,7 @@ Button **[Create User]** opens a modal dialog.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| Email | Text | ✓ (create only) | Disabled when editing an existing user. |
+| Email | Text | ✓ (create only) | Disabled when editing an existing user. The part before the `@` must be unique instance-wide — it determines the user's file directory (files skill, `{user}`). If it collides with an existing account, creation is rejected with a notice, even when the full email is new. |
 | Display Name | Text | | Visible name in the interface. |
 | Password | Password | ✓ (create only) | At least 8 characters. Not shown when editing. |
 | Role | Dropdown | ✓ | `User` or `Administrator`. Cannot be changed on your own account. |

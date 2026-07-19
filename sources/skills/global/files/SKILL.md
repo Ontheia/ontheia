@@ -119,6 +119,18 @@ are inactive; if no root remains, every script exits 2 with a clear
 message. There is no fallback to "all users". `info.py` (no arguments)
 shows the resolved user and active roots at any time.
 
+**Uniqueness is enforced:** two addresses sharing a local part
+(`rasher@a.de` and `rasher@b.de`) would resolve to the same directory.
+Ontheia therefore rejects creating an account whose normalized local part
+is already taken — a unique index on `app.users.email_local` backs this, so
+it holds for every creation path. Such an attempt fails with HTTP 409 and a
+message naming the conflict.
+
+**Deleted users:** removing a user does *not* remove their directory. If an
+account with the same local part is created later, it inherits the leftover
+files. Cleaning up or archiving the directory of a deleted user is an
+administrator task.
+
 ### Mounts
 
 The configured roots must be reachable *inside the host container*. For

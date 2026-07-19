@@ -211,6 +211,16 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
     } catch (error: any) {
       if (error?.code === '23505') {
         reply.code(409);
+        // V70 also makes the normalized email local part unique (it maps to the
+        // files skill's per-user root directory). Distinguish it from a plain
+        // duplicate email, otherwise the message would be misleading — the email
+        // itself is new, only the part before the "@" collides.
+        if (error?.constraint === 'users_email_local_uidx') {
+          return {
+            error: 'auth_email_local_taken',
+            message: 'This email cannot be used: the part before the "@" is already taken by another account.'
+          };
+        }
         return { error: 'auth_email_exists', message: 'Email address is already registered.' };
       }
       request.log.error({ err: error }, 'Signup failed');
