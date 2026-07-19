@@ -6,9 +6,18 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.3.x — Stability & Efficiency
+## Current: v0.4.x — Diagrams, Streaming & Bundled Skills
 
-Building on the v0.2.x feature base. Shipped with 0.3.0:
+Building on the v0.3.x feature base. Shipped with 0.4.0:
+
+- **Diagrams in chat** — the agent writes Mermaid, the chat renders it live, with a fullscreen view for wide diagrams
+- **Response streaming** — answers appear token by token across all API providers, with a global admin toggle for providers that struggle with SSE
+- **Bundled skills** — the `files` and `mermaid` skills ship with every install; per-user file roots and user identity are wired through to skill scripts
+- **In-place updates** — `update.sh` carries new environment variables and bundled skills into existing installations
+- **Tool permissions via API** — `default_tool_permissions` exposed on the agents API
+- **Delegation hardening** — sub-agent errors surface to the parent agent; user identity and date/time propagate into delegated runs
+
+Shipped with 0.3.0:
 
 - **Agent Skills system** — skill catalog, admin UI, and a built-in skill-creator that builds and tests new skills directly in chat
 - **Guided onboarding** — the Ontheia Guide walks new users through setup, memory, skills, and automation; example agents work out of the box
@@ -17,22 +26,25 @@ Building on the v0.2.x feature base. Shipped with 0.3.0:
 - **One-line installer** — `curl | bash` setup with preconfigured AI tools (prompt optimizer, summarizer)
 - **Prompt cache control** — global admin toggle to disable Anthropic-specific prompt caching (write premium can cost more than it saves for sporadic single-user setups)
 
+Already merged, ships with the next release:
+
+- **Reasoning across providers** — OpenAI's Responses API path (`/v1/responses`), so reasoning and function tools work together where chat completions no longer allows it, plus Anthropic extended thinking. Effort is configurable per model, reasoning is preserved across tool iterations, and a Reasoning tab in the trace panel shows the model's thinking.
+
 Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.3.x)
+## Near-term (v0.4.x)
 
 | Feature | Description |
 |---|---|
-| **OpenAI Responses API** | Second OpenAI request path (`/v1/responses`) so reasoning models can combine reasoning with function tools — chat completions no longer supports that combination as of GPT-5.6 (interim: `reasoning_effort` model metadata). Opt-in per model; chat completions stays the default for OpenAI-compatible providers. |
 | **Provider Fallback Hint** | Clear message in chat when no AI provider is configured yet |
 | **CI Pipeline** | Automated lint and test runs on every pull request |
 | **Embedding Fallback** | Documents are embedded with a primary and a backup provider simultaneously (e.g. OpenAI + Ollama). If the primary provider is unavailable, the backup takes over automatically. |
 
 ---
 
-## Mid-term (v0.4+)
+## Mid-term (v0.5+)
 
 | Feature | Description |
 |---|---|
