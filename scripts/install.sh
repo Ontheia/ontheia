@@ -18,6 +18,23 @@ BLUE='\033[1;34m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# ─── Terminal required ───────────────────────────────────────────────────────
+# Every prompt below reads from /dev/tty instead of stdin, so the installer keeps
+# working when piped (curl | bash). That only holds with a controlling terminal:
+# without one the first read fails with a bare "/dev/tty: no such device" and the
+# script aborts mid-banner — in the piped case only after it has already cloned
+# the repository, leaving a stray directory behind. Check up front and say why.
+if ! { : < /dev/tty; } 2>/dev/null; then
+    echo ""
+    echo -e "${RED}This installer needs an interactive terminal.${NC}"
+    echo "Run it in a real shell, e.g.:  ssh -t user@host 'cd ~/ontheia && bash scripts/install.sh'"
+    echo ""
+    echo -e "${RED}Dieses Installationsprogramm benötigt ein interaktives Terminal.${NC}"
+    echo "In einer echten Shell starten, z. B.:  ssh -t user@host 'cd ~/ontheia && bash scripts/install.sh'"
+    echo ""
+    exit 1
+fi
+
 # ─── Self-bootstrap when run via curl ────────────────────────────────────────
 # When piped through curl, only this script exists — the repo files are missing.
 # Clone (or download) the full repo, cd into it, and re-exec from the file.
