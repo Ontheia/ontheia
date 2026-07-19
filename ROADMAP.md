@@ -6,9 +6,17 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.4.x — Diagrams, Streaming & Bundled Skills
+## Current: v0.5.x — Reasoning & Transparency
 
-Building on the v0.3.x feature base. Shipped with 0.4.0:
+Building on the v0.4.x feature base. Shipped with 0.5.0:
+
+- **Reasoning across providers** — OpenAI's Responses API path (`/v1/responses`), so reasoning and function tools work together where chat completions no longer allows it, plus Anthropic extended thinking. Effort is configurable per model, and reasoning is preserved across tool iterations.
+- **Reasoning in the open** — a Reasoning tab in the trace panel shows what the model actually thought, and the full run trace exports as JSON with or without it
+- **Resilient provider calls** — transient provider failures are retried automatically, and the underlying cause is surfaced instead of a bare "fetch failed"
+- **Live run activity** — the composer shows colour-coded status while a run is working
+- **Hardened per-user file isolation** — the email local part that maps to a user's file root is now unique instance-wide, so two accounts can never share a directory
+
+Shipped with 0.4.0:
 
 - **Diagrams in chat** — the agent writes Mermaid, the chat renders it live, with a fullscreen view for wide diagrams
 - **Response streaming** — answers appear token by token across all API providers, with a global admin toggle for providers that struggle with SSE
@@ -26,15 +34,11 @@ Shipped with 0.3.0:
 - **One-line installer** — `curl | bash` setup with preconfigured AI tools (prompt optimizer, summarizer)
 - **Prompt cache control** — global admin toggle to disable Anthropic-specific prompt caching (write premium can cost more than it saves for sporadic single-user setups)
 
-Already merged, ships with the next release:
-
-- **Reasoning across providers** — OpenAI's Responses API path (`/v1/responses`), so reasoning and function tools work together where chat completions no longer allows it, plus Anthropic extended thinking. Effort is configurable per model, reasoning is preserved across tool iterations, and a Reasoning tab in the trace panel shows the model's thinking.
-
 Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.4.x)
+## Near-term (v0.5.x)
 
 | Feature | Description |
 |---|---|
@@ -44,7 +48,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Mid-term (v0.5+)
+## Mid-term (v0.6+)
 
 | Feature | Description |
 |---|---|
