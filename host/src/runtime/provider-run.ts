@@ -167,6 +167,13 @@ export interface NormalizedUsage {
   completion: number;
   cacheRead: number;
   cacheCreation: number;
+  /**
+   * Reasoning tokens, where the provider names them (OpenAI/xAI). A *subset* of
+   * `completion`, never additive — reporting it separately lets the UI tell
+   * "the model reasoned but the provider returned no readable summary" apart
+   * from "no reasoning happened", which otherwise look identical.
+   */
+  reasoning: number;
 }
 
 /**
@@ -260,11 +267,25 @@ export function normalizeUsage(usage: any): NormalizedUsage | undefined {
     }
   }
 
+  // Reasoning tokens as named by the provider: Chat Completions reports them
+  // under completion_tokens_details, the Responses API under
+  // output_tokens_details. Both count them inside completion/output tokens, so
+  // this is passed through for display only and never added to any total.
+  // Google is not covered here on purpose — it never names them, which is what
+  // the total_tokens recovery above deals with.
+  const reasoning =
+    typeof usage.completion_tokens_details?.reasoning_tokens === 'number'
+      ? usage.completion_tokens_details.reasoning_tokens
+      : typeof usage.output_tokens_details?.reasoning_tokens === 'number'
+      ? usage.output_tokens_details.reasoning_tokens
+      : 0;
+
   return {
     prompt,
     completion: finalCompletion,
     cacheRead,
-    cacheCreation
+    cacheCreation,
+    reasoning
   };
 }
 
@@ -436,6 +457,8 @@ async function runCliLoop(
         completion: completion.usage.completion,
         cacheRead: completion.usage.cacheRead,
         cacheCreation: completion.usage.cacheCreation
+        // No reasoning field: CLI providers report no named reasoning tokens,
+        // and omitting it says "unknown" rather than claiming a zero.
       });
     }
 
@@ -767,7 +790,7 @@ export async function runOpenAiCompletion(
 
       const usage = extractUsage(responseBody);
       if (usage) {
-        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion, cacheRead: usage.cacheRead, cacheCreation: usage.cacheCreation });
+        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion, cacheRead: usage.cacheRead, cacheCreation: usage.cacheCreation, reasoning: usage.reasoning });
         if (usage.prompt + usage.cacheRead + usage.cacheCreation > MAX_PROMPT_TOKENS) {
           emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${usage.prompt.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
           return events;
@@ -979,8 +1002,8 @@ async function consumeEventStream(
 
   if (promptTokens || completionTokens) {
     const norm = normalizeUsage(lastUsageRaw)
-      ?? { prompt: promptTokens, completion: completionTokens, cacheRead: 0, cacheCreation: 0 };
-    emit({ type: 'tokens', prompt: norm.prompt, completion: norm.completion, cacheRead: norm.cacheRead, cacheCreation: norm.cacheCreation });
+      ?? { prompt: promptTokens, completion: completionTokens, cacheRead: 0, cacheCreation: 0, reasoning: 0 };
+    emit({ type: 'tokens', prompt: norm.prompt, completion: norm.completion, cacheRead: norm.cacheRead, cacheCreation: norm.cacheCreation, reasoning: norm.reasoning });
     if (promptTokens > MAX_PROMPT_TOKENS) {
       emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${promptTokens.toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` } as any);
       return [];

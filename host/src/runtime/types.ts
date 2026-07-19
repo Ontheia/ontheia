@@ -108,6 +108,9 @@ export type RunEvent = (
       // Anthropic prompt-cache tokens; not included in `prompt`.
       cacheRead?: number;
       cacheCreation?: number;
+      // Reasoning tokens where the provider names them (OpenAI/xAI). Already
+      // part of `completion` — for display only, never add it to a total.
+      reasoning?: number;
       timestamp?: string;
     }
   | {

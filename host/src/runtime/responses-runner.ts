@@ -382,7 +382,7 @@ export async function runResponsesCompletion(
 
       const usage = normalizeUsage(responseBody?.usage);
       if (usage) {
-        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion, cacheRead: usage.cacheRead, cacheCreation: usage.cacheCreation });
+        emit({ type: 'tokens', prompt: usage.prompt, completion: usage.completion, cacheRead: usage.cacheRead, cacheCreation: usage.cacheCreation, reasoning: usage.reasoning });
         if (usage.prompt + usage.cacheRead + usage.cacheCreation > MAX_PROMPT_TOKENS) {
           emit({ type: 'error', code: 'prompt_too_large', message: `Prompt exceeds token limit (${(usage.prompt + usage.cacheRead + usage.cacheCreation).toLocaleString()} > ${MAX_PROMPT_TOKENS.toLocaleString()} tokens). Run aborted to prevent context explosion.` });
           return events;

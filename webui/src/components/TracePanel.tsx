@@ -53,6 +53,14 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
 
   const memoryWrites = events.filter((e: any) => e.type === 'memory_write');
   const reasoningEvents = events.filter((e: any) => e.type === 'reasoning');
+  // Providers may reason without returning anything readable: OpenAI returns a
+  // summary only sporadically, regardless of effort. The token count is then the
+  // only evidence that thinking happened at all, and without it an empty tab
+  // looks like a broken feature rather than a provider decision.
+  const reasoningTokens = events.reduce(
+    (sum: number, e: any) => (e.type === 'tokens' && typeof e.reasoning === 'number' ? sum + e.reasoning : sum),
+    0
+  );
   const rollingSummaryEvent = [...events].reverse().find((e: any) => e.type === 'info' && e.code === 'rolling_summary');
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -278,7 +286,11 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
         {activeTab === 'reasoning' && (
           <div className="trace-list">
             {reasoningEvents.length === 0 ? (
-              <p className="trace-empty">{t('noReasoning')}</p>
+              <p className="trace-empty">
+                {reasoningTokens > 0
+                  ? t('reasoningWithoutSummary', { tokens: reasoningTokens })
+                  : t('noReasoning')}
+              </p>
             ) : (
               reasoningEvents.map((evt: any, i: number) => {
                 const isExpanded = expandedReasoning.has(i);
