@@ -25,7 +25,9 @@ import type { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { requireSession, sanitizeEmail, mapUserRow } from './security.js';
 import {
   listProviders,
@@ -59,6 +61,20 @@ import { chunkText } from '../runtime/ingest/chunker.js';
 
 const AUTH_MODES = new Set(['bearer', 'header', 'query', 'none']);
 const HTTP_METHODS = new Set(['GET', 'POST']);
+
+// The container starts the server directly (CMD ["node", "dist/index.js"]), so npm
+// never populates npm_package_version and reading it would always yield null. Take
+// the version from package.json instead; relative to this module it sits two levels
+// up both as dist/routes/admin.js and as src/routes/admin.ts under ts-node-dev.
+const APP_VERSION: string | null = (() => {
+  try {
+    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(readFileSync(path.join(moduleDir, '..', '..', 'package.json'), 'utf8'));
+    return typeof pkg?.version === 'string' ? pkg.version : null;
+  } catch {
+    return null;
+  }
+})();
 
 async function setSystemSetting(db: Pool, key: string, value: any) {
   await db.query(
@@ -838,7 +854,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
         disabled: memoryDisabled,
         embeddingMode: memoryDisabled ? 'disabled' : (embeddingMode ?? 'unknown'),
       },
-      version: process.env.npm_package_version ?? null,
+      version: APP_VERSION,
     };
   });
 }
