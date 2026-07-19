@@ -18,8 +18,11 @@ Ontheia runs as a Docker stack.
 | **openssl** | any | For secret generation (`apt install openssl`) |
 | **curl** | any | For health checks |
 | **jq** | any | For JSON parsing (`apt install jq`) |
+| **Terminal** | interactive | The installer asks for language, license and admin account |
 
 At least one AI provider API key is required (e.g. Anthropic, OpenAI, or a local Ollama instance).
+
+> **An interactive terminal is required.** The installer reads its input from `/dev/tty`, which is why it also works behind `curl … | bash`, where standard input is already taken. Without a real terminal — in a CI pipeline, or over `ssh` without `-t` — it stops immediately with a notice instead of leaving a half-configured installation behind. Over SSH, use `ssh -t`.
 
 ## Quick Start (recommended)
 

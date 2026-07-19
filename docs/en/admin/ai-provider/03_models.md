@@ -61,6 +61,8 @@ Additional technical parameters can be stored per model as a JSON object. This i
 
 > `reasoning_effort` and `chat_api` have dedicated dropdowns in the model form (tab **Model**) — see [Admin Console › AI Provider](/en/webui_navi/06_admin_providers/). `chat_api` is shown for OpenAI-compatible providers, `reasoning_effort` additionally for Anthropic. The JSON entry below still applies to all other fields and to scripting/API access.
 
+> **Defaults on a fresh installation.** New installations seed one small, medium and large model per provider, with reasoning already switched on: OpenAI and xAI models get `chat_api: "responses"` plus `reasoning_effort: "medium"`, Anthropic models `reasoning_effort: "medium"`. Reasoning costs output tokens even when the answer is short, so lower the effort or clear it if that matters more than answer quality. **Updating an existing installation changes nothing here** — your model list and its settings stay as they are.
+
 | Field | Type | Description | Example |
 | :--- | :--- | :--- | :--- |
 | `reasoning_effort` | string | Sent as `reasoning_effort` with every chat request for this model. Newer OpenAI reasoning models (gpt-5.6 family) reject function tools on `/v1/chat/completions` unless this is `"none"` — set it to keep tool-calling agents working. Only set it on models that support the parameter. On the Responses API path it is sent as `reasoning: { effort }`, where reasoning levels work together with tools. For Anthropic providers the value maps to Extended Thinking (adaptive thinking depth) and likewise works together with tools. | `"none"` |

@@ -29,7 +29,9 @@ Shows the model's intermediate thoughts, provided the provider exposes them (e.g
 - **Origin:** Each entry is labeled with the agent that produced it. For delegated runs the respective sub-agent's label appears; otherwise "Reasoning".
 - **Preview & Details:** Longer chains of thought are truncated to five lines and can be expanded in full via "Show more".
 - **Withheld Content:** If the provider releases only parts of the reasoning, an italic note points this out.
-- **Prerequisite:** The tab only fills up when a reasoning effort is set on the model and the run actually had a thinking phase. For simple requests it may stay empty.
+- **Prerequisite:** A reasoning effort must be set on the model.
+- **Summary, not raw text:** The OpenAI Responses API never exposes the actual chain of thought — it returns a recap the model writes about its own reasoning (a "summary", usually with a bold heading). Anthropic returns the thinking text directly.
+- **Empty tab despite a thinking phase:** OpenAI produces such a summary only sporadically, and not in proportion to the effort: a run with 390 reasoning tokens may return none while one with 44 tokens returns one. When the model demonstrably reasoned but no summary arrived, the tab reports the token count, so "did not think" can be told apart from "the provider withheld it". Anthropic and xAI fill the tab reliably.
 
 ### 4. Events (Chain of Events)
 The chronological list of all technical background events of a Run.

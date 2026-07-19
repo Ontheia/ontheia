@@ -61,6 +61,8 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
 
 > `reasoning_effort` und `chat_api` haben eigene Dropdowns im Modell-Formular (Tab **Modell**) — siehe [Admin-Konsole › AI-Provider](/de/webui_navi/06_admin_providers/). `chat_api` erscheint bei OpenAI-kompatiblen Providern, `reasoning_effort` zusätzlich bei Anthropic. Die Angabe hier als JSON bleibt für alle übrigen Felder sowie für Skripting/API-Zugriff relevant.
 
+> **Standardwerte bei einer Neuinstallation.** Neue Installationen legen je Provider ein kleines, mittleres und großes Modell an — mit bereits aktiviertem Reasoning: OpenAI- und xAI-Modelle erhalten `chat_api: "responses"` plus `reasoning_effort: "medium"`, Anthropic-Modelle `reasoning_effort: "medium"`. Reasoning kostet Output-Tokens, auch wenn die Antwort kurz ausfällt — wem das wichtiger ist als die Antwortqualität, senkt den Effort oder entfernt ihn. **Ein Update einer bestehenden Installation ändert hier nichts** — die vorhandene Modellliste und ihre Einstellungen bleiben unangetastet.
+
 | Feld | Typ | Beschreibung | Beispiel |
 | :--- | :--- | :--- | :--- |
 | `reasoning_effort` | string | Wird als `reasoning_effort` mit jedem Chat-Request dieses Modells gesendet. Neuere OpenAI-Reasoning-Modelle (gpt-5.6-Familie) lehnen Function Tools auf `/v1/chat/completions` ab, sofern der Wert nicht `"none"` ist — so setzen, damit Tool-nutzende Agenten funktionieren. Nur an Modellen setzen, die den Parameter unterstützen. Auf dem Responses-API-Pfad wird der Wert als `reasoning: { effort }` gesendet — dort funktionieren Reasoning-Stufen zusammen mit Tools. Bei Anthropic-Providern wird der Wert auf Extended Thinking (adaptive Denktiefe) abgebildet und funktioniert ebenfalls zusammen mit Tools. | `"none"` |

@@ -29,7 +29,9 @@ Zeigt die Zwischenüberlegungen des Modells, sofern der Provider sie liefert (z.
 - **Herkunft:** Jeder Eintrag ist mit dem Agenten beschriftet, der ihn erzeugt hat. Bei delegierten Läufen erscheint das Label des jeweiligen Sub-Agenten, sonst „Reasoning".
 - **Vorschau & Details:** Längere Gedankengänge werden auf fünf Zeilen gekürzt und lassen sich per „Mehr anzeigen" vollständig aufklappen.
 - **Zurückgehaltene Inhalte:** Gibt der Provider nur Teile des Reasonings frei, weist ein kursiver Hinweis darauf hin.
-- **Voraussetzung:** Der Tab füllt sich nur, wenn am Modell ein Reasoning-Effort gesetzt ist und der Lauf tatsächlich eine Denkphase hatte. Bei einfachen Anfragen kann er leer bleiben.
+- **Voraussetzung:** Am Modell muss ein Reasoning-Effort gesetzt sein.
+- **Zusammenfassung statt Rohtext:** Die OpenAI-Responses-API gibt die eigentliche Gedankenkette nie heraus, sondern eine vom Modell selbst verfasste Nacherzählung („Summary", meist mit fetter Überschrift). Anthropic liefert dagegen den Denktext direkt.
+- **Leerer Tab trotz Denkphase:** OpenAI erzeugt eine solche Zusammenfassung nur sporadisch — und nicht proportional zum Aufwand: Ein Lauf mit 390 Reasoning-Tokens kann ohne Zusammenfassung bleiben, während einer mit 44 Tokens eine liefert. Hat das Modell nachweislich gedacht, ohne dass eine Zusammenfassung kam, nennt der Tab die verbrauchte Token-Zahl, damit sich „hat nicht gedacht" von „Provider verschweigt es" unterscheiden lässt. Anthropic und xAI füllen den Tab zuverlässig.
 
 ### 4. Events (Ereigniskette)
 Die chronologische Liste aller technischen Hintergrundereignisse eines Runs.
