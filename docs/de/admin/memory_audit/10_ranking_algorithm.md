@@ -13,6 +13,10 @@ $$Score_{base} = 1 - (Vektor_{Search} \cdot Vektor_{Document})$$
 
 Wertebereich: `[0.0, 1.0]`. Ein Wert von `1.0` bedeutet Identität. Aufgrund der Charakteristik moderner Embedding-Modelle (z.B. `text-embedding-3-small`) gelten Werte ab `0.4` bereits als thematisch signifikant.
 
+> **Mindest-Score (Standard `0.4`).** Treffer unterhalb dieser Schwelle werden verworfen, bevor sie in den Kontext gelangen. Bis Version 0.5.0 lag die Schwelle bei `0.2` — praktisch jede Anfrage schöpfte damit `top_k` voll aus, auch wenn im Namespace nichts Passendes stand, und jeder dieser Treffer wurde als Prompt-Token bezahlt. Der Wert lässt sich pro Agent in der Memory-Policy über `min_score` überschreiben; bei einem Korpus mit durchweg niedrigen Scores kann ein kleinerer Wert sinnvoll sein.
+>
+> Ohne Suchbegriff (reines Durchblättern eines Namespace, etwa in der Admin-Konsole) greift die Schwelle nicht — dort gibt es keine Ähnlichkeit zu bewerten.
+
 ### 1.2 Namespace-Mischung
 Namespaces werden nicht sequentiell durchsucht. Die Abfrage erfolgt über alle Ziel-Namespaces gleichzeitig (`namespace = ANY(...)`), was eine echte Relevanz-Mischung über Namespace-Grenzen hinweg ermöglicht.
 

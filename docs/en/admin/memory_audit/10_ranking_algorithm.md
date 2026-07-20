@@ -13,6 +13,10 @@ $$Score_{base} = 1 - (Vector_{Search} \cdot Vector_{Document})$$
 
 Value range: `[0.0, 1.0]`. A value of `1.0` means identity. Due to the characteristics of modern embedding models (e.g. `text-embedding-3-small`), values from `0.4` are already considered thematically significant.
 
+> **Minimum score (default `0.4`).** Hits below this threshold are discarded before they reach the context. Up to version 0.5.0 the threshold was `0.2`, which meant almost every request filled `top_k` completely — even when the namespace held nothing relevant — and every one of those hits was paid for as prompt tokens. The value can be overridden per agent in the memory policy via `min_score`; a corpus with uniformly low scores may warrant a lower one.
+>
+> Without a search term (plain browsing of a namespace, e.g. in the admin console) the threshold does not apply — there is no similarity to judge.
+
 ### 1.2 Namespace Mixing
 Namespaces are not searched sequentially. The query runs across all target namespaces simultaneously (`namespace = ANY(...)`), enabling true relevance mixing across namespace boundaries.
 

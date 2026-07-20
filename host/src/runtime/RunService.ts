@@ -519,7 +519,8 @@ export class RunService {
           const hits = await withRls(this.db, userId, role, async (client) => {
             return this.memoryAdapter.search(allowed, {
               query: buildMemoryQuery(enrichedInput.messages) || undefined,
-              topK
+              topK,
+              minScore: policy.minScore
             }, client);
           });
           await emitRunEvent({ type: 'memory_hits', hits: hits.map(mapHitToEvent) });

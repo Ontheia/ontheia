@@ -51,7 +51,14 @@ type NamespaceRule = {
   instruction?: string;
 };
 
-const DEFAULT_MIN_SCORE = 0.2;
+// Similarity floor for a hit to reach the model. 0.2 accepted almost anything:
+// with text-embedding-3-small a query unrelated to the namespace still scored
+// 0.30-0.38 across the board, so top_k was always filled and paid for. Measured
+// against a real preferences namespace, "Kaffee" and "Termin nächste Woche"
+// returned 8 and 7 hits respectively — none of them relevant, all of them below
+// 0.4. Matches the 0.4 significance threshold the ranking docs already state.
+// Override per agent via the memory policy (min_score) when a corpus needs it.
+const DEFAULT_MIN_SCORE = 0.4;
 
 export class MemoryAdapter {
   private _disabled: boolean;
@@ -278,9 +285,11 @@ export class MemoryAdapter {
             LIMIT ${limitParam}`,
           params
         );
+        // No score filter here: the namespace bonus is applied in phase 3 and
+        // exists precisely to lift borderline hits. Cutting on the raw cosine
+        // first would discard the hits the bonus is meant to rescue.
         return result.rows
-          .map((row: any) => mapRowToHit(row, typeof row.score === 'number' ? row.score : 0))
-          .filter((hit) => hit.score >= minScore);
+          .map((row: any) => mapRowToHit(row, typeof row.score === 'number' ? row.score : 0));
       }, client);
     }
 
@@ -292,7 +301,13 @@ export class MemoryAdapter {
       hits.sort((a, b) => b.score - a.score);
     }
 
-    const deduped = this.deduplicateHits(hits);
+    // Apply the floor to the final score — the one the UI and the trace show.
+    // Filtering earlier would compare against a number nobody ever sees, making
+    // the threshold impossible to calibrate against observed results.
+    // Browsing without a query yields score 1.0 and is therefore unaffected.
+    const scored = hits.filter((hit) => hit.score >= minScore);
+
+    const deduped = this.deduplicateHits(scored);
     return deduped.slice(0, requestedLimit);
   }
 
