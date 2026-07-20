@@ -1162,6 +1162,7 @@ export interface ProviderResponse {
   baseUrl: string | null;
   authMode: ProviderAuthMode;
   apiKeyRef: string | null;
+  hasApiKey?: boolean;
   headerName: string | null;
   queryName: string | null;
   testPath: string | null;

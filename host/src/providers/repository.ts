@@ -45,6 +45,7 @@ export interface ProviderRecord {
   providerType: ProviderType;
   baseUrl: string | null;
   authMode: 'bearer' | 'header' | 'query' | 'none';
+  /** Raw stored credential — internal use only. Pass through redactProvider() before returning it to a client. */
   apiKeyRef: string | null;
   headerName: string | null;
   queryName: string | null;
@@ -109,6 +110,32 @@ export interface ProviderConnectionUpdate {
   connectionUrl?: string | null;
   connectionPreview?: string | null;
   connectionWarnings?: string[] | null;
+}
+
+/**
+ * A stored credential is either an indirection (`secret:ENV_NAME`) or a literal
+ * key. The indirection is safe to show — it names an environment variable and
+ * reveals nothing. A literal key must never leave the host.
+ */
+function isSecretReference(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('secret:');
+}
+
+/**
+ * Strip the credential before a provider record is sent to a client.
+ *
+ * This deliberately sits at the API boundary rather than in mapRowToProvider:
+ * the runtime reads providers through the very same mapping to authenticate
+ * LLM calls, so redacting there would silently strip the key from every
+ * request the host makes.
+ */
+export function redactProvider<T extends ProviderRecord>(provider: T): T & { hasApiKey: boolean } {
+  const stored = provider.apiKeyRef;
+  return {
+    ...provider,
+    apiKeyRef: isSecretReference(stored) ? stored : null,
+    hasApiKey: typeof stored === 'string' && stored.trim().length > 0
+  };
 }
 
 function mapRowToProvider(row: any): ProviderRecord {
@@ -333,7 +360,7 @@ export async function createOrUpdateProvider(db: Pool, payload: ProviderUpsertPa
         test_model_id, metadata, show_in_composer, updated_at
       )
       VALUES (
-        $1, $2, COALESCE($3, 'http'), $4, COALESCE($5, 'bearer'), $6,
+        $1, $2, COALESCE($3, 'http'), $4, COALESCE($5, 'bearer'), NULLIF($6, ''),
         $7, $8, $9, COALESCE($10, 'GET'),
         $11, COALESCE($12::jsonb, '{}'::jsonb), $13, now()
       )
@@ -343,7 +370,16 @@ export async function createOrUpdateProvider(db: Pool, payload: ProviderUpsertPa
         provider_type = EXCLUDED.provider_type,
         base_url = EXCLUDED.base_url,
         auth_mode = EXCLUDED.auth_mode,
-        api_key_ref = EXCLUDED.api_key_ref,
+        -- Credential semantics, because the client no longer receives literal
+        -- keys and therefore cannot echo one back: NULL (field absent) keeps
+        -- what is stored, an empty string clears it, anything else replaces it.
+        -- Without the first case every provider save would wipe the key it was
+        -- never allowed to see.
+        api_key_ref = CASE
+          WHEN EXCLUDED.api_key_ref IS NULL THEN app.providers.api_key_ref
+          WHEN EXCLUDED.api_key_ref = '' THEN NULL
+          ELSE EXCLUDED.api_key_ref
+        END,
         header_name = EXCLUDED.header_name,
         query_name = EXCLUDED.query_name,
         test_path = EXCLUDED.test_path,

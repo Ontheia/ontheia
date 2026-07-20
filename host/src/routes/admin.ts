@@ -32,6 +32,7 @@ import { requireSession, sanitizeEmail, mapUserRow } from './security.js';
 import {
   listProviders,
   createOrUpdateProvider,
+  redactProvider,
   deleteProvider, 
   updateProviderConnection, 
   getProvider,
@@ -114,7 +115,9 @@ function parseProviderPayload(
       providerType,
       baseUrl,
       authMode,
-      apiKeyRef: body?.apiKeyRef || null,
+      // Distinguish "not sent" (keep the stored key) from "" (clear it) —
+      // `|| null` would have collapsed both into "keep".
+      apiKeyRef: typeof body?.apiKeyRef === 'string' ? body.apiKeyRef : null,
       headerName: body?.headerName || null,
       queryName: body?.queryName || null,
       testPath: body?.testPath || null,
@@ -288,7 +291,10 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
   // --- Providers ---
   server.get('/providers', async (request, reply) => {
     await requireSession(db, request, reply);
-    return listProviders(db);
+    // Redacted: this endpoint is readable by every signed-in user, and the
+    // records carry the literal provider credentials.
+    const list = await listProviders(db);
+    return list.map(redactProvider);
   });
 
   server.post('/providers', async (request, reply) => {
@@ -299,8 +305,10 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
       reply.code(400);
       return { error: 'invalid_argument', message: parsed.message };
     }
-    const created = await withRls(db, auth.session.userId, auth.session.role, async () =>
-      createOrUpdateProvider(db, parsed.value)
+    const created = redactProvider(
+      await withRls(db, auth.session.userId, auth.session.role, async () =>
+        createOrUpdateProvider(db, parsed.value)
+      )
     );
     // A provider edit can add, remove or re-type the configured embedding
     // model, which decides whether memory works at all.
@@ -319,8 +327,10 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     }
     // Ensure ID from URL is used
     const payload = { ...parsed.value, id };
-    const saved = await withRls(db, auth.session.userId, auth.session.role, async () =>
-      createOrUpdateProvider(db, payload)
+    const saved = redactProvider(
+      await withRls(db, auth.session.userId, auth.session.role, async () =>
+        createOrUpdateProvider(db, payload)
+      )
     );
     await reloadMemoryRuntime(db, memoryAdapter);
     return saved;
@@ -339,6 +349,15 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const payload = request.body as ProviderConnectionTestRequest;
+    // The client no longer holds literal keys, so an already-saved provider is
+    // tested with the credential from the database. A key in the payload still
+    // wins — that is the "test before saving" case for a freshly typed one.
+    if (!payload.apiKey && payload.providerId) {
+      const stored = await getProvider(db, normalizeProviderId(payload.providerId) ?? payload.providerId);
+      if (stored?.apiKeyRef) {
+        payload.apiKey = stored.apiKeyRef;
+      }
+    }
     const result = await testProviderConnection(payload);
     
     // Persist result

@@ -40,6 +40,8 @@ export type ProviderEntry = {
   models: ProviderModel[];
   baseUrl?: string | null;
   apiKeyRef?: string | null;
+  /** Server-side flag: a credential is stored. The key itself never reaches the browser. */
+  hasApiKey?: boolean;
   authMode?: ProviderAuthMode;
   headerName?: string | null;
   queryName?: string | null;

@@ -7041,7 +7041,10 @@ function ProvidersSection({
         authMode: isCli ? 'none' : draft.authMode,
         headerName: (!isCli && draft.authMode === 'header') ? draft.headerName.trim() || undefined : undefined,
         queryName: (!isCli && draft.authMode === 'query') ? draft.queryName.trim() || undefined : undefined,
-        apiKeyRef: (!isCli && draft.apiKey.trim()) ? draft.apiKey.trim() : (isCli ? null : existing?.apiKeyRef),
+        // The server never sends literal keys back, so an untouched field must
+        // mean "keep what is stored" (omit) — not "write back what I was shown".
+        // Empty string is the explicit clear, used when switching to CLI.
+        apiKeyRef: isCli ? '' : (draft.apiKey.trim() ? draft.apiKey.trim() : undefined),
         testPath: isCli ? null : (draft.testPath.trim() || existing?.testPath),
         testMethod: isCli ? 'GET' : draft.method,
         testModelId: isCli ? null : (draft.modelId.trim() || existing?.testModelId),
@@ -7143,7 +7146,8 @@ function ProvidersSection({
           providerType: provider.providerType ?? 'http',
           baseUrl: provider.baseUrl ?? '',
           authMode: provider.authMode ?? 'bearer',
-          apiKey: provider.apiKeyRef ?? undefined,
+          // Omitted on purpose: the host looks up the stored credential itself.
+          apiKey: undefined,
           headerName: provider.headerName ?? undefined,
           queryName: provider.queryName ?? undefined,
           testPath: provider.testPath ?? undefined,
@@ -7208,6 +7212,8 @@ function ProvidersSection({
       testPath: provider.testPath ?? '/v1/models',
       method: provider.testMethod ?? 'GET',
       authMode: provider.authMode ?? 'bearer',
+      // apiKeyRef only ever carries a `secret:NAME` indirection now; a stored
+      // literal key is never sent to the browser, so the field stays empty.
       apiKey: provider.apiKeyRef ?? '',
       headerName: provider.headerName ?? 'X-API-Key',
       queryName: provider.queryName ?? '',
@@ -7745,10 +7751,10 @@ function ProvidersSection({
                             <dd>{provider.connectionWarnings.join(', ')}</dd>
                           </div>
                         )}
-                        {provider.apiKeyRef && (
+                        {(provider.apiKeyRef || provider.hasApiKey) && (
                           <div>
                             <dt>{t('providers.apiKeySecret')}</dt>
-                            <dd>{provider.apiKeyRef.startsWith('secret:') && /^[A-Z][A-Z0-9_]*$/.test(provider.apiKeyRef.slice(7)) ? provider.apiKeyRef : '***'}</dd>
+                            <dd>{provider.apiKeyRef && /^[A-Z][A-Z0-9_]*$/.test(provider.apiKeyRef.slice(7)) ? provider.apiKeyRef : '***'}</dd>
                           </div>
                         )}
                       </dl>

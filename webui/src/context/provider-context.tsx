@@ -82,6 +82,7 @@ function mapResponseToEntry(response: ProviderResponse): ProviderEntry {
     baseUrl: response.baseUrl,
     authMode: response.authMode,
     apiKeyRef: response.apiKeyRef,
+    hasApiKey: response.hasApiKey === true,
     headerName: response.headerName,
     queryName: response.queryName,
     testPath: response.testPath,
