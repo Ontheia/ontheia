@@ -12,11 +12,13 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 ---
 
 ## 2. Authentifizierung (AuthN) & Sitzungsmanagement
-- **Passwort-Speicherung:** Verwendung von Argon2 oder PBKDF2 mit individuellem Salt.
+- **Passwort-Speicherung:** bcrypt (`bcryptjs`) mit Kostenfaktor 12; das Salt ist Teil des Hashes.
 - **Sitzungen:**
-    - JWT-basierte oder Session-basierte Authentifizierung (Backend entscheidet).
-    - Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`.
-    - Session-Timeout: Standardmäßig 12 Stunden.
+    - Opake Session-Tokens (UUID) in `app.sessions` — kein JWT, keine Cookies.
+    - Die WebUI sendet das Token als `Authorization: Bearer <token>` und hält es im `localStorage`.
+    - Session-Lebensdauer: 7 Tage; Sitzungen sind serverseitig widerrufbar (`revoked`-Flag).
+- **CSRF:** Strukturell nicht anwendbar — der Browser sendet kein Credential automatisch mit, eine fremde Origin kann also nicht auf einer bestehenden Sitzung mitreiten.
+- **Abwägung:** Ein Token im `localStorage` ist für JavaScript lesbar und wird durch ein erfolgreiches XSS mit offengelegt. Deshalb ist die strikte CSP aus Abschnitt 6 eine tragende Schutzmaßnahme, kein Beiwerk.
 - **Multi-Faktor-Authentifizierung (MFA):** (Geplant für Phase 2).
 
 ---
@@ -65,8 +67,8 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 - **Netzwerk-Isolation:** MCP-Server laufen in einem dedizierten Docker-Netzwerk (`ontheia-net`) ohne direkten Zugriff auf den Host oder andere Container (außer explizit konfiguriert).
 - **Egress-Kontrolle:** Globale Allowlist für ausgehende Verbindungen (`config/allowlist.urls`).
 - **WebUI-Schutz:**
-    - Strikte **Content Security Policy (CSP)** zur Verhinderung von XSS.
-    - Schutz gegen CSRF durch Double Submit Tokens oder SameSite-Cookies.
+    - Strikte **Content Security Policy (CSP)** zur Verhinderung von XSS — siehe [CSP-Template](/de/security/04_csp-template/).
+    - `frame-ancestors 'none'` und `X-Content-Type-Options` gegen Clickjacking und MIME-Sniffing.
 
 ---
 
@@ -98,8 +100,8 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 
 | Bereich | Prüfpunkt | Status | Bemerkung |
 | :--- | :--- | :--- | :--- |
-| **AuthN** | Sind Passwörter sicher gehasht? | [x] | Bcrypt (Cost 12) |
-| **AuthN** | Haben Cookies die Flags `HttpOnly`, `Secure`? | [x] | In index.ts konfiguriert |
+| **AuthN** | Sind Passwörter sicher gehasht? | [x] | bcrypt (Cost 12) |
+| **AuthN** | Sind Session-Tokens opak, serverseitig widerrufbar und befristet? | [x] | `app.sessions`, 7 Tage, `revoked`-Flag |
 | **AuthZ** | Greift RLS in der Datenbank korrekt? | [x] | Verifiziert via rls_audit.sql |
 | **Sandbox** | Laufen MCP-Server wirklich als Rootless-Docker? | [x] | Erzwingung durch Orchestrator |
 | **Sandbox** | Werden Ressourcen-Limits (`cpu`, `mem`) erzwungen? | [x] | Konfigurierbar via config |
@@ -129,9 +131,9 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 - [x] **Frame- & Clickjacking-Schutz:** `X-Frame-Options` und `X-Content-Type-Options` setzen.
 
 ### 3. Sitzungs- & Verbindungshärtung
-- [x] **Production Cookie-Flags:** `Secure` und `SameSite` Flags für Produktion optimieren.
+- [x] **Bearer-Tokens statt Cookies:** Die Authentifizierung nutzt opake Session-Tokens im `Authorization`-Header — es gibt keine Cookie-Flags zu justieren.
 - [x] **CORS-Einschränkung:** Wechsel von `origin: true` zu einer expliziten Allowlist.
-- [x] **CSRF-Schutz:** Implementierung von Schutzmechanismen gegen Cross-Site Request Forgery (Erledigt via Bearer Tokens).
+- [x] **CSRF-Schutz:** Durch den Wechsel auf Bearer-Tokens strukturell erledigt.
 
 ### 4. Datenbank & Multi-Tenancy (Row Level Security)
 - [x] **RLS-Framework:** Migration `V36` erstellt und `withRls`-Helper im Backend implementiert.

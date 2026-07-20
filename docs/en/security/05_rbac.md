@@ -1,14 +1,16 @@
-# RBAC-Grundlagen (Stub)
+# RBAC Basics
 
-- Rollen: `admin`, `user`
-- Admin:
-  - Vollzugriff auf Agents, Tasks, Chains, MCP-Server, Embeddings, Settings
-  - Kann andere Nutzer anlegen (später)
-- User:
-  - Zugriff auf Chat-Funktion, eigene Chats, begrenzte Tools (laut Scopes)
-  - Keine Admin-UI (Agents/Tasks/Chains/MCP-Server)
-- Erweiterung (später): projektbezogene Rollen (`project_admin`, `viewer`)
-- Durchsetzung:
-  - Backend: `requireSession({requireAdmin:true})` schützt `/memory/*`-Admin-APIs, `/agents/:id/memory`, `/tasks/:id/memory`.
-  - WebUI: Admin-Konsole nur für Nutzer mit `role=admin`. Memory-Panel zeigt Policies/Audit nur dann.
-- Logging: RBAC-Entscheidungen (deny) auditieren
+- **Roles:** `admin`, `user`
+- **Admin:**
+  - Full access to agents, tasks, chains, MCP servers, embeddings, settings.
+  - Creates users, approves `pending` accounts and manages roles.
+  - **No bypass to other people's content:** chats, memory and files of other users stay closed to admins too — the RLS policies have no admin exception.
+- **User:**
+  - Access to the chat function, own chats and the assigned tools (per scopes).
+  - No admin console (agents/tasks/chains/MCP servers).
+- **Extension (later):** project-scoped roles (`project_admin`, `viewer`).
+- **Enforcement:**
+  - **Database:** Row Level Security is the primary boundary — it applies regardless of which code issues the query.
+  - **Backend:** `requireSession({requireAdmin:true})` protects the `/memory/*` admin APIs, `/agents/:id/memory` and `/tasks/:id/memory`.
+  - **WebUI:** The admin console is only visible for `role=admin`. That layer is convenience, not a control.
+- **Logging:** RBAC decisions (deny) are audited.

@@ -1,49 +1,51 @@
-# 🛡️ Security Concept Ontheia (MCP-Host/Agent)
+# 🛡️ Security Concept Ontheia (MCP Host/Agent)
 
-## 1. Einleitung & Zielsetzung
-Dieses Dokument beschreibt das Security Concept für das System "Ontheia", bestehend aus WebUI, Host (Backend) und Datenbank (Postgres). Es dient als Referenz für die Implementierung und als Vorlage für Sicherheitsaudits.
+## 1. Introduction & Objectives
+This document describes the security concept for the "Ontheia" system, consisting of WebUI, host (backend) and database (Postgres). It serves as a reference for implementation and as a template for security audits.
 
-### Schutzziele:
-- **Vertraulichkeit:** Schutz von Nutzerdaten, KI-Prompts und API-Keys.
-- **Integrität:** Schutz vor unbefugter Manipulation von Agenten-Konfigurationen und Speicherinhalten.
-- **Verfügbarkeit:** Schutz vor Denial-of-Service durch Ressourcen-Limits (MCP-Server, LLM-Quotas).
-- **Isolation:** Strenge Trennung zwischen verschiedenen Nutzern (Multi-Tenancy) und zwischen dem Host-System und den MCP-Servern (Sandboxing).
-
----
-
-## 2. Authentifizierung (AuthN) & Sitzungsmanagement
-- **Passwort-Speicherung:** Verwendung von Argon2 oder PBKDF2 mit individuellem Salt.
-- **Sitzungen:**
-    - JWT-basierte oder Session-basierte Authentifizierung (Backend entscheidet).
-    - Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`.
-    - Session-Timeout: Standardmäßig 12 Stunden.
-- **Multi-Faktor-Authentifizierung (MFA):** (Geplant für Phase 2).
+### Protection goals:
+- **Confidentiality:** Protection of user data, AI prompts and API keys.
+- **Integrity:** Protection against unauthorized manipulation of agent configurations and memory contents.
+- **Availability:** Protection against denial of service through resource limits (MCP servers, LLM quotas).
+- **Isolation:** Strict separation between different users (multi-tenancy) and between the host system and the MCP servers (sandboxing).
 
 ---
 
-## 3. Autorisierung (AuthZ) & Mandantentrennung
-- **Rollenbasiertes Zugriffsmodell (RBAC):**
-    - `admin`: Vollzugriff auf Systemkonfiguration, MCP-Server-Management und alle Nutzer-Ressourcen.
-    - `user`: Zugriff auf eigene Chats, Agenten und zugewiesene Tools.
-- **Datenbank-Ebene (RLS):** Einsatz von PostgreSQL Row Level Security (RLS) zur Sicherstellung, dass Nutzer nur auf ihre eigenen Datensätze in den Schemata `app` und `vector` zugreifen können.
-- **Mandantentrennung:** Isolation auf Namespace-Ebene im Memory-Adapter (`vector.user.<user_id>.*`).
+## 2. Authentication (AuthN) & Session Management
+- **Password storage:** bcrypt (`bcryptjs`) with a cost factor of 12; the salt is part of the hash.
+- **Sessions:**
+    - Opaque session tokens (UUID) stored in `app.sessions` — no JWT, no cookies.
+    - The token is sent by the WebUI as `Authorization: Bearer <token>` and held in `localStorage`.
+    - Session lifetime: 7 days; sessions can be revoked server-side (`revoked` flag).
+- **CSRF:** Structurally not applicable — no credential is sent automatically by the browser, so a foreign origin cannot ride along on an existing session.
+- **Trade-off:** A token in `localStorage` is readable by JavaScript, so it is exposed by a successful XSS. This is why the strict CSP in section 6 is a load-bearing control, not a nicety.
+- **Multi-factor authentication (MFA):** (planned for phase 2).
 
 ---
 
-## 4. MCP-Server Sandboxing & Laufzeitsicherheit
-- **Laufzeitumgebung:** Standardmäßig Docker Rootless für alle MCP-Server.
-- **Härtungs-Flags (Erzwungen durch Orchestrator):**
-    - `--read-only`: Dateisystem des Containers ist schreibgeschützt.
-    - `--tmpfs /tmp:rw,nosuid,nodev,size=64m`: Begrenzter beschreibbarer Speicher für temporäre Daten.
-    - `--cap-drop=ALL`: Entzug aller Linux-Capabilities.
-    - `--security-opt no-new-privileges`: Verhindert Privilege Escalation.
-- **Ressourcen-Limits:**
-    - CPU: Max. 1 Core (konfigurierbar).
-    - Memory: Max. 512MB (konfigurierbar).
-    - PIDs: Max. 256 Prozesse.
+## 3. Authorization (AuthZ) & Tenant Separation
+- **Role-based access model (RBAC):**
+    - `admin`: Full access to system configuration, MCP server management and all user resources.
+    - `user`: Access to own chats, agents and assigned tools.
+- **Database level (RLS):** PostgreSQL Row Level Security ensures that users can only access their own records in the `app` and `vector` schemas.
+- **Tenant separation:** Isolation at namespace level in the memory adapter (`vector.user.<user_id>.*`).
+
+---
+
+## 4. MCP Server Sandboxing & Runtime Security
+- **Runtime environment:** Docker Rootless by default for all MCP servers.
+- **Hardening flags (enforced by the orchestrator):**
+    - `--read-only`: The container file system is read-only.
+    - `--tmpfs /tmp:rw,nosuid,nodev,size=64m`: Limited writable storage for temporary data.
+    - `--cap-drop=ALL`: Drops all Linux capabilities.
+    - `--security-opt no-new-privileges`: Prevents privilege escalation.
+- **Resource limits:**
+    - CPU: max. 1 core (configurable).
+    - Memory: max. 512 MB (configurable).
+    - PIDs: max. 256 processes.
 - **Allowlists:**
-    - **Docker-Images:** Nur explizit freigegebene Images (`config/allowlist.images`).
-    - **Pakete:** Validierung von npm/PyPI-Paketen bei Verwendung von `uvx` oder `npx`.
+    - **Docker images:** Only explicitly approved images (`config/allowlist.images`).
+    - **Packages:** Validation of npm/PyPI packages when using `uvx` or `npx`.
 
 ---
 
@@ -61,53 +63,53 @@ Dieses Dokument beschreibt das Security Concept für das System "Ontheia", beste
 
 ---
 
-## 6. Netzwerksicherheit
-- **Netzwerk-Isolation:** MCP-Server laufen in einem dedizierten Docker-Netzwerk (`ontheia-net`) ohne direkten Zugriff auf den Host oder andere Container (außer explizit konfiguriert).
-- **Egress-Kontrolle:** Globale Allowlist für ausgehende Verbindungen (`config/allowlist.urls`).
-- **WebUI-Schutz:**
-    - Strikte **Content Security Policy (CSP)** zur Verhinderung von XSS.
-    - Schutz gegen CSRF durch Double Submit Tokens oder SameSite-Cookies.
+## 6. Network Security
+- **Network isolation:** MCP servers run in a dedicated Docker network (`ontheia-net`) without direct access to the host or other containers (unless explicitly configured).
+- **Egress control:** Global allowlist for outbound connections (`config/allowlist.urls`).
+- **WebUI protection:**
+    - Strict **Content Security Policy (CSP)** to prevent XSS — see [CSP template](/en/security/04_csp-template/).
+    - `frame-ancestors 'none'` and `X-Content-Type-Options` against clickjacking and MIME sniffing.
 
 ---
 
-## 7. Datensicherheit & Verschlüsselung
-- **In-Transit:** Alle Verbindungen (WebUI -> Host, Host -> LLM-Provider) müssen über TLS (HTTPS/WSS) verschlüsselt sein.
-- **At-Rest:** Verschlüsselung der Datenbank-Volumes und Dateisysteme (Infrastruktur-Ebene).
-- **Geheimnisverwaltung (Secrets):**
-    - API-Keys werden nie im Klartext in Konfigurationsdateien gespeichert.
-    - Verwendung von Secret-Referenzen (`secret:NAME`), die zur Laufzeit aus Umgebungsvariablen aufgelöst werden.
-    - Maskierung von Secrets in Logs und UI-Previews.
+## 7. Data Security & Encryption
+- **In transit:** All connections (WebUI → host, host → LLM provider) must be encrypted via TLS (HTTPS/WSS).
+- **At rest:** Encryption of database volumes and file systems (infrastructure level).
+- **Secret management:**
+    - API keys are never stored in plain text in configuration files.
+    - Use of secret references (`secret:NAME`) resolved from environment variables at runtime.
+    - Masking of secrets in logs and UI previews.
 
 ---
 
-## 8. Input-Validierung & API-Sicherheit
-- **Schema-Validierung:** Alle API-Requests werden gegen JSON-Schemas geprüft (`contracts/schemas/`).
-- **Sanitizing:** Bereinigung von KI-generierten Inhalten (Markdown, HTML) vor der Anzeige in der WebUI.
-- **Rate Limiting:** Schutz der API-Endpunkte vor Brute-Force und DoS-Angriffen.
+## 8. Input Validation & API Security
+- **Schema validation:** All API requests are checked against JSON schemas (`contracts/schemas/`).
+- **Sanitizing:** Cleaning of AI-generated content (Markdown, HTML) before display in the WebUI.
+- **Rate limiting:** Protection of API endpoints against brute force and DoS attacks.
 
 ---
 
 ## 9. Observability & Auditing
-- **Audit-Logs:** Protokollierung aller sicherheitsrelevanten Aktionen (Logins, MCP-Server Starts, Zugriff auf Memory-Namespaces).
-- **Metriken:** Überwachung von Fehlerraten und Ressourcenverbrauch via Prometheus.
-- **Alarmierung:** Benachrichtigung bei verdächtigen Aktivitäten (z.B. mehrfache fehlgeschlagene Logins, Ausbruchsversuche aus Sandboxes).
+- **Audit logs:** Logging of all security-relevant actions (logins, MCP server starts, access to memory namespaces).
+- **Metrics:** Monitoring of error rates and resource consumption via Prometheus.
+- **Alerting:** Notification on suspicious activity (e.g. repeated failed logins, sandbox escape attempts).
 
 ---
 
-## 10. Audit-Checkliste (Prüfvorlage)
+## 10. Audit Checklist (review template)
 
-| Bereich | Prüfpunkt | Status | Bemerkung |
+| Area | Check | Status | Note |
 | :--- | :--- | :--- | :--- |
-| **AuthN** | Sind Passwörter sicher gehasht? | [x] | Bcrypt (Cost 12) |
-| **AuthN** | Haben Cookies die Flags `HttpOnly`, `Secure`? | [x] | In index.ts konfiguriert |
-| **AuthZ** | Greift RLS in der Datenbank korrekt? | [x] | Verifiziert via rls_audit.sql |
-| **Sandbox** | Laufen MCP-Server wirklich als Rootless-Docker? | [x] | Erzwingung durch Orchestrator |
-| **Sandbox** | Werden Ressourcen-Limits (`cpu`, `mem`) erzwungen? | [x] | Konfigurierbar via config |
-| **Netzwerk** | Ist die CSP in der WebUI aktiv und strikt? | [x] | Via Fastify Helmet |
-| **Netzwerk** | Funktioniert die Egress-Allowlist für MCP-Server? | [x] | Erzwingung durch Orchestrator |
-| **Secrets** | Sind API-Keys in der DB/Konfig maskiert/referenziert? | [x] | SecretRef Pattern aktiv |
-| **Input** | Werden alle API-Inputs gegen Schemas validiert? | [x] | Ajv Integration aktiv |
-| **Audit** | Werden MCP-Server-Starts im Audit-Log erfasst? | [x] | Logging im Host aktiv |
+| **AuthN** | Are passwords securely hashed? | [x] | bcrypt (cost 12) |
+| **AuthN** | Are session tokens opaque, server-side revocable and expiring? | [x] | `app.sessions`, 7 days, `revoked` flag |
+| **AuthZ** | Does RLS take effect correctly in the database? | [x] | Verified via rls_audit.sql |
+| **Sandbox** | Do MCP servers really run as rootless Docker? | [x] | Enforced by orchestrator |
+| **Sandbox** | Are resource limits (`cpu`, `mem`) enforced? | [x] | Configurable via config |
+| **Network** | Is the CSP in the WebUI active and strict? | [x] | Via Fastify Helmet |
+| **Network** | Does the egress allowlist work for MCP servers? | [x] | Enforced by orchestrator |
+| **Secrets** | Are API keys masked/referenced in the DB/config? | [x] | SecretRef pattern active |
+| **Input** | Are all API inputs validated against schemas? | [x] | Ajv integration active |
+| **Audit** | Are MCP server starts recorded in the audit log? | [x] | Logging active in the host |
 | **Skills** | Is path traversal blocked for skill file access? | [x] | `safeSkillPath()` in SkillService |
 | **Skills** | Are skill scope permissions enforced server-side? | [x] | Via RLS + handler check |
 | **Skills** | Does skill script execution run through cli-tools (Docker Rootless)? | [x] | cli-tools in own container |
@@ -115,48 +117,46 @@ Dieses Dokument beschreibt das Security Concept für das System "Ontheia", beste
 
 ---
 
-## 11. Implementierungs-Roadmap (Kritische Schwachstellen)
+## 11. Implementation Roadmap (critical weaknesses)
 
-### 1. API-Absicherung (`/runs` & Autorisierung)
-- [x] **Strikte Authentifizierung für `/runs`:** `requireSession` im `POST /runs`-Handler erzwingen.
-- [x] **Agent-Berechtigungsprüfung:** Zugriffsschutz für Agenten vor dem Run-Start validieren.
-- [x] **Rate-Limiting Fix:** Konsistentes Rate-Limiting für alle Nutzer sicherstellen.
-- [x] **Autorisierter Policy-Lookup:** Datenbank-Lookups für Memory-Policies absichern.
+### 1. API hardening (`/runs` & authorization)
+- [x] **Strict authentication for `/runs`:** Enforce `requireSession` in the `POST /runs` handler.
+- [x] **Agent permission check:** Validate access protection for agents before the run starts.
+- [x] **Rate limiting fix:** Ensure consistent rate limiting for all users.
+- [x] **Authorized policy lookup:** Secure database lookups for memory policies.
 
-### 2. WebUI & Browser-Sicherheit
-- [x] **Fastify Helmet Integration:** Sicherheits-Header (CSP, HSTS, etc.) via `@fastify/helmet` aktivieren.
-- [x] **Strikte CSP:** `connect-src` auf notwendige Provider-Endpunkte einschränken.
-- [x] **Frame- & Clickjacking-Schutz:** `X-Frame-Options` und `X-Content-Type-Options` setzen.
+### 2. WebUI & browser security
+- [x] **Fastify Helmet integration:** Enable security headers (CSP, HSTS, etc.) via `@fastify/helmet`.
+- [x] **Strict CSP:** Restrict `connect-src` to the necessary provider endpoints.
+- [x] **Frame & clickjacking protection:** Set `X-Frame-Options` and `X-Content-Type-Options`.
 
-### 3. Sitzungs- & Verbindungshärtung
-- [x] **Production Cookie-Flags:** `Secure` und `SameSite` Flags für Produktion optimieren.
-- [x] **CORS-Einschränkung:** Wechsel von `origin: true` zu einer expliziten Allowlist.
-- [x] **CSRF-Schutz:** Implementierung von Schutzmechanismen gegen Cross-Site Request Forgery (Erledigt via Bearer Tokens).
+### 3. Session & connection hardening
+- [x] **Bearer tokens instead of cookies:** Authentication uses opaque session tokens sent via the `Authorization` header — no cookie flags to tune.
+- [x] **CORS restriction:** Switched from `origin: true` to an explicit allowlist.
+- [x] **CSRF protection:** Addressed structurally by the move to bearer tokens.
 
-### 4. Datenbank & Multi-Tenancy (Row Level Security)
-- [x] **RLS-Framework:** Migration `V36` erstellt und `withRls`-Helper im Backend implementiert.
-- [x] **Kern-Entitäten (Read/Write):**
-    - [x] **Chat-System:** `GET /chats`, `GET /chats/:id`, `PATCH /chats/:chatId`, `DELETE /chats/:chatId` und automatische Isolation von Chat-Nachrichten via RLS umgesetzt.
-    - [x] **Projekt-Verwaltung:** Vollständige RLS-Absicherung für Projekte (`GET`, `POST`, `PATCH`, `DELETE`).
-    - [x] **Agent-Management:** `GET /agents`, `POST /agents`, `PATCH /agents/:id`, `DELETE /agents/:id` nutzen `withRls`. Sichtbarkeiten (public/private) werden auf DB-Ebene durch Policies erzwungen.
-- [x] **Historie & Einstellungen:**
-    - [x] **Run Logs:** Zugriff auf `/runs/:id` und `/runs/recent` via RLS abgesichert. `requireSession` für alle Run-Endpunkte ergänzt.
-    - [x] **User Settings:** Persönliche Einstellungen und Profil-Daten (`/auth/me`) via RLS geschützt.
-- [x] **Erweiterte Ressourcen:**
-    - [x] **Chain-Absicherung:** RLS-Policies für `app.chains` und `app.chain_versions` implementiert (`V37`) und alle Routen auf `withRls` umgestellt.
-    - [x] **Task-Isolation:** `app.tasks` um `owner_id` erweitert und via RLS abgesichert.
-- [x] **Vektordaten & Memory:**
-    - [x] **RLS für `vector`-Schema:** Namespace-Isolation auf DB-Ebene via `owner_id` und RLS-Policies umgesetzt. `MemoryAdapter` und API-Routen wurden auf `withRls` umgestellt.
-- [x] **Abschluss & Validierung:**
-    - [x] **Security Audit:** Systematische Testläufe zur Verifizierung der Mandantentrennung erfolgreich durchgeführt (`scripts/rls_audit.sql`). Rekursionsfehler in Policies behoben.
-    - [x] **RLS Cleanup:** Redundante Filter wurden geprüft; RLS-Erzwingung via `FORCE ROW LEVEL SECURITY` aktiviert.
-
-
-### 5. Observability & Auditing
-- [x] **Security Auditing:** Protokollierung von unbefugten Zugriffsversuchen.
-- [x] **Security Monitoring & Dashboard (Minimal-Lösung):**
-    *   **Backend-Integration:** Erledigt. `GET /memory/stats` liefert aggregierte Sicherheitswarnungen.
-    *   **Admin-Konsole:** Erledigt. Monitoring-Widgets in "Memory & Audit" integriert.
-    *   **User-Info:** Erledigt. Trennung zwischen Admin-Status und Nutzer-Status gewahrt.
+### 4. Database & multi-tenancy (Row Level Security)
+- [x] **RLS framework:** Migration `V36` created and `withRls` helper implemented in the backend.
+- [x] **Core entities (read/write):**
+    - [x] **Chat system:** `GET /chats`, `GET /chats/:id`, `PATCH /chats/:chatId`, `DELETE /chats/:chatId` and automatic isolation of chat messages implemented via RLS.
+    - [x] **Project management:** Full RLS protection for projects (`GET`, `POST`, `PATCH`, `DELETE`).
+    - [x] **Agent management:** `GET /agents`, `POST /agents`, `PATCH /agents/:id`, `DELETE /agents/:id` use `withRls`. Visibilities (public/private) are enforced at DB level through policies.
+- [x] **History & settings:**
+    - [x] **Run logs:** Access to `/runs/:id` and `/runs/recent` secured via RLS. `requireSession` added for all run endpoints.
+    - [x] **User settings:** Personal settings and profile data (`/auth/me`) protected via RLS.
+- [x] **Extended resources:**
+    - [x] **Chain protection:** RLS policies for `app.chains` and `app.chain_versions` implemented (`V37`) and all routes switched to `withRls`.
+    - [x] **Task isolation:** `app.tasks` extended with `owner_id` and secured via RLS.
+- [x] **Vector data & memory:**
+    - [x] **RLS for the `vector` schema:** Namespace isolation at DB level implemented via `owner_id` and RLS policies. `MemoryAdapter` and API routes were switched to `withRls`.
+- [x] **Completion & validation:**
+    - [x] **Security audit:** Systematic test runs to verify tenant separation completed successfully (`scripts/rls_audit.sql`). Recursion errors in policies fixed.
+    - [x] **RLS cleanup:** Redundant filters reviewed; RLS enforcement enabled via `FORCE ROW LEVEL SECURITY`.
 
 
+### 5. Observability & auditing
+- [x] **Security auditing:** Logging of unauthorized access attempts.
+- [x] **Security monitoring & dashboard (minimal solution):**
+    *   **Backend integration:** Done. `GET /memory/stats` returns aggregated security warnings.
+    *   **Admin console:** Done. Monitoring widgets integrated into "Memory & Audit".
+    *   **User info:** Done. Separation between admin status and user status preserved.

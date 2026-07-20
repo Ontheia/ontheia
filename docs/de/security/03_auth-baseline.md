@@ -1,8 +1,13 @@
-# Authentifizierungs-Basis (Vorbereitung)
+# Authentifizierungs-Basis
 
-- Lokaler Admin-Login mit Passwort (PBKDF2/Argon2)
-- Sitzungen: HTTP-only, Secure Cookies, SameSite=Lax
-- CSRF-Schutz: Double Submit Token oder SameSite + Anti-CSRF Header
-- Passwort-Reset (später) via CLI oder Admin-Endpoint
-- Multi-User/Rollen: Admin, User (weitere projektbezogene Rollen später)
-- Session-Timeout: 12h (konfigurierbar)
+Ist-Zustand der Authentifizierung. Für die Einordnung ins Gesamtbild siehe [Sicherheitskonzept](/de/security/01_security_concept/).
+
+- **Passwort-Hashing:** bcrypt (`bcryptjs`), Kostenfaktor 12. Mindestlänge 8 Zeichen.
+- **Sitzungen:** Opake UUID-Tokens in `app.sessions`, gesendet als `Authorization: Bearer <token>`. Keine Cookies, kein JWT.
+- **Session-Lebensdauer:** 7 Tage. Serverseitiger Widerruf über das `revoked`-Flag; `POST /auth/logout` widerruft die aktuelle Sitzung.
+- **CSRF:** Strukturell nicht anwendbar, da kein Credential automatisch vom Browser mitgesendet wird.
+- **Passwortwechsel:** `POST /auth/change-password` — verlangt das aktuelle Passwort.
+- **Passwort-Reset:** Es gibt **keinen** Self-Service-Flow für vergessene Passwörter. Ein Administrator muss den Account neu anlegen oder das Passwort direkt in der Datenbank ersetzen.
+- **Rollen:** `admin`, `user` — siehe [RBAC](/de/security/05_rbac/).
+- **Account-Status:** `pending` (wartet auf Admin-Freigabe), `active`, gesperrt. Ein Login ist nur bei `active` möglich.
+- **Multi-Faktor-Authentifizierung (MFA):** nicht implementiert (Phase 2).
