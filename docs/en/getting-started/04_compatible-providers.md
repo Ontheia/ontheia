@@ -2,7 +2,7 @@
 title: "Compatible AI Providers"
 ---
 
-Ontheia supports any **OpenAI-compatible inference server** — local or remote. As long as the endpoint implements `/v1/chat/completions`, Ontheia can communicate with it.
+Ontheia supports any **OpenAI-compatible inference server** — local or remote. An endpoint implementing `/v1/chat/completions` is enough. If it also offers `/v1/responses`, individual models can be routed through the Responses API (`chat_api: "responses"`) — required to combine reasoning with tool calling on current reasoning models. Anthropic and Google Gemini are addressed through their own protocols, not through OpenAI compatibility.
 
 ## Local Providers (self-hosted)
 
@@ -19,9 +19,9 @@ Ontheia supports any **OpenAI-compatible inference server** — local or remote.
 | Provider | Protocol | Link |
 |---|---|---|
 | **Anthropic Claude** | Anthropic API | [anthropic.com](https://anthropic.com) |
-| **OpenAI** | OpenAI API | [openai.com](https://openai.com) |
+| **OpenAI** | OpenAI API (Chat Completions + Responses) | [openai.com](https://openai.com) |
 | **Google Gemini** | Gemini API | [ai.google.dev](https://ai.google.dev) |
-| **xAI / Grok** | OpenAI-compatible | [x.ai](https://x.ai) |
+| **xAI / Grok** | OpenAI-compatible (+ Responses) | [x.ai](https://x.ai) |
 | **Groq** | OpenAI-compatible | [groq.com](https://groq.com) |
 | **DeepSeek** | OpenAI-compatible | [deepseek.com](https://deepseek.com) |
 | **OpenRouter** | OpenAI-compatible | [openrouter.ai](https://openrouter.ai) |

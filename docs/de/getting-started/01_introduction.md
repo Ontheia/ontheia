@@ -207,7 +207,7 @@ Ontheia ist von Grund auf für den Mehrbenutzerbetrieb ausgelegt:
 - **Agenten-Sichtbarkeit**: Agenten können öffentlich, für bestimmte Nutzer oder nur für den Ersteller sichtbar sein.
 - **Audit-Logging**: Jede Aktion — Chat-Nachricht, Tool-Aufruf, Speicherzugriff — wird revisionssicher protokolliert.
 - **Row Level Security**: Datentrennung direkt in der Datenbank. Programmierfehler im Backend können keine Datenlecks verursachen, da die Datenbank selbst den Zugriff verweigert.
-- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, gpt-5.4, lokale Modelle) nutzen — alle über dieselbe Plattform.
+- **Mehrere KI-Provider**: Verschiedene Teams können unterschiedliche LLMs (Claude, gpt-5.6-terra, lokale Modelle) nutzen — alle über dieselbe Plattform.
 
 ---
 

@@ -12,5 +12,5 @@ Ontheia uses an internal abstraction layer that makes it possible to:
 ## Hierarchy
 
 1. **Provider:** The technical basis (e.g., "OpenAI Production").
-2. **Model:** The available units of this provider (e.g., `gpt-5.4`, `gpt-3.5-turbo`).
+2. **Model:** The available units of this provider (e.g., `gpt-5.6-terra`, `gpt-5.6-luna`).
 3. **Assignment:** Agents are not bound directly to a URL, but to a combination of provider and model.

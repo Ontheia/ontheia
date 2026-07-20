@@ -24,14 +24,14 @@ For CLI providers, the model ID is passed to the CLI as a `-m` parameter. The ID
 
 | CLI Tool | Example Model IDs |
 | :--- | :--- |
-| Gemini CLI | `gemini-2.5-flash`, `gemini-2.5-pro` |
-| Claude CLI | `claude-opus-4-6`, `claude-sonnet-4-6` |
+| Gemini CLI | `gemini-3.5-flash`, `gemini-3.1-flash-lite` |
+| Claude CLI | `claude-opus-4-8`, `claude-sonnet-5` |
 
 > **Note:** Full functionality of the Claude CLI as a provider is no longer guaranteed as of 04/2026.
 
-**Tip:** If the internal display name should differ from the actual model name (e.g., `gemini-flatrate` as display name, but `gemini-2.5-flash` as the actual model), the `cli_model` field can be set in the model metadata:
+**Tip:** If the internal display name should differ from the actual model name (e.g., `gemini-flatrate` as display name, but `gemini-3.5-flash` as the actual model), the `cli_model` field can be set in the model metadata:
 ```json
-{ "cli_model": "gemini-2.5-flash" }
+{ "cli_model": "gemini-3.5-flash" }
 ```
 
 ## Docker Configuration

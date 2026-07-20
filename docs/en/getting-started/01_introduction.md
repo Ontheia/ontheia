@@ -207,7 +207,7 @@ Ontheia is designed from the ground up for multi-user operation:
 - **Agent visibility**: Agents can be public, visible to specific users, or private to the creator.
 - **Audit logging**: Every action — chat message, tool call, memory access — is logged in a tamper-proof manner.
 - **Row Level Security**: Data separation directly in the database. Backend programming errors cannot cause data leaks, as the database itself denies access.
-- **Multiple AI providers**: Different teams can use different LLMs (Claude, gpt-5.4, local models) — all through the same platform.
+- **Multiple AI providers**: Different teams can use different LLMs (Claude, gpt-5.6-terra, local models) — all through the same platform.
 
 ---
 
