@@ -21,7 +21,7 @@ Ontheia uses PostgreSQL with the `pgvector` extension.
 
 | Variable | Description |
 | :--- | :--- |
-| `DATABASE_URL` | Full connection string for the host service. **Important:** Must use a restricted user (see Section 8). |
+| `DATABASE_URL` | Full connection string for the host service. **Important:** Must use a restricted user (see Section 9). |
 | `FLYWAY_URL` | JDBC URL for database migrations. |
 | `FLYWAY_USER` | Username for migrations (must be superuser `postgres`). |
 | `FLYWAY_PASSWORD` | Password for the superuser. |
@@ -34,8 +34,6 @@ These variables control API access and browser security.
 | :--- | :--- |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed domains/IPs for CORS. Supports wildcards (e.g., `http://192.168.2.*`). |
 | `METRICS_TOKEN` | Bearer token required to scrape `/metrics`. Generated on a fresh installation; if empty, the endpoint stays open and the host logs a warning at startup. See [Metrics](/en/observability/02_metrics/). |
-| `SESSION_SECRET` | Reserved. Ontheia uses opaque session tokens stored in the database, not signed cookies — this value is currently not read by the host. |
-| `COOKIE_SECRET` | Reserved for a future OAuth flow. Not read by the host today. |
 
 ## 4. MCP Orchestrator (Docker)
 

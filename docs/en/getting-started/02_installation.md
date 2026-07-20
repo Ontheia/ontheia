@@ -46,7 +46,7 @@ bash scripts/install.sh
 git clone https://github.com/Ontheia/ontheia.git
 cd ontheia
 cp .env.example .env
-# Edit .env — set FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, SESSION_SECRET, ADMIN_EMAIL
+# Edit .env — set FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, ADMIN_EMAIL
 docker compose up -d
 ```
 

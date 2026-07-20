@@ -356,17 +356,12 @@ fi
 # breaking an existing database volume with a new password.
 echo "$MSG_SECRET_GEN"
 
-SESSION_SECRET=$(openssl rand -base64 48)
-sed -i "s|SESSION_SECRET=.*|SESSION_SECRET=$SESSION_SECRET|" .env
-
-# Protect the Prometheus endpoint on fresh installs. Existing .env files are
-# left alone: adding a token there would break a running scrape job.
 if [ "$ENV_IS_NEW" = true ]; then
+    # Protect the Prometheus endpoint. Existing .env files are left alone:
+    # adding a token there would break a running scrape job.
     METRICS_TOKEN_GEN=$(openssl rand -hex 24)
     sed -i "s|METRICS_TOKEN=.*|METRICS_TOKEN=$METRICS_TOKEN_GEN|" .env
-fi
 
-if [ "$ENV_IS_NEW" = true ]; then
     FLYWAY_PASSWORD_GEN=$(openssl rand -hex 16)
     APP_USER_PWD=$(openssl rand -hex 16)
     sed -i "s|FLYWAY_PASSWORD=.*|FLYWAY_PASSWORD=$FLYWAY_PASSWORD_GEN|" .env

@@ -120,6 +120,6 @@ Backups are stored in the `./backups/` directory.
 
 ## Notes
 
-- **Back up your `.env` file:** It contains all secrets (SESSION_SECRET, DB passwords, API keys). Store it separately and encrypted.
+- **Back up your `.env` file:** It contains all secrets (DB passwords, API keys, METRICS_TOKEN). Store it separately and encrypted.
 - **Test your backups:** Regularly perform a restore on a test instance to verify backups are valid.
 - **Off-site storage:** Copy backups to external storage (S3, NFS, USB) — backups in the same directory do not protect against server loss.
