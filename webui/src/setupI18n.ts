@@ -1123,6 +1123,7 @@ const resources = {
       'tos.commercialLicense': 'Commercial license (LICENSE-COMMERCIAL.md)'
     },
     errors: {
+      'memory_disabled': 'Memory is switched off because no embedding provider is configured. Set one up under Administration → AI Provider → Embedding.',
       'auth_email_required': 'Email address is required.',
       'auth_password_invalid': 'Password must be at least 8 characters long.',
       'auth_signup_disabled': 'Self-registration is currently disabled.',
@@ -2286,6 +2287,7 @@ const resources = {
       'tos.commercialLicense': 'Kommerzielle Lizenz (LICENSE-COMMERCIAL.md)'
     },
     errors: {
+      'memory_disabled': 'Das Gedächtnis ist abgeschaltet, weil kein Embedding-Provider konfiguriert ist. Unter Administration → AI-Provider → Embedding einrichten.',
       'auth_email_required': 'E-Mail-Adresse ist erforderlich.',
       'auth_password_invalid': 'Das Passwort muss mindestens 8 Zeichen lang sein.',
       'auth_signup_disabled': 'Die Selbstregistrierung ist aktuell deaktiviert.',

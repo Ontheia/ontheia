@@ -233,6 +233,18 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     const { session } = auth;
+    // Without this, a disabled memory subsystem is indistinguishable from a
+    // namespace that genuinely has no matches: search() returns [] before it
+    // looks at anything, and the reason only ever reached the container log.
+    if (memoryAdapter.disabled) {
+      reply.code(503);
+      return {
+        error: 'memory_disabled',
+        message:
+          'Memory is disabled because no embedding provider is configured. ' +
+          'Configure one under Administration → AI Provider → Embedding.'
+      };
+    }
     const query = request.query as any;
     const requestedNamespaces = (Array.isArray(query?.namespace) ? query.namespace : [query?.namespace]).concat(Array.isArray(query?.namespaces) ? query.namespaces : [query?.namespaces]).filter(Boolean);
     const fallbackNamespaces = defaultUserNamespaces(session);

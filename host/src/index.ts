@@ -38,8 +38,8 @@ import { registry } from './metrics.js';
 import { updateServerStatus, type ServerStatusUpdateParams } from './orchestrator/server-config.repository.js';
 import { logger } from './logger.js';
 import { MemoryAdapter } from './memory/adapter.js';
-import { loadEmbeddingConfig, loadEmbeddingConfigFromDb } from './memory/config.js';
-import { createEmbeddingProvider, NullEmbeddingProvider } from './memory/provider.js';
+import { loadEmbeddingRuntime } from './memory/runtime.js';
+import { NullEmbeddingProvider } from './memory/provider.js';
 import { RunService } from './runtime/RunService.js';
 import { CronService } from './runtime/CronService.js';
 import { SkillService } from './runtime/SkillService.js';
@@ -116,18 +116,7 @@ const dbPool = new Pool({ connectionString: config.databaseUrl });
 
 const memoryAdapter = await (async () => {
   try {
-    const fileConfig = loadEmbeddingConfig();
-    let embeddingConfig = fileConfig;
-    try {
-      const dbConfig = await loadEmbeddingConfigFromDb(dbPool, fileConfig);
-      if (dbConfig) {
-        embeddingConfig = dbConfig;
-        logger.info('Embedding config loaded from database (DB-backed provider).');
-      }
-    } catch (dbErr) {
-      logger.warn({ err: dbErr }, 'DB embedding config could not be loaded — falling back to file config.');
-    }
-    const embeddingProvider = createEmbeddingProvider(embeddingConfig);
+    const { provider: embeddingProvider, config: embeddingConfig } = await loadEmbeddingRuntime(dbPool);
     const adapter = new MemoryAdapter(dbPool, embeddingProvider, embeddingConfig);
     if (embeddingConfig.mode === 'disabled') {
       logger.warn('Memory features are disabled. Configure an embedding provider in the Admin UI to enable them.');

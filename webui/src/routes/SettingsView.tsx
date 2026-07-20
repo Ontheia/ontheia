@@ -1749,7 +1749,11 @@ function MemorySection({
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.message || t('memory.searchFailed'));
+        // Carry the server's error code so localizeError can translate it —
+        // without it only the English server message would surface.
+        const err: any = new Error(data?.message || t('memory.searchFailed'));
+        if (data?.error) err.code = data.error;
+        throw err;
       }
       const hits: MemorySearchHit[] = Array.isArray(data?.hits) ? data.hits : [];
       setSearchResults(hits);

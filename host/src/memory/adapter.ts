@@ -54,25 +54,47 @@ type NamespaceRule = {
 const DEFAULT_MIN_SCORE = 0.2;
 
 export class MemoryAdapter {
-  readonly disabled: boolean;
+  private _disabled: boolean;
   private tables: TableDefinition[];
   private defaultDimension: number;
   private probes: number | undefined;
   private rankingConfig: EmbeddingConfig['ranking'];
   private namespaceRules: Map<string, NamespaceRule> = new Map();
 
+  /** Whether memory is switched off. Can change at runtime via reconfigure(). */
+  get disabled(): boolean {
+    return this._disabled;
+  }
+
   constructor(
     private db: Pool,
     private provider: EmbeddingProvider,
     embeddingConfig: EmbeddingConfig
   ) {
-    this.disabled = embeddingConfig.mode === 'disabled';
+    this._disabled = embeddingConfig.mode === 'disabled';
     this.tables = resolveTables(embeddingConfig);
     this.defaultDimension = embeddingConfig.cloud?.dimension ?? embeddingConfig.local?.dimension ?? 1536;
     this.probes = embeddingConfig.index?.probes;
     this.rankingConfig = embeddingConfig.ranking;
     // Fire and forget loading initial rules
-    if (!this.disabled) {
+    if (!this._disabled) {
+      this.loadNamespaceRules().catch(err => logger.error({ err }, 'Failed to load namespace rules'));
+    }
+  }
+
+  /**
+   * Swap in a new embedding provider and configuration without restarting the
+   * host. Until this existed, an admin who fixed a broken embedding setup saw
+   * no effect until the container was restarted — and nothing said so.
+   */
+  reconfigure(provider: EmbeddingProvider, embeddingConfig: EmbeddingConfig): void {
+    this.provider = provider;
+    this._disabled = embeddingConfig.mode === 'disabled';
+    this.tables = resolveTables(embeddingConfig);
+    this.defaultDimension = embeddingConfig.cloud?.dimension ?? embeddingConfig.local?.dimension ?? 1536;
+    this.probes = embeddingConfig.index?.probes;
+    this.rankingConfig = embeddingConfig.ranking;
+    if (!this._disabled) {
       this.loadNamespaceRules().catch(err => logger.error({ err }, 'Failed to load namespace rules'));
     }
   }

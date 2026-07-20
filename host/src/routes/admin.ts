@@ -56,6 +56,7 @@ import {
 } from './utils.js';
 import { loadServerTools } from './mcp-utils.js';
 import { RouteContext } from './types.js';
+import { reloadMemoryRuntime } from '../memory/runtime.js';
 import { CronService } from '../runtime/CronService.js';
 import { chunkText } from '../runtime/ingest/chunker.js';
 
@@ -277,6 +278,10 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     }
     // Refresh cron jobs if timezone might have changed
     await cronService.rescheduleAll();
+    // Pick up a changed embedding setup without a container restart.
+    if (Object.prototype.hasOwnProperty.call(body, 'embedding_config')) {
+      await reloadMemoryRuntime(db, memoryAdapter);
+    }
     return { status: 'ok' };
   });
 
@@ -294,7 +299,13 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
       reply.code(400);
       return { error: 'invalid_argument', message: parsed.message };
     }
-    return withRls(db, auth.session.userId, auth.session.role, async () => createOrUpdateProvider(db, parsed.value));
+    const created = await withRls(db, auth.session.userId, auth.session.role, async () =>
+      createOrUpdateProvider(db, parsed.value)
+    );
+    // A provider edit can add, remove or re-type the configured embedding
+    // model, which decides whether memory works at all.
+    await reloadMemoryRuntime(db, memoryAdapter);
+    return created;
   });
 
   server.put('/providers/:id', async (request, reply) => {
@@ -308,7 +319,11 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     }
     // Ensure ID from URL is used
     const payload = { ...parsed.value, id };
-    return withRls(db, auth.session.userId, auth.session.role, async () => createOrUpdateProvider(db, payload));
+    const saved = await withRls(db, auth.session.userId, auth.session.role, async () =>
+      createOrUpdateProvider(db, payload)
+    );
+    await reloadMemoryRuntime(db, memoryAdapter);
+    return saved;
   });
 
   server.delete('/providers/:id', async (request, reply) => {
@@ -316,6 +331,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     if (!auth) return;
     const { id } = request.params as { id: string };
     await withRls(db, auth.session.userId, auth.session.role, async () => deleteProvider(db, id));
+    await reloadMemoryRuntime(db, memoryAdapter);
     return { status: 'ok' };
   });
 
