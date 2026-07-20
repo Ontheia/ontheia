@@ -95,6 +95,7 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 
 ## Observability
 - [Logging](https://docs.ontheia.ai/en/observability/01_logging): Log levels, log files, structured logging
+- [Metrics](https://docs.ontheia.ai/en/observability/02_metrics): Prometheus endpoint, exported metrics, scrape config
 
 ## User Guide
 - [Interface Overview](https://docs.ontheia.ai/en/user/general/01_interface): Main UI areas
