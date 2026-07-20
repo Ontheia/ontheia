@@ -2,7 +2,7 @@
 title: "Kompatible AI-Provider"
 ---
 
-Ontheia unterstützt jeden **OpenAI-kompatiblen Inference-Server** — lokal oder remote. Ein Endpoint, der `/v1/chat/completions` implementiert, genügt. Bietet er zusätzlich `/v1/responses` an, kann einzelnen Modellen die Responses-API zugewiesen werden (`chat_api: "responses"`) — nötig, um bei aktuellen Reasoning-Modellen Reasoning und Tool Calling zu kombinieren. Anthropic und Google Gemini werden über ihre eigenen Protokolle angesprochen, nicht über die OpenAI-Kompatibilität.
+Ontheia unterstützt jeden **OpenAI-kompatiblen Inference-Server** — lokal oder remote. Ein Endpoint, der `/v1/chat/completions` implementiert, genügt. Bietet er zusätzlich `/v1/responses` an, kann einzelnen Modellen die Responses-API zugewiesen werden (`chat_api: "responses"`) — nötig, um bei aktuellen Reasoning-Modellen Reasoning und Tool Calling zu kombinieren. Anthropic wird über sein eigenes API-Protokoll angesprochen, nicht über die OpenAI-Kompatibilität. Google Gemini dagegen **läuft über Googles OpenAI-kompatible Schicht** (`https://generativelanguage.googleapis.com/v1beta/openai/`) — nicht über `generateContent` und nicht über die neue Interactions API.
 
 ## Lokale Provider (selbst-gehostet)
 
@@ -20,7 +20,7 @@ Ontheia unterstützt jeden **OpenAI-kompatiblen Inference-Server** — lokal ode
 |---|---|---|
 | **Anthropic Claude** | Anthropic API | [anthropic.com](https://anthropic.com) |
 | **OpenAI** | OpenAI API (Chat Completions + Responses) | [openai.com](https://openai.com) |
-| **Google Gemini** | Gemini API | [ai.google.dev](https://ai.google.dev) |
+| **Google Gemini** | OpenAI-kompatibel (Google-Compat-Schicht) | [ai.google.dev](https://ai.google.dev) |
 | **xAI / Grok** | OpenAI-kompatibel (+ Responses) | [x.ai](https://x.ai) |
 | **Groq** | OpenAI-kompatibel | [groq.com](https://groq.com) |
 | **DeepSeek** | OpenAI-kompatibel | [deepseek.com](https://deepseek.com) |
@@ -49,5 +49,7 @@ Für lokale OpenAI-kompatible Provider:
 **LM Studio** und **Jan** bieten eine grafische Oberfläche für die Modellverwaltung und starten einen lokalen API-Server. Praktisch für Nutzer, die Ontheia als Agent-Layer über einer Desktop-App betreiben.
 
 **vLLM** ist für Produktions-Deployments mit vielen gleichzeitigen Nutzern optimiert. Empfehlenswert wenn Ontheia im Unternehmen für mehrere Teams betrieben wird.
+
+**Google Gemini** wird über Googles OpenAI-Kompatibilitätsschicht angebunden. Zwei Eigenheiten folgen daraus: Gemini akzeptiert `reasoning_effort` zusammen mit Function Tools (was OpenAI auf demselben Endpunkt-Typ ablehnt), und die Schicht weist Reasoning-Tokens in keinem eigenen Feld aus — sie stecken nur in `total_tokens`. Ontheia rechnet sie daraus zurück und zählt sie zu den Output-Tokens, damit die Kostenanzeige nicht zu niedrig ausfällt. Googles neue **Interactions API** (seit Juni 2026 allgemein verfügbar) wird derzeit nicht genutzt; die Kompatibilitätsschicht ist nicht abgekündigt.
 
 **OpenRouter** ist ein Aggregator — ein einziger API-Key gibt Zugriff auf Modelle von OpenAI, Anthropic, Google, Meta und vielen weiteren Anbietern.
