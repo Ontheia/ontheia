@@ -30,6 +30,7 @@ import websocket from '@fastify/websocket';
 import { FastifySSEPlugin } from 'fastify-sse-v2';
 import { Pool } from 'pg';
 import { execFileSync } from 'child_process';
+import { timingSafeEqual } from 'crypto';
 import { loadConfig } from './config.js';
 import { registerRoutes } from './routes.js';
 import { OrchestratorService } from './orchestrator/service.js';
@@ -240,7 +241,36 @@ const runService = new RunService(dbPool, orchestrator, memoryAdapter, skillServ
 const cronService = new CronService(dbPool, runService, server.log);
 await cronService.start();
 
+// The metric labels carry agent and task IDs, so /metrics is not public data.
+// It is guarded by a shared token because Prometheus cannot hold a session:
+// scrape with `authorization: Bearer <METRICS_TOKEN>`.
+// Without METRICS_TOKEN the endpoint stays open for backwards compatibility —
+// the warning below is logged once at startup so this is never silent.
+if (!config.metricsToken) {
+  logger.warn(
+    'METRICS_TOKEN is not set — /metrics is reachable without authentication. ' +
+      'Set METRICS_TOKEN in .env or block the endpoint in your reverse proxy.'
+  );
+}
+
+const metricsTokenBuffer = config.metricsToken ? Buffer.from(config.metricsToken) : null;
+
 server.get('/metrics', async (request, reply) => {
+  if (metricsTokenBuffer) {
+    const header = request.headers.authorization;
+    const presented = typeof header === 'string' && header.startsWith('Bearer ')
+      ? Buffer.from(header.slice(7))
+      : null;
+    // timingSafeEqual requires equal lengths, so compare the length first.
+    const ok =
+      presented !== null &&
+      presented.length === metricsTokenBuffer.length &&
+      timingSafeEqual(presented, metricsTokenBuffer);
+    if (!ok) {
+      reply.code(401);
+      return { error: 'unauthorized' };
+    }
+  }
   reply.header('content-type', registry.contentType);
   return registry.metrics();
 });

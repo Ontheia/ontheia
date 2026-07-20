@@ -33,8 +33,9 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 | Variable | Beschreibung |
 | :--- | :--- |
 | `ALLOWED_ORIGINS` | Kommagetrennte Liste der erlaubten Domains/IPs für CORS. Unterstützt Wildcards (z.B. `http://192.168.2.*`). |
-| `SESSION_SECRET` | Geheimer Schlüssel zur Signierung von Session-Cookies. |
-| `COOKIE_SECRET` | Schlüssel für verschlüsselte Cookies (bei OAuth Nutzung). |
+| `METRICS_TOKEN` | Bearer-Token für das Scrapen von `/metrics`. Wird bei einer Neuinstallation erzeugt; bleibt der Wert leer, ist der Endpunkt offen und der Host schreibt beim Start eine Warnung ins Log. Siehe [Metriken](/de/observability/02_metrics/). |
+| `SESSION_SECRET` | Reserviert. Ontheia nutzt opake Session-Tokens in der Datenbank, keine signierten Cookies — der Wert wird derzeit nicht vom Host gelesen. |
+| `COOKIE_SECRET` | Reserviert für einen künftigen OAuth-Flow. Wird heute nicht vom Host gelesen. |
 
 ## 4. MCP Orchestrator (Docker)
 

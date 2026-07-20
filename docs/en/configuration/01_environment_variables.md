@@ -33,8 +33,9 @@ These variables control API access and browser security.
 | Variable | Description |
 | :--- | :--- |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed domains/IPs for CORS. Supports wildcards (e.g., `http://192.168.2.*`). |
-| `SESSION_SECRET` | Secret key for signing session cookies. |
-| `COOKIE_SECRET` | Key for encrypted cookies (when using OAuth). |
+| `METRICS_TOKEN` | Bearer token required to scrape `/metrics`. Generated on a fresh installation; if empty, the endpoint stays open and the host logs a warning at startup. See [Metrics](/en/observability/02_metrics/). |
+| `SESSION_SECRET` | Reserved. Ontheia uses opaque session tokens stored in the database, not signed cookies — this value is currently not read by the host. |
+| `COOKIE_SECRET` | Reserved for a future OAuth flow. Not read by the host today. |
 
 ## 4. MCP Orchestrator (Docker)
 

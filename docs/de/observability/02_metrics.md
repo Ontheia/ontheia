@@ -2,7 +2,17 @@
 
 Der Host stellt unter `GET /metrics` auf dem API-Port (Standard `8080`) Prometheus-Metriken bereit. Der Endpunkt liefert das übliche Text-Expositionsformat und kann direkt gescrapt werden.
 
-> **Der Endpunkt verlangt keine Authentifizierung.** Die Labels enthalten Agenten- und Task-IDs, die Node.js-Standardmetriken geben Details über den Prozess preis. `/metrics` sollte daher nicht öffentlich erreichbar sein — im Reverse Proxy auf das Monitoring-Netz beschränken. Siehe [Reverse Proxy](/de/configuration/04_reverse_proxy/).
+## Authentifizierung
+
+Die Labels enthalten Agenten- und Task-IDs — `/metrics` ist damit kein öffentliches Datum. Der Zugriff ist über ein gemeinsames Bearer-Token abgesichert, denn ein Prometheus-Scraper kann keine Sitzung halten:
+
+```bash
+curl -H "Authorization: Bearer $METRICS_TOKEN" http://localhost:8080/metrics
+```
+
+`METRICS_TOKEN` wird in der `.env` gesetzt. Eine Neuinstallation erzeugt es automatisch; ein falsches oder fehlendes Token beantwortet der Host mit `401`.
+
+> **Bestehende Installationen bleiben offen.** Ein Update trägt kein Token in Ihre `.env` ein — das würde einen laufenden Scrape-Job ohne Vorwarnung abreißen lassen. Solange `METRICS_TOKEN` leer ist, antwortet der Endpunkt ohne Authentifizierung, und der Host schreibt bei jedem Start eine Warnung ins Log. Zum Schließen ein Token in die `.env` eintragen, den Host mit `docker compose up -d host` neu starten und den Header in die Scrape-Konfiguration aufnehmen.
 
 ## Ontheia-Metriken
 
@@ -25,6 +35,9 @@ Zusätzlich sammelt `prom-client` die Node.js-Standardmetriken (`process_*`, `no
 ```yaml
 scrape_configs:
   - job_name: ontheia
+    authorization:
+      type: Bearer
+      credentials: '<METRICS_TOKEN>'
     static_configs:
       - targets: ['ontheia-host:8080']
 ```

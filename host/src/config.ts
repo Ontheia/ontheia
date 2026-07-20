@@ -58,6 +58,7 @@ export interface ServiceConfig {
   };
   orchestratorHardeningPath: string;
   allowedOrigins: string[];
+  metricsToken?: string;
 }
 
 export function loadConfig(): ServiceConfig {
@@ -92,7 +93,8 @@ export function loadConfig(): ServiceConfig {
       bun: resolvePath('config/allowlist.packages.bun', process.env.ALLOWLIST_PACKAGES_BUN_PATH)
     },
     orchestratorHardeningPath: resolvePath('config/orchestrator.hardening.json', process.env.ORCHESTRATOR_HARDENING_PATH),
-    allowedOrigins
+    allowedOrigins,
+    metricsToken: process.env.METRICS_TOKEN?.trim() || undefined
   };
 }
 
