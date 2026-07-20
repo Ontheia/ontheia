@@ -88,4 +88,4 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-*For running multiple organizations on shared infrastructure, we recommend [separate instances](./docs/en/admin/configuration/06_multi_instance.md) — full isolation without added complexity.*
+*For running multiple organizations on shared infrastructure, we recommend [separate instances](./docs/en/configuration/06_multi_instance.md) — full isolation without added complexity.*

@@ -12,7 +12,13 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Introduction](https://docs.ontheia.ai/en/getting-started/01_introduction): What is Ontheia, core principles, use cases, architecture overview
 - [Installation](https://docs.ontheia.ai/en/getting-started/02_installation): Server setup in under 30 minutes
 - [Compatible MCP Servers](https://docs.ontheia.ai/en/getting-started/03_compatible-mcp-servers): Supported MCP servers and integration patterns
-- [Compatible AI Providers](https://docs.ontheia.ai/en/getting-started/04_compatible-providers): Supported LLM providers (Claude, gpt-5.4, Gemini, Ollama, Mistral, ...)
+- [Compatible AI Providers](https://docs.ontheia.ai/en/getting-started/04_compatible-providers): Supported LLM providers (Claude, GPT, Gemini, Grok, Ollama, Mistral, ...)
+
+## Admin: General Settings
+- [Overview](https://docs.ontheia.ai/en/admin/general/01_overview): Where the global system settings live and what they affect
+- [Runtime & UI](https://docs.ontheia.ai/en/admin/general/02_runtime_and_ui): Tool loop timeout, memory top-K, rate limits, timezone, response streaming, prompt caching
+- [AI Tools](https://docs.ontheia.ai/en/admin/general/03_ai_tools): Default providers for the prompt optimizer and the rolling summary
+- [Rolling Summary](https://docs.ontheia.ai/en/admin/general/04_rolling_summary): Context compression for long conversations
 
 ## Admin: MCP Servers
 - [Basics](https://docs.ontheia.ai/en/admin/mcp-server/01_basics): What MCP servers are and how Ontheia uses them
@@ -55,6 +61,8 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Policies and Templates](https://docs.ontheia.ai/en/admin/memory_audit/03_policies_and_templates): Memory policies per agent
 - [Best Practices](https://docs.ontheia.ai/en/admin/memory_audit/04_best_practices): Namespace design, TTL, cleanup
 - [Admin Tools](https://docs.ontheia.ai/en/admin/memory_audit/05_admin_tools): Memory browser, manual operations
+- [Maintenance and Status](https://docs.ontheia.ai/en/admin/memory_audit/06_maintenance_and_status): Monitoring dashboard, database maintenance, re-embedding jobs
+- [Disabled Mode](https://docs.ontheia.ai/en/admin/memory_audit/09_disabled_mode): Running Ontheia without vector memory
 - [Ranking Algorithm](https://docs.ontheia.ai/en/admin/memory_audit/10_ranking_algorithm): How relevant memories are scored and selected
 
 ## Admin: Scheduled Tasks
@@ -90,9 +98,19 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 
 ## User Guide
 - [Interface Overview](https://docs.ontheia.ai/en/user/general/01_interface): Main UI areas
+- [Limits and Preselection](https://docs.ontheia.ai/en/user/general/02_limits_and_preselection): History limits, start configuration, default tool authorization
+- [Access and Authentication](https://docs.ontheia.ai/en/user/auth/01_access): Login, signup, password security
 - [Chat](https://docs.ontheia.ai/en/user/chat/01_overview): Starting and managing chats
 - [Composer](https://docs.ontheia.ai/en/user/chat/02_composer): Message input, attachments, agent selection
+- [Message Types](https://docs.ontheia.ai/en/user/chat/03_message_types): Markdown, Mermaid diagrams, images, tool cards, status messages
+- [Interactions](https://docs.ontheia.ai/en/user/chat/04_interactions): Message actions, history and continuity, streaming behaviour
 - [Trace Panel](https://docs.ontheia.ai/en/user/chat/05_trace_panel): Inspect agent reasoning and tool calls
+- [Left Sidebar](https://docs.ontheia.ai/en/user/sidebars/01_left_navigation): Actions and search, projects, history, user menu
+- [Right Sidebar](https://docs.ontheia.ai/en/user/sidebars/02_right_activity): Run status, chain console, tool queue, MCP servers, automation
+- [Project Details](https://docs.ontheia.ai/en/user/sidebars/03_project_details): Creating and managing projects, project actions
+- [Profile and Privacy](https://docs.ontheia.ai/en/user/account/01_profile): Personal data, avatar, memory access, GDPR export and deletion
+- [Password and Security](https://docs.ontheia.ai/en/user/account/02_security): Changing your password and the requirements it must meet
+- [Account Activity](https://docs.ontheia.ai/en/user/info/01_account_activity): Account overview, session audit, recent activity, session token for API access
 - [Keyboard Shortcuts](https://docs.ontheia.ai/en/user/01_keyboard_shortcuts): Full shortcut reference
 
 ## Optional
@@ -102,4 +120,20 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Namespace Rules Details](https://docs.ontheia.ai/en/admin/memory_audit/08_namespace_rules_details): Advanced namespace configuration
 - [DB Rollback](https://docs.ontheia.ai/en/db/01_rollback): Database migration rollback procedures
 - [CSP Template](https://docs.ontheia.ai/en/security/04_csp-template): Content Security Policy configuration
-- [WebUI Navigation Reference](https://docs.ontheia.ai/en/webui_navi/01_overview): Complete UI navigation map
+
+## WebUI Navigation Reference
+Field-by-field reference of every screen — the most precise source for what a given control does.
+- [Overview](https://docs.ontheia.ai/en/webui_navi/01_overview): Layout of start page, admin console and sidebars
+- [Admin › General](https://docs.ontheia.ai/en/webui_navi/02_admin_general): Global runtime and UI settings
+- [Admin › Users](https://docs.ontheia.ai/en/webui_navi/03_admin_users): Creating users, roles, approval, account status
+- [Admin › MCP Servers](https://docs.ontheia.ai/en/webui_navi/04_admin_mcp): Server list, config editor, lifecycle controls
+- [Admin › Skills](https://docs.ontheia.ai/en/webui_navi/05_admin_skills): Skill installation, scope and agent assignment
+- [Admin › AI Providers](https://docs.ontheia.ai/en/webui_navi/06_admin_providers): Provider and model forms, chat API and reasoning effort
+- [Admin › Agents](https://docs.ontheia.ai/en/webui_navi/07_admin_agents): Agent form, tools, visibility, delegation
+- [Admin › Memory](https://docs.ontheia.ai/en/webui_navi/08_admin_memory): Memory browser, policies, audit widgets
+- [Admin › Info](https://docs.ontheia.ai/en/webui_navi/09_admin_info): System status and version information
+- [User Settings](https://docs.ontheia.ai/en/webui_navi/10_user_settings): Personal settings, profile, security
+- [Automation](https://docs.ontheia.ai/en/webui_navi/11_automation): Scheduled task forms and controls
+- [Composer](https://docs.ontheia.ai/en/webui_navi/12_composer): Input area, attachments, agent and model picker
+- [Left Sidebar](https://docs.ontheia.ai/en/webui_navi/13_sidebar_left): Navigation, projects, history, user menu
+- [Right Sidebar](https://docs.ontheia.ai/en/webui_navi/14_sidebar_right): Run status, tool queue, MCP servers, memory hits
