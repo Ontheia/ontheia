@@ -29,6 +29,8 @@ As with the MCP servers, it is strongly recommended to use the **Secret-Ref-Patt
 - The host service resolves this securely via its environment variables.
 - In the UI, these values are always displayed masked.
 
+> **What happens if you enter the key directly?** It is stored in the database in plain text. Ontheia no longer hands it out over the API — the form field stays empty when you edit a provider, and an empty field leaves the stored key untouched. Enter a new value to replace it; switch the provider to CLI or clear the key explicitly to remove it. The value is not encrypted in the database — that is what the `secret:` reference is for.
+
 ## 5. Model Capabilities
 
 Each model can be assigned a capability:

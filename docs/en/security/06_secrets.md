@@ -3,7 +3,8 @@
 ## Secret references in MCP configs
 - Values prefixed with `secret:` are resolved at runtime (e.g. `secret:API_KEY`).
 - `envFrom.secretRef` accepts keys whose ENV values are given in `KEY=VALUE` format (one per line).
-- Secrets are never persisted in plain text; the preview shows masks (`***`).
+- With a `secret:` reference the configuration holds only the name of an environment variable — the value itself stays in the process ENV.
+- A value **entered directly**, by contrast, is stored as typed. It is masked in previews (`***`) and, since version 0.5.0, no longer returned over the API, but it sits in the database in plain text. Use the `secret:` reference if that is not acceptable.
 
 ## Resolution in the orchestrator
 - `resolveEnv` checks `env` and `envFrom` per server:

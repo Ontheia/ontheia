@@ -3,7 +3,8 @@
 ## Secret-Referenzen in MCP-Configs
 - Werte mit Prefix `secret:` werden zur Laufzeit aufgelöst (z. B. `secret:API_KEY`).
 - `envFrom.secretRef` akzeptiert Schlüssel, deren ENV-Werte im Format `KEY=VALUE` (pro Zeile) vorliegen.
-- Secrets werden nie im Klartext persistiert; Preview zeigt Masken (`***`).
+- Wird eine `secret:`-Referenz verwendet, steht in der Konfiguration nur der Name der Umgebungsvariablen — der eigentliche Wert bleibt im Prozess-ENV.
+- Ein **direkt eingetragener** Wert wird dagegen so gespeichert, wie er eingegeben wurde. Er wird in Previews maskiert (`***`) und seit Version 0.5.0 nicht mehr über die API ausgeliefert, liegt in der Datenbank aber im Klartext. Wer das nicht möchte, nutzt die `secret:`-Referenz.
 
 ## Auflösung im Orchestrator
 - `resolveEnv` prüft `env` und `envFrom` je Server:

@@ -76,8 +76,9 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 - **In-Transit:** Alle Verbindungen (WebUI -> Host, Host -> LLM-Provider) müssen über TLS (HTTPS/WSS) verschlüsselt sein.
 - **At-Rest:** Verschlüsselung der Datenbank-Volumes und Dateisysteme (Infrastruktur-Ebene).
 - **Geheimnisverwaltung (Secrets):**
-    - API-Keys werden nie im Klartext in Konfigurationsdateien gespeichert.
-    - Verwendung von Secret-Referenzen (`secret:NAME`), die zur Laufzeit aus Umgebungsvariablen aufgelöst werden.
+    - API-Keys gehören nicht in Konfigurationsdateien im Repository.
+    - Empfohlen sind Secret-Referenzen (`secret:NAME`), die zur Laufzeit aus Umgebungsvariablen aufgelöst werden; nur dann verlässt der Wert nie das Prozess-ENV.
+    - Ein direkt in der Admin-UI eingetragener Provider-Key wird im Klartext in der Datenbank abgelegt. Er wird in Logs und Previews maskiert und nicht über die API ausgeliefert — verschlüsselt ist er nicht. Der Schutz ruht damit auf der Verschlüsselung des Datenbank-Volumes (siehe „At-Rest").
     - Maskierung von Secrets in Logs und UI-Previews.
 
 ---
@@ -107,7 +108,8 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 | **Sandbox** | Werden Ressourcen-Limits (`cpu`, `mem`) erzwungen? | [x] | Konfigurierbar via config |
 | **Netzwerk** | Ist die CSP in der WebUI aktiv und strikt? | [x] | Via Fastify Helmet |
 | **Netzwerk** | Funktioniert die Egress-Allowlist für MCP-Server? | [x] | Erzwingung durch Orchestrator |
-| **Secrets** | Sind API-Keys in der DB/Konfig maskiert/referenziert? | [x] | SecretRef Pattern aktiv |
+| **Secrets** | Werden API-Keys niemals an Clients ausgeliefert? | [x] | Redaktion an der API-Grenze (seit 0.5.0) |
+| **Secrets** | Liegen Provider-Keys verschlüsselt in der DB? | [ ] | Nein — nur `secret:`-Referenzen halten den Wert aus der DB heraus |
 | **Input** | Werden alle API-Inputs gegen Schemas validiert? | [x] | Ajv Integration aktiv |
 | **Audit** | Werden MCP-Server-Starts im Audit-Log erfasst? | [x] | Logging im Host aktiv |
 | **Skills** | Ist Pfad-Traversal bei Skill-Dateizugriffen geblockt? | [x] | `safeSkillPath()` in SkillService |

@@ -29,6 +29,8 @@ Wie bei den MCP-Servern wird dringend empfohlen, das **Secret-Ref-Pattern** zu n
 - Der Host-Service löst dies sicher über seine Umgebungsvariablen auf.
 - In der UI werden diese Werte grundsätzlich maskiert angezeigt.
 
+> **Was passiert, wenn Sie den Key direkt eintragen?** Er wird im Klartext in der Datenbank gespeichert. Ontheia gibt ihn nicht mehr über die API heraus — das Formularfeld bleibt beim Bearbeiten leer und ein leeres Feld lässt den gespeicherten Key unverändert. Zum Ersetzen einen neuen Wert eintragen; zum Entfernen den Provider auf CLI umstellen oder den Key gezielt leeren. Verschlüsselt ist der Wert in der Datenbank nicht — dafür ist die `secret:`-Referenz da.
+
 ## 5. Modell-Fähigkeiten (Capability)
 
 Jedem Modell kann eine Fähigkeit zugeordnet werden:

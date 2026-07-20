@@ -76,8 +76,9 @@ This document describes the security concept for the "Ontheia" system, consistin
 - **In transit:** All connections (WebUI → host, host → LLM provider) must be encrypted via TLS (HTTPS/WSS).
 - **At rest:** Encryption of database volumes and file systems (infrastructure level).
 - **Secret management:**
-    - API keys are never stored in plain text in configuration files.
-    - Use of secret references (`secret:NAME`) resolved from environment variables at runtime.
+    - API keys do not belong in configuration files inside the repository.
+    - Secret references (`secret:NAME`) resolved from environment variables at runtime are the recommended form; only then does the value never leave the process ENV.
+    - A provider key typed directly into the Admin UI is stored in the database in plain text. It is masked in logs and previews and is not returned over the API — but it is not encrypted. Its protection therefore rests on the encryption of the database volume (see "At rest").
     - Masking of secrets in logs and UI previews.
 
 ---
@@ -107,7 +108,8 @@ This document describes the security concept for the "Ontheia" system, consistin
 | **Sandbox** | Are resource limits (`cpu`, `mem`) enforced? | [x] | Configurable via config |
 | **Network** | Is the CSP in the WebUI active and strict? | [x] | Via Fastify Helmet |
 | **Network** | Does the egress allowlist work for MCP servers? | [x] | Enforced by orchestrator |
-| **Secrets** | Are API keys masked/referenced in the DB/config? | [x] | SecretRef pattern active |
+| **Secrets** | Are API keys never handed out to clients? | [x] | Redacted at the API boundary (since 0.5.0) |
+| **Secrets** | Are provider keys encrypted at rest in the DB? | [ ] | No — only `secret:` references keep the value out of the database |
 | **Input** | Are all API inputs validated against schemas? | [x] | Ajv integration active |
 | **Audit** | Are MCP server starts recorded in the audit log? | [x] | Logging active in the host |
 | **Skills** | Is path traversal blocked for skill file access? | [x] | `safeSkillPath()` in SkillService |
