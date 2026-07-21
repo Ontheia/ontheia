@@ -188,3 +188,59 @@ test('extractFilesEnvelope: write.py with unverifiable content yields no envelop
   const entries = extractFilesEnvelope(writeEvent(stdout, { args: ['/data/x.md'], input_data: 'something else' }));
   assert.equal(entries, null);
 });
+
+test('extractFilesEnvelope: binary read yields metadata without content', () => {
+  const stdout = [
+    `=== /data/ki-souveraenitaet.pdf (204800 bytes, sha256 ${SHA_A}, binary) ===`,
+    '[binary file — content not shown]'
+  ].join('\n');
+  const entries = extractFilesEnvelope(readEvent(stdout, { args: ['/data/ki-souveraenitaet.pdf'] }));
+  assert.ok(entries);
+  assert.equal(entries!.length, 1);
+  assert.equal(entries![0].path, '/data/ki-souveraenitaet.pdf');
+  assert.equal(entries![0].bytes, 204800);
+  assert.equal(entries![0].binary, true);
+  assert.equal(entries![0].content, '');
+  assert.equal(entries![0].complete, true);
+});
+
+const infoEvent = (stdout: string) => ({
+  server: 'cli-tools',
+  tool: 'run_skill_script',
+  arguments: { skill_dir: '/skills/files', script_path: 'scripts/info.py', args: ['/data/x.pdf'] },
+  result: cliResult(stdout, 0)
+});
+
+test('extractFilesEnvelope: info.py on a binary file yields a card entry', () => {
+  const stdout = [
+    '/data/ki-souveraenitaet.pdf',
+    '  type: binary file',
+    '  size: 204800 bytes (200.0 KB)',
+    '  mtime: 2026-07-21T16:00:00',
+    `  sha256: ${SHA_A}`
+  ].join('\n');
+  const entries = extractFilesEnvelope(infoEvent(stdout));
+  assert.equal(entries!.length, 1);
+  assert.equal(entries![0].path, '/data/ki-souveraenitaet.pdf');
+  assert.equal(entries![0].sha256, SHA_A);
+  assert.equal(entries![0].binary, true);
+});
+
+test('extractFilesEnvelope: info.py on text or without a path yields nothing', () => {
+  const textInfo = [
+    '/data/notes.md',
+    '  type: text file',
+    '  size: 12 bytes (12 B)',
+    `  sha256: ${SHA_A}`,
+    '  lines: 2'
+  ].join('\n');
+  // Text files carry no content in info output — a snapshot-less text
+  // artifact would be worse than none.
+  assert.equal(extractFilesEnvelope(infoEvent(textInfo)), null);
+  assert.equal(extractFilesEnvelope(infoEvent('files skill configuration\n  user: wbrangl')), null);
+});
+
+test('kindForPath: pdf', () => {
+  assert.equal(kindForPath('/data/x.pdf'), 'pdf');
+  assert.equal(kindForPath('/data/X.PDF'), 'pdf');
+});

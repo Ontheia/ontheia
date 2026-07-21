@@ -1036,6 +1036,20 @@ export function saveArtifact(id: string, content: string, expectSha: string): Pr
   }) as Promise<{ id: string; sha256: string }>;
 }
 
+/** Fetches a binary artifact (PDF) as a Blob for the panel's viewer. */
+export async function fetchArtifactRaw(id: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getStoredToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(`${API_BASE}/api/artifacts/${encodeURIComponent(id)}/raw`, { headers });
+  if (!response.ok) {
+    const error = new Error(`Request failed (${response.status})`);
+    (error as any).status = response.status;
+    throw error;
+  }
+  return response.blob();
+}
+
 export function materializeArtifact(
   path: string,
   content: string,

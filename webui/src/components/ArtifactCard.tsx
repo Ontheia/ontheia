@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import { useTranslation } from 'react-i18next';
-import { FileText, PencilLine } from 'lucide-react';
+import { Eye, FileText, FileType, PencilLine } from 'lucide-react';
 
 /**
  * File envelope entry attached by the host to a files-skill read
@@ -53,6 +53,8 @@ const formatBytes = (bytes: number): string => {
 export function ArtifactCard({ file, onOpen }: ArtifactCardProps) {
   const { t } = useTranslation(['chat']);
   const name = file.path.split('/').pop() || file.path;
+  // PDFs open in a viewer, everything else in the editor — signal which
+  const isBinary = /\.pdf$/i.test(file.path);
 
   return (
     <div className="artifact-card-row">
@@ -63,7 +65,9 @@ export function ArtifactCard({ file, onOpen }: ArtifactCardProps) {
         title={file.path}
       >
         <div className="artifact-card-icon">
-          <FileText aria-hidden="true" width={20} height={20} />
+          {isBinary
+            ? <FileType aria-hidden="true" width={20} height={20} />
+            : <FileText aria-hidden="true" width={20} height={20} />}
         </div>
         <div className="artifact-card-body">
           <span className="artifact-card-title">{name}</span>
@@ -77,7 +81,9 @@ export function ArtifactCard({ file, onOpen }: ArtifactCardProps) {
           </span>
         </div>
         <div className="artifact-card-action">
-          <PencilLine aria-hidden="true" width={16} height={16} />
+          {isBinary
+            ? <Eye aria-hidden="true" width={16} height={16} />
+            : <PencilLine aria-hidden="true" width={16} height={16} />}
           <span>{t('artifactOpen')}</span>
         </div>
       </button>

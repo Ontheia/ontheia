@@ -23,12 +23,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Eye, Loader2, PencilLine, RefreshCw, Save, X } from 'lucide-react';
-import { getArtifactByPath, materializeArtifact, refreshArtifact, saveArtifact } from '@/lib/api';
+import { fetchArtifactRaw, getArtifactByPath, materializeArtifact, refreshArtifact, saveArtifact } from '@/lib/api';
 import { MarkdownMessage } from './MarkdownMessage';
 import { MermaidBlock } from './MermaidBlock';
+import { PdfViewer } from './PdfViewer';
 
 /** Kinds the panel can render as a preview (everything else is editor-only). */
 const PREVIEWABLE_KINDS = ['markdown', 'mermaid'];
+/** Kinds with no text body: shown in a viewer, never edited. */
+const BINARY_KINDS = ['pdf'];
 
 /**
  * What the panel is opened on: a file-bound artifact (chat card) or a
@@ -176,6 +179,24 @@ export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
     setState({ phase: 'loading' });
     try {
       const artifact = await getArtifactByPath(source.path);
+      if (BINARY_KINDS.includes(artifact.kind)) {
+        // No text body to re-read — the viewer streams the file itself
+        setState({
+          phase: 'ready',
+          artifactId: artifact.id,
+          filePath: artifact.binding_path,
+          kind: artifact.kind,
+          sha256: artifact.binding_sha,
+          complete: true,
+          original: '',
+          draft: '',
+          saving: false,
+          conflict: false,
+          saveError: null,
+          savedAt: null
+        });
+        return;
+      }
       const fresh = await refreshArtifact(artifact.id);
       setState({
         phase: 'ready',
@@ -205,6 +226,35 @@ export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Binary artifacts: pull the bytes once and render them ourselves (pdf.js).
+  // Fetched rather than linked because the route needs the session token.
+  const [rawData, setRawData] = useState<ArrayBuffer | null>(null);
+  const [rawError, setRawError] = useState<string | null>(null);
+  const binaryArtifactId =
+    state.phase === 'ready' && BINARY_KINDS.includes(state.kind) ? state.artifactId : null;
+  const handleRawError = useCallback(() => setRawError(t('artifactLoadError')), [t]);
+  useEffect(() => {
+    if (!binaryArtifactId) return;
+    let cancelled = false;
+    setRawError(null);
+    setRawData(null);
+    void (async () => {
+      try {
+        const blob = await fetchArtifactRaw(binaryArtifactId);
+        const buffer = await blob.arrayBuffer();
+        if (cancelled) return;
+        setRawData(buffer);
+      } catch (err) {
+        if (cancelled) return;
+        const status = (err as { status?: number })?.status;
+        setRawError(status === 410 ? t('artifactFileGone') : t('artifactLoadError'));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [binaryArtifactId, t]);
 
   const handleSave = async () => {
     if (state.phase !== 'ready' || state.saving || !state.artifactId || !state.sha256) return;
@@ -410,7 +460,21 @@ export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
               <span className="artifact-panel-error-text">{state.saveError}</span>
             </div>
           )}
-          {PREVIEWABLE_KINDS.includes(state.kind) && mode === 'preview' ? (
+          {BINARY_KINDS.includes(state.kind) ? (
+            rawError ? (
+              <div className="artifact-panel-status artifact-panel-error">
+                <AlertTriangle width={16} height={16} aria-hidden="true" />
+                <span>{rawError}</span>
+              </div>
+            ) : rawData ? (
+              <PdfViewer data={rawData} onError={handleRawError} />
+            ) : (
+              <div className="artifact-panel-status">
+                <Loader2 className="artifact-panel-spinner" width={18} height={18} aria-hidden="true" />
+                {t('artifactLoading')}
+              </div>
+            )
+          ) : PREVIEWABLE_KINDS.includes(state.kind) && mode === 'preview' ? (
             <div className="artifact-panel-preview">
               {state.kind === 'mermaid' ? (
                 <MermaidBlock code={state.draft} />
@@ -432,7 +496,15 @@ export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
               }
             />
           )}
-          {isDraft ? (
+          {BINARY_KINDS.includes(state.kind) ? (
+            <footer className="artifact-panel-footer">
+              {state.sha256 && (
+                <span className="artifact-panel-sha" title={state.sha256}>
+                  sha256 {state.sha256.slice(0, 12)}…
+                </span>
+              )}
+            </footer>
+          ) : isDraft ? (
             <footer className="artifact-panel-footer artifact-panel-saveas">
               <input
                 type="text"

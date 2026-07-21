@@ -46,9 +46,14 @@ export interface FileEnvelopeEntry {
   complete: boolean;
   /** Captured file content (only trusted as a full snapshot when complete). */
   content: string;
+  /** Binary file (PDF, image, …): metadata only, never a text snapshot. */
+  binary?: boolean;
 }
 
-const READ_HEADER_RE = /^=== (.+) \((\d+) bytes, sha256 ([0-9a-f]{64})\) ===$/;
+const READ_HEADER_RE = /^=== (.+) \((\d+) bytes, sha256 ([0-9a-f]{64})(, binary)?\) ===$/;
+const INFO_SIZE_RE = /^ {2}size: (\d+) bytes/m;
+const INFO_SHA_RE = /^ {2}sha256: ([0-9a-f]{64})$/m;
+const INFO_BINARY_RE = /^ {2}type: binary file$/m;
 const WRITE_CONFIRM_RE = /^Written: (.+) \((\d+) bytes, sha256 ([0-9a-f]{64})\)$/m;
 const TRUNCATED_RE = /^\[TRUNCATED — continue with --offset \d+\]$/;
 
@@ -73,7 +78,8 @@ export function extractFilesEnvelope(event: {
   const scriptPath = typeof event.arguments?.script_path === 'string' ? event.arguments.script_path : '';
   const isRead = /(^|\/)read\.py$/.test(scriptPath);
   const isWrite = /(^|\/)write\.py$/.test(scriptPath);
-  if (!isRead && !isWrite) return null;
+  const isInfo = /(^|\/)info\.py$/.test(scriptPath);
+  if (!isRead && !isWrite && !isInfo) return null;
 
   // MCP result shape: { content: [{ type: 'text', text: JSON of {stdout, stderr, exit_code} }] }
   const result = event.result as { content?: Array<{ type?: string; text?: string }> } | undefined;
@@ -91,6 +97,27 @@ export function extractFilesEnvelope(event: {
   if (typeof payload.stdout !== 'string' || payload.exit_code !== 0) return null;
 
   const stdout = unwrapCommandOutput(payload.stdout);
+
+  if (isInfo) {
+    // `info.py <path>` is the documented route for binary files, and its
+    // metadata block is all a binary card needs. Text files are ignored here:
+    // info carries no content, and a snapshot-less text artifact would be
+    // worse than none — the agent reads those with read.py anyway. Called
+    // without a path info prints the configuration (no leading path).
+    const first = stdout.split('\n')[0]?.trim() ?? '';
+    if (!first.startsWith('/') || !INFO_BINARY_RE.test(stdout)) return null;
+    const size = stdout.match(INFO_SIZE_RE);
+    const sha = stdout.match(INFO_SHA_RE);
+    if (!size || !sha) return null;
+    return [{
+      path: first,
+      bytes: Number(size[1]),
+      sha256: sha[1],
+      complete: true,
+      content: '',
+      binary: true
+    }];
+  }
 
   if (isWrite) {
     // write.py confirms with path/size/sha but does not echo the content. It
@@ -121,6 +148,12 @@ export function extractFilesEnvelope(event: {
 
   const flush = () => {
     if (!current) return;
+    if (current.binary) {
+      // Only the placeholder line follows a binary header — never content
+      current.content = '';
+      entries.push(current);
+      return;
+    }
     // Drop the trailing truncation marker from the captured content
     if (contentLines.length > 0 && TRUNCATED_RE.test(contentLines[contentLines.length - 1])) {
       contentLines.pop();
@@ -139,7 +172,8 @@ export function extractFilesEnvelope(event: {
         bytes: Number(header[2]),
         sha256: header[3],
         complete: !hasOffset,
-        content: ''
+        content: '',
+        ...(header[4] ? { binary: true } : {})
       };
       contentLines = [];
     } else if (current) {
@@ -161,10 +195,11 @@ export function envelopeMetadata(entries: FileEnvelopeEntry[]) {
  * is text (binary files never produce an envelope); the kind decides which
  * preview the panel offers (markdown rendering, mermaid diagram, none).
  */
-export function kindForPath(filePath: string): 'markdown' | 'text' | 'mermaid' {
+export function kindForPath(filePath: string): 'markdown' | 'text' | 'mermaid' | 'pdf' {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.md' || ext === '.markdown') return 'markdown';
   if (ext === '.mmd' || ext === '.mermaid') return 'mermaid';
+  if (ext === '.pdf') return 'pdf';
   return 'text';
 }
 
@@ -182,6 +217,11 @@ export async function promoteFilesEnvelope(
   ref: { chatId: string; messageId: string }
 ): Promise<void> {
   for (const entry of entries) {
+    const kind = kindForPath(entry.path);
+    // Binary files only become artifacts when the panel can actually present
+    // them (PDF today). A card for a .zip would open into nothing.
+    if (entry.binary && kind !== 'pdf') continue;
+
     const title = path.basename(entry.path);
     const upsert = await client.query(
       `INSERT INTO app.artifacts (kind, title, binding_type, binding_path, complete)
@@ -189,12 +229,14 @@ export async function promoteFilesEnvelope(
        ON CONFLICT (user_id, binding_path) WHERE binding_type = 'file' AND deleted_at IS NULL
        DO UPDATE SET updated_at = now(), kind = EXCLUDED.kind
        RETURNING id`,
-      [entry.path, title, entry.complete, kindForPath(entry.path)]
+      [entry.path, title, entry.complete, kind]
     );
     const artifactId: string = upsert.rows[0].id;
 
     let versionId: string | null = null;
-    if (entry.complete) {
+    // Binary artifacts carry no text snapshot — their bytes are served from
+    // the file itself; only the sha is tracked, for change detection.
+    if (entry.complete && !entry.binary) {
       const version = await client.query(
         `INSERT INTO app.artifact_versions (artifact_id, content, sha256, author)
          SELECT $1, $2, $3, 'agent'

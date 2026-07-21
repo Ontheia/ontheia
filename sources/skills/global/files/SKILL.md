@@ -71,6 +71,14 @@ write it to a file; do not paste the draft into your answer.
   actually discussing — never the whole file.
 - To change a file, use `edit.py`/`write.py` — do not route the full text
   through the chat and back.
+- **Showing a file means running `read.py` on it.** Only that creates the
+  card. Locating a path with `search.py`/`list.py` shows the user nothing —
+  after finding it, always `read.py` the file itself. Never present a bare
+  path as if it were the file, and never invent a download or `sandbox:`
+  link: those do not exist here, the card is the delivery mechanism.
+- **Binary files (PDF, images) work the same way:** `read.py` reports their
+  metadata instead of content (`info.py <path>` does too) and the user gets
+  a card — a PDF opens in the viewer. Never claim you cannot display them.
 - Files you read earlier in the conversation are listed in the artifact
   context of each request (path, artifact_id, sha256). To recall their
   content, use `artifact_read` (server `artifacts`) for the stored snapshot,

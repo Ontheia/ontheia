@@ -32,8 +32,14 @@ def read_one(path: str, offset: int, limit: int) -> bool:
         print(f"ERROR[{c.EXIT_NOT_FOUND}]: not found or not a file: {path}")
         return False
     if c.is_binary(real):
-        print(f"=== {real} — binary file, content not shown (see info.py) ===")
-        return False
+        # Metadata header in the same shape as text files, marked binary: the
+        # content cannot be shown, but path/size/sha are what the caller needs
+        # (and what Ontheia turns into a file card for the user).
+        size = os.path.getsize(real)
+        digest = c.sha256_file(real)
+        print(f"=== {real} ({size} bytes, sha256 {digest}, binary) ===")
+        print("[binary file — content not shown]")
+        return True
     size = os.path.getsize(real)
     digest = c.sha256_file(real)
     print(f"=== {real} ({size} bytes, sha256 {digest}) ===")

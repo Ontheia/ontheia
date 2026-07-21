@@ -22,6 +22,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { PoolClient } from 'pg';
+import { createReadStream } from 'node:fs';
+import path from 'node:path';
 import { requireSession } from './security.js';
 import { withRls, isUuid } from './utils.js';
 import type { RouteContext } from './types.js';
@@ -41,6 +43,9 @@ import { extractFilesEnvelope, recordVersion, materializeFileArtifact } from '..
 
 /** Character cap for a panel re-read; beyond this the artifact stays partial. */
 const REFRESH_READ_LIMIT = 2_000_000;
+
+/** Upper bound for streaming a binary artifact to the browser viewer. */
+const RAW_MAX_BYTES = 100 * 1024 * 1024;
 
 type CliScriptResult = { stdout: string; stderr: string; exit_code: number };
 
@@ -119,7 +124,7 @@ export function registerArtifactRoutes(
   const runFilesScript = async (
     userId: string,
     userEmail: string,
-    script: 'scripts/read.py' | 'scripts/write.py',
+    script: 'scripts/read.py' | 'scripts/write.py' | 'scripts/info.py',
     args: string[],
     inputData?: string
   ): Promise<{ cli: CliScriptResult | null; skillDirMissing: boolean }> => {
@@ -173,6 +178,54 @@ export function registerArtifactRoutes(
     });
   });
 
+  // GET /api/artifacts/:id/raw — stream a binary artifact (PDF) to the
+  // browser's viewer. The files skill stays the authority on which paths are
+  // reachable: info.py validates the path (exit 2 outside the roots) and
+  // returns the canonical realpath, which is what gets streamed — the host
+  // never resolves roots itself, so the {user} contract has only one owner.
+  server.get('/api/artifacts/:id/raw', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { id } = request.params as { id: string };
+    if (!isUuid(id)) return reply.code(400).send({ error: 'invalid_id' });
+
+    const artifact = await withRls(db, auth.session.userId, auth.session.role, async (client) =>
+      loadArtifact(client, id)
+    );
+    if (!artifact) return reply.code(404).send({ error: 'not_found' });
+    if (artifact.binding_type !== 'file' || !artifact.binding_path) {
+      return reply.code(400).send({ error: 'not_file_bound' });
+    }
+    if (artifact.kind !== 'pdf') return reply.code(400).send({ error: 'not_binary' });
+
+    const { cli, skillDirMissing } = await runFilesScript(
+      auth.session.userId, auth.session.email, 'scripts/info.py', [artifact.binding_path]
+    );
+    if (skillDirMissing) return reply.code(500).send({ error: 'files_skill_unavailable' });
+    if (!cli) return reply.code(502).send({ error: 'cli_result_unreadable' });
+    if (cli.exit_code === 4) return reply.code(410).send({ error: 'file_gone' });
+    if (cli.exit_code !== 0) {
+      return reply.code(502).send({ error: 'info_failed', exit_code: cli.exit_code, detail: cli.stderr.slice(0, 500) });
+    }
+
+    const stdout = cli.stdout.replace(/^<command_output>\n?|\n?<\/command_output>$/g, '');
+    const realPath = stdout.split('\n')[0]?.trim() ?? '';
+    const sizeMatch = stdout.match(/^ {2}size: (\d+) bytes/m);
+    if (!realPath.startsWith('/') || !sizeMatch) {
+      return reply.code(502).send({ error: 'info_unparseable' });
+    }
+    const size = Number(sizeMatch[1]);
+    if (size > RAW_MAX_BYTES) return reply.code(413).send({ error: 'file_too_large' });
+
+    const filename = path.basename(realPath).replace(/["\\]/g, '');
+    return reply
+      .type('application/pdf')
+      .header('Content-Length', String(size))
+      .header('Content-Disposition', `inline; filename="${filename}"`)
+      .header('Cache-Control', 'private, no-store')
+      .send(createReadStream(realPath));
+  });
+
   // POST /api/artifacts/:id/refresh — re-read the live file (the file on disk
   // is the source of truth; the DB is a mirror) and store a fresh snapshot.
   server.post('/api/artifacts/:id/refresh', async (request, reply) => {
@@ -212,7 +265,13 @@ export function registerArtifactRoutes(
     if (!entry) return reply.code(502).send({ error: 'read_unparseable' });
 
     return withRls(db, auth.session.userId, auth.session.role, async (client) => {
-      if (entry.complete) {
+      if (entry.binary) {
+        // No text snapshot for binary artifacts — track the sha only
+        await client.query(
+          `UPDATE app.artifacts SET binding_sha = $2, updated_at = now() WHERE id = $1`,
+          [id, entry.sha256]
+        );
+      } else if (entry.complete) {
         await recordVersion(client, id, entry.content, entry.sha256, 'agent');
       } else {
         await client.query(
