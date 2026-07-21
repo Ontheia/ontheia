@@ -26,7 +26,7 @@ Appears automatically as soon as an agent reads or creates a file. Survives a pa
 ## Artifact Panel (right edge)
 
 ```
-┌─ ⇔ ─────────────────────────────────────────┐
+┌─ ⇔ ────────────────────────────────────────┐
 │ filename.md        [Edit|Preview]       [×] │
 │ /path/to/filename.md                        │
 │ ┌─────────────────────────────────────────┐ │

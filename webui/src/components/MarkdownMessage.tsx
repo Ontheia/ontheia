@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import React, { type ComponentPropsWithoutRef, useCallback, useState } from 'react';
+import React, { type ComponentPropsWithoutRef, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown, { type Components, type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -290,6 +290,16 @@ export function MarkdownMessage({
   const { t } = useTranslation(['chat', 'common']);
   const [copied, setCopied] = useState(false);
 
+  // Memoized: react-markdown maps these to component types, so a fresh object
+  // per render makes React treat every block as a different type and remount
+  // it. Invisible for plain elements, but a MermaidBlock loses its rendered
+  // diagram and has to draw again — a visible flicker whenever the parent
+  // re-renders for unrelated reasons.
+  const markdownComponents = useMemo(
+    () => createMarkdownComponents({ enableCopy: showCodeCopyButton, onCopy }),
+    [showCodeCopyButton, onCopy]
+  );
+
   const handleCopy = useCallback(async () => {
     try {
       const ok = await copyText(content);
@@ -326,10 +336,7 @@ export function MarkdownMessage({
         // markdown, where a single newline is a soft break).
         remarkPlugins={userInput ? [remarkDisablePasteTraps, remarkGfm, remarkBreaks, remarkHighlight] : [remarkGfm, remarkHighlight]}
         rehypePlugins={[[rehypeSanitize, markdownSchema]]}
-        components={createMarkdownComponents({
-          enableCopy: showCodeCopyButton,
-          onCopy
-        })}
+        components={markdownComponents}
       >
         {content}
       </ReactMarkdown>
