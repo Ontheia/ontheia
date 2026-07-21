@@ -106,6 +106,7 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Message Types](https://docs.ontheia.ai/en/user/chat/03_message_types): Markdown, Mermaid diagrams, images, tool cards, status messages
 - [Interactions](https://docs.ontheia.ai/en/user/chat/04_interactions): Message actions, history and continuity, streaming behaviour
 - [Trace Panel](https://docs.ontheia.ai/en/user/chat/05_trace_panel): Inspect agent reasoning and tool calls
+- [Artifacts](https://docs.ontheia.ai/en/user/chat/06_artifacts): File cards, panel editor, PDF viewer, saving chat drafts as files
 - [Left Sidebar](https://docs.ontheia.ai/en/user/sidebars/01_left_navigation): Actions and search, projects, history, user menu
 - [Right Sidebar](https://docs.ontheia.ai/en/user/sidebars/02_right_activity): Run status, chain console, tool queue, MCP servers, automation
 - [Project Details](https://docs.ontheia.ai/en/user/sidebars/03_project_details): Creating and managing projects, project actions

@@ -18,6 +18,7 @@ Welcome to Ontheia. This documentation helps you navigate the web interface and 
 - [Message Types (Markdown, Tools)](./chat/03_message_types.md)
 - [Interactions & Token Display](./chat/04_interactions.md)
 - [The Trace Panel (Deep Diagnostics)](./chat/05_trace_panel.md)
+- [Artifacts: File Cards & Panel Editor](./chat/06_artifacts.md)
 
 ### 4. [Personal Settings](./account/01_profile.md)
 - [Profile, Avatar & Privacy](./account/01_profile.md)

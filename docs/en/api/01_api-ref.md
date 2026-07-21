@@ -211,6 +211,21 @@ Organization of conversations into projects.
 
 ---
 
+## Artifacts
+
+File cards and the panel editor. Every file access goes through the `files` skill scripts so that its root whitelist and `{user}` isolation apply. All routes are restricted to the calling user by RLS.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/artifacts/by-path` | Resolves a file path to its artifact (query `path`). |
+| `GET` | `/api/artifacts/:id` | Returns metadata and the stored content of the current version. |
+| `GET` | `/api/artifacts/:id/raw` | Streams the bytes of a binary artifact (PDF) for the viewer. |
+| `POST` | `/api/artifacts/:id/refresh` | Re-reads the file and stores a new version if it changed. |
+| `POST` | `/api/artifacts/:id/save` | Writes edited content back; `409` on a checksum conflict. |
+| `POST` | `/api/artifacts/materialize` | Creates a chat draft as a new file; `409` if it already exists. |
+
+---
+
 ## MCP & Servers
 
 Management of Model Context Protocol servers and tool configurations.

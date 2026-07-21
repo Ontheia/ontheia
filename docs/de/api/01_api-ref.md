@@ -210,6 +210,21 @@ Organisation von Konversationen in Projekten.
 
 ---
 
+## Artefakte
+
+Dateikarten und Panel-Editor. Jeder Dateizugriff läuft über die Skripte des `files`-Skills, damit dessen Wurzelverzeichnis-Prüfung und `{user}`-Isolation greifen. Alle Routen sind per RLS auf den eigenen Benutzer beschränkt.
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `GET` | `/api/artifacts/by-path` | Löst einen Dateipfad zum zugehörigen Artefakt auf (Query `path`). |
+| `GET` | `/api/artifacts/:id` | Liefert Metadaten und den gespeicherten Inhalt der aktuellen Version. |
+| `GET` | `/api/artifacts/:id/raw` | Streamt die Bytes eines Binär-Artefakts (PDF) für die Leseansicht. |
+| `POST` | `/api/artifacts/:id/refresh` | Liest die Datei neu ein und legt bei Änderung eine neue Version an. |
+| `POST` | `/api/artifacts/:id/save` | Schreibt bearbeiteten Inhalt zurück; bei Prüfsummen-Konflikt `409`. |
+| `POST` | `/api/artifacts/materialize` | Legt einen Chat-Entwurf als neue Datei an; existiert sie bereits, `409`. |
+
+---
+
 ## MCP & Server
 
 Verwaltung von Model Context Protocol Servern und Tool-Konfigurationen.

@@ -18,6 +18,7 @@ Willkommen bei Ontheia. Diese Dokumentation hilft dir dabei, dich in der Web-Obe
 - [Nachrichtentypen (Markdown, Tools)](./chat/03_message_types.md)
 - [Interaktionen & Token-Anzeige](./chat/04_interactions.md)
 - [Das Trace-Panel (Tiefendiagnose)](./chat/05_trace_panel.md)
+- [Artefakte: Dateikarten & Panel-Editor](./chat/06_artifacts.md)
 
 ### 4. [Persönliche Einstellungen](./account/01_profile.md)
 - [Profil, Avatar & Datenschutz](./account/01_profile.md)
