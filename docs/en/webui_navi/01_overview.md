@@ -27,10 +27,13 @@ User menu*           │ [Composer]             │
 
 > **Note:** Administration, Settings, and Automation are accessed via the **Avatar dropdown** at the bottom of the left sidebar — they are not directly visible in the sidebar.
 
+> **Artifact panel:** When the user opens a file card in the chat, an additional window overlays the view on the right (see [File Cards & Artifact Panel](/en/webui_navi/15_artifact_panel/)). It is not a fixed part of the layout and appears only on demand.
+
 Detailed documentation:
 - [Left Sidebar](/en/webui_navi/13_sidebar_left/)
 - [Right Sidebar](/en/webui_navi/14_sidebar_right/)
 - [Composer](/en/webui_navi/12_composer/)
+- [File Cards & Artifact Panel](/en/webui_navi/15_artifact_panel/)
 
 ---
 

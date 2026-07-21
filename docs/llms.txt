@@ -139,3 +139,4 @@ Field-by-field reference of every screen — the most precise source for what a 
 - [Composer](https://docs.ontheia.ai/en/webui_navi/12_composer): Input area, attachments, agent and model picker
 - [Left Sidebar](https://docs.ontheia.ai/en/webui_navi/13_sidebar_left): Navigation, projects, history, user menu
 - [Right Sidebar](https://docs.ontheia.ai/en/webui_navi/14_sidebar_right): Run status, tool queue, MCP servers, memory hits
+- [File Cards & Artifact Panel](https://docs.ontheia.ai/en/webui_navi/15_artifact_panel): File cards in the chat, panel editor, PDF viewer, saving drafts as files
