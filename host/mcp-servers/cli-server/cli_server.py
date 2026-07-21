@@ -42,7 +42,8 @@ class CliServer:
                         "skill_dir":   {"type": "string",  "description": "Absolute base directory of the skill (from activate_skill response)."},
                         "script_path": {"type": "string",  "description": "Relative path to the script, e.g. 'scripts/extract.py'."},
                         "args":        {"type": "array",   "items": {"type": "string"}, "description": "Arguments passed to the script."},
-                        "input_data":  {"type": "string",  "description": "Optional stdin data."}
+                        "input_data":  {"type": "string",  "description": "Optional stdin data."},
+                        "raw_stdin":   {"type": "boolean", "description": "Pass input_data through byte-faithfully (skip the literal-\\n repair heuristic). For host-side callers with verbatim content."}
                     },
                     "required": ["skill_dir", "script_path"]
                 }
@@ -252,7 +253,13 @@ class CliServer:
                 script_path = tool_args.get("script_path", "")
                 args        = list(tool_args.get("args", []))
                 input_raw   = tool_args.get("input_data", "")
-                input_data  = input_raw.replace("\\n", "\n")
+                # The \n repair targets model-double-escaped JSON strings; a
+                # host-side caller sending verbatim content opts out via
+                # raw_stdin so intended literal backslashes survive.
+                if tool_args.get("raw_stdin") is True:
+                    input_data = input_raw
+                else:
+                    input_data = input_raw.replace("\\n", "\n")
 
                 if not skill_dir or not script_path:
                     res_data = {"error": "skill_dir and script_path are required."}

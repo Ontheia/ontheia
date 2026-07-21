@@ -64,6 +64,8 @@ import { useChatSidebar, type ToolApprovalMode, type WarningEntry } from '../con
 import { CombinedPicker } from '../components/CombinedPicker';
 import { MarkdownMessage } from '../components/MarkdownMessage';
 import { TracePanel } from '../components/TracePanel';
+import { ArtifactCard, type ArtifactFileRef } from '../components/ArtifactCard';
+import { ArtifactPanel } from '../components/ArtifactPanel';
 import type { PrimarySelection, SecondarySelection } from '../App';
 import type { ProviderEntry } from '../types/providers';
 import type { AgentEntry } from '../components/CombinedPicker';
@@ -295,6 +297,8 @@ export function ChatView({
   const [message, setMessage] = useState('');
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Path of the file artifact open in the right-hand editor drawer (null = closed)
+  const [artifactPath, setArtifactPath] = useState<string | null>(null);
   const [cronReloadKey, setCronReloadKey] = useState(0);
   const [motd, setMotd] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
@@ -1465,6 +1469,22 @@ export function ChatView({
                   }
                 ]);
               }
+              // File envelope (files-skill read): show the artifact card(s)
+              // immediately. Mirrors the tool message the host persists, so
+              // the reloaded chat renders identically.
+              const envelopeFiles = (event.metadata as Record<string, unknown> | undefined)?.files;
+              if (status === 'success' && Array.isArray(envelopeFiles) && envelopeFiles.length > 0) {
+                setMessages(prev => [
+                  ...prev,
+                  {
+                    id: makeId('msg'),
+                    role: 'tool' as const,
+                    content: '',
+                    createdAt: new Date().toISOString(),
+                    metadata: { files: envelopeFiles, tool: event.tool, server: event.server, status: 'success' }
+                  }
+                ]);
+              }
             }
           } else {
             setEvents(prev => [...prev, event]);
@@ -1922,7 +1942,7 @@ export function ChatView({
         }
         const historyMessages = Array.isArray(messagesResponse?.messages)
           ? messagesResponse.messages
-              .flatMap((msg) => {
+              .flatMap((msg): ChatMessage[] => {
                 const content = typeof msg?.content === 'string' ? msg.content : '';
                 const rawRole = typeof msg?.role === 'string' ? msg.role : 'user';
                 const role =
@@ -1950,6 +1970,12 @@ export function ChatView({
                       createdAt,
                       metadata: { images: imageDataUris }
                     }];
+                  }
+                  // Keep file-read tool messages: their envelope renders as
+                  // artifact card(s), so the cards survive a reload.
+                  const files = (metadata as any)?.files;
+                  if (Array.isArray(files) && files.length > 0) {
+                    return [{ id, role: 'tool' as const, content: '', metadata, createdAt }];
                   }
                   return [];
                 }
@@ -2170,8 +2196,28 @@ export function ChatView({
             </div>
           ) : (
             messages
-              .filter((msg) => msg.role !== 'tool' && msg.role !== 'system')
+              .filter((msg) =>
+                (msg.role !== 'tool' && msg.role !== 'system') ||
+                (msg.role === 'tool' && Array.isArray(msg.metadata?.files) && (msg.metadata!.files as unknown[]).length > 0))
               .map((msg) => {
+              if (msg.role === 'tool') {
+                // File read → provenance-native artifact card(s) instead of a dump
+                const files = (msg.metadata!.files as ArtifactFileRef[]).filter(
+                  (f) => f && typeof f.path === 'string'
+                );
+                if (files.length === 0) return null;
+                return (
+                  <div key={msg.id} className="artifact-cards">
+                    {files.map((file) => (
+                      <ArtifactCard
+                        key={`${msg.id}-${file.path}`}
+                        file={file}
+                        onOpen={(f) => setArtifactPath(f.path)}
+                      />
+                    ))}
+                  </div>
+                );
+              }
               const isStreamingAgent =
                 msg.role === 'agent' && streamingMessageRef.current && msg.id === streamingMessageRef.current.id;
               const renderedContent = isStreamingAgent && streamingText ? streamingText : msg.content;
@@ -2627,6 +2673,9 @@ export function ChatView({
       </footer>
 
       </div>
+      {artifactPath && (
+        <ArtifactPanel path={artifactPath} onClose={() => setArtifactPath(null)} />
+      )}
     </section>
   );
 }

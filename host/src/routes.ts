@@ -41,6 +41,8 @@ import { handleCreateSchedule, handleCancelSchedule, handleListSchedules } from 
 import { handleSkillsTool } from './mcp/plugins/skills.js';
 import { SkillService } from './runtime/SkillService.js';
 import { registerSkillRoutes } from './routes/skills.js';
+import { registerArtifactRoutes } from './routes/artifacts.js';
+import { readArtifactSnapshot } from './runtime/ArtifactService.js';
 
 export async function registerRoutes(
   server: FastifyInstance,
@@ -74,6 +76,15 @@ export async function registerRoutes(
   registerCronRoutes(server, { ...context, cronService });
   registerPromptRoutes(server, context);
   if (skillService) registerSkillRoutes(server, { ...context, skillService });
+  registerArtifactRoutes(server, { ...context, skillService });
+
+  orchestrator.registerInternalToolHandler('artifacts', async (name, args, ctx) => {
+    const userId = ctx?.userId;
+    const role = ctx?.role || 'user';
+    if (!userId) throw new Error('User context required for artifact tools.');
+    if (name !== 'artifact_read') throw new Error(`Tool ${name} not found on server artifacts`);
+    return withRls(db, userId, role, async (client) => readArtifactSnapshot(client, args ?? {}));
+  });
 
   orchestrator.registerInternalToolHandler('scheduler', async (name, args, ctx) => {
     const userId = ctx?.userId;

@@ -995,6 +995,47 @@ export function getChat(chatId: string) {
   return request(`/chats/${encodeURIComponent(chatId)}`, { method: 'GET' });
 }
 
+export type ArtifactHead = {
+  version_id: string;
+  content: string;
+  sha256: string;
+  author: 'user' | 'agent';
+  created_at: string;
+};
+
+export type ArtifactDto = {
+  id: string;
+  kind: string;
+  title: string | null;
+  binding_type: 'file' | 'ephemeral';
+  binding_path: string | null;
+  binding_sha: string | null;
+  complete: boolean;
+  updated_at: string;
+  head: ArtifactHead | null;
+};
+
+export function getArtifactByPath(path: string): Promise<ArtifactDto> {
+  return request(`/api/artifacts/by-path?path=${encodeURIComponent(path)}`, { method: 'GET' }) as Promise<ArtifactDto>;
+}
+
+export function getArtifact(id: string): Promise<ArtifactDto> {
+  return request(`/api/artifacts/${encodeURIComponent(id)}`, { method: 'GET' }) as Promise<ArtifactDto>;
+}
+
+export function refreshArtifact(id: string): Promise<{ id: string; binding_path: string; sha256: string; complete: boolean; content: string }> {
+  return request(`/api/artifacts/${encodeURIComponent(id)}/refresh`, { method: 'POST', body: JSON.stringify({}) }) as Promise<{
+    id: string; binding_path: string; sha256: string; complete: boolean; content: string;
+  }>;
+}
+
+export function saveArtifact(id: string, content: string, expectSha: string): Promise<{ id: string; sha256: string }> {
+  return request(`/api/artifacts/${encodeURIComponent(id)}/save`, {
+    method: 'POST',
+    body: JSON.stringify({ content, expect_sha: expectSha })
+  }) as Promise<{ id: string; sha256: string }>;
+}
+
 export function listChatMessages(chatId: string, params?: { limit?: number; q?: string; beforeId?: string }) {
   const search = new URLSearchParams();
   if (params?.limit) {

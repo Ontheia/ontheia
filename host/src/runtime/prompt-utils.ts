@@ -127,6 +127,17 @@ export function appendMemoryContext(messages: ChatMessage[], memoryContextText?:
   );
 }
 
+/**
+ * Appends the per-chat artifact context (pointer lines for previously read
+ * files, plus verbatim user edits) to the last user message. Volatile — the
+ * pointed-at versions change between requests — so it lives in the suffix.
+ * No-op when the chat references no artifacts.
+ */
+export function appendArtifactContext(messages: ChatMessage[], artifactContextText?: string): void {
+  if (!artifactContextText) return;
+  appendToLastUserMessage(messages, artifactContextText);
+}
+
 /** Appends the current date/time to the last user message (volatile, suffix). */
 export function appendDateTimeContext(
   messages: ChatMessage[],

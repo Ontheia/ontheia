@@ -85,12 +85,13 @@ export async function upsertChat(db: Pool, client: PoolClient | null, params: { 
   );
 }
 
-export async function insertChatMessage(db: Pool, client: PoolClient | null, params: { chatId: string; runId: string; role: 'user' | 'agent' | 'system' | 'tool'; content: string; metadata?: Record<string, unknown>; createdAt?: string }) {
+export async function insertChatMessage(db: Pool, client: PoolClient | null, params: { chatId: string; runId: string; role: 'user' | 'agent' | 'system' | 'tool'; content: string; metadata?: Record<string, unknown>; createdAt?: string }): Promise<string | null> {
   const runner = client ?? db;
   try {
-    await runner.query(
+    const inserted = await runner.query(
       `INSERT INTO app.chat_messages (chat_id, run_id, role, content, metadata, created_at)
-       VALUES ($1, $2, $3, $4, $5::jsonb, COALESCE($6::timestamptz, now()))`,
+       VALUES ($1, $2, $3, $4, $5::jsonb, COALESCE($6::timestamptz, now()))
+       RETURNING id`,
       [params.chatId, params.runId, params.role, params.content, JSON.stringify(params.metadata ?? {}), params.createdAt ?? null]
     );
     await runner.query(
@@ -100,6 +101,7 @@ export async function insertChatMessage(db: Pool, client: PoolClient | null, par
         WHERE id = $1`,
       [params.chatId, params.createdAt ?? null]
     );
+    return inserted.rows[0]?.id ?? null;
   } catch (error) {
     logger.error({ err: error }, 'Failed to insert chat message');
     throw error;

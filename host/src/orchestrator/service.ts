@@ -507,7 +507,14 @@ export class OrchestratorService {
       status: 'running' as const,
       startedAt: this.startTime.toISOString()
     };
-    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess, schedulerProcess, skillsProcess];
+    const artifactsProcess = {
+      name: 'artifacts',
+      command: 'internal',
+      args: [],
+      status: 'running' as const,
+      startedAt: this.startTime.toISOString()
+    };
+    return [...runnerProcesses, ...clientProcesses, memoryProcess, delegationProcess, schedulerProcess, skillsProcess, artifactsProcess];
   }
 
   async stop(name: string) {
@@ -537,7 +544,7 @@ export class OrchestratorService {
   }
 
   listClientNames() {
-    return Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler', 'skills']);
+    return Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler', 'skills', 'artifacts']);
   }
 
   /**
@@ -684,6 +691,23 @@ export class OrchestratorService {
       ];
     }
 
+    if (serverName === 'artifacts') {
+      return [
+        {
+          name: 'artifact_read',
+          description: 'Loads the stored snapshot of a file artifact (a file previously read in this chat, shown to the user as an editable card). Use it to rehydrate file content referenced in the artifact context instead of re-reading the file, unless you explicitly need the live file state.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              artifact_id: { type: 'string', description: 'Artifact id from the artifact context (preferred).' },
+              path: { type: 'string', description: 'Alternative lookup: the file path exactly as listed in the artifact context.' },
+              version_id: { type: 'string', description: 'Omit this. Only for retrieving an older snapshot when you already have its exact version uuid; defaults to the newest snapshot.' }
+            }
+          }
+        }
+      ];
+    }
+
     if (serverName === 'scheduler') {
       return [
         {
@@ -786,7 +810,7 @@ export class OrchestratorService {
     }
     const client = this.clients.get(serverName);
     if (!client) {
-      const available = Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler']);
+      const available = Array.from(this.clients.keys()).concat(['memory', 'delegation', 'scheduler', 'artifacts']);
       throw new Error(`MCP server "${serverName}" is not running. Available: ${available.join(', ')}`);
     }
     try {
@@ -803,7 +827,12 @@ export class OrchestratorService {
       const runMeta = context?.run?.options?.metadata as Record<string, unknown> | undefined;
       const identity: Record<string, string> = {};
       if (typeof context?.userId === 'string' && context.userId) identity['ontheia/user_id'] = context.userId;
-      if (typeof runMeta?.user_email === 'string' && runMeta.user_email) identity['ontheia/user_email'] = runMeta.user_email;
+      // userEmail as a first-class context field covers ad-hoc calls outside a
+      // run (e.g. the artifact write-back route); runMeta stays the run path.
+      const userEmail = (typeof context?.userEmail === 'string' && context.userEmail)
+        ? context.userEmail
+        : (typeof runMeta?.user_email === 'string' && runMeta.user_email ? runMeta.user_email : undefined);
+      if (userEmail) identity['ontheia/user_email'] = userEmail;
       if (typeof runMeta?.user_name === 'string' && runMeta.user_name) identity['ontheia/user_name'] = runMeta.user_name;
       const result = await client.client.callTool({
         name: params.name,

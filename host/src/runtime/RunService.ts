@@ -50,10 +50,17 @@ import { loadUserSettings } from '../routes/auth.js';
 import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countMemoryWarning } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
-import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
 import { SkillService, type SkillRecord } from './SkillService.js';
+import {
+  extractFilesEnvelope,
+  envelopeMetadata,
+  promoteFilesEnvelope,
+  buildChatArtifactContext,
+  type FileEnvelopeEntry
+} from './ArtifactService.js';
 
 export type RunContext = {
   userId: string;
@@ -134,6 +141,22 @@ export class RunService {
         }
       }
 
+      // FILE ENVELOPE: a successful files-skill read carries per-file headers
+      // (path, sha256, size) in its stdout. Parse them once here so the
+      // structured envelope reaches BOTH the SSE stream (webui artifact card)
+      // and the persisted tool message — and promote below.
+      let filesEnvelope: FileEnvelopeEntry[] | null = null;
+      if (event.type === 'tool_call' && event.status === 'success') {
+        try {
+          filesEnvelope = extractFilesEnvelope(event as any);
+        } catch (err) {
+          if (logger) logger.warn({ err, runId }, 'files envelope extraction failed');
+        }
+        if (filesEnvelope) {
+          (event as any).metadata = { ...((event as any).metadata || {}), files: envelopeMetadata(filesEnvelope) };
+        }
+      }
+
       // 1. CALL onEvent IMMEDIATELY for low-latency streaming
       const eventResult = onEvent(event);
       if (eventResult instanceof Promise) {
@@ -197,7 +220,7 @@ export class RunService {
                   ? (typeof toolEvent.result === 'string' ? toolEvent.result : JSON.stringify(toolEvent.result))
                   : `Error: ${toolEvent.error || 'Unknown tool error'}`;
                 
-                await insertChatMessage(this.db, client, {
+                const messageId = await insertChatMessage(this.db, client, {
                   chatId: activeChatId,
                   runId,
                   role: 'tool',
@@ -210,9 +233,21 @@ export class RunService {
                     arguments: toolEvent.arguments,
                     result: toolEvent.result,
                     error: toolEvent.error,
-                    timestamp: toolEvent.timestamp
+                    timestamp: toolEvent.timestamp,
+                    ...(toolEvent.metadata?.files ? { files: toolEvent.metadata.files } : {})
                   }
                 });
+
+                // ARTIFACT PROMOTION: file reads become addressable artifacts,
+                // deduplicated per (user, path), linked to this tool message.
+                // Same RLS client — the insert trigger fills user_id.
+                if (filesEnvelope && messageId) {
+                  try {
+                    await promoteFilesEnvelope(client, filesEnvelope, { chatId: activeChatId, messageId });
+                  } catch (err) {
+                    if (logger) logger.error({ err, runId }, 'Artifact promotion failed');
+                  }
+                }
               });
             } catch (err) {
               if (logger) logger.error({ err, runId }, 'Failed to persist tool message');
@@ -578,8 +613,26 @@ export class RunService {
       enrichedInput.messages.unshift(...systemMsgs);
       // Volatile, per-request context lives in the non-cacheable suffix (anchored
       // to the last user message), so the system+tools prefix stays cacheable:
-      // retrieved memory (query-dependent) first, then date/time (per-minute).
+      // retrieved memory (query-dependent) first, then artifacts, then date/time.
       appendMemoryContext(enrichedInput.messages, memoryContextText);
+
+      // ARTIFACT CONTEXT: pointer lines for files previously read in this chat
+      // (the webui strips role:'tool' messages from the history it sends, so
+      // without this the model loses all knowledge of read files across turns),
+      // plus verbatim injection of user edits the model has not seen yet.
+      if (chatId) {
+        try {
+          const artifactReadAvailable = (((enrichedInput as any).toolset || []) as RunToolDefinition[])
+            .some(t => t.server === 'artifacts' && t.name === 'artifact_read');
+          const artifactContextText = await withRls(this.db, userId, role, async (client) => {
+            return buildChatArtifactContext(client, chatId!, { artifactReadAvailable });
+          });
+          appendArtifactContext(enrichedInput.messages, artifactContextText);
+        } catch (err) {
+          if (logger) logger.warn({ err, runId }, 'Artifact context build failed');
+        }
+      }
+
       appendDateTimeContext(enrichedInput.messages, templateContext);
 
       // 6. Run Execution

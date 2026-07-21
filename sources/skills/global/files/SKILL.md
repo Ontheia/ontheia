@@ -58,6 +58,24 @@ If OLD matches zero times you get the closest lines in the file (exit 5);
 if it matches more than once you get the line numbers (exit 6) — extend OLD
 with surrounding context and retry.
 
+## Showing file contents to the user
+
+Every file you read with `read.py` is shown to the user automatically as an
+**editable card** in the chat — they see the full content there and can edit
+and save it themselves.
+
+- After a `read.py`, do **not** echo the file's content into your answer.
+  Refer to the file by its path and quote only the specific lines you are
+  actually discussing — never the whole file.
+- To change a file, use `edit.py`/`write.py` — do not route the full text
+  through the chat and back.
+- Files you read earlier in the conversation are listed in the artifact
+  context of each request (path, artifact_id, sha256). To recall their
+  content, use `artifact_read` (server `artifacts`) for the stored snapshot,
+  or `read.py` when you need the live file state — it may have changed.
+- When the artifact context reports a user edit, that content is verbatim
+  and authoritative: never paraphrase it back into the file or revert it.
+
 ## Exit Codes
 
 | Code | Meaning | Typical reaction |

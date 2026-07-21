@@ -417,6 +417,7 @@ async function main() {
         { server: 'skills', tool: 'write_skill_resource' },
         { server: 'skills', tool: 'create_skill' },
         { server: 'cli-tools', tool: 'run_skill_script' },
+        { server: 'artifacts', tool: 'artifact_read' },
       ];
 
       // Scheduler tools shared by both agents (reminders, recurring tasks).
@@ -441,7 +442,7 @@ async function main() {
       await pool.query(
         `INSERT INTO app.agents
            (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $8::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
            persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
@@ -506,7 +507,7 @@ async function main() {
       await pool.query(
         `INSERT INTO app.agents
            (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'skills', 'cli-tools', 'scheduler'], $8::jsonb, true)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $8::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
            persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
@@ -538,7 +539,7 @@ async function main() {
       // skills + cli-tools (skill-creator), scheduler (reminders)
       await pool.query(
         `INSERT INTO app.agent_mcp_servers (agent_id, server, active)
-         VALUES ($1, 'memory', true), ($1, 'delegation', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
+         VALUES ($1, 'memory', true), ($1, 'delegation', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true), ($1, 'artifacts', true)
          ON CONFLICT (agent_id, server) DO NOTHING`,
         [GUIDE_AGENT_ID]
       );
@@ -548,7 +549,7 @@ async function main() {
       // it executes tasks, it does not orchestrate other agents)
       await pool.query(
         `INSERT INTO app.agent_mcp_servers (agent_id, server, active)
-         VALUES ($1, 'memory', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true)
+         VALUES ($1, 'memory', true), ($1, 'skills', true), ($1, 'cli-tools', true), ($1, 'scheduler', true), ($1, 'artifacts', true)
          ON CONFLICT (agent_id, server) DO NOTHING`,
         [ASSISTANT_AGENT_ID]
       );
