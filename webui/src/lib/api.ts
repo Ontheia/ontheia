@@ -1036,6 +1036,17 @@ export function saveArtifact(id: string, content: string, expectSha: string): Pr
   }) as Promise<{ id: string; sha256: string }>;
 }
 
+export function materializeArtifact(
+  path: string,
+  content: string,
+  chatId?: string
+): Promise<{ id: string; binding_path: string; sha256: string }> {
+  return request('/api/artifacts/materialize', {
+    method: 'POST',
+    body: JSON.stringify({ path, content, chat_id: chatId })
+  }) as Promise<{ id: string; binding_path: string; sha256: string }>;
+}
+
 export function listChatMessages(chatId: string, params?: { limit?: number; q?: string; beforeId?: string }) {
   const search = new URLSearchParams();
   if (params?.limit) {

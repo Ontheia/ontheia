@@ -65,7 +65,7 @@ import { CombinedPicker } from '../components/CombinedPicker';
 import { MarkdownMessage } from '../components/MarkdownMessage';
 import { TracePanel } from '../components/TracePanel';
 import { ArtifactCard, type ArtifactFileRef } from '../components/ArtifactCard';
-import { ArtifactPanel } from '../components/ArtifactPanel';
+import { ArtifactPanel, type ArtifactPanelSource } from '../components/ArtifactPanel';
 import type { PrimarySelection, SecondarySelection } from '../App';
 import type { ProviderEntry } from '../types/providers';
 import type { AgentEntry } from '../components/CombinedPicker';
@@ -297,8 +297,9 @@ export function ChatView({
   const [message, setMessage] = useState('');
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  // Path of the file artifact open in the right-hand editor drawer (null = closed)
-  const [artifactPath, setArtifactPath] = useState<string | null>(null);
+  // Source open in the right-hand artifact editor drawer (null = closed);
+  // the nonce forces a panel remount when a new source is opened.
+  const [panelSource, setPanelSource] = useState<{ source: ArtifactPanelSource; nonce: number } | null>(null);
   const [cronReloadKey, setCronReloadKey] = useState(0);
   const [motd, setMotd] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
@@ -2085,6 +2086,48 @@ export function ChatView({
     return () => window.removeEventListener('ontheia:cron_complete', handler);
   }, [activeChatId]);
 
+  // Chat blocks (e.g. rendered mermaid) offer "edit in panel": they dispatch
+  // this event with their source; the panel opens on it as a transient draft.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { content?: string; kind?: string } | undefined;
+      if (!detail || typeof detail.content !== 'string') return;
+      setPanelSource({
+        source: {
+          type: 'draft',
+          content: detail.content,
+          kind: typeof detail.kind === 'string' ? detail.kind : 'text',
+          chatId: activeChatId ?? undefined
+        },
+        nonce: Date.now()
+      });
+    };
+    window.addEventListener('ontheia:artifact_draft', handler);
+    return () => window.removeEventListener('ontheia:artifact_draft', handler);
+  }, [activeChatId]);
+
+  // A materialized draft ("Speichern unter…") gets its card into the chat
+  // immediately; the host has persisted the matching tool message, so a
+  // reload renders the same card from the DB.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { files?: unknown[] } | undefined;
+      if (!Array.isArray(detail?.files) || detail!.files.length === 0) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: makeId('msg'),
+          role: 'tool' as const,
+          content: '',
+          createdAt: new Date().toISOString(),
+          metadata: { files: detail!.files, tool: 'artifact_materialize', server: 'artifacts', status: 'success' }
+        }
+      ]);
+    };
+    window.addEventListener('ontheia:artifact_materialized', handler);
+    return () => window.removeEventListener('ontheia:artifact_materialized', handler);
+  }, []);
+
   return (
     <section className="chat-view">
       <div className="chat-topbar">
@@ -2212,7 +2255,7 @@ export function ChatView({
                       <ArtifactCard
                         key={`${msg.id}-${file.path}`}
                         file={file}
-                        onOpen={(f) => setArtifactPath(f.path)}
+                        onOpen={(f) => setPanelSource({ source: { type: 'file', path: f.path }, nonce: Date.now() })}
                       />
                     ))}
                   </div>
@@ -2673,8 +2716,12 @@ export function ChatView({
       </footer>
 
       </div>
-      {artifactPath && (
-        <ArtifactPanel path={artifactPath} onClose={() => setArtifactPath(null)} />
+      {panelSource && (
+        <ArtifactPanel
+          key={panelSource.nonce}
+          source={panelSource.source}
+          onClose={() => setPanelSource(null)}
+        />
       )}
     </section>
   );

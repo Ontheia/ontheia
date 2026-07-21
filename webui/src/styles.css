@@ -5754,3 +5754,75 @@
     display: none;
   }
 }
+
+/* Artifact panel: edit/preview toggle (markdown only) + preview surface */
+.artifact-panel-mode {
+  display: inline-flex;
+  border: 1px solid hsl(var(--sidebar-border));
+  border-radius: 0.65rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.artifact-panel-mode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  color: var(--muted-foreground, #6b7280);
+  background: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.artifact-panel-mode button + button {
+  border-left: 1px solid hsl(var(--sidebar-border));
+}
+
+.artifact-panel-mode button:hover {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.artifact-panel-mode button.is-active {
+  background: rgba(56, 189, 248, 0.18);
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.artifact-panel-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid hsl(var(--sidebar-border));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
+}
+
+/* Artifact panel: "Speichern unter…" footer for chat drafts */
+.artifact-panel-saveas input {
+  flex: 1;
+  min-width: 0;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 0.65rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.artifact-panel-saveas input:focus-visible {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+}
+
+.artifact-panel-error-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Inside the panel preview the block IS the panel content — no self-opening */
+.artifact-panel-preview .mermaid-toolbar-edit {
+  display: none;
+}

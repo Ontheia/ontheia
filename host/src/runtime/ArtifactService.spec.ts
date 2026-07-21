@@ -135,10 +135,12 @@ test('envelopeMetadata strips content', () => {
   assert.ok(!('content' in meta[0]));
 });
 
-test('kindForPath: only genuine Markdown extensions are markdown', () => {
+test('kindForPath: kind follows the file extension', () => {
   assert.equal(kindForPath('/data/notes/x.md'), 'markdown');
   assert.equal(kindForPath('/data/notes/X.MD'), 'markdown');
   assert.equal(kindForPath('/data/notes/readme.markdown'), 'markdown');
+  assert.equal(kindForPath('/data/diagram.mmd'), 'mermaid');
+  assert.equal(kindForPath('/data/flow.mermaid'), 'mermaid');
   assert.equal(kindForPath('/data/notes/x.txt'), 'text');
   assert.equal(kindForPath('/data/config.yaml'), 'text');
   assert.equal(kindForPath('/data/script.py'), 'text');

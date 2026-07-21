@@ -26,7 +26,7 @@ import { requireSession } from './security.js';
 import { withRls, isUuid } from './utils.js';
 import type { RouteContext } from './types.js';
 import type { SkillService } from '../runtime/SkillService.js';
-import { extractFilesEnvelope, recordVersion } from '../runtime/ArtifactService.js';
+import { extractFilesEnvelope, recordVersion, materializeFileArtifact } from '../runtime/ArtifactService.js';
 
 /**
  * Artifact REST routes — read/refresh/save for the webui panel editor.
@@ -227,6 +227,57 @@ export function registerArtifactRoutes(
         complete: entry.complete,
         content: entry.content
       };
+    });
+  });
+
+  // POST /api/artifacts/materialize — save an ephemeral chat draft (e.g. an
+  // LLM-emitted mermaid block edited in the panel) as a NEW file and register
+  // it as a file-bound artifact. write.py runs WITHOUT --force, so an
+  // existing file yields a clean 409 instead of being replaced.
+  server.post('/api/artifacts/materialize', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const body = request.body as { path?: string; content?: string; chat_id?: string };
+    if (typeof body?.path !== 'string' || !body.path.trim()) {
+      return reply.code(400).send({ error: 'path_required' });
+    }
+    if (typeof body?.content !== 'string' || !body.content.trim()) {
+      return reply.code(400).send({ error: 'content_required' });
+    }
+    const targetPath = body.path.trim();
+
+    const { cli, skillDirMissing } = await runFilesScript(
+      auth.session.userId, auth.session.email, 'scripts/write.py',
+      [targetPath, '--allow-escapes'], body.content
+    );
+    if (skillDirMissing) return reply.code(500).send({ error: 'files_skill_unavailable' });
+    if (!cli) return reply.code(502).send({ error: 'cli_result_unreadable' });
+    if (cli.exit_code === 3) {
+      return reply.code(409).send({ error: 'file_exists' });
+    }
+    if (cli.exit_code === 2) {
+      // Path outside the allowed roots — pass the roots from stderr through
+      // so the panel can show the user where saving is possible.
+      return reply.code(400).send({ error: 'path_outside_roots', detail: cli.stderr.slice(0, 500) });
+    }
+    if (cli.exit_code !== 0) {
+      return reply.code(502).send({ error: 'write_failed', exit_code: cli.exit_code, detail: cli.stderr.slice(0, 500) });
+    }
+
+    const written = cli.stdout.match(/Written: (.+) \(\d+ bytes, sha256 ([0-9a-f]{64})\)/);
+    if (!written) return reply.code(502).send({ error: 'write_unparseable' });
+    const realPath = written[1];
+    const newSha = written[2];
+    const storedContent = body.content.endsWith('\n') ? body.content : `${body.content}\n`;
+
+    return withRls(db, auth.session.userId, auth.session.role, async (client) => {
+      const artifactId = await materializeFileArtifact(client, {
+        path: realPath,
+        content: storedContent,
+        sha256: newSha,
+        chatId: typeof body.chat_id === 'string' ? body.chat_id : undefined
+      });
+      return { id: artifactId, binding_path: realPath, sha256: newSha };
     });
   });
 

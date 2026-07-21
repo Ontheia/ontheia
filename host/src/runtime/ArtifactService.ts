@@ -136,12 +136,14 @@ export function envelopeMetadata(entries: FileEnvelopeEntry[]) {
 
 /**
  * Artifact kind derived from the file extension. Everything read.py delivers
- * is text (binary files never produce an envelope); only genuine Markdown is
- * labelled as such — later iterations hang rendering/preview off this field.
+ * is text (binary files never produce an envelope); the kind decides which
+ * preview the panel offers (markdown rendering, mermaid diagram, none).
  */
-export function kindForPath(filePath: string): 'markdown' | 'text' {
+export function kindForPath(filePath: string): 'markdown' | 'text' | 'mermaid' {
   const ext = path.extname(filePath).toLowerCase();
-  return ext === '.md' || ext === '.markdown' ? 'markdown' : 'text';
+  if (ext === '.md' || ext === '.markdown') return 'markdown';
+  if (ext === '.mmd' || ext === '.mermaid') return 'mermaid';
+  return 'text';
 }
 
 /**
@@ -205,6 +207,62 @@ export async function promoteFilesEnvelope(
       [artifactId, ref.messageId, ref.chatId]
     );
   }
+}
+
+/**
+ * Registers a freshly materialized file (an ephemeral chat draft saved via
+ * "Speichern unter…") as a file-bound artifact: upsert on (user, path) plus a
+ * user-authored version. When a chat is given, a tool message carrying the
+ * file envelope is inserted into it — the chat then shows the same editable
+ * card a read.py would have produced (surviving reloads), and the artifact
+ * ref anchors to that message, so the model's artifact context picks the new
+ * file up without any read.py ever having run. Runs on an RLS client.
+ */
+export async function materializeFileArtifact(
+  client: PoolClient,
+  params: { path: string; content: string; sha256: string; chatId?: string }
+): Promise<string> {
+  const upsert = await client.query(
+    `INSERT INTO app.artifacts (kind, title, binding_type, binding_path, complete)
+     VALUES ($3, $2, 'file', $1, true)
+     ON CONFLICT (user_id, binding_path) WHERE binding_type = 'file' AND deleted_at IS NULL
+     DO UPDATE SET updated_at = now(), kind = EXCLUDED.kind
+     RETURNING id`,
+    [params.path, path.basename(params.path), kindForPath(params.path)]
+  );
+  const artifactId: string = upsert.rows[0].id;
+  await recordVersion(client, artifactId, params.content, params.sha256, 'user');
+
+  if (params.chatId) {
+    const bytes = Buffer.byteLength(params.content, 'utf8');
+    const message = await client.query(
+      `INSERT INTO app.chat_messages (chat_id, role, content, metadata)
+       VALUES ($1, 'tool', '', $2::jsonb)
+       RETURNING id`,
+      [
+        params.chatId,
+        JSON.stringify({
+          tool: 'artifact_materialize',
+          server: 'artifacts',
+          status: 'success',
+          tool_call_id: `materialize-${artifactId}-${Date.now()}`,
+          files: [{ path: params.path, sha256: params.sha256, bytes, complete: true }]
+        })
+      ]
+    );
+    const messageId: string = message.rows[0].id;
+    await client.query(
+      `UPDATE app.chats SET last_message_at = now(), updated_at = now() WHERE id = $1`,
+      [params.chatId]
+    );
+    await client.query(
+      `INSERT INTO app.artifact_refs (artifact_id, message_id, chat_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (artifact_id, message_id) DO NOTHING`,
+      [artifactId, messageId, params.chatId]
+    );
+  }
+  return artifactId;
 }
 
 /**
