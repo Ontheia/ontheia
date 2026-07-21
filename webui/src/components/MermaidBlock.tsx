@@ -23,8 +23,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, ChartNetwork, Code, Copy, Maximize2, PencilLine, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, ChartNetwork, Code, Copy, Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
+import { ArtifactEditButton } from './ArtifactEditButton';
 import { COPY_DEFAULT_DELAY_MS } from './CodeCopyButton';
 
 // The mermaid library is ~1.5 MB, so it lives in its own lazily loaded chunk:
@@ -234,23 +235,11 @@ export function MermaidBlock({ code, onCopy }: MermaidBlockProps) {
               <Copy aria-hidden="true" width={14} height={14} />
             )}
           </button>
-          <button
-            type="button"
+          <ArtifactEditButton
+            content={code}
+            kind="mermaid"
             className="mermaid-toolbar-button mermaid-toolbar-edit"
-            aria-label={t('artifactEditInPanel')}
-            title={t('artifactEditInPanel')}
-            onClick={() =>
-              // Decoupled from the view hierarchy on purpose: the block sits
-              // deep inside react-markdown; ChatView listens and opens the
-              // artifact panel with this source as a draft (same pattern as
-              // the ontheia:cron_complete event).
-              window.dispatchEvent(
-                new CustomEvent('ontheia:artifact_draft', { detail: { content: code, kind: 'mermaid' } })
-              )
-            }
-          >
-            <PencilLine aria-hidden="true" width={14} height={14} />
-          </button>
+          />
         </div>
       </div>
       {showDiagram ? (

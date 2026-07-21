@@ -31,6 +31,7 @@ import { Check, Copy } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
 import { CodeCopyButton, COPY_DEFAULT_DELAY_MS } from './CodeCopyButton';
 import { MermaidBlock } from './MermaidBlock';
+import { ArtifactEditButton, kindForFenceLanguage } from './ArtifactEditButton';
 
 type MdNode = {
   type?: string;
@@ -230,6 +231,11 @@ const createMarkdownComponents = ({ enableCopy, onCopy }: CodeRendererArgs): Com
       <div className="markdown-code-block-wrapper" data-language={language}>
         <div className="markdown-code-block-header">
           <span className="markdown-code-label">{label}</span>
+          <ArtifactEditButton
+            content={codeText}
+            kind={kindForFenceLanguage(language)}
+            className="markdown-code-edit-button"
+          />
         </div>
         {enableCopy && (
           <CodeCopyButton

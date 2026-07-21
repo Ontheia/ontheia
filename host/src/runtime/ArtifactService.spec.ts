@@ -147,3 +147,44 @@ test('kindForPath: kind follows the file extension', () => {
   assert.equal(kindForPath('/data/no-extension'), 'text');
   assert.equal(kindForPath('/data/note (final).md'), 'markdown');
 });
+
+const writeEvent = (stdout: string, args: Record<string, unknown>) => ({
+  server: 'cli-tools',
+  tool: 'run_skill_script',
+  arguments: { skill_dir: '/skills/files', script_path: 'scripts/write.py', ...args },
+  result: cliResult(stdout, 0)
+});
+
+test('extractFilesEnvelope: write.py confirmation yields a verified snapshot', async () => {
+  const { createHash } = await import('node:crypto');
+  const content = 'Hallo Sascha,\n\nviele Grüße\n';
+  const sha = createHash('sha256').update(content, 'utf8').digest('hex');
+  const stdout = `Written: /data/entwurf.md (${Buffer.byteLength(content)} bytes, sha256 ${sha})`;
+  const entries = extractFilesEnvelope(
+    writeEvent(stdout, { args: ['/data/entwurf.md'], input_data: content })
+  );
+  assert.ok(entries);
+  assert.equal(entries!.length, 1);
+  assert.equal(entries![0].path, '/data/entwurf.md');
+  assert.equal(entries![0].sha256, sha);
+  assert.equal(entries![0].complete, true);
+  assert.equal(entries![0].content, content);
+});
+
+test('extractFilesEnvelope: write.py applies the literal-\\n repair and trailing newline', async () => {
+  const { createHash } = await import('node:crypto');
+  // Model sent escape-damaged single-line input; cli_server repairs it and
+  // write.py appends the trailing newline — the sha confirms the repaired form.
+  const inputData = 'Zeile 1\\nZeile 2';
+  const written = 'Zeile 1\nZeile 2\n';
+  const sha = createHash('sha256').update(written, 'utf8').digest('hex');
+  const stdout = `Written: /data/x.md (${Buffer.byteLength(written)} bytes, sha256 ${sha})`;
+  const entries = extractFilesEnvelope(writeEvent(stdout, { args: ['/data/x.md'], input_data: inputData }));
+  assert.equal(entries![0].content, written);
+});
+
+test('extractFilesEnvelope: write.py with unverifiable content yields no envelope', () => {
+  const stdout = `Written: /data/x.md (10 bytes, sha256 ${SHA_A})`;
+  const entries = extractFilesEnvelope(writeEvent(stdout, { args: ['/data/x.md'], input_data: 'something else' }));
+  assert.equal(entries, null);
+});

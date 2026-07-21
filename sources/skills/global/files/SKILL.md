@@ -60,9 +60,11 @@ with surrounding context and retry.
 
 ## Showing file contents to the user
 
-Every file you read with `read.py` is shown to the user automatically as an
-**editable card** in the chat — they see the full content there and can edit
-and save it themselves.
+Every file you read with `read.py` — and every file you create with
+`write.py` — is shown to the user automatically as an **editable card** in
+the chat: they see the full content there and can edit and save it
+themselves. To draft something for the user's review (an email, a note),
+write it to a file; do not paste the draft into your answer.
 
 - After a `read.py`, do **not** echo the file's content into your answer.
   Refer to the file by its path and quote only the specific lines you are

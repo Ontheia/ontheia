@@ -22,13 +22,15 @@
  */
 import type { PoolClient } from 'pg';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 /**
  * Artifacts — persisted, addressable mirrors of files the agent has read.
  *
  * A successful `files`-skill read (cli-tools/run_skill_script → read.py) prints
- * one header per file: `=== /real/path (N bytes, sha256 <hex>) ===`. This module
- * turns those headers into a structured envelope on the tool_call event
+ * one header per file: `=== /real/path (N bytes, sha256 <hex>) ===`; write.py
+ * confirms with `Written: /real/path (N bytes, sha256 <hex>)`. This module
+ * turns those lines into a structured envelope on the tool_call event
  * (metadata.files[]), promotes each file into app.artifacts /
  * app.artifact_versions / app.artifact_refs (RLS-scoped, deduplicated per
  * (user, path)), and builds the compact per-chat artifact context that replaces
@@ -47,6 +49,7 @@ export interface FileEnvelopeEntry {
 }
 
 const READ_HEADER_RE = /^=== (.+) \((\d+) bytes, sha256 ([0-9a-f]{64})\) ===$/;
+const WRITE_CONFIRM_RE = /^Written: (.+) \((\d+) bytes, sha256 ([0-9a-f]{64})\)$/m;
 const TRUNCATED_RE = /^\[TRUNCATED — continue with --offset \d+\]$/;
 
 /** Strips the <command_output>…</command_output> guard cli_server.py wraps stdout in. */
@@ -68,7 +71,9 @@ export function extractFilesEnvelope(event: {
 }): FileEnvelopeEntry[] | null {
   if (event.server !== 'cli-tools' || event.tool !== 'run_skill_script') return null;
   const scriptPath = typeof event.arguments?.script_path === 'string' ? event.arguments.script_path : '';
-  if (!/(^|\/)read\.py$/.test(scriptPath)) return null;
+  const isRead = /(^|\/)read\.py$/.test(scriptPath);
+  const isWrite = /(^|\/)write\.py$/.test(scriptPath);
+  if (!isRead && !isWrite) return null;
 
   // MCP result shape: { content: [{ type: 'text', text: JSON of {stdout, stderr, exit_code} }] }
   const result = event.result as { content?: Array<{ type?: string; text?: string }> } | undefined;
@@ -86,6 +91,23 @@ export function extractFilesEnvelope(event: {
   if (typeof payload.stdout !== 'string' || payload.exit_code !== 0) return null;
 
   const stdout = unwrapCommandOutput(payload.stdout);
+
+  if (isWrite) {
+    // write.py confirms with path/size/sha but does not echo the content. It
+    // is reconstructable from the call's stdin (input_data) by applying the
+    // same transforms as cli_server + write.py (literal-\n repair unless
+    // raw_stdin, trailing newline). Verified against the confirmed sha — on
+    // mismatch no envelope rather than a wrong snapshot.
+    const confirm = stdout.match(WRITE_CONFIRM_RE);
+    if (!confirm) return null;
+    const inputRaw = typeof event.arguments?.input_data === 'string' ? event.arguments.input_data : '';
+    let content = event.arguments?.raw_stdin === true ? inputRaw : inputRaw.replace(/\\n/g, '\n');
+    if (content !== '' && !content.endsWith('\n')) content += '\n';
+    const digest = createHash('sha256').update(content, 'utf8').digest('hex');
+    if (digest !== confirm[3]) return null;
+    return [{ path: confirm[1], bytes: Number(confirm[2]), sha256: confirm[3], complete: true, content }];
+  }
+
   const lines = stdout.split('\n');
 
   // A read with --offset > 0 is a continuation chunk — never a full snapshot.

@@ -5826,3 +5826,29 @@
 .artifact-panel-preview .mermaid-toolbar-edit {
   display: none;
 }
+
+/* "Edit in panel" on a plain code block — sits left of the (absolutely
+   positioned) copy button in the block header */
+.markdown-code-edit-button {
+  background: none;
+  border: none;
+  color: rgba(148, 163, 184, 0.75);
+  padding: 0.2rem;
+  margin-right: 1.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.markdown-code-edit-button:hover {
+  color: rgba(248, 250, 252, 0.95);
+  background: rgba(148, 163, 184, 0.15);
+}
+
+/* Inside the panel preview the block IS the panel content — no self-opening */
+.artifact-panel-preview .markdown-code-edit-button {
+  display: none;
+}
