@@ -54,7 +54,7 @@ Der Composer bleibt über dem Panel bedienbar; das Panel hält den unteren Berei
 | --- | --- |
 | `.md`, `.markdown` | Vorschau (gerendertes Markdown) ↔ Editor |
 | `.mmd`, `.mermaid` | Vorschau (gerendertes Diagramm mit Zoom) ↔ Editor |
-| `.pdf` | Leseansicht: Seiten scrollen, Zoom-Buttons, Text markierbar und kopierbar. Kein Bearbeiten. |
+| `.pdf` | Leseansicht: Seiten scrollen, Zoom-Buttons, Text markierbar und kopierbar. Kein Bearbeiten. Inhalt auf Nachfrage auswertbar (siehe unten). |
 | alle anderen Textdateien | Nur Editor, kein Umschalter |
 
 ### Speichern und Konflikte
@@ -93,3 +93,16 @@ Das Eingabefeld wird mit dem zuletzt verwendeten Verzeichnis vorbelegt.
 - Dateiinhalte lädt er bei Bedarf gezielt nach.
 
 > **Grenze:** Änderungen, die außerhalb von Ontheia am Dateisystem vorgenommen werden, bemerkt der Agent erst, wenn er die Datei erneut liest. In dem Fall ausdrücklich darum bitten.
+
+### PDF-Inhalte
+
+Die Bytes einer PDF sieht der Agent nie — nur Name, Pfad und Größe. Wird nach dem **Inhalt** gefragt, wandelt Ontheia die PDF in Text um und übergibt diesen.
+
+| Frage des Nutzers | Was passiert |
+| --- | --- |
+| „öffne/zeige die PDF" | Karte im Chat, Leseansicht im Panel — keine Umwandlung |
+| „was steht in der PDF …" | Umwandlung in Text, der Agent antwortet inhaltlich |
+
+Die Umwandlung läuft **erst bei der ersten Inhaltsfrage** und wird danach zwischengespeichert; Folgefragen im selben Chat sind ohne Wartezeit. Wird die Datei ausgetauscht, wird automatisch neu ausgewertet.
+
+> **Grenze:** Ausgewertet wird die Textebene. **Eingescannte oder reine Bild-PDFs** haben keine — der Agent meldet dann, dass er den Inhalt nicht lesen kann (dafür wäre OCR nötig). Bei mehrspaltigen Seiten, Diagrammen und Tabellen geht das Layout verloren: Die Angaben sind vollständig, aber anders angeordnet als im Original.

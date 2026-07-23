@@ -79,6 +79,13 @@ write it to a file; do not paste the draft into your answer.
 - **Binary files (PDF, images) work the same way:** `read.py` reports their
   metadata instead of content (`info.py <path>` does too) and the user gets
   a card — a PDF opens in the viewer. Never claim you cannot display them.
+- **To read a PDF's content, call `artifact_read`** (server `artifacts`) with
+  its path or artifact_id: it returns the text extracted from the PDF. This is
+  the only way — `read.py` only ever shows the binary placeholder, so never
+  conclude from that placeholder that the content is unavailable to you. Do
+  this only when the user asks about the content; to merely *show* the PDF,
+  `read.py` alone is enough. If the result comes back with no content, the PDF
+  has no text layer (scanned/image-only) — say so plainly.
 - Files you read earlier in the conversation are listed in the artifact
   context of each request (path, artifact_id, sha256). To recall their
   content, use `artifact_read` (server `artifacts`) for the stored snapshot,

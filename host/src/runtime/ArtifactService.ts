@@ -368,16 +368,27 @@ export async function recordVersion(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * Extracts a binary artifact (PDF) to Markdown for the model to read. Injected
+ * by the route layer so ArtifactService stays free of pdfjs/fs imports.
+ */
+export type PdfTextExtractor = (filePath: string) => Promise<string>;
+
+/**
  * Reads an artifact snapshot for the artifact_read tool.
  *
  * Model-supplied arguments are treated leniently: empty strings count as
  * absent, and a non-uuid version_id falls back to the newest snapshot with an
  * explanatory note instead of surfacing a database error — the model never
  * sees version uuids in the artifact context, only the head state.
+ *
+ * PDFs carry no text version. When one is requested, its content is extracted
+ * on demand (options.extractPdfText) and cached on the artifact row, keyed by
+ * the source sha — so the model reads PDF text just like any other file.
  */
 export async function readArtifactSnapshot(
   client: PoolClient,
-  args: { artifact_id?: string; path?: string; version_id?: string }
+  args: { artifact_id?: string; path?: string; version_id?: string },
+  options: { extractPdfText?: PdfTextExtractor } = {}
 ): Promise<Record<string, unknown>> {
   const argString = (v: unknown): string | undefined =>
     typeof v === 'string' && v.trim() ? v.trim() : undefined;
@@ -385,16 +396,17 @@ export async function readArtifactSnapshot(
   const path = argString(args.path);
   const requestedVersion = argString(args.version_id);
 
+  const COLUMNS = 'id, title, kind, binding_path, binding_sha, complete, head_version, text_cache, text_cache_sha';
   let artifactRow;
   if (artifactId && UUID_RE.test(artifactId)) {
     artifactRow = await client.query(
-      `SELECT id, title, binding_path, binding_sha, complete, head_version
+      `SELECT ${COLUMNS}
          FROM app.artifacts WHERE id = $1::uuid AND deleted_at IS NULL`,
       [artifactId]
     );
   } else if (path) {
     artifactRow = await client.query(
-      `SELECT id, title, binding_path, binding_sha, complete, head_version
+      `SELECT ${COLUMNS}
          FROM app.artifacts
         WHERE binding_type = 'file' AND binding_path = $1 AND deleted_at IS NULL`,
       [path]
@@ -419,6 +431,12 @@ export async function readArtifactSnapshot(
     }
   }
   if (!versionId) {
+    // PDFs have no version — extract their text on demand and cache it, keyed
+    // by the source sha so a replaced file re-extracts. Everything else with no
+    // snapshot only ever came from partial reads.
+    if (artifact.kind === 'pdf' && options.extractPdfText && artifact.binding_path) {
+      return readPdfArtifactText(client, artifact, options.extractPdfText);
+    }
     return {
       artifact_id: artifact.id,
       path: artifact.binding_path,
@@ -449,6 +467,85 @@ export async function readArtifactSnapshot(
   };
 }
 
+/** Cap for extracted PDF text returned to the model; the full text is cached. */
+const PDF_TEXT_RETURN_MAX_CHARS = 200000;
+
+const PDF_EXTRACT_NOTE =
+  'Text extracted from the PDF via its text layer (layout-reconstructed Markdown; formatting may differ from the original).';
+
+/** Builds the tool result for extracted PDF text, capping what the model sees. */
+function pdfTextResult(base: Record<string, unknown>, markdown: string): Record<string, unknown> {
+  if (markdown.length <= PDF_TEXT_RETURN_MAX_CHARS) {
+    return { ...base, content: markdown, extracted: true, note: PDF_EXTRACT_NOTE };
+  }
+  return {
+    ...base,
+    content: markdown.slice(0, PDF_TEXT_RETURN_MAX_CHARS),
+    extracted: true,
+    truncated: true,
+    note: `${PDF_EXTRACT_NOTE} Only the first ${PDF_TEXT_RETURN_MAX_CHARS} of ${markdown.length} characters are shown.`
+  };
+}
+
+/**
+ * Returns a PDF artifact's text as Markdown, from the cache when it still
+ * matches the current file sha, otherwise by extracting and caching it. Never
+ * throws for a bad PDF — extraction failure yields content:null with a note, so
+ * the model gets a clear signal instead of a tool error.
+ */
+async function readPdfArtifactText(
+  client: PoolClient,
+  artifact: {
+    id: string;
+    binding_path: string;
+    binding_sha: string | null;
+    text_cache: string | null;
+    text_cache_sha: string | null;
+  },
+  extractPdfText: PdfTextExtractor
+): Promise<Record<string, unknown>> {
+  const base = {
+    artifact_id: artifact.id,
+    path: artifact.binding_path,
+    sha256: artifact.binding_sha,
+    kind: 'pdf' as const
+  };
+
+  const cacheValid =
+    artifact.text_cache !== null &&
+    artifact.text_cache_sha !== null &&
+    artifact.text_cache_sha === artifact.binding_sha;
+  if (cacheValid) {
+    return pdfTextResult(base, artifact.text_cache!);
+  }
+
+  let markdown: string;
+  try {
+    markdown = await extractPdfText(artifact.binding_path);
+  } catch (err: any) {
+    return {
+      ...base,
+      content: null,
+      note: `Could not extract text from this PDF (${err?.message ?? 'extraction failed'}). It may be a scanned/image-only document; OCR would be required.`
+    };
+  }
+
+  if (!markdown.trim()) {
+    return {
+      ...base,
+      content: null,
+      note: 'This PDF has no extractable text layer (likely scanned/image-only). OCR would be required to read its content.'
+    };
+  }
+
+  await client.query(
+    `UPDATE app.artifacts SET text_cache = $2, text_cache_sha = $3 WHERE id = $1`,
+    [artifact.id, markdown, artifact.binding_sha]
+  );
+
+  return pdfTextResult(base, markdown);
+}
+
 /** Cap for verbatim user-edit injection; larger edits fall back to a pointer. */
 const USER_EDIT_INJECT_MAX_CHARS = 12000;
 
@@ -469,7 +566,7 @@ export async function buildChatArtifactContext(
 ): Promise<string | undefined> {
   const rows = await client.query(
     `SELECT DISTINCT ON (a.id)
-            a.id, a.binding_path, a.binding_sha, a.complete, a.updated_at,
+            a.id, a.binding_path, a.binding_sha, a.complete, a.updated_at, a.kind,
             v.author AS head_author, v.sha256 AS head_sha, v.content AS head_content,
             v.created_at AS head_created_at,
             (SELECT max(m.created_at) FROM app.chat_messages m
@@ -489,8 +586,16 @@ export async function buildChatArtifactContext(
     const shaShort = typeof row.binding_sha === 'string' ? row.binding_sha.slice(0, 12) : 'unknown';
     // No version counter here: it reads like an id and tempts the model into
     // passing "v6" as version_id. The id and sha are all it needs.
+    // PDFs have no live text via read.py (it only prints a binary placeholder) —
+    // point the model at artifact_read, which returns the extracted text.
+    const suffix =
+      row.kind === 'pdf'
+        ? 'PDF — artifact_read returns its extracted text; read.py only shows a binary placeholder'
+        : row.complete
+          ? 'complete'
+          : 'partial snapshot';
     pointerLines.push(
-      `- ${row.binding_path} — artifact_id ${row.id} · sha256 ${shaShort}… · ${row.complete ? 'complete' : 'partial snapshot'}`
+      `- ${row.binding_path} — artifact_id ${row.id} · sha256 ${shaShort}… · ${suffix}`
     );
 
     const lastAgentAt = row.last_agent_at ? new Date(row.last_agent_at).getTime() : 0;

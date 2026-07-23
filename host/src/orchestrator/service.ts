@@ -695,7 +695,7 @@ export class OrchestratorService {
       return [
         {
           name: 'artifact_read',
-          description: 'Loads the stored snapshot of a file artifact (a file previously read in this chat, shown to the user as an editable card). Use it to rehydrate file content referenced in the artifact context instead of re-reading the file, unless you explicitly need the live file state.',
+          description: 'Loads the content of a file artifact (a file previously read in this chat, shown to the user as a card). Use it to rehydrate file content referenced in the artifact context instead of re-reading the file, unless you explicitly need the live file state. For a PDF artifact this returns the text extracted from the PDF (Markdown) — the only way to read a PDF\'s content, since read.py shows just a binary placeholder.',
           inputSchema: {
             type: 'object',
             properties: {

@@ -43,6 +43,7 @@ import { SkillService } from './runtime/SkillService.js';
 import { registerSkillRoutes } from './routes/skills.js';
 import { registerArtifactRoutes } from './routes/artifacts.js';
 import { readArtifactSnapshot } from './runtime/ArtifactService.js';
+import { extractPdfPages, pagesToMarkdown } from './runtime/ingest/pdf-converter.js';
 
 export async function registerRoutes(
   server: FastifyInstance,
@@ -83,7 +84,13 @@ export async function registerRoutes(
     const role = ctx?.role || 'user';
     if (!userId) throw new Error('User context required for artifact tools.');
     if (name !== 'artifact_read') throw new Error(`Tool ${name} not found on server artifacts`);
-    return withRls(db, userId, role, async (client) => readArtifactSnapshot(client, args ?? {}));
+    return withRls(db, userId, role, async (client) =>
+      readArtifactSnapshot(client, args ?? {}, {
+        // PDFs have no text version — extract on demand (text layer only; no OCR
+        // endpoint configured, scanned PDFs return empty and get a note).
+        extractPdfText: async (filePath) => pagesToMarkdown(await extractPdfPages(filePath))
+      })
+    );
   });
 
   orchestrator.registerInternalToolHandler('scheduler', async (name, args, ctx) => {

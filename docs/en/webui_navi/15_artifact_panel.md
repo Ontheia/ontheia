@@ -54,7 +54,7 @@ The composer stays usable above the panel; the panel keeps its lower area clear 
 | --- | --- |
 | `.md`, `.markdown` | Preview (rendered Markdown) ↔ editor |
 | `.mmd`, `.mermaid` | Preview (rendered diagram with zoom) ↔ editor |
-| `.pdf` | Viewer: scrollable pages, zoom buttons, selectable and copyable text. No editing. |
+| `.pdf` | Viewer: scrollable pages, zoom buttons, selectable and copyable text. No editing. Content readable on request (see below). |
 | all other text files | Editor only, no toggle |
 
 ### Saving and conflicts
@@ -93,3 +93,16 @@ The path field is prefilled with the directory used last.
 - File content is loaded deliberately when needed.
 
 > **Limitation:** Changes made outside Ontheia, directly on the filesystem, are only noticed once the agent reads the file again. Ask it explicitly to do so in that case.
+
+### PDF content
+
+The agent never sees a PDF's bytes — only its name, path, and size. When asked about the **content**, Ontheia converts the PDF to text and hands that over.
+
+| What the user asks | What happens |
+| --- | --- |
+| "open/show the PDF" | Card in the chat, viewer in the panel — no conversion |
+| "what does the PDF say about…" | Converted to text; the agent answers from it |
+
+Conversion runs **only on the first content question** and is cached afterwards, so follow-ups in the same chat are instant. Replacing the file triggers a fresh extraction.
+
+> **Limitation:** Extraction uses the text layer. **Scanned or image-only PDFs** have none — the agent will report it cannot read the content (OCR would be required). For multi-column pages, diagrams, and tables the layout is lost: the information is complete but arranged differently from the original.

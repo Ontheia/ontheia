@@ -20,7 +20,7 @@ The panel opens on the right and can be **resized** by dragging its left edge; t
 
 **Saving:** Opening a file re-reads it from disk — the file is the truth, not the cached snapshot. On save, Ontheia checks whether the file changed in the meantime (checksum). If it did, you get a conflict notice with a reload option instead of a silent overwrite. The previous version is moved to the trash (`.trash/`) automatically.
 
-**PDFs** are rendered inside the panel: scrollable pages, zoom controls, and text you can **select and copy**. Rendering is independent of your browser's PDF settings.
+**PDFs** are rendered inside the panel: scrollable pages, zoom controls, and text you can **select and copy**. Rendering is independent of your browser's PDF settings. PDFs cannot be edited.
 
 ## 3. Turning Chat Drafts Into Files
 
@@ -43,3 +43,14 @@ Ontheia keeps the agent current without pushing whole files through the chat aga
 - **Your edit is passed on verbatim:** after you save in the panel, the agent receives your exact wording on its next turn, with the instruction neither to paraphrase nor to revert it.
 
 > **Note:** The stored snapshot is what Ontheia last saw. If you change a file outside Ontheia (directly on the filesystem, for instance), the agent will only notice once it reads the file again. Ask it explicitly to re-read the file in that case.
+
+## 5. Working With a PDF's Content
+
+To the agent a PDF is, at first, just a file with a name and a size — it never sees the bytes. When you ask about its **content**, Ontheia converts the PDF to text in the background and hands that to the agent:
+
+> *Show me offer.pdf* → card
+> *What does the PDF say about delivery times?* → the agent reads the extracted text and answers from it
+
+The conversion happens **only on the first content question** and is cached afterwards, so follow-up questions in the same chat are instant. Replacing the PDF re-runs the extraction automatically.
+
+> **Limits:** Extraction uses the PDF's text layer. **Scanned documents** and image-only PDFs have no text layer — the agent will report that the content is not readable. Layout is lost as well: multi-column pages, diagrams, and nested tables become running text that contains the information but arranges it differently from the original. For critical figures, check the viewer.

@@ -20,7 +20,7 @@ Das Panel öffnet sich rechts und lässt sich am linken Rand **in der Breite zie
 
 **Speichern:** Beim Öffnen wird die Datei frisch von der Platte gelesen — die Datei ist die Wahrheit, nicht der zwischengespeicherte Stand. Beim Speichern prüft Ontheia, ob sich die Datei zwischenzeitlich geändert hat (Prüfsumme). Ist das der Fall, erscheint statt eines stillen Überschreibens ein Hinweis mit der Möglichkeit, neu zu laden. Die vorherige Fassung wandert automatisch in den Papierkorb (`.trash/`).
 
-**PDFs** werden direkt im Panel dargestellt: Seiten scrollen, Zoom-Schaltflächen, und der Text lässt sich **markieren und kopieren**. Die Darstellung erfolgt unabhängig von den PDF-Einstellungen deines Browsers.
+**PDFs** werden direkt im Panel dargestellt: Seiten scrollen, Zoom-Schaltflächen, und der Text lässt sich **markieren und kopieren**. Die Darstellung erfolgt unabhängig von den PDF-Einstellungen deines Browsers. Bearbeiten ist bei PDFs nicht möglich.
 
 ## 3. Entwürfe aus dem Chat übernehmen
 
@@ -43,3 +43,14 @@ Ontheia hält den Agenten auf Stand, ohne den ganzen Dateiinhalt erneut durch de
 - **Deine Bearbeitung wird wortgetreu weitergereicht:** Speicherst du im Panel, erhält der Agent beim nächsten Mal deinen exakten Wortlaut mit der Anweisung, ihn weder umzuformulieren noch zurückzudrehen.
 
 > **Zu beachten:** Der gespeicherte Stand ist das, was Ontheia zuletzt gesehen hat. Änderst du eine Datei außerhalb von Ontheia (etwa direkt am Dateisystem), merkt der Agent das erst, wenn er sie erneut liest. Bitte ihn in dem Fall ausdrücklich, die Datei neu einzulesen.
+
+## 5. PDFs inhaltlich auswerten
+
+Eine PDF ist für den Agenten zunächst nur eine Datei mit Namen und Größe — ihre Bytes bekommt er nie zu sehen. Fragst du nach dem **Inhalt**, wandelt Ontheia die PDF im Hintergrund in Text um und übergibt ihm diesen:
+
+> *Zeig mir die datei angebot.pdf* → Karte
+> *Was steht in der PDF zu den Lieferzeiten?* → der Agent liest den extrahierten Text und antwortet inhaltlich
+
+Die Umwandlung passiert **erst bei der ersten Inhaltsfrage** und wird danach zwischengespeichert — Folgefragen im selben Chat sind ohne Verzögerung. Wird die PDF ausgetauscht, wird sie automatisch neu ausgewertet.
+
+> **Grenze:** Ausgewertet wird die Textebene der PDF. Bei **eingescannten Dokumenten** oder reinen Bild-PDFs gibt es keine Textebene — der Agent meldet dann, dass der Inhalt nicht lesbar ist. Auch Layout geht verloren: Aus mehrspaltigen Seiten, Diagrammen und verschachtelten Tabellen wird fortlaufender Text, der die Angaben zwar vollständig enthält, aber anders anordnet als das Original. Bei kritischen Zahlen lohnt der Blick in die Leseansicht.
