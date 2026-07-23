@@ -660,8 +660,10 @@ export class ChainRunner {
         this.debug(`Warning: Tool resolution error: ${(e as Error).message}`);
       }
 
-      // Use Task Context (System Context) if available, else fallback to Persona
-      const taskContextPrompt = profile.task_context || profile.persona || 'You are a helpful assistant.';
+      // The task's context prompt IS the agent's system prompt — the single
+      // source. An agent without one gets a neutral default rather than falling
+      // back to a second, UI-invisible field that silently goes stale.
+      const taskContextPrompt = profile.task_context || 'You are a helpful assistant.';
 
       // Load memory context for sub-agent (if policy defines readNamespaces and auto-inject is enabled)
       let subAgentMemoryContextText: string | undefined;
@@ -896,7 +898,7 @@ export class ChainRunner {
 
     const query = `
       SELECT 
-        a.id, a.label, a.persona,
+        a.id, a.label,
         a.provider_id, a.model_id, a.tool_approval_mode,
         a.default_mcp_servers, a.default_tools,
         a.default_tool_permissions,

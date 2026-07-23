@@ -33,23 +33,10 @@ const GUIDE_TASK_ID             = 'a1b2c3d4-0011-4000-8000-000000000001';
 const ASSISTANT_TASK_ID         = 'a1b2c3d4-0012-4000-8000-000000000002';
 const PROMPT_OPTIMIZER_CHAIN_ID = 'cd08ffb9-d60c-4512-a364-1b19390f3af0';
 
-// ── System prompts ────────────────────────────────────────────────────────────
-// Always English — best LLM quality. Admin can change via UI.
-const GUIDE_PERSONA = `You are the Ontheia Guide, a personal assistant for \${user_name}.
-
-Your role is to help \${user_name} get started with Ontheia and answer questions about the platform. You have access to the Ontheia documentation via the memory-search tool — always search it before answering questions about features, configuration or usage.
-
-When \${user_name} asks how to do something in Ontheia, search the docs first and give a precise, step-by-step answer with references to the relevant documentation.
-
-Beyond answering questions, you can set up simple skills (reusable instruction or small script modules) and schedule reminders for \${user_name}.
-
-Be friendly, concise and encouraging. This is likely \${user_name}'s first experience with Ontheia.`;
-
-const ASSISTANT_PERSONA = `Your name is Ontheia. You are a personal AI assistant for \${user_name}.
-
-You are helpful, concise and friendly. You assist with a wide range of tasks: answering questions, drafting text, summarizing documents, brainstorming ideas and general problem-solving.
-
-Address \${user_name} by name when it feels natural. Keep responses focused and actionable.`;
+// An agent's system prompt lives solely in its task's context_prompt, seeded
+// further down and editable in the UI (always English — best LLM quality).
+// There is deliberately no second, agent-level prompt: a field the UI never
+// shows cannot be kept in sync and only drifts.
 
 
 // ── Bundled skills ──────────────────────────────────────────────────────────
@@ -441,11 +428,11 @@ async function main() {
       // Agent 1: Ontheia Guide
       await pool.query(
         `INSERT INTO app.agents
-           (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $8::jsonb, true)
+           (id, label, description, visibility, owner_id, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, 'granted', ARRAY['memory', 'delegation', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $7::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
-           persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
+           provider_id = EXCLUDED.provider_id,
            model_id = EXCLUDED.model_id, visibility = 'public',
            default_mcp_servers = EXCLUDED.default_mcp_servers,
            default_tools = EXCLUDED.default_tools,
@@ -455,7 +442,6 @@ async function main() {
           'Ontheia Guide',
           'Your personal guide to Ontheia. Ask me anything about the platform.',
           adminId,
-          GUIDE_PERSONA,
           defaultSlug,
           defaultModelKey,
           guideTools,
@@ -506,11 +492,11 @@ async function main() {
       // Agent 2: Personal Assistant (memory + skills + scheduler)
       await pool.query(
         `INSERT INTO app.agents
-           (id, label, description, visibility, owner_id, persona, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
-         VALUES ($1, $2, $3, 'public', $4, $5, $6, $7, 'granted', ARRAY['memory', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $8::jsonb, true)
+           (id, label, description, visibility, owner_id, provider_id, model_id, tool_approval_mode, default_mcp_servers, default_tools, show_in_composer)
+         VALUES ($1, $2, $3, 'public', $4, $5, $6, 'granted', ARRAY['memory', 'skills', 'cli-tools', 'scheduler', 'artifacts'], $7::jsonb, true)
          ON CONFLICT (id) DO UPDATE SET
            label = EXCLUDED.label, description = EXCLUDED.description,
-           persona = EXCLUDED.persona, provider_id = EXCLUDED.provider_id,
+           provider_id = EXCLUDED.provider_id,
            model_id = EXCLUDED.model_id, visibility = 'public',
            default_mcp_servers = EXCLUDED.default_mcp_servers,
            default_tools = EXCLUDED.default_tools,
@@ -520,7 +506,6 @@ async function main() {
           'Personal Assistant',
           'Your general-purpose AI assistant.',
           adminId,
-          ASSISTANT_PERSONA,
           defaultSlug,
           defaultModelKey,
           assistantTools,
@@ -737,7 +722,7 @@ Then offer one concrete next action:
 Cover only sections relevant to their context. One section at a time, briefly:
 - **Memory** — Vector store, namespace browser, ingest, search. (Already familiar from Step 3.)
 - **Skills** — Reusable capability modules any agent can apply. Covered in Step 5.
-- **Agents** — Where AI assistants live. Each agent has a persona, a task (context prompt), memory policy, and tools.
+- **Agents** — Where AI assistants live. Each agent has a task (its context prompt — the system prompt), memory policy, and tools.
 - **MCP Servers** — Connects Ontheia to external tools (file system, web search, email, etc.). Covered in detail in Step 6.
 - **Chains** — Automated multi-step workflows. Covered in Step 9.
 - **AI Providers** — API keys and model selection. (Already connected — just point it out.)
@@ -804,7 +789,7 @@ Walk through: Admin Console → MCP Servers → Add Server. Explain the config f
 
 Guide through:
 1. Admin Console → Agents → New Agent
-2. Choose a name and persona matching their use case
+2. Choose a name matching their use case
 3. Select provider + model
 4. Attach relevant MCP servers and tools
 5. Create a Task with a context prompt that frames the agent's role

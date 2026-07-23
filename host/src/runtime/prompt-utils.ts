@@ -25,7 +25,7 @@ import type { ChatMessage } from './types.js';
 import type { ChainTemplateContext } from './chain-runner.js';
 
 export interface BuildSystemMessagesOptions {
-  /** Raw task/persona context prompt, may contain {{placeholders}}. */
+  /** Raw task context prompt, may contain {{placeholders}}. */
   taskContextPrompt?: string;
   /** Agent label used for the identity/anti-self-delegation note (sub-agents only). */
   agentLabel?: string;
@@ -39,7 +39,7 @@ export interface BuildSystemMessagesOptions {
  * Builds the ordered list of system messages that precede the conversation.
  *
  * Order (item[0] ends up first in the final prompt — callers spread/unshift at 0):
- *   1. Task/persona      (if provided, after template resolution)
+ *   1. Task context      (if provided, after template resolution)
  *   2. Skill catalog     (if provided)
  *   3. Tool hint         (if includeToolHint)
  *
@@ -57,7 +57,7 @@ export function buildSystemMessages(
   const { taskContextPrompt, agentLabel, skillCatalogText, includeToolHint } = options;
   const messages: ChatMessage[] = [];
 
-  // 1. Task context / persona
+  // 1. Task context — the agent's system prompt
   if (taskContextPrompt) {
     // current_date/current_time are deliberately withheld here: substituted
     // into the system prompt they would invalidate the provider's cached

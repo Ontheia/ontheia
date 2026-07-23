@@ -31,7 +31,6 @@ const USER_ID  = '00000000-0000-0000-0000-000000000003';
 const AGENT_PROFILE_ROW = {
   id: AGENT_ID,
   label: 'TestAgent',
-  persona: 'You are a test agent.',
   provider_id: 'test-provider',
   model_id: 'test-model',
   tool_approval_mode: 'granted',

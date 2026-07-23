@@ -454,7 +454,7 @@ export class RunService {
           // Fallback: Load from DB if not in user settings
           await withRls(this.db, userId, role, async (client) => {
             const res = await client.query(`
-              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id, a.persona, a.label
+              SELECT a.default_mcp_servers, a.default_tools, a.provider_id, a.model_id, a.label
                 FROM app.agents a
                WHERE a.id = $1
             `, [enrichedInput.agent_id]);
@@ -468,8 +468,6 @@ export class RunService {
               // Expose the agent identity to tool handlers (self-delegation guard)
               meta.agent_id = enrichedInput.agent_id;
               if (row.label) meta.agent_label = row.label;
-              // Use persona as fallback context if no task provides a context_prompt
-              if (!taskContextPrompt && row.persona) taskContextPrompt = row.persona;
             }
 
             if (enrichedInput.task_id) {
