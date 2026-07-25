@@ -833,6 +833,10 @@
   margin: 0.35rem 0;
 }
 
+.markdown-message strong {
+  font-weight: 550;
+}
+
 .markdown-message ul,
 .markdown-message ol {
   margin: 0.45rem 0;
@@ -904,15 +908,18 @@
 }
 
 .markdown-message h1 {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
+  margin: 1.5rem 0 2rem 0;
 }
 
 .markdown-message h2 {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 1.5rem 0;
 }
 
 .markdown-message h3 {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
+  margin: 1.5rem 0 1rem 0;
 }
 
 .markdown-message h4,
@@ -1202,8 +1209,8 @@
   flex-direction: column;
   gap: 0.075rem;
   background: #020817;
-  /*border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 0.65rem; */
+  /*border: 1px solid rgba(148, 163, 184, 0.25);*/
+  border-radius: 0.65rem; 
   padding: 0.25rem 1rem 0.5rem 1rem;
   box-shadow: none;
   backdrop-filter: none;
@@ -1295,27 +1302,27 @@
    runs and .chat-composer textarea:disabled sets a fill color that would
    otherwise override the placeholder color in Chrome/WebKit. */
 .composer-textarea textarea.composer-status-thinking::placeholder {
-  color: #facc15;
-  -webkit-text-fill-color: #facc15;
-  opacity: 1;
+  color: #eab308;
+  -webkit-text-fill-color: #eab308;
+  opacity: 0.8;
 }
 
 .composer-textarea textarea.composer-status-memory::placeholder {
-  color: #4ade80;
-  -webkit-text-fill-color: #4ade80;
-  opacity: 1;
+  color: #22c55e;
+  -webkit-text-fill-color: #22c55e;
+  opacity: 0.8;
 }
 
 .composer-textarea textarea.composer-status-tool::placeholder {
-  color: #c084fc;
-  -webkit-text-fill-color: #c084fc;
-  opacity: 1;
+  color: #a855f7;
+  -webkit-text-fill-color: #a855f7;
+  opacity: 0.8;
 }
 
 .composer-textarea textarea.composer-status-delegation::placeholder {
-  color: #fb923c;
-  -webkit-text-fill-color: #fb923c;
-  opacity: 1;
+  color: #f97316;
+  -webkit-text-fill-color: #f97316;
+  opacity: 0.8;
 }
 
 .composer-paste-button {
