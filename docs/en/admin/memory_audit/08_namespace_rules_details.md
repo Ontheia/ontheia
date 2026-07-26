@@ -4,16 +4,28 @@ Namespace rules allow administrators to globally control the behavior of AI sear
 
 ## 1. Ranking Bonuses
 With the ranking bonus, you can control which information sources should be preferred.
-- **Principle:** A bonus between `0.0` and `1.0` is added to the score of the search results.
+- **Principle:** A bonus between `0.0` and `1.0` acts as a **percentage surcharge** on the score. `0.2` therefore means +20 % — not `+0.2` as an absolute value.
 - **Use Case:** Give `vector.global.knowledge.faq` a bonus of `0.2` so that official answers always appear above random chat notes.
+- **Keep it moderate:** Values above `0.3` push weak results past the minimum-score threshold that their own similarity would never have reached. The rules shipped by default range from `0.03` to `0.12`.
 
 ## 2. LLM Instruction Templates
-This is a powerful feature to increase response quality. When the AI finds a hit from a namespace with instruction text, this text is automatically injected into the system prompt.
-- **Example:** For the namespace `vector.global.business.legal`, you store: *"Always cite the corresponding paragraph for information from this area."*
+This is a powerful feature to increase response quality. When the AI finds a hit from a namespace with instruction text, that text precedes the hit in the context.
+- **Example:** For the namespace `vector.global.business.legal`, you store: *"Always cite the corresponding paragraph for information from this area: {{content}}"*
 - **Effect:** The agent automatically becomes a "legal advisor" as soon as it retrieves knowledge from this source.
+- **Placeholder:** `{{content}}` marks where the results are inserted. If it is missing, they are appended to the text.
+- **Once per group:** When several results match the same rule, the instruction appears **once** above all of them — not once per result.
+
+> The text does not go into the system prompt but to the end of the last user message. The reason is prompt caching; details in the [technical reference](/en/admin/memory_audit/10_ranking_algorithm/).
 
 ## 3. Pattern Matching
-Rules are defined via wildcards (e.g., `vector.agent.*`). This allows rules to be efficiently applied to entire groups of namespaces.
+Rules apply to namespace patterns, not to individual namespaces:
+
+| Notation | Meaning |
+| :--- | :--- |
+| `${user_id}` | exactly **one** segment — the rule applies to every user |
+| `*` | any remainder, e.g. `vector.agent.*` |
+
+A rule always covers the sub-namespaces of its pattern as well. When several instruction rules match, the longest one wins.
 
 ---
 

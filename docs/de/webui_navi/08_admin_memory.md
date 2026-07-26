@@ -103,10 +103,10 @@ Namespace-Regeln-Editor: Konfiguriert Ranking-Boni und LLM-Instruktionsvorlagen 
 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
-| Namespace-Muster | Text | Namespace-Pattern, auf das die Regel zutrifft (z. B. `vector.global.*`). |
-| Ranking-Bonus | Zahl | Bonus-Wert für diesen Namespace bei der Relevanzbewertung. |
+| Namespace-Muster | Text | Namespace-Pattern, auf das die Regel zutrifft. `${user_id}` steht für genau ein Segment, `*` für den Rest — z. B. `vector.agent.${user_id}.howto` oder `vector.global.*`. Unter-Namespaces sind eingeschlossen. |
+| Ranking-Bonus | Zahl | Prozentualer Aufschlag auf den Relevanz-Score: `0.1` entspricht +10 %. Die mitgelieferten Regeln liegen zwischen `0.03` und `0.12`. |
 | Regel-Beschreibung | Text | Lesbarer Bezeichner der Regel. |
-| LLM-Instruktions-Vorlage | Textarea | Template für LLM-Instruktionen beim Treffer. Variablen: `${user_id}`, `${agent_id}`, `${task_id}`. |
+| LLM-Instruktions-Vorlage | Textarea | Text, der den Treffern dieses Namespace im Kontext vorangestellt wird. Einziger Platzhalter ist **`{{content}}`** — dort werden die Treffer eingesetzt; fehlt er, werden sie angehängt. Bei mehreren Treffern derselben Regel erscheint der Text **einmal** über allen. |
 
 Bestehende Regeln werden als Liste unterhalb des Formulars angezeigt. Aktion pro Regel: **Löschen** (mit Bestätigungsdialog).
 
