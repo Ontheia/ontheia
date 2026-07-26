@@ -26,7 +26,7 @@ Namespaces are not searched sequentially. The query runs across all target names
 
 After the database query, a re-ranking is performed to weight context relevance and recency.
 
-> **All three factors are multiplicative.** They are summed into a *single*
+> **Both factors are multiplicative.** They are summed into a *single*
 > multiplier, which the base score is then multiplied by. A bonus of `0.1`
 > therefore means **+10 % relative**, not `+0.1` absolute. On a base score of
 > `0.5` that is `+0.05`; on `0.8` it is `+0.08`.
@@ -47,7 +47,7 @@ $$Share_{age} = \frac{recency\_decay}{1 + Age\_in\_Days}$$
 | 7 days | + 0.6 % |
 | 30 days | + 0.1 % |
 
-In practice this is the weakest of the three: for an entry six months old it falls below 0.03 %, and any namespace rule outweighs it by a wide margin.
+In practice this is the weaker of the two: for an entry six months old it falls below 0.03 %, and any namespace rule outweighs it by a wide margin.
 
 ### 2.2 Dynamic Namespace Bonuses
 In the `app.vector_namespace_rules` table, bonuses can be defined per namespace pattern. Each matching rule raises the multiplier by its bonus.
@@ -56,19 +56,20 @@ In the `app.vector_namespace_rules` table, bonuses can be defined per namespace 
 *   **Multiple matches:** If several rules match the same namespace, their bonuses add up within the multiplier.
 *   **Logic:** Increases the "visibility" of entire categories compared to general memory.
 
-### 2.3 Static Priorities
-In `embedding.config.json`, namespaces can be weighted additionally. A priority of `1.1` contributes `0.1` to the multiplier — it behaves exactly like a bonus of `0.1`, only from a different source.
-
-*   **Example:** `priorities: { "vector.agent.${user_id}.howto": 1.05 }` -> 5 % surcharge.
-*   **Note:** The database rules from 2.2 are the recommended path — they can be maintained at runtime through the admin UI, whereas changes to the configuration file require a restart.
+> **Namespace weighting is maintained here and nowhere else.**
+> `embedding.config.json` used to offer a second path for it
+> (`ranking.priorities`). It was removed: both fed the same multiplier and
+> added up silently, so a rule showing +9 % could actually apply +29 %. If the
+> key is still present it is ignored, and a warning at startup spells out the
+> conversion (`bonus = priority - 1`).
 
 ---
 
 ## 3. Overall Algorithm (Summary)
 
-The final score of a result is the base score times a multiplier that all factors feed into:
+The final score of a result is the base score times a multiplier that both factors feed into:
 
-$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + \sum (Priority_{config} - 1) + Share_{age}\right)$$
+$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + Share_{age}\right)$$
 
 > **The minimum-score threshold applies to the *final* score**, not the base score. A result can therefore cross a threshold its own similarity would not reach. This is intended: the threshold is calibrated against the values visible in the admin console and the trace.
 

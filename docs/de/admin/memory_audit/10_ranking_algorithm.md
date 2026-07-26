@@ -26,7 +26,7 @@ Namespaces werden nicht sequentiell durchsucht. Die Abfrage erfolgt über alle Z
 
 Nach der Datenbank-Abfrage wird ein Re-Ranking durchgeführt, um Kontext-Relevanz und Aktualität zu gewichten.
 
-> **Alle drei Faktoren wirken multiplikativ.** Sie werden zu *einem* Multiplikator
+> **Beide Faktoren wirken multiplikativ.** Sie werden zu *einem* Multiplikator
 > aufsummiert, mit dem der Basis-Score anschließend malgenommen wird. Ein Bonus
 > von `0.1` bedeutet also **+10 % relativ**, nicht `+0.1` absolut. Bei einem
 > Basis-Score von `0.5` sind das `+0.05`, bei `0.8` sind es `+0.08`.
@@ -47,7 +47,7 @@ $$Anteil_{age} = \frac{recency\_decay}{1 + Alter\_in\_Tagen}$$
 | 7 Tage | + 0,6 % |
 | 30 Tage | + 0,1 % |
 
-In der Praxis ist dieser Anteil der schwächste der drei: bei einem Eintrag, der ein halbes Jahr alt ist, liegt er unter 0,03 % und wird von jeder Namespace-Regel deutlich übertroffen.
+In der Praxis ist dieser Anteil der schwächere der beiden: bei einem Eintrag, der ein halbes Jahr alt ist, liegt er unter 0,03 % und wird von jeder Namespace-Regel deutlich übertroffen.
 
 ### 2.2 Dynamische Namespace-Boni
 In der Tabelle `app.vector_namespace_rules` können Boni pro Namespace-Pattern definiert werden. Jede zutreffende Regel erhöht den Multiplikator um ihren Bonus.
@@ -56,19 +56,21 @@ In der Tabelle `app.vector_namespace_rules` können Boni pro Namespace-Pattern d
 *   **Mehrere Treffer:** Passen mehrere Regeln auf denselben Namespace, addieren sich ihre Boni im Multiplikator.
 *   **Logik:** Erhöht die "Sichtbarkeit" ganzer Kategorien gegenüber dem allgemeinen Gedächtnis.
 
-### 2.3 Statische Prioritäten
-In der `embedding.config.json` können Namespaces zusätzlich gewichtet werden. Eine Priorität von `1.1` steuert `0.1` zum Multiplikator bei — sie wirkt also genau wie ein Bonus von `0.1`, nur aus einer anderen Quelle.
-
-*   **Beispiel:** `priorities: { "vector.agent.${user_id}.howto": 1.05 }` -> 5 % Aufschlag.
-*   **Hinweis:** Die Datenbank-Regeln aus 2.2 sind der empfohlene Weg — sie lassen sich zur Laufzeit über die Admin-Oberfläche pflegen, während Änderungen an der Konfigurationsdatei einen Neustart erfordern.
+> **Namespace-Gewichtung wird ausschließlich hier gepflegt.** Die
+> `embedding.config.json` hatte früher einen zweiten Weg dafür
+> (`ranking.priorities`). Er wurde entfernt: beide speisten denselben
+> Multiplikator und addierten sich still, sodass eine Regel mit sichtbaren
+> +9 % tatsächlich +29 % bewirken konnte. Ist der Schlüssel noch vorhanden,
+> wird er ignoriert und beim Start eine Warnung mit der Umrechnung
+> (`Bonus = Priorität − 1`) geschrieben.
 
 ---
 
 ## 3. Gesamt-Algorithmus (Zusammenfassung)
 
-Der finale Score eines Treffers berechnet sich aus dem Basis-Score und einem Multiplikator, in den alle Faktoren einfließen:
+Der finale Score eines Treffers berechnet sich aus dem Basis-Score und einem Multiplikator, in den beide Faktoren einfließen:
 
-$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + \sum (Priorität_{config} - 1) + Anteil_{age}\right)$$
+$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + Anteil_{age}\right)$$
 
 > **Die Mindest-Score-Schwelle greift auf den *finalen* Score**, nicht auf den Basis-Score. Ein Treffer kann also über einen Bonus eine Schwelle überschreiten, die er aus eigener Ähnlichkeit nicht erreicht. Das ist beabsichtigt: die Schwelle wird gegen die Werte kalibriert, die in Admin-Konsole und Trace sichtbar sind.
 

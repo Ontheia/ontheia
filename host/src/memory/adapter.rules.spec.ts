@@ -75,10 +75,6 @@ test('MemoryAdapter uses database ranking rules', async () => {
       tables: { '1': { name: 'vector.test', column: 'embedding', dimension: 1 } },
       local: { dimension: 1 },
       ranking: {
-          priorities: {
-              // Static config rule (should add up)
-              'vector.global': 1.05 
-          },
           recency_decay: 0
       }
   };
@@ -101,9 +97,8 @@ test('MemoryAdapter uses database ranking rules', async () => {
   // Hit 2:
   // Base 0.5
   // DB Rule 'vector.global' (+0.1)
-  // Config Rule 'vector.global' (+0.05)
-  // Final Multiplier: 1.0 + 0.1 + 0.05 = 1.15
-  // Expected Score: 0.5 * 1.15 = 0.575
+  // Final Multiplier: 1.0 + 0.1 = 1.1
+  // Expected Score: 0.5 * 1.1 = 0.55
 
   assert.equal(results.length, 2);
   
@@ -114,7 +109,7 @@ test('MemoryAdapter uses database ranking rules', async () => {
   assert.ok(hit2);
 
   assert.ok(Math.abs(hit1.score - 0.75) < 0.001, `Expected 0.75, got ${hit1.score}`);
-  assert.ok(Math.abs(hit2.score - 0.575) < 0.001, `Expected 0.575, got ${hit2.score}`);
+  assert.ok(Math.abs(hit2.score - 0.55) < 0.001, `Expected 0.55, got ${hit2.score}`);
 });
 
 test('getInstructionForNamespace resolves the live rule patterns', async () => {

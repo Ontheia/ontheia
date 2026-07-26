@@ -23,6 +23,7 @@
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import type { Pool, PoolClient } from 'pg';
+import { logger } from '../logger.js';
 
 type Queryable = Pool | PoolClient;
 
@@ -63,7 +64,10 @@ export interface EmbeddingConfig {
     probes?: number;
   };
   ranking?: {
-    priorities?: Record<string, number>;
+    /**
+     * Global time decay. Namespace weighting lives in app.vector_namespace_rules
+     * — see warnOnRemovedPriorities() for why it is not configurable here.
+     */
     recency_decay?: number;
   };
   tables: Record<string, EmbeddingTableConfig>;
@@ -85,7 +89,35 @@ export function loadEmbeddingConfig(): EmbeddingConfig {
 
   const raw = readFileSync(filePath, 'utf-8');
   const parsed = JSON.parse(raw) as EmbeddingConfig;
+  warnOnRemovedPriorities(parsed, filePath);
   return resolvePlaceholders(parsed);
+}
+
+/**
+ * `ranking.priorities` used to weight namespaces from this file. It duplicated
+ * app.vector_namespace_rules exactly — both fed the same multiplier — while
+ * offering less: no runtime editing, no admin UI, no instruction template. Worse,
+ * the two sources silently added up, so a rule showing +9 % in the UI could
+ * actually apply +29 %.
+ *
+ * The key is now ignored. It is not dropped in silence: an installation that
+ * still sets it changes behaviour on upgrade, and that has to be visible.
+ */
+function warnOnRemovedPriorities(parsed: EmbeddingConfig, filePath: string): void {
+  const priorities = (parsed.ranking as { priorities?: Record<string, number> } | undefined)?.priorities;
+  if (!priorities || typeof priorities !== 'object') return;
+
+  const entries = Object.entries(priorities).filter(([, value]) => typeof value === 'number');
+  if (entries.length === 0) return;
+
+  logger.warn(
+    { filePath, priorities },
+    'ranking.priorities is no longer supported and is being ignored. ' +
+      'Move each entry to app.vector_namespace_rules (bonus = priority - 1): ' +
+      entries
+        .map(([pattern, priority]) => `${pattern} -> bonus ${(priority - 1).toFixed(2)}`)
+        .join(', ')
+  );
 }
 
 // ── DB-backed embedding config ────────────────────────────────────────────────

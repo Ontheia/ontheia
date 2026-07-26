@@ -317,41 +317,30 @@ export class MemoryAdapter {
     return deduped.slice(0, requestedLimit);
   }
 
+  /**
+   * Weights a hit by namespace and age. Both factors feed one multiplier, so a
+   * bonus of 0.1 is +10 % relative to the hit's own similarity, not +0.1.
+   *
+   * Namespace weighting comes from app.vector_namespace_rules only. The
+   * embedding config used to offer a second, identical path (ranking.priorities);
+   * it was removed because the two silently added up — see
+   * warnOnRemovedPriorities() in config.ts.
+   */
   private calculateRankingScore(hit: MemoryHit): number {
-    let score = hit.score;
+    const score = hit.score;
     let multiplier = 1.0;
 
-    // 1. Database Rules (Dynamic) - Multiplicative Bonus
-    if (this.namespaceRules.size > 0) {
-      for (const [pattern, rule] of this.namespaceRules.entries()) {
-        if (namespacePatternToRegex(pattern).test(hit.namespace)) {
-          multiplier += rule.bonus;
-        }
+    for (const [pattern, rule] of this.namespaceRules.entries()) {
+      if (namespacePatternToRegex(pattern).test(hit.namespace)) {
+        multiplier += rule.bonus;
       }
     }
 
-    // 2. Config File Rules (Static) - Multiplicative
-    // Second, older path for the same thing as (1). app.vector_namespace_rules
-    // is the live path — it can be edited at runtime through the admin UI,
-    // whereas this file needs a restart. Kept deliberately: removing it belongs
-    // with the ranking rework, not with a cleanup.
-    if (this.rankingConfig?.priorities) {
-      for (const [pattern, priority] of Object.entries(this.rankingConfig.priorities)) {
-        if (namespacePatternToRegex(pattern).test(hit.namespace)) {
-          multiplier += (priority - 1.0);
-        }
-      }
-    }
-
-    // Recency Bonus
     if (this.rankingConfig?.recency_decay && hit.createdAt) {
-      const created = new Date(hit.createdAt).getTime();
-      const now = Date.now();
-      const ageInDays = Math.max(0, (now - created) / (1000 * 60 * 60 * 24));
-      const recencyBonus = this.rankingConfig.recency_decay / (1 + ageInDays);
-      multiplier += recencyBonus;
+      const ageInDays = Math.max(0, (Date.now() - new Date(hit.createdAt).getTime()) / 86_400_000);
+      multiplier += this.rankingConfig.recency_decay / (1 + ageInDays);
     }
-    
+
     return score * multiplier;
   }
 

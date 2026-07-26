@@ -24,7 +24,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MemoryAdapter } from './adapter.js';
 
-test('MemoryAdapter search ranks hits by priority and recency', async () => {
+test('MemoryAdapter search ranks hits by namespace rule and recency', async () => {
   const mockProvider = {
     embed: async (texts: string[]) => texts.map(t => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
   };
@@ -59,10 +59,18 @@ test('MemoryAdapter search ranks hits by priority and recency', async () => {
     }
   ];
 
+  // Namespace weighting comes from app.vector_namespace_rules. These two rules
+  // carry the bonuses that ranking.priorities used to supply as 1.1 / 1.05,
+  // and the expected scores below are unchanged — the paths are equivalent.
+  const mockRules = [
+    { pattern: 'vector.global', bonus: 0.1, instruction_template: null },
+    { pattern: 'vector.user', bonus: 0.05, instruction_template: null }
+  ];
+
   const mockClient = {
     query: async (sql: string) => {
-      if (sql.includes('vector_namespace_rules') || sql.includes('vector_ranking_rules')) {
-         return { rows: [] };
+      if (sql.includes('vector_namespace_rules')) {
+         return { rows: mockRules };
       }
       if (sql.includes('SELECT')) {
          return {
@@ -83,29 +91,26 @@ test('MemoryAdapter search ranks hits by priority and recency', async () => {
       tables: { '3': { name: 'vector.test', column: 'embedding', dimension: 3 } },
       local: { dimension: 3 },
       ranking: {
-          priorities: {
-              'vector.global': 1.1,
-              'vector.user': 1.05
-          },
           recency_decay: 0.1 // 10% max bonus
       }
   };
 
   const adapter = new MemoryAdapter(mockDb as any, mockProvider as any, config as any);
+  await adapter.loadNamespaceRules();
 
   const results = await adapter.search(['vector.user.chat', 'vector.global.knowledge.docs', 'vector.other'], { query: 'test', topK: 5, dimension: 3 });
 
   // Calculate expected scores:
   // Hit 1 (User, Now):
   //   Base: 0.9
-  //   Ns Bonus: +0.05 (1.05 - 1.0)
+  //   Ns Bonus: +0.05 (rule "vector.user")
   //   Recency: +0.1 (0.1 / (1 + 0))
   //   Multiplier: 1.0 + 0.05 + 0.1 = 1.15
   //   Final: 0.9 * 1.15 = 1.035
   
   // Hit 2 (Global, Old):
   //   Base: 0.9
-  //   Ns Bonus: +0.1 (1.1 - 1.0)
+  //   Ns Bonus: +0.1 (rule "vector.global")
   //   Recency: +0.009 (0.1 / (1 + 10)) = 0.00909
   //   Multiplier: 1.0 + 0.1 + 0.009 = 1.109
   //   Final: 0.9 * 1.109 = 0.9981
@@ -156,10 +161,17 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
     }
   ];
 
+  // The ${...} placeholder must resolve against the live user id, and the more
+  // specific rule must apply on top of the broader one.
+  const mockRules = [
+    { pattern: 'vector.user', bonus: 0.0, instruction_template: null },
+    { pattern: 'vector.user.${user_id}.howto', bonus: 0.05, instruction_template: null }
+  ];
+
   const mockClient = {
     query: async (sql: string) => {
-        if (sql.includes('vector_namespace_rules') || sql.includes('vector_ranking_rules')) {
-            return { rows: [] };
+        if (sql.includes('vector_namespace_rules')) {
+            return { rows: mockRules };
         }
         return { rows: mockRows };
     },
@@ -175,28 +187,25 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
       tables: { '3': { name: 'vector.test', column: 'embedding', dimension: 3 } },
       local: { dimension: 3 },
       ranking: {
-          priorities: {
-              'vector.user': 1.0,
-              'vector.user.${user_id}.howto': 1.05
-          },
           recency_decay: 0
       }
   };
 
   const adapter = new MemoryAdapter(mockDb as any, mockProvider as any, config as any);
+  await adapter.loadNamespaceRules();
 
   const results = await adapter.search(['vector.user.testuser.howto', 'vector.user.testuser.memory'], { query: 'test', topK: 5, dimension: 3 });
 
   // Expected scores:
   // Hit 1 (testuser.howto):
   //   Base: 0.9
-  //   Pattern "vector.user" matches -> bonus +0.0
-  //   Pattern "vector.user.${user_id}.howto" matches -> bonus +0.05
+  //   Rule "vector.user" matches -> bonus +0.0
+  //   Rule "vector.user.${user_id}.howto" matches -> bonus +0.05
   //   Final: 0.9 * (1.0 + 0 + 0.05) = 0.945
   
   // Hit 2 (testuser.memory):
   //   Base: 0.9
-  //   Pattern "vector.user" matches -> bonus +0.0
+  //   Rule "vector.user" matches -> bonus +0.0
   //   Final: 0.9 * 1.0 = 0.9
   
   assert.equal(results.length, 2);

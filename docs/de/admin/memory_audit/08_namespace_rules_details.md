@@ -30,6 +30,6 @@ Eine Regel deckt immer auch die Unter-Namespaces ihres Musters ab. Treffen mehre
 ---
 
 ## 🛠️ Technischer Hintergrund
-Für eine detaillierte mathematische Erklärung des Such- und Ranking-Algorithmus (inkl. Cosine Similarity, Recency Decay und statischen Prioritäten), konsultieren Sie bitte die:
+Für eine detaillierte mathematische Erklärung des Such- und Ranking-Algorithmus (inkl. Cosine Similarity, Recency Decay und Namespace-Boni), konsultieren Sie bitte die:
 
 👉 **[Technische Referenz: Memory Ranking & Suchalgorithmus](/de/admin/memory_audit/10_ranking_algorithm/)**

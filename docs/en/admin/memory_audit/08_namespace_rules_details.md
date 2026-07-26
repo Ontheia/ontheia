@@ -30,6 +30,6 @@ A rule always covers the sub-namespaces of its pattern as well. When several ins
 ---
 
 ## 🛠️ Technical Background
-For a detailed mathematical explanation of the search and ranking algorithm (including Cosine Similarity, Recency Decay, and static priorities), please consult the:
+For a detailed mathematical explanation of the search and ranking algorithm (including Cosine Similarity, Recency Decay, and namespace bonuses), please consult the:
 
 👉 **[Technical Reference: Memory Ranking & Search Algorithm](/en/admin/memory_audit/10_ranking_algorithm/)**
