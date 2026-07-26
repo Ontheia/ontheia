@@ -35,12 +35,41 @@ The compressed summary is prepended to the LLM request as a synthetic `user`/`as
 ```
 [User]:      [Context Summary — compressed history of this conversation]
              ## Chat Summary … (structured text)
-[Assistant]: Understood. I will use this summary as context for our conversation.
+[Assistant]: [Context loaded]
 [User]:      <last minRecent messages as plaintext>
 …
 ```
 
 System messages and the actual agent prompts are not affected.
+
+### Structure of the summary
+
+The summarizer produces a fixed outline. Empty sections are dropped.
+
+| Section | Content |
+| --- | --- |
+| `### Guide` | Topic horizon, last completed, current task, next steps |
+| `### Main Topics` | Topics of the compressed range |
+| `### Decisions & Results` | Durable decisions, each with a **message number** as source locator |
+| `### Open Commitments` | Outstanding promises, blockers, approvals granted or refused |
+| `### Uncertainties` | Open questions, unverified assumptions and **rejected hypotheses** |
+| `### Tool Calls` | One line per call: `[Tool: name(args) → result]` |
+| `### Omitted` | Dropped topic strands — as pointers, so they stay findable in the full history |
+| `### Current State` | Free text on where things stand |
+
+Messages reach the summarizer numbered (`[#12 User]`) so decisions can cite
+their source.
+
+> **Three sections are never overwritten:** `Decisions & Results`,
+> `Open Commitments` and `Uncertainties` are carried over unchanged from the
+> previous summary and only added to. Everything else is weighted towards newer
+> messages. Without that exception, precisely the content a summary exists for
+> fades across repeated compressions.
+
+**The original messages remain intact.** The summary replaces them only in the
+LLM's context window, not in the database — every entry under `### Omitted`
+therefore stays readable in the chat history.
+
 
 ---
 

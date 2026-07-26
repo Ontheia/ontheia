@@ -35,12 +35,42 @@ Die komprimierte Summary wird dem LLM als synthetisches `user`/`assistant`-Paar 
 ```
 [User]:      [Context Summary — compressed history of this conversation]
              ## Chat Summary … (strukturierter Text)
-[Assistant]: Understood. I will use this summary as context for our conversation.
+[Assistant]: [Context loaded]
 [User]:      <letzte minRecent Nachrichten als Klartext>
 …
 ```
 
 System-Messages und die eigentlichen Agenten-Prompts bleiben davon unberührt.
+
+### Aufbau der Summary
+
+Der Summarizer erzeugt eine feste Gliederung. Leere Abschnitte entfallen.
+
+| Abschnitt | Inhalt |
+| --- | --- |
+| `### Guide` | Topic Horizon, zuletzt Abgeschlossenes, aktuelle Aufgabe, nächste Schritte |
+| `### Main Topics` | Themen des komprimierten Abschnitts |
+| `### Decisions & Results` | dauerhafte Entscheidungen, je mit **Nachrichtennummer** als Quellverweis |
+| `### Open Commitments` | offene Zusagen, Blocker, erteilte oder verweigerte Freigaben |
+| `### Uncertainties` | offene Fragen, ungeprüfte Annahmen und **verworfene Hypothesen** |
+| `### Tool Calls` | je Aufruf eine Zeile `[Tool: name(args) → Ergebnis]` |
+| `### Omitted` | weggelassene Themenstränge — als Zeiger, damit sie im Volltext auffindbar bleiben |
+| `### Current State` | Freitext zum aktuellen Stand |
+
+Die Nachrichten gehen nummeriert in den Summarizer (`[#12 User]`), damit
+Entscheidungen auf ihre Quelle verweisen können.
+
+> **Drei Abschnitte werden nicht überschrieben:** `Decisions & Results`,
+> `Open Commitments` und `Uncertainties` übernimmt jede neue Verdichtung
+> unverändert aus der vorherigen Summary und ergänzt sie nur. Alles andere wird
+> zugunsten neuerer Nachrichten gewichtet. Ohne diese Ausnahme verblassen genau
+> die Inhalte, für die eine Summary da ist, über mehrere Verdichtungsrunden.
+
+**Die Originalnachrichten bleiben vollständig erhalten.** Die Summary ersetzt sie
+nur im Kontextfenster des LLM, nicht in der Datenbank — jeder Eintrag in
+`### Omitted` ist damit im Chatverlauf nachlesbar.
+
+
 
 ---
 

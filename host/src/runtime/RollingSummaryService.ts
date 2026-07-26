@@ -55,9 +55,23 @@ export function estimateTokens(messages: ChatMessage[]): number {
   return Math.ceil(chars / 4);
 }
 
-function serializeForSummarizer(messages: ChatMessage[]): string {
-  return messages.map((msg) => {
-    const label = msg.role === 'user' ? '[User]' : msg.role === 'assistant' ? '[Assistant]' : `[${msg.role}]`;
+/**
+ * Renders messages for the summarizer.
+ *
+ * `startIndex` turns on numbering: each line is prefixed with the message's
+ * position in the whole conversation, so the summary can cite a decision as
+ * `[#12]` instead of asserting it without a source — the contract requires
+ * durable decisions to carry a source locator. Omit it for the verbatim
+ * Recent-Messages block, where numbers would only be noise for the main model.
+ *
+ * The number is a position, not an id: it stays meaningful as long as the
+ * client sends the full history, which is the same assumption
+ * rolling_summary_covers_until already makes.
+ */
+export function serializeForSummarizer(messages: ChatMessage[], startIndex?: number): string {
+  return messages.map((msg, i) => {
+    const role = msg.role === 'user' ? 'User' : msg.role === 'assistant' ? 'Assistant' : msg.role;
+    const label = typeof startIndex === 'number' ? `[#${startIndex + i} ${role}]` : `[${role}]`;
     const text = extractTextFromContent(msg.content);
     const toolLines = msg.tool_calls?.map((tc) => {
       let args = tc.function.arguments;
@@ -68,7 +82,9 @@ function serializeForSummarizer(messages: ChatMessage[]): string {
   }).join('\n\n');
 }
 
-const SUMMARIZER_SYSTEM_PROMPT = `You are a context compressor for chat histories. Produce a structured summary in at most 600 words.
+export const SUMMARIZER_SYSTEM_PROMPT = `You are a context compressor for chat histories. Produce a structured summary in at most 700 words.
+
+Messages are numbered ([#12 User]). Cite those numbers wherever the format asks for a source.
 
 Format:
 
@@ -85,20 +101,32 @@ Compressed: [N] messages
 - ...
 
 ### Decisions & Results
-- ...
+- [#N] decision or result, one line each
+
+### Open Commitments
+- [#N] anything promised but not delivered, still blocked, or explicitly approved/refused
+
+### Uncertainties
+- [#N] open questions, unverified assumptions, and hypotheses that were tried and rejected
 
 ### Tool Calls
 - [Tool: name(key-args) → result-summary]
+
+### Omitted
+- topic strands dropped from this summary, one line each
 
 ### Current State
 [concise free text oriented around the Guide]
 
 Rules:
-- The Topic Horizon defines what is relevant — anything outside it is omitted
+- The Topic Horizon defines what stays in full. Anything outside it is dropped from the body — but name it in ### Omitted with a message number, never silently. The full history remains available; the pointer is what makes it recoverable
+- Drop a section entirely when it has no content. Do not write "none" or invent entries to fill it
+- Decisions, Open Commitments and Uncertainties are carried over from an existing summary **unchanged**. Add to them, never rewrite or drop them because newer material seems more pressing — they are what a summary exists to preserve
+- A rejected hypothesis belongs in ### Uncertainties. Without it the next turn re-proposes what was already ruled out
 - Tool calls are compressed to a single line: [Tool: name(args) → result]; never reproduce the full payload
 - Derive Last completed / Current task / Next steps from the most recent messages
-- If an existing summary is provided, integrate it but weight the new messages more heavily — they reflect the current state of the conversation
-- No prose introductions, no padding, stay within 600 words`;
+- For everything else, weight the new messages more heavily than the existing summary — they reflect the current state of the conversation
+- No prose introductions, no padding, stay within 700 words`;
 
 function buildSummaryMessages(summary: string): ChatMessage[] {
   return [
@@ -248,7 +276,7 @@ export class RollingSummaryService {
     const activatedSkills = extractActivatedSkills(messages.slice(0, coversUntilNew));
 
     L('COMPRESS START', { total: messages.length, compressing: toCompress.length, retainedTail: retainedTail.length });
-    const newSummary = await this.runSummarizer(existingSummary, toCompress, config, logger);
+    const newSummary = await this.runSummarizer(existingSummary, toCompress, config, logger, coversUntil);
     if (!newSummary) { W('summarizer returned empty — aborting'); return { messages, applied: false }; }
     L('COMPRESS DONE', { summaryLen: newSummary.length });
 
@@ -297,13 +325,14 @@ export class RollingSummaryService {
     existingSummary: string | null,
     messages: ChatMessage[],
     config: RollingSummaryConfig,
-    logger?: any
+    logger?: any,
+    startIndex = 0
   ): Promise<string | null> {
     const parts: string[] = [];
     if (existingSummary) {
       parts.push(`## Existing Summary (to be updated)\n${existingSummary}`);
     }
-    parts.push(`## Messages to compress (${messages.length})\n${serializeForSummarizer(messages)}`);
+    parts.push(`## Messages to compress (${messages.length})\n${serializeForSummarizer(messages, startIndex)}`);
 
     try {
       const events = await runProviderCompletion(this.db, this.orchestrator, {
