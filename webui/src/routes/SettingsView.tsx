@@ -1640,6 +1640,8 @@ function MemorySection({
         write_namespace: null,
         allow_write: true,
         top_k: 5,
+        min_score: null,
+        relative_cutoff: null,
         allowed_write_namespaces: null,
         allow_tool_write: false,
         allow_tool_delete: false
@@ -1679,6 +1681,14 @@ function MemorySection({
       if (field === 'top_k' && (typeof value === 'number' || value === null)) {
         setMemoryDirty(true);
         return { ...base, top_k: value };
+      }
+      if (field === 'min_score' && (typeof value === 'number' || value === null)) {
+        setMemoryDirty(true);
+        return { ...base, min_score: value };
+      }
+      if (field === 'relative_cutoff' && (typeof value === 'number' || value === null)) {
+        setMemoryDirty(true);
+        return { ...base, relative_cutoff: value };
       }
       return base;
     });
@@ -2573,6 +2583,56 @@ function MemorySection({
             }}
           />
         </label>
+        <label className="settings-field">
+          <span>{t('memory.minScore')}</span>
+          <Input
+            type="number"
+            min="0"
+            max="1"
+            step="0.05"
+            value={agentPolicy?.min_score ?? ''}
+            placeholder="Standard (0.4)"
+            onChange={(event) => {
+              const rawValue = event.target.value;
+              if (rawValue === '') {
+                updatePolicyField('agent', 'min_score', null);
+                onHasChanges?.(true);
+                return;
+              }
+              const value = Number.parseFloat(rawValue);
+              if (Number.isFinite(value)) {
+                updatePolicyField('agent', 'min_score', Math.max(0, Math.min(1, value)));
+                onHasChanges?.(true);
+              }
+            }}
+          />
+          <small className="muted">{t('memory.minScoreHint')}</small>
+        </label>
+        <label className="settings-field">
+          <span>{t('memory.relativeCutoff')}</span>
+          <Input
+            type="number"
+            min="0"
+            max="1"
+            step="0.05"
+            value={agentPolicy?.relative_cutoff ?? ''}
+            placeholder="Standard (0.7)"
+            onChange={(event) => {
+              const rawValue = event.target.value;
+              if (rawValue === '') {
+                updatePolicyField('agent', 'relative_cutoff', null);
+                onHasChanges?.(true);
+                return;
+              }
+              const value = Number.parseFloat(rawValue);
+              if (Number.isFinite(value)) {
+                updatePolicyField('agent', 'relative_cutoff', Math.max(0, Math.min(1, value)));
+                onHasChanges?.(true);
+              }
+            }}
+          />
+          <small className="muted">{t('memory.relativeCutoffHint')}</small>
+        </label>
         <label className="settings-field inline py-2">
           <input
             type="checkbox"
@@ -2758,6 +2818,56 @@ function MemorySection({
                   }
                 }}
               />
+            </label>
+            <label className="settings-field">
+              <span>{t('memory.minScore')}</span>
+              <Input
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                value={taskPolicy?.min_score ?? ''}
+                placeholder={t('memory.topKInherit')}
+                onChange={(event) => {
+                  const rawValue = event.target.value;
+                  if (rawValue === '') {
+                    updatePolicyField('task', 'min_score', null);
+                    onHasChanges?.(true);
+                    return;
+                  }
+                  const value = Number.parseFloat(rawValue);
+                  if (Number.isFinite(value)) {
+                    updatePolicyField('task', 'min_score', Math.max(0, Math.min(1, value)));
+                    onHasChanges?.(true);
+                  }
+                }}
+              />
+              <small className="muted">{t('memory.minScoreHint')}</small>
+            </label>
+            <label className="settings-field">
+              <span>{t('memory.relativeCutoff')}</span>
+              <Input
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                value={taskPolicy?.relative_cutoff ?? ''}
+                placeholder={t('memory.topKInherit')}
+                onChange={(event) => {
+                  const rawValue = event.target.value;
+                  if (rawValue === '') {
+                    updatePolicyField('task', 'relative_cutoff', null);
+                    onHasChanges?.(true);
+                    return;
+                  }
+                  const value = Number.parseFloat(rawValue);
+                  if (Number.isFinite(value)) {
+                    updatePolicyField('task', 'relative_cutoff', Math.max(0, Math.min(1, value)));
+                    onHasChanges?.(true);
+                  }
+                }}
+              />
+              <small className="muted">{t('memory.relativeCutoffHint')}</small>
             </label>
             <TriStateSelect
               label={t('memory.allowWriteAuto')}
@@ -8279,6 +8389,8 @@ export function SettingsView() {
           write_namespace: taskNsTemplate,
           allow_write: true,
           top_k: null,
+          min_score: null,
+          relative_cutoff: null,
           allowed_write_namespaces: null,
           allow_tool_write: false,
           allow_tool_delete: false

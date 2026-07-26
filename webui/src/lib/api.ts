@@ -171,6 +171,8 @@ export type MemoryPolicyDto = {
   write_namespace: string | null;
   allow_write: boolean | null;
   top_k: number | null;
+  min_score: number | null;
+  relative_cutoff: number | null;
   allowed_write_namespaces: string[] | null;
   allow_tool_write: boolean | null;
   allow_tool_delete: boolean | null;
