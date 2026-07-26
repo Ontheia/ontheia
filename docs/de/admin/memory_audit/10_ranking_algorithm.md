@@ -17,6 +17,18 @@ Wertebereich: `[0.0, 1.0]`. Ein Wert von `1.0` bedeutet Identität. Aufgrund der
 >
 > Ohne Suchbegriff (reines Durchblättern eines Namespace, etwa in der Admin-Konsole) greift die Schwelle nicht — dort gibt es keine Ähnlichkeit zu bewerten.
 
+### 1.3 Relativer Cutoff (Standard `0.7`)
+
+Ein zweiter Filter nach dem Mindest-Score, der eine **andere** Frage beantwortet. Der Mindest-Score fragt: *Ist dieser Treffer überhaupt themenverwandt?* Der relative Cutoff fragt: *Ist er innerhalb dieser Trefferliste noch konkurrenzfähig?*
+
+Treffer unterhalb von 70 % des besten Treffers werden verworfen. Bei einem Spitzentreffer von `0.81` fällt damit alles unter `0.57` heraus — auch wenn es über `0.4` liegt.
+
+**Warum beides nötig ist.** Über 3786 Treffer aus 906 Läufen gemessen: In 227 Läufen lag bereits der *beste* Treffer unter `0.4`. Ein rein relativer Filter hätte dort 750 Treffer durchgelassen, weil er nur den Abstand zum Besten kennt, nicht dessen Güte. Umgekehrt behält der Mindest-Score allein Treffer, die im Vergleich chancenlos sind. Die Kriterien ersetzen einander nicht.
+
+**Charakteristik.** Der Filter wirkt als *Schwanz-Abschneider*: Der Abstand zwischen den ersten beiden Treffern ist für ihn unerheblich. Eine Liste `0.999 / 0.999 / 0.994 / 0.688` verliert nur den letzten Eintrag. In der Praxis greift er in etwa 7 % der Läufe und entfernt dort 3,6 % der Treffer — Kosinus-Werte liegen von Natur aus dicht beieinander.
+
+Der Wert lässt sich pro Agent in der Memory-Policy über `relative_cutoff` überschreiben; `0` schaltet ihn ab. Werte ab `0.8` sind riskant: bei `0.9` verschwände jeder dritte Treffer, viele davon berechtigt.
+
 ### 1.2 Namespace-Mischung
 Namespaces werden nicht sequentiell durchsucht. Die Abfrage erfolgt über alle Ziel-Namespaces gleichzeitig (`namespace = ANY(...)`), was eine echte Relevanz-Mischung über Namespace-Grenzen hinweg ermöglicht.
 

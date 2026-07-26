@@ -35,6 +35,8 @@ export type MemoryPolicy = {
   topK?: number;
   /** Similarity floor for auto-injected hits; overrides the global default. */
   minScore?: number;
+  /** Second, relative stage after minScore. 0 disables it. */
+  relativeCutoff?: number;
   allowedWriteNamespaces?: string[];
   allowToolWrite?: boolean;
   allowToolDelete?: boolean;
@@ -48,6 +50,7 @@ export const sanitizePolicyResponse = (policy: MemoryPolicy) => ({
   allow_write: policy.allowWrite !== undefined ? policy.allowWrite : null,
   top_k: policy.topK ?? null,
   min_score: policy.minScore ?? null,
+  relative_cutoff: policy.relativeCutoff ?? null,
   allowed_write_namespaces: policy.allowedWriteNamespaces ?? null,
   allow_tool_write: policy.allowToolWrite !== undefined ? policy.allowToolWrite : null,
   allow_tool_delete: policy.allowToolDelete !== undefined ? policy.allowToolDelete : null
@@ -62,6 +65,7 @@ export const toStoredPolicy = (policy: MemoryPolicy): Record<string, unknown> =>
   if (policy.allowWrite !== undefined) result.allow_write = policy.allowWrite;
   if (typeof policy.topK === 'number') result.top_k = policy.topK;
   if (typeof policy.minScore === 'number') result.min_score = policy.minScore;
+  if (typeof policy.relativeCutoff === 'number') result.relative_cutoff = policy.relativeCutoff;
   if (policy.allowedWriteNamespaces && policy.allowedWriteNamespaces.length > 0) result.allowed_write_namespaces = policy.allowedWriteNamespaces;
   if (policy.allowToolWrite !== undefined) result.allow_tool_write = policy.allowToolWrite;
   if (policy.allowToolDelete !== undefined) result.allow_tool_delete = policy.allowToolDelete;
@@ -88,6 +92,10 @@ export const parsePolicyPayload = (raw: unknown): MemoryPolicy => {
   const minScore = typeof rawMinScore === 'number' && Number.isFinite(rawMinScore)
     ? Math.max(0, Math.min(1, rawMinScore))
     : undefined;
+  const rawCutoff = (raw as any).relative_cutoff ?? (raw as any).relativeCutoff;
+  const relativeCutoff = typeof rawCutoff === 'number' && Number.isFinite(rawCutoff)
+    ? Math.max(0, Math.min(1, rawCutoff))
+    : undefined;
 
   return {
     readNamespaces: readNamespaces.length > 0 ? readNamespaces : undefined,
@@ -97,6 +105,7 @@ export const parsePolicyPayload = (raw: unknown): MemoryPolicy => {
     allowWrite,
     topK,
     minScore,
+    relativeCutoff,
     allowedWriteNamespaces: allowedWriteNamespaces.length > 0 ? allowedWriteNamespaces : undefined,
     allowToolWrite: (raw as any).allow_tool_write ?? (raw as any).allowToolWrite,
     allowToolDelete: (raw as any).allow_tool_delete ?? (raw as any).allowToolDelete
@@ -112,6 +121,7 @@ export const mergePolicies = (base: MemoryPolicy, override: MemoryPolicy): Memor
     allowWrite: override.allowWrite ?? base.allowWrite,
     topK: override.topK ?? base.topK,
     minScore: override.minScore ?? base.minScore,
+    relativeCutoff: override.relativeCutoff ?? base.relativeCutoff,
     allowedWriteNamespaces: override.allowedWriteNamespaces ?? base.allowedWriteNamespaces,
     allowToolWrite: override.allowToolWrite ?? base.allowToolWrite,
     allowToolDelete: override.allowToolDelete ?? base.allowToolDelete

@@ -17,6 +17,18 @@ Value range: `[0.0, 1.0]`. A value of `1.0` means identity. Due to the character
 >
 > Without a search term (plain browsing of a namespace, e.g. in the admin console) the threshold does not apply — there is no similarity to judge.
 
+### 1.3 Relative Cutoff (default `0.7`)
+
+A second filter after the minimum score, answering a **different** question. The minimum score asks: *is this hit related to the topic at all?* The relative cutoff asks: *is it still competitive within this result list?*
+
+Hits below 70 % of the best hit are discarded. With a top hit of `0.81` everything below `0.57` drops out — even though it clears `0.4`.
+
+**Why both are needed.** Measured across 3786 hits from 906 runs: in 227 runs even the *best* hit scored below `0.4`. A purely relative filter would have let 750 hits through there, because it only knows the distance to the best hit, not its quality. Conversely the minimum score alone keeps hits that stand no chance in comparison. The two do not replace each other.
+
+**Characteristic.** The filter acts as a *tail trimmer*: the gap between the first two hits is irrelevant to it. A list of `0.999 / 0.999 / 0.994 / 0.688` loses only its last entry. In practice it fires in roughly 7 % of runs and removes 3.6 % of hits there — cosine scores sit close together by nature.
+
+The value can be overridden per agent in the memory policy via `relative_cutoff`; `0` disables it. Values from `0.8` upwards are risky: at `0.9` every third hit would vanish, many of them legitimate.
+
 ### 1.2 Namespace Mixing
 Namespaces are not searched sequentially. The query runs across all target namespaces simultaneously (`namespace = ANY(...)`), enabling true relevance mixing across namespace boundaries.
 

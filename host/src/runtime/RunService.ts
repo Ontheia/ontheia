@@ -583,7 +583,8 @@ export class RunService {
             return this.memoryAdapter.search(allowed, {
               query: buildMemoryQuery(enrichedInput.messages) || undefined,
               topK,
-              minScore: policy.minScore
+              minScore: policy.minScore,
+              relativeCutoff: policy.relativeCutoff
             }, client);
           });
           await emitRunEvent({ type: 'memory_hits', hits: hits.map(mapHitToEvent) });
