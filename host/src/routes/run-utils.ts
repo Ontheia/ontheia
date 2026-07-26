@@ -22,7 +22,6 @@
  */
 import type { ChatMessage, RunMemoryOptions, RunRequest } from '../runtime/types.js';
 import { extractTextFromContent, isPlainObject } from './utils.js';
-import { buildReadableNamespaces } from '../memory/namespaces.js';
 import type { Pool } from 'pg';
 
 export function parseMessages(rawMessages: unknown): ChatMessage[] | null {
@@ -167,16 +166,6 @@ export function buildChatTitlePreview(messages: ChatMessage[], fallback: string)
   return fallback;
 }
 
-export function deriveNamespaces(params: { userId: string; chatId?: string }): string[] {
-  const { userId, chatId } = params;
-  const ns: string[] = [];
-  if (userId) {
-    ns.push(`vector.agent.${userId}.memory`);
-    ns.push(`vector.user.${userId}.memory`);
-  }
-  if (userId && chatId) ns.push(`vector.user.${userId}.chat.${chatId}`);
-  return ns;
-}
 
 export function pickWriteNamespace(namespaces: string[]): string | null {
   // Prefer chat namespace for writing if available, else user memory

@@ -35,15 +35,15 @@ import type { ChainTemplateContext } from './chain-runner.js';
 import { TaskToolBinding } from '../routes/types.js';
 import { runProviderCompletion } from './provider-run.js';
 import { withRls, isPlainObject, isUuid, extractTextFromContent, applyNamespaceTemplate, logMemoryAudit, TEMPLATE_PATTERN, countHitsForNamespace } from '../routes/utils.js';
-import { filterNamespacesForSession, mapHitToEvent, defaultUserNamespaces } from '../routes/memory.js';
+import { filterNamespacesForSession, mapHitToEvent } from '../routes/memory.js';
 import {
   buildMemoryQuery,
   extractRunMetadata,
-  deriveNamespaces,
   normalizeMemoryOptions,
   pickWriteNamespace,
   buildChatTitlePreview
 } from '../routes/run-utils.js';
+import { buildReadableNamespaces } from '../memory/namespaces.js';
 import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
 import { loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
@@ -540,7 +540,7 @@ export class RunService {
           } else if (Array.isArray(policy.readNamespaces) && policy.readNamespaces.length > 0) {
             namespacesToUse = policy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, templateContext));
           } else {
-            namespacesToUse = deriveNamespaces({ userId, chatId });
+            namespacesToUse = buildReadableNamespaces({ userId, chatId });
           }
         }
 

@@ -37,7 +37,6 @@ import {
 } from '../secrets/resolver.js';
 import type { ServerStatusUpdateParams } from './server-config.repository.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
-import { buildReadableNamespaces } from '../memory/namespaces.js';
 import { countMemoryHits, countMemoryWarning } from '../metrics.js';
 
 const execFileAsync = promisify(execFile);

@@ -26,7 +26,7 @@ import { runProviderCompletion } from './provider-run.js';
 import { jsonrepair } from 'jsonrepair';
 import { logMemoryAudit, applyNamespaceTemplate, countHitsForNamespace } from '../routes/utils.js';
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
-import { buildMemoryQuery, deriveNamespaces } from '../routes/run-utils.js';
+import { buildMemoryQuery } from '../routes/run-utils.js';
 import { isGlobalNamespace } from '../memory/namespaces.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';

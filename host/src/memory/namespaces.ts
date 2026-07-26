@@ -39,12 +39,24 @@ export interface NamespaceParams {
 }
 
 /**
- * Builds the default set of readable namespaces for a run.
+ * Builds the default set of readable namespaces — the fallback used whenever no
+ * policy names any. This is the single source for that set: the chat path, the
+ * MCP tools and the search API all call it, so the same user sees the same
+ * memory regardless of how the request arrived.
+ *
+ * It used to exist three times (deriveNamespaces in run-utils,
+ * defaultUserNamespaces in routes/memory, and this one), and the copies had
+ * drifted: one omitted the session namespace, another the chat namespace, and
+ * one skipped slugification entirely. An agent therefore read different entries
+ * over MCP than in chat.
  *
  * Namespace ownership: the UUID segment is always the user's ID.
  *   vector.user.{user_id}.*   — private user data
  *   vector.agent.{user_id}.*  — agent-context memory for the user
  *   vector.global.*           — shared knowledge (policy-controlled, no UUID owner)
+ *
+ * Callers pass whatever identifiers they hold; each optional segment is only
+ * added when its id is present, so passing fewer never changes the rest.
  */
 export function buildReadableNamespaces(params: NamespaceParams): string[] {
   const namespaces = new Set<string>();
@@ -103,7 +115,7 @@ export function isNamespaceAllowed(
     if (!pattern) continue;
 
     // 1. Resolve placeholders
-    let resolved = pattern.replace(/\$\{([^}]+)\}/g, (_, key) => {
+    const resolved = pattern.replace(/\$\{([^}]+)\}/g, (_, key) => {
       return slugifiedContext[key] || '';
     });
 

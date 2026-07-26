@@ -94,19 +94,8 @@ export const getUserNamespacePrefix = (session?: LoadedSession | null): string |
   return `vector.user.${slugUser}`;
 };
 
-export const defaultUserNamespaces = (session?: LoadedSession | null): string[] => {
-  if (!session) return [];
-  const slugUser = slugifySegment(session.userId);
-  if (!slugUser) return [];
-  const namespaces = new Set<string>();
-  namespaces.add(`vector.agent.${slugUser}.memory`);
-  namespaces.add(`vector.user.${slugUser}.memory`);
-  if (session.id) {
-    const slugSession = slugifySegment(session.id) ?? session.id;
-    namespaces.add(`vector.user.${slugUser}.session.${slugSession}`);
-  }
-  return Array.from(namespaces);
-};
+export const defaultUserNamespaces = (session?: LoadedSession | null): string[] =>
+  session ? buildReadableNamespaces({ userId: session.userId, sessionId: session.id }) : [];
 
 /**
  * Checks whether a namespace is owned by the given user slug.
