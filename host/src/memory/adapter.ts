@@ -331,11 +331,10 @@ export class MemoryAdapter {
     }
 
     // 2. Config File Rules (Static) - Multiplicative
-    // Second, older path for the same thing as (1). Every priority currently
-    // shipped in embedding.config.json is a no-op: some are 1.0, the rest name
-    // namespaces no installation has. app.vector_namespace_rules is the live
-    // path — edit rules there, not here. Left in place deliberately: removing
-    // it belongs with the ranking rework, not with a cleanup.
+    // Second, older path for the same thing as (1). app.vector_namespace_rules
+    // is the live path — it can be edited at runtime through the admin UI,
+    // whereas this file needs a restart. Kept deliberately: removing it belongs
+    // with the ranking rework, not with a cleanup.
     if (this.rankingConfig?.priorities) {
       for (const [pattern, priority] of Object.entries(this.rankingConfig.priorities)) {
         if (namespacePatternToRegex(pattern).test(hit.namespace)) {

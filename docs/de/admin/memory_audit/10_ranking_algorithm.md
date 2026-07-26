@@ -59,7 +59,7 @@ In der Tabelle `app.vector_namespace_rules` können Boni pro Namespace-Pattern d
 ### 2.3 Statische Prioritäten
 In der `embedding.config.json` können Namespaces zusätzlich gewichtet werden. Eine Priorität von `1.1` steuert `0.1` zum Multiplikator bei — sie wirkt also genau wie ein Bonus von `0.1`, nur aus einer anderen Quelle.
 
-*   **Beispiel:** `priorities: { "vector.project": 1.1 }` -> 10 % Aufschlag.
+*   **Beispiel:** `priorities: { "vector.agent.${user_id}.howto": 1.05 }` -> 5 % Aufschlag.
 *   **Hinweis:** Die Datenbank-Regeln aus 2.2 sind der empfohlene Weg — sie lassen sich zur Laufzeit über die Admin-Oberfläche pflegen, während Änderungen an der Konfigurationsdatei einen Neustart erfordern.
 
 ---

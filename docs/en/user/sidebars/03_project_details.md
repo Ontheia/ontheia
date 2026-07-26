@@ -14,4 +14,6 @@ Right-click (or click the menu icon) on a project to:
 - Start a **New Chat** directly within this project.
 
 ## 3. Technical Background
-Every project has a unique ID. In the Admin Console, specific **Memory Policies** can be configured so that an agent only receives access to documents assigned to the ID of the current project (`vector.project.${project_id}`).
+Every project has a unique ID. When a chat runs inside a project, that ID is recorded as `project_id` in the metadata of the memory entries it produces.
+
+Dedicated `vector.project.*` namespaces no longer exist — project content lives in the user's regular namespaces (`vector.user.*` / `vector.agent.*`). The `project_id` serves as a **filter** and can be used in the Admin Console and through the API to narrow a search. Automatic memory retrieval in chat does not filter by it: an agent sees the user's entries regardless of which project they came from.

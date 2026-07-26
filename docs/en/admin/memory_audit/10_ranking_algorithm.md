@@ -59,7 +59,7 @@ In the `app.vector_namespace_rules` table, bonuses can be defined per namespace 
 ### 2.3 Static Priorities
 In `embedding.config.json`, namespaces can be weighted additionally. A priority of `1.1` contributes `0.1` to the multiplier — it behaves exactly like a bonus of `0.1`, only from a different source.
 
-*   **Example:** `priorities: { "vector.project": 1.1 }` -> 10 % surcharge.
+*   **Example:** `priorities: { "vector.agent.${user_id}.howto": 1.05 }` -> 5 % surcharge.
 *   **Note:** The database rules from 2.2 are the recommended path — they can be maintained at runtime through the admin UI, whereas changes to the configuration file require a restart.
 
 ---

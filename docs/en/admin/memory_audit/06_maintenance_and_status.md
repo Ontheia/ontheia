@@ -76,7 +76,7 @@ The endpoint `POST /memory/reembed` is intended to re-embed existing documents u
 ### CLI
 
 ```bash
-cd host && npm run memory:reembed -- --namespace vector.project.foo.docs
+cd host && npm run memory:reembed -- --namespace vector.global.ontheia.docs
 ```
 
 | Flag | Default | Description |
@@ -132,7 +132,7 @@ Increase probes if search accuracy declines (`SET ivfflat.probes = 15`).
 ### 4.4 Re-Embed After Model Change
 
 ```bash
-npm run memory:reembed -- --namespace vector.project.example.docs --model text-embedding-3-large
+npm run memory:reembed -- --namespace vector.global.ontheia.docs --model text-embedding-3-large
 ```
 
 Afterwards, verify via the **Audit Log** tab (filterable by agent/task).
