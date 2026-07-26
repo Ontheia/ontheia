@@ -64,6 +64,8 @@ Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeit
 | Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, findet keinerlei automatische Injektion statt — die Lese-Namespaces bleiben aber per LLM Memory Tool erreichbar. |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | Liste der Namespaces, aus denen der Agent lesen darf. |
 | Top K | Zahl | Maximale Anzahl zurückgegebener Memory-Treffer (1–20). |
+| Mindest-Score | Zahl (0–1) | Verwirft Treffer unterhalb dieser Ähnlichkeit. Leer = Standard `0.4`. Höher setzen, wenn ein unruhiger Korpus zu viel Beifang liefert. |
+| Relativer Cutoff | Zahl (0–1) | Verwirft zusätzlich Treffer unter diesem Anteil des **besten** Treffers. Leer = Standard `0.7`, `0` schaltet ab. Wirkt nur, wenn ein Treffer deutlich heraussticht — s. [Ranking-Algorithmus 1.3](/de/admin/memory_audit/10_ranking_algorithm/). |
 | Schreiben erlauben (Auto) | Checkbox | Erlaubt dem Agent, automatisch in den Schreib-Namespace zu speichern. |
 | Schreiben (Namespace) | Text | Namespace, in den der Agent automatisch schreibt. |
 
@@ -78,6 +80,8 @@ Unterabschnitt **LLM Memory Tools:**
 
 Button: **[Agent-Policy speichern]**
 
+Nach dem Speichern prüft der Server jedes Namespace-Muster. Ein struktureller Fehler (leeres Segment, unerlaubtes Zeichen, `*` nicht am Ende) wird **abgelehnt** — die Policy bleibt unverändert und die Fehlermeldung nennt das betroffene Muster. Ein unbekanntes Klassen-Suffix wird dagegen gespeichert und nur als Hinweis unter dem Formular angezeigt, samt Vorschlag bei Tippfehlern (`preferenzes` → *„meintest du preferences?"*). Dieser Hinweis blendet sich nicht selbst aus: ein Muster, das nichts trifft, meldet sich später nie wieder.
+
 **Task-Policy** (dasselbe Formular für den ausgewählten Task). Die Agent-Policy gilt als Basis für alle Tasks des Agenten; jedes hier belegte Feld überschreibt die Agent-Policy für diesen Task (Feinjustierung). Leere bzw. auf „erben" gestellte Felder fallen auf die Agent-Policy zurück.
 
 | Feld | Typ | Beschreibung |
@@ -86,6 +90,8 @@ Button: **[Agent-Policy speichern]**
 | Automatisch in Kontext injizieren (bei jedem Run) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | |
 | Top K | Zahl | Leer lassen = vom Agent erben. |
+| Mindest-Score | Zahl (0–1) | Leer lassen = vom Agent erben. |
+| Relativer Cutoff | Zahl (0–1) | Leer lassen = vom Agent erben. |
 | Schreiben erlauben (Auto) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Schreiben (Namespace) | Text | |
 | Schreiben erlauben (Tool) | Tri-State-Dropdown | |

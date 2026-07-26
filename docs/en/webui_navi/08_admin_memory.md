@@ -64,6 +64,8 @@ Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]
 | Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, no automatic injection takes place at all — the read namespaces remain reachable via the LLM Memory Tool. |
 | Read (Namespaces, one per line) | Textarea | List of namespaces the agent may read from. |
 | Top K | Number | Maximum number of memory hits returned (1–20). |
+| Minimum score | Number (0–1) | Discards hits below this similarity. Empty = default `0.4`. Raise it when a noisy corpus produces too much by-catch. |
+| Relative cutoff | Number (0–1) | Additionally discards hits below this fraction of the **best** hit. Empty = default `0.7`, `0` disables it. Only has an effect when one hit stands out clearly — see [Ranking algorithm 1.3](/en/admin/memory_audit/10_ranking_algorithm/). |
 | Allow Writing (Auto) | Checkbox | Allows the agent to automatically save to the write namespace. |
 | Write (Namespace) | Text | Namespace the agent automatically writes to. |
 
@@ -78,6 +80,8 @@ Subsection **LLM Memory Tools:**
 
 Button: **[Save Agent Policy]**
 
+On save the server checks every namespace pattern. A structural mistake (empty segment, disallowed character, `*` not at the end) is **rejected** — the policy stays unchanged and the error names the offending pattern. An unknown class suffix is saved and merely reported as a hint below the form, with a suggestion for typos (`preferenzes` → *"did you mean preferences?"*). That hint does not fade out on its own: a pattern matching nothing never reports itself again later.
+
 **Task Policy** (same form for the selected task). The agent policy serves as the base for all tasks of the agent; every field set here overrides the agent policy for this task (fine-tuning). Empty fields or fields set to "inherit" fall back to the agent policy.
 
 | Field | Type | Description |
@@ -86,6 +90,8 @@ Button: **[Save Agent Policy]**
 | Auto-inject into Context (on every Run) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Read (Namespaces, one per line) | Textarea | |
 | Top K | Number | Leave empty = inherit from agent. |
+| Minimum score | Number (0–1) | Leave empty = inherit from agent. |
+| Relative cutoff | Number (0–1) | Leave empty = inherit from agent. |
 | Allow Writing (Auto) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Write (Namespace) | Text | |
 | Allow Writing (Tool) | Tri-state Dropdown | |
