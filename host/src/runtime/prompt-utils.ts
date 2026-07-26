@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { applyNamespaceTemplate } from '../routes/utils.js';
+import { applyTemplate } from '../routes/utils.js';
 import type { ChatMessage } from './types.js';
 import type { MemoryHit } from '../memory/types.js';
 import type { ChainTemplateContext } from './chain-runner.js';
@@ -69,7 +69,7 @@ export function buildSystemMessages(
     // (appendDateTimeContext); an unresolved ${current_time} in a task
     // context surfaces through the unresolved-key debug log instead.
     const { current_date: _cd, current_time: _ct, ...prefixSafeContext } = templateContext;
-    let resolved = applyNamespaceTemplate(taskContextPrompt, prefixSafeContext);
+    let resolved = applyTemplate(taskContextPrompt, prefixSafeContext);
     if (agentLabel) {
       resolved += `\n\nIMPORTANT: Your identity in this system is "${agentLabel}". You are the specialist for this task. If you see tools related to your specialty, USE THEM DIRECTLY. Do not delegate tasks to yourself ("${agentLabel}") via delegation tools.`;
     }

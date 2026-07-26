@@ -37,7 +37,7 @@ import {
   RouteContext, 
   TaskToolBinding 
 } from './types.js';
-import { slugifySegment } from '../memory/namespaces.js';
+import { slugifySegment, validateNamespacePatterns, type NamespacePatternIssue } from '../memory/namespaces.js';
 import { validateChainGraphSpec, validateSpec } from './chain-utils.js';
 import { 
   parsePolicyPayload, 
@@ -1281,6 +1281,35 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     }
   });
 
+
+/**
+ * Validates every namespace pattern of a memory policy before it is stored.
+ *
+ * A wrong pattern is otherwise permanent and completely silent: it matches
+ * nothing, raises nothing, and the agent simply never finds anything. A live
+ * policy carried `vector.agent.${user_id}.preferenzes` for months this way.
+ *
+ * Structural mistakes are rejected. An unknown class suffix comes back as a
+ * hint alongside the saved policy, so inventing a namespace stays possible.
+ */
+function checkPolicyNamespaces(payload: {
+  readNamespaces?: string[];
+  toolReadNamespaces?: string[];
+  writeNamespace?: string | null;
+  allowedWriteNamespaces?: string[];
+}): { errors: NamespacePatternIssue[]; hints: NamespacePatternIssue[] } {
+  const issues = validateNamespacePatterns([
+    ...(payload.readNamespaces ?? []),
+    ...(payload.toolReadNamespaces ?? []),
+    ...(payload.allowedWriteNamespaces ?? []),
+    payload.writeNamespace ?? undefined
+  ]);
+  return {
+    errors: issues.filter((i) => i.level === 'error'),
+    hints: issues.filter((i) => i.level === 'hint')
+  };
+}
+
   // --- Memory Policies ---
   server.get('/agents/:agentId/memory', async (request, reply) => {
     const auth = await requireSession(db, request, reply, { requireAdmin: true });
@@ -1298,6 +1327,11 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     if (!auth) return;
     const { agentId } = request.params as { agentId: string };
     const payload = parsePolicyPayload(request.body);
+    const { errors, hints } = checkPolicyNamespaces(payload);
+    if (errors.length > 0) {
+      reply.code(400);
+      return { error: 'invalid_namespace_pattern', issues: errors };
+    }
     await withRls(db, auth.session.userId, auth.session.role, async (client) => {
       await client.query(
         `INSERT INTO app.agent_config (agent_id, memory, updated_at) VALUES ($1, $2::jsonb, now())
@@ -1305,7 +1339,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
         [agentId, JSON.stringify(toStoredPolicy(payload))]
       );
     });
-    return sanitizePolicyResponse(payload);
+    return { ...sanitizePolicyResponse(payload), ...(hints.length > 0 ? { warnings: hints } : {}) };
   });
 
   server.get('/tasks/:taskId/memory', async (request, reply) => {
@@ -1324,10 +1358,15 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     if (!auth) return;
     const { taskId } = request.params as { taskId: string };
     const payload = parsePolicyPayload(request.body);
+    const { errors, hints } = checkPolicyNamespaces(payload);
+    if (errors.length > 0) {
+      reply.code(400);
+      return { error: 'invalid_namespace_pattern', issues: errors };
+    }
     await withRls(db, auth.session.userId, auth.session.role, async (client) => {
       await client.query(`UPDATE app.tasks SET memory = $1::jsonb WHERE id = $2`, [JSON.stringify(toStoredPolicy(payload)), taskId]);
     });
-    return sanitizePolicyResponse(payload);
+    return { ...sanitizePolicyResponse(payload), ...(hints.length > 0 ? { warnings: hints } : {}) };
   });
 }
 

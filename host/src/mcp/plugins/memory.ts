@@ -24,14 +24,34 @@ import { FastifyInstance } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import type { MemoryAdapter } from '../../memory/adapter.js';
 import { logger } from '../../logger.js';
-import { buildReadableNamespaces, isNamespaceAllowed } from '../../memory/namespaces.js';
+import {
+  buildReadableNamespaces,
+  isNamespaceAllowed,
+  resolveNamespaceTemplate,
+  NamespaceError
+} from '../../memory/namespaces.js';
 import type { RunRequest } from '../../runtime/types.js';
 import { countMemoryHits, countMemoryWarning, countMemoryWrites } from '../../metrics.js';
 import { loadMemoryPolicy } from '../../routes/policy-utils.js';
 
-const TEMPLATE_PATTERN = /\$\{([a-zA-Z0-9_]+)\}/g;
-function applyNamespaceTemplate(template: string, context: Record<string, string | undefined>): string {
-  return template.replace(TEMPLATE_PATTERN, (_, key) => context[key] ?? '');
+/**
+ * Resolves namespace templates, skipping the ones that cannot be resolved.
+ * Was a local copy of the generic text substitution, which inserted raw values
+ * and turned a missing key into `vector.agent..memory`.
+ */
+function resolveAll(templates: string[], ctx: Record<string, string | undefined>, what: string): string[] {
+  const out: string[] = [];
+  for (const template of templates) {
+    try {
+      out.push(resolveNamespaceTemplate(template, ctx));
+    } catch (err) {
+      logger.warn(
+        { what, pattern: template, err: err instanceof NamespaceError ? err.message : String(err) },
+        'Memory policy namespace could not be resolved and is ignored'
+      );
+    }
+  }
+  return out;
 }
 
 export async function handleMemorySearch(
@@ -75,8 +95,7 @@ export async function handleMemorySearch(
   } else {
     // No explicit namespaces: resolve from policy templates.
     // Wildcards are kept as-is — adapter.search() handles them via LIKE.
-    const policyRead = (policy.readNamespaces || []).map((tpl: string) => applyNamespaceTemplate(tpl, ctx));
-    namespaces = policyRead.filter((ns: string) => ns.length > 0);
+    namespaces = resolveAll(policy.readNamespaces || [], ctx, 'readNamespaces');
   }
 
   // Final fallback to system defaults when no policy namespaces are configured
@@ -149,16 +168,21 @@ export async function handleMemoryWrite(
     session_id: metadata.session_id
   };
 
-  let targetNamespace = args.namespace;
-  if (!targetNamespace) {
-    // Fallback to policy write namespace
-    if (policy.writeNamespace) {
-      targetNamespace = applyNamespaceTemplate(policy.writeNamespace, ctx);
-    }
+  // The model may pass a namespace itself, and it copies the notation it sees
+  // in the policy — `vector.user.${user_id}.temp` reached this check verbatim
+  // 13 times in February and was rejected as a literal. Resolve both sources
+  // the same way so a placeholder means the same thing wherever it is written.
+  const rawNamespace = args.namespace || policy.writeNamespace;
+  if (!rawNamespace) {
+    throw new Error('No target namespace specified or configured for write operation.');
   }
 
-  if (!targetNamespace) {
-    throw new Error('No target namespace specified or configured for write operation.');
+  let targetNamespace: string;
+  try {
+    targetNamespace = resolveNamespaceTemplate(rawNamespace, ctx);
+  } catch (err) {
+    const detail = err instanceof NamespaceError ? err.message : String(err);
+    throw new Error(`Namespace '${rawNamespace}' is unusable: ${detail}`);
   }
 
   if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {
@@ -173,7 +197,12 @@ export async function handleMemoryWrite(
         detail: { error: 'namespace_not_allowed', user_id: ctx.user_id }
       }, (context as any).db);
     }
-    throw new Error(`Write access to namespace '${targetNamespace}' not allowed.`);
+    // Name what is allowed: a bare refusal leaves the model guessing, and the
+    // reason only ever reached the audit log.
+    const allowed = (policy.allowedWriteNamespaces || []).join(', ') || '(none configured)';
+    throw new Error(
+      `Write access to namespace '${targetNamespace}' not allowed. Allowed patterns: ${allowed}`
+    );
   }
 
   const inserted = await memoryAdapter.writeDocuments(targetNamespace, [{
@@ -232,15 +261,28 @@ export async function handleMemoryDelete(
     session_id: metadata.session_id
   };
 
-  if (!isNamespaceAllowed(args.namespace, policy.allowedWriteNamespaces || [], ctx)) {
-    throw new Error(`Delete access to namespace '${args.namespace}' not allowed.`);
+  // Same resolution as the write path — the model reaches this one with the
+  // same notation.
+  let targetNamespace: string;
+  try {
+    targetNamespace = resolveNamespaceTemplate(args.namespace, ctx);
+  } catch (err) {
+    const detail = err instanceof NamespaceError ? err.message : String(err);
+    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`);
+  }
+
+  if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {
+    const allowed = (policy.allowedWriteNamespaces || []).join(', ') || '(none configured)';
+    throw new Error(
+      `Delete access to namespace '${targetNamespace}' not allowed. Allowed patterns: ${allowed}`
+    );
   }
 
   // Prefer id-based deletion: content matching is exact and routinely fails
   // for long entries the agent reconstructs from chat context.
   const affected = args.id
-    ? await memoryAdapter.deleteDocumentById(args.namespace, args.id, { hard: false }, dbClient as PoolClient)
-    : await memoryAdapter.deleteDocuments(args.namespace, [args.content as string], { hard: false }, dbClient as PoolClient);
+    ? await memoryAdapter.deleteDocumentById(targetNamespace, args.id, { hard: false }, dbClient as PoolClient)
+    : await memoryAdapter.deleteDocuments(targetNamespace, [args.content as string], { hard: false }, dbClient as PoolClient);
 
   if (affected === 0) {
     return {

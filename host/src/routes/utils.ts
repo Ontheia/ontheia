@@ -70,7 +70,16 @@ export function extractTextFromContent(content: ChatMessage['content']): string 
 
 export const TEMPLATE_PATTERN = /\$\{([a-zA-Z0-9_]+)\}/g;
 
-export function applyNamespaceTemplate(template: string, context: Record<string, string | undefined>): string {
+/**
+ * Substitutes ${...} in free text — task context prompts, where any value is
+ * legitimate (`user_name` may well be "Wolfgang Brangl").
+ *
+ * NOT for namespaces. It used to be called applyNamespaceTemplate and served
+ * both, which is how raw values with spaces or dots could reach a namespace.
+ * Namespaces go through resolveNamespaceTemplate() in memory/namespaces.ts,
+ * which validates each segment instead of substituting blindly.
+ */
+export function applyTemplate(template: string, context: Record<string, string | undefined>): string {
   return template.replace(TEMPLATE_PATTERN, (_, key) => {
     const value = context[key];
     if (value === undefined) {

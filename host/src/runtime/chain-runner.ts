@@ -24,10 +24,10 @@ import type { PoolClient } from 'pg';
 import { OrchestratorService } from '../orchestrator/service.js';
 import { runProviderCompletion } from './provider-run.js';
 import { jsonrepair } from 'jsonrepair';
-import { logMemoryAudit, applyNamespaceTemplate, countHitsForNamespace } from '../routes/utils.js';
+import { logMemoryAudit, countHitsForNamespace } from '../routes/utils.js';
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery } from '../routes/run-utils.js';
-import { isGlobalNamespace } from '../memory/namespaces.js';
+import { isGlobalNamespace, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
@@ -673,7 +673,15 @@ export class ChainRunner {
         const subUserId = userId || this.templateContext.user_id;
         if (subUserId && subAutoReadEnabled && Array.isArray(subPolicy.readNamespaces) && subPolicy.readNamespaces.length > 0) {
           const subCtx = { ...this.templateContext, agent_id: profile.id, task_id: profile.task_id ?? undefined };
-          const nsResolved = subPolicy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, subCtx));
+          const nsResolved = subPolicy.readNamespaces.flatMap((ns: string) => {
+            try {
+              return [resolveNamespaceTemplate(ns, subCtx as Record<string, string | undefined>)];
+            } catch (err) {
+              // An unusable pattern must not take the sub-agent down with it.
+              this.debug(`Skipping memory namespace "${ns}": ${err instanceof NamespaceError ? err.message : String(err)}`);
+              return [];
+            }
+          });
           // Security filter: global namespaces pass, user/agent namespaces must carry the current user's UUID
           const nsAllowed = nsResolved.filter((ns: string) => {
             if (isGlobalNamespace(ns)) return true;

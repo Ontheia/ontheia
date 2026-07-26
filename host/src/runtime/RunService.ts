@@ -34,7 +34,7 @@ import {
 import type { ChainTemplateContext } from './chain-runner.js';
 import { TaskToolBinding } from '../routes/types.js';
 import { runProviderCompletion } from './provider-run.js';
-import { withRls, isPlainObject, isUuid, extractTextFromContent, applyNamespaceTemplate, logMemoryAudit, TEMPLATE_PATTERN, countHitsForNamespace } from '../routes/utils.js';
+import { withRls, isPlainObject, isUuid, extractTextFromContent, logMemoryAudit, TEMPLATE_PATTERN, countHitsForNamespace } from '../routes/utils.js';
 import { filterNamespacesForSession, mapHitToEvent } from '../routes/memory.js';
 import {
   buildMemoryQuery,
@@ -43,7 +43,7 @@ import {
   pickWriteNamespace,
   buildChatTitlePreview
 } from '../routes/run-utils.js';
-import { buildReadableNamespaces } from '../memory/namespaces.js';
+import { buildReadableNamespaces, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
 import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
 import { loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
@@ -77,6 +77,36 @@ export type RunContext = {
   waitForToolApproval?: (toolKey: string, info: any) => Promise<'once' | 'always' | 'deny'>;
   logger?: any;
 };
+
+/**
+ * Resolves policy namespace templates, dropping the ones that cannot be
+ * resolved rather than failing the run.
+ *
+ * A policy is administrator data that has usually sat in the database for
+ * months; a single unusable pattern must not take down every request of an
+ * agent. It is logged at warn level with the offending pattern, which is the
+ * signal that was missing when `vector.agent.${user_id}.preferenzes` quietly
+ * returned nothing for months.
+ */
+function resolvePolicyNamespaces(
+  templates: string[],
+  context: Record<string, string | undefined>,
+  logger: { warn: (obj: unknown, msg: string) => void } | undefined,
+  field: string
+): string[] {
+  const resolved: string[] = [];
+  for (const template of templates) {
+    try {
+      resolved.push(resolveNamespaceTemplate(template, context));
+    } catch (err) {
+      logger?.warn(
+        { field, pattern: template, err: err instanceof NamespaceError ? err.message : String(err) },
+        'Memory policy namespace could not be resolved and is ignored'
+      );
+    }
+  }
+  return resolved;
+}
 
 export class RunService {
   constructor(
@@ -538,7 +568,7 @@ export class RunService {
           if (!autoReadEnabled) {
             namespacesToUse = [];
           } else if (Array.isArray(policy.readNamespaces) && policy.readNamespaces.length > 0) {
-            namespacesToUse = policy.readNamespaces.map((ns: string) => applyNamespaceTemplate(ns, templateContext));
+            namespacesToUse = resolvePolicyNamespaces(policy.readNamespaces, templateContext, logger, 'readNamespaces');
           } else {
             namespacesToUse = buildReadableNamespaces({ userId, chatId });
           }
@@ -698,7 +728,7 @@ export class RunService {
 
         if (docsToWrite.length > 0) {
           const writeNs = policy.writeNamespace
-            ? applyNamespaceTemplate(policy.writeNamespace, templateContext)
+            ? resolvePolicyNamespaces([policy.writeNamespace], templateContext, logger, 'writeNamespace')[0]
             : `vector.user.${userId}.memory`;
           await emitRunEvent({ type: 'step_start', step: 'memory_write', metadata: { namespace: writeNs, items: docsToWrite.length } } as any);
           try {
