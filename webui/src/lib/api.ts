@@ -176,6 +176,18 @@ export type MemoryPolicyDto = {
   allow_tool_delete: boolean | null;
 };
 
+/** Advisory issue the server reports for a namespace pattern it saved anyway. */
+export type NamespacePatternWarning = {
+  pattern: string;
+  level: 'error' | 'hint';
+  message: string;
+};
+
+/** A saved policy, plus any advisory warnings the server attached to it. */
+export type MemoryPolicySaveResult = MemoryPolicyDto & {
+  warnings?: NamespacePatternWarning[];
+};
+
 export type MemoryAuditEntry = {
   id: string;
   run_id?: string | null;
@@ -396,7 +408,7 @@ export function updateAgentMemoryPolicy(agentId: string, data: MemoryPolicyDto) 
   return request(`/agents/${agentId}/memory`, {
     method: 'PUT',
     body: JSON.stringify(data)
-  }) as Promise<MemoryPolicyDto>;
+  }) as Promise<MemoryPolicySaveResult>;
 }
 
 export function getTaskMemoryPolicy(taskId: string) {
@@ -407,7 +419,7 @@ export function updateTaskMemoryPolicy(taskId: string, data: MemoryPolicyDto) {
   return request(`/tasks/${taskId}/memory`, {
     method: 'PUT',
     body: JSON.stringify(data)
-  }) as Promise<MemoryPolicyDto>;
+  }) as Promise<MemoryPolicySaveResult>;
 }
 
 export function fetchVectorHealth() {

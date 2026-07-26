@@ -5956,3 +5956,30 @@
 .pdf-viewer .textLayer ::selection {
   background: rgba(56, 189, 248, 0.35);
 }
+
+/* Advisory namespace warnings under a memory policy. Amber, not red: the
+   policy was saved — the pattern is merely suspect. Deliberately without a
+   timeout, since a pattern that matches nothing gives no later signal. */
+.memory-policy-warnings {
+  margin: 0.75rem 0 0 0;
+  padding: 0.6rem 0.75rem;
+  list-style: none;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-left: 3px solid #eab308;
+  border-radius: 0.375rem;
+  background: rgba(234, 179, 8, 0.07);
+  font-size: 0.85rem;
+}
+
+.memory-policy-warnings li + li {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.memory-policy-warnings code {
+  display: block;
+  color: #eab308;
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}

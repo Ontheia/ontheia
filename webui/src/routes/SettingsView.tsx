@@ -105,6 +105,7 @@ import {
   type ProviderConnectionTestPayload,
   type ProviderConnectionTestResponse,
   type MemoryPolicyDto,
+  type NamespacePatternWarning,
   type MemoryAuditEntry,
   type VectorHealthResponse,
   type McpToolDefinitionDto,
@@ -1684,12 +1685,18 @@ function MemorySection({
   };
 
   const [savingPolicies, setSavingPolicies] = useState(false);
+  // Advisory namespace warnings from the last save. Unlike the status message
+  // these do NOT time out: a pattern that matches nothing produces no error and
+  // no empty-result signal later, so this notice is the only chance to see it.
+  const [agentPolicyWarnings, setAgentPolicyWarnings] = useState<NamespacePatternWarning[]>([]);
+  const [taskPolicyWarnings, setTaskPolicyWarnings] = useState<NamespacePatternWarning[]>([]);
 
   const handleSaveAgentPolicy = async () => {
     if (!selectedAgent || !agentPolicy) return;
     setSavingAgentPolicy(true);
     try {
-      await updateAgentMemoryPolicy(selectedAgent, agentPolicy);
+      const saved = await updateAgentMemoryPolicy(selectedAgent, agentPolicy);
+      setAgentPolicyWarnings(saved.warnings ?? []);
       setStatusMessage(t('memory.policySaved'));
       setErrorMessage(null);
       onHasChanges?.(true);
@@ -1707,7 +1714,8 @@ function MemorySection({
     if (!selectedTask || !taskPolicy) return;
     setSavingTaskPolicy(true);
     try {
-      await updateTaskMemoryPolicy(selectedTask, taskPolicy);
+      const saved = await updateTaskMemoryPolicy(selectedTask, taskPolicy);
+      setTaskPolicyWarnings(saved.warnings ?? []);
       setStatusMessage(t('memory.policySaved'));
       setErrorMessage(null);
       onHasChanges?.(true);
@@ -2652,6 +2660,16 @@ function MemorySection({
             />
           </label>
         </div>
+        {agentPolicyWarnings.length > 0 && (
+          <ul className="memory-policy-warnings" role="status">
+            {agentPolicyWarnings.map((issue, index) => (
+              <li key={`${issue.pattern}-${index}`}>
+                <code>{issue.pattern}</code>
+                <span>{issue.message.replace(`"${issue.pattern}": `, '')}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="memory-card-toolbar" style={{ marginTop: '0.5rem' }}>
           <button
             type="button"
@@ -2816,6 +2834,16 @@ function MemorySection({
                 />
               </label>
             </div>
+            {taskPolicyWarnings.length > 0 && (
+              <ul className="memory-policy-warnings" role="status">
+                {taskPolicyWarnings.map((issue, index) => (
+                  <li key={`${issue.pattern}-${index}`}>
+                    <code>{issue.pattern}</code>
+                    <span>{issue.message.replace(`"${issue.pattern}": `, '')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="memory-card-toolbar" style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
