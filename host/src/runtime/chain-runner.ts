@@ -28,7 +28,7 @@ import { logMemoryAudit, applyNamespaceTemplate, countHitsForNamespace } from '.
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery, deriveNamespaces } from '../routes/run-utils.js';
 import { isGlobalNamespace } from '../memory/namespaces.js';
-import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
   ChatMessage,
@@ -688,10 +688,9 @@ export class ChainRunner {
               const subHits = await this.memoryAdapter.search(nsAllowed, { topK: subTopK, query: subQuery }, this.client);
               this.emit({ type: 'memory_hits', hits: subHits } as any);
               if (subHits.length > 0) {
-                subAgentMemoryContextText = subHits.map(h => {
-                  const dateStr = h.createdAt ? new Date(h.createdAt as any).toLocaleDateString('en-US') : 'Unknown';
-                  return `--- MEMORY ENTRY (Stored on ${dateStr}, Namespace: ${h.namespace}) ---\n${h.content}`;
-                }).join('\n\n');
+                subAgentMemoryContextText = formatMemoryContext(subHits, (ns) =>
+                  this.memoryAdapter.getInstructionForNamespace(ns)
+                );
                 for (const ns of nsAllowed) {
                   await logMemoryAudit(null, {
                     agentId: profile.id,

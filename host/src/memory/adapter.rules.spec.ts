@@ -116,3 +116,56 @@ test('MemoryAdapter uses database ranking rules', async () => {
   assert.ok(Math.abs(hit1.score - 0.75) < 0.001, `Expected 0.75, got ${hit1.score}`);
   assert.ok(Math.abs(hit2.score - 0.575) < 0.001, `Expected 0.575, got ${hit2.score}`);
 });
+
+test('getInstructionForNamespace resolves the live rule patterns', async () => {
+  const rules = [
+    { pattern: 'vector.global.ontheia.temp', bonus: 0.12, instruction_template: 'TEMP: {{content}}' },
+    { pattern: 'vector.agent.${user_id}.preferences', bonus: 0.09, instruction_template: 'PREF: {{content}}' },
+    { pattern: 'vector.agent.${user_id}.howto', bonus: 0.06, instruction_template: 'HOWTO: {{content}}' },
+    { pattern: 'vector.agent.${user_id}.memory', bonus: 0.03, instruction_template: 'MEM: {{content}}' }
+  ];
+
+  const mockDb = {
+    connect: async () => ({ query: async () => ({ rows: [] }), release: () => {} }),
+    query: async (sql: string) => (sql.includes('vector_namespace_rules') ? { rows: rules } : { rows: [] })
+  };
+
+  const adapter = new MemoryAdapter(mockDb as any, {} as any, {
+    tables: { '1': { name: 'vector.test', column: 'embedding', dimension: 1 } },
+    local: { dimension: 1 }
+  } as any);
+  await adapter.loadNamespaceRules();
+
+  const uuid = '84a9cfd4-9f6d-4785-9bdf-2473cf53e3d8';
+  assert.equal(adapter.getInstructionForNamespace(`vector.agent.${uuid}.preferences`), 'PREF: {{content}}');
+  assert.equal(adapter.getInstructionForNamespace(`vector.agent.${uuid}.howto`), 'HOWTO: {{content}}');
+  assert.equal(adapter.getInstructionForNamespace(`vector.agent.${uuid}.memory`), 'MEM: {{content}}');
+  assert.equal(adapter.getInstructionForNamespace('vector.global.ontheia.temp'), 'TEMP: {{content}}');
+
+  // Sub-namespaces inherit their rule — same semantics as the ranking bonus.
+  assert.equal(adapter.getInstructionForNamespace(`vector.agent.${uuid}.howto.sql`), 'HOWTO: {{content}}');
+
+  // Namespaces without a rule stay undecorated: the corpus, and vector.user.*
+  // (no rule covers it today — see the plan doc, 3.4).
+  assert.equal(adapter.getInstructionForNamespace('vector.global.ontheia.docs.api'), undefined);
+  assert.equal(adapter.getInstructionForNamespace(`vector.user.${uuid}.preferences`), undefined);
+});
+
+test('getInstructionForNamespace prefers the longer pattern', async () => {
+  const rules = [
+    { pattern: 'vector.agent.*', bonus: 0.01, instruction_template: 'GENERIC: {{content}}' },
+    { pattern: 'vector.agent.${user_id}.preferences', bonus: 0.09, instruction_template: 'PREF: {{content}}' }
+  ];
+  const mockDb = {
+    connect: async () => ({ query: async () => ({ rows: [] }), release: () => {} }),
+    query: async (sql: string) => (sql.includes('vector_namespace_rules') ? { rows: rules } : { rows: [] })
+  };
+  const adapter = new MemoryAdapter(mockDb as any, {} as any, {
+    tables: { '1': { name: 'vector.test', column: 'embedding', dimension: 1 } },
+    local: { dimension: 1 }
+  } as any);
+  await adapter.loadNamespaceRules();
+
+  assert.equal(adapter.getInstructionForNamespace('vector.agent.u1.preferences'), 'PREF: {{content}}');
+  assert.equal(adapter.getInstructionForNamespace('vector.agent.u1.other'), 'GENERIC: {{content}}');
+});

@@ -50,7 +50,7 @@ import { loadUserSettings } from '../routes/auth.js';
 import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countMemoryWarning } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
-import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext, formatMemoryContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
 import { SkillService, type SkillRecord } from './SkillService.js';
@@ -573,10 +573,9 @@ export class RunService {
               }
             });
 
-            memoryContextText = hits.map(h => {
-              const dateStr = h.createdAt ? new Date(h.createdAt).toLocaleDateString('en-US') : 'Unknown';
-              return `--- MEMORY ENTRY (Stored on ${dateStr}, Namespace: ${h.namespace}) ---\n${h.content}`;
-            }).join('\n\n');
+            memoryContextText = formatMemoryContext(hits, (ns) =>
+              this.memoryAdapter.getInstructionForNamespace(ns)
+            );
           }
         }
       }

@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSystemMessages, appendDateTimeContext, appendMemoryContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { ChatMessage } from './types.js';
 
 const ctx = { current_date: 'Samstag, 13. Juni 2026', current_time: '13:34' } as any;
@@ -97,4 +97,72 @@ test('appendDateTimeContext is a no-op when there is no user message', () => {
   const messages: ChatMessage[] = [{ role: 'system', content: 'task' }];
   appendDateTimeContext(messages, ctx);
   assert.equal(messages[0].content, 'task');
+});
+
+// --- formatMemoryContext -----------------------------------------------------
+
+const hit = (namespace: string, content: string, createdAt = '2026-07-21T10:00:00Z') =>
+  ({ namespace, content, createdAt, metadata: {}, score: 0.5 }) as any;
+
+const PREF = 'NUTZERPRÄFERENZ: berücksichtige sie: {{content}}';
+const MEM = 'ERINNERUNG: aus einem früheren Gespräch: {{content}}';
+
+test('formatMemoryContext keeps the legacy format without namespace rules', () => {
+  const out = formatMemoryContext([hit('vector.global.docs', 'Doc A')]);
+  assert.match(out, /^--- MEMORY ENTRY \(Stored on 7\/21\/2026, Namespace: vector\.global\.docs\) ---\nDoc A$/);
+});
+
+test('formatMemoryContext emits a rule instruction once per group, not per hit', () => {
+  const out = formatMemoryContext(
+    [
+      hit('vector.agent.u1.preferences', 'Trinkt Kaffee'),
+      hit('vector.agent.u1.preferences', 'Mag kurze Antworten')
+    ],
+    () => PREF
+  );
+  assert.equal(out.split('NUTZERPRÄFERENZ').length - 1, 1, 'instruction must appear exactly once');
+  assert.match(out, /Trinkt Kaffee/);
+  assert.match(out, /Mag kurze Antworten/);
+});
+
+test('formatMemoryContext groups by rule and keeps score order across groups', () => {
+  const out = formatMemoryContext(
+    [
+      hit('vector.agent.u1.preferences', 'Pref A'),
+      hit('vector.agent.u1.memory', 'Episode A'),
+      hit('vector.agent.u1.preferences', 'Pref B')
+    ],
+    (ns) => (ns.endsWith('.preferences') ? PREF : MEM)
+  );
+  // The strongest hit's group leads, and the second preference joins its group.
+  assert.ok(out.indexOf('NUTZERPRÄFERENZ') < out.indexOf('ERINNERUNG'));
+  assert.ok(out.indexOf('Pref B') < out.indexOf('ERINNERUNG'), 'Pref B must join the preferences group');
+});
+
+test('formatMemoryContext appends hits when the template lacks the placeholder', () => {
+  const out = formatMemoryContext([hit('vector.agent.u1.howto', 'Schritt 1')], () => 'GELERNTE STRATEGIE:');
+  assert.match(out, /^GELERNTE STRATEGIE:\n--- MEMORY ENTRY/);
+  assert.match(out, /Schritt 1/);
+});
+
+test('formatMemoryContext falls back to the legacy format when a namespace has no rule', () => {
+  const out = formatMemoryContext(
+    [hit('vector.agent.u1.preferences', 'Pref A'), hit('vector.global.docs', 'Doc A')],
+    (ns) => (ns.endsWith('.preferences') ? PREF : undefined)
+  );
+  assert.equal(out.split('NUTZERPRÄFERENZ').length - 1, 1);
+  // The corpus hit sits in its own block after the preferences group, with no
+  // instruction of its own — it must not inherit the preferences framing.
+  assert.ok(out.indexOf('Doc A') > out.indexOf('Pref A'));
+  assert.match(out, /\n\n--- MEMORY ENTRY \(Stored on 7\/21\/2026, Namespace: vector\.global\.docs\) ---\nDoc A$/);
+});
+
+test('formatMemoryContext returns an empty string for no hits', () => {
+  assert.equal(formatMemoryContext([]), '');
+  assert.equal(formatMemoryContext(undefined as any), '');
+});
+
+test('formatMemoryContext tolerates a missing createdAt', () => {
+  const out = formatMemoryContext([{ namespace: 'vector.global.docs', content: 'X', metadata: {}, score: 0.5 } as any]);
+  assert.match(out, /Stored on Unknown/);
 });

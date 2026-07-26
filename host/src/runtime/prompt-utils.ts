@@ -22,7 +22,11 @@
  */
 import { applyNamespaceTemplate } from '../routes/utils.js';
 import type { ChatMessage } from './types.js';
+import type { MemoryHit } from '../memory/types.js';
 import type { ChainTemplateContext } from './chain-runner.js';
+
+/** Placeholder a namespace rule's instruction_template uses for the hits. */
+const CONTENT_PLACEHOLDER = '{{content}}';
 
 export interface BuildSystemMessagesOptions {
   /** Raw task context prompt, may contain {{placeholders}}. */
@@ -112,6 +116,71 @@ function appendToLastUserMessage(messages: ChatMessage[], text: string): void {
     }
     return;
   }
+}
+
+/**
+ * Substitutes the hit entries into an instruction template, forcing a line
+ * break at each seam. Templates are written as prose ending in a colon
+ * ("... Berücksichtige sie bei deiner Antwort: {{content}}"), so a plain
+ * replace would run the first `--- MEMORY ENTRY ---` header onto the
+ * instruction line and bury the group boundary.
+ */
+function substituteContent(template: string, entriesText: string): string {
+  const parts = template.split(CONTENT_PLACEHOLDER);
+  return parts.reduce((acc, part, i) => {
+    if (i === 0) return part;
+    const lead = acc.length === 0 || acc.endsWith('\n') ? '' : '\n';
+    const trail = part.length === 0 || part.startsWith('\n') ? '' : '\n';
+    return `${acc}${lead}${entriesText}${trail}${part}`;
+  }, '');
+}
+
+/**
+ * Renders retrieved memory hits into the block that goes to the model.
+ *
+ * Hits that share a namespace rule are grouped, and the rule's instruction
+ * template is emitted ONCE per group rather than once per hit. Repeating the
+ * same instruction five times would cost tokens for no gain and reads to a
+ * model like emphasis rather than a single rule.
+ *
+ * Group order follows the first occurrence in `hits`, which arrive sorted by
+ * score — so the strongest hit still leads the block and grouping never
+ * silently re-prioritises anything.
+ *
+ * `resolveInstruction` is passed in rather than importing the adapter, so this
+ * stays a pure formatter and both call sites (RunService, chain-runner
+ * sub-agents) produce byte-identical blocks. Without it the output is the
+ * plain per-entry format that predates namespace rules.
+ */
+export function formatMemoryContext(
+  hits: MemoryHit[],
+  resolveInstruction?: (namespace: string) => string | undefined
+): string {
+  if (!Array.isArray(hits) || hits.length === 0) return '';
+
+  const groups = new Map<string, string[]>();
+  for (const hit of hits) {
+    const instruction = resolveInstruction?.(hit.namespace) ?? '';
+    const dateStr = hit.createdAt ? new Date(hit.createdAt).toLocaleDateString('en-US') : 'Unknown';
+    const entry = `--- MEMORY ENTRY (Stored on ${dateStr}, Namespace: ${hit.namespace}) ---\n${hit.content}`;
+    const bucket = groups.get(instruction);
+    if (bucket) bucket.push(entry);
+    else groups.set(instruction, [entry]);
+  }
+
+  const blocks: string[] = [];
+  for (const [instruction, entries] of groups.entries()) {
+    const entriesText = entries.join('\n\n');
+    if (!instruction) {
+      blocks.push(entriesText);
+    } else if (instruction.includes(CONTENT_PLACEHOLDER)) {
+      blocks.push(substituteContent(instruction, entriesText));
+    } else {
+      // Template without the placeholder: append instead of dropping the hits.
+      blocks.push(`${instruction}\n${entriesText}`);
+    }
+  }
+  return blocks.join('\n\n');
 }
 
 /**

@@ -60,6 +60,27 @@ type NamespaceRule = {
 // Override per agent via the memory policy (min_score) when a corpus needs it.
 const DEFAULT_MIN_SCORE = 0.4;
 
+/**
+ * Compiles a namespace rule pattern into a matcher.
+ *
+ * Patterns use two placeholders: `${...}` stands for exactly one segment
+ * (`vector.agent.${user_id}.howto`), `*` for any remainder. The trailing
+ * `($|\.)` makes a rule cover its sub-namespaces, so a rule on
+ * `vector.agent.${user_id}.howto` also applies to `…howto.sql`.
+ *
+ * Shared by the ranking bonus and the instruction lookup on purpose: those
+ * used to compile the same pattern with slightly different expressions, which
+ * meant a namespace could earn a rule's bonus while never receiving its
+ * instruction.
+ */
+function namespacePatternToRegex(pattern: string): RegExp {
+  const body = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // escape every regex metacharacter
+    .replace(/\\\*/g, '.*') // then restore the wildcard
+    .replace(/\\\$\\\{([^}]+)\\\}/g, '[^.]+'); // and the ${...} segment placeholder
+  return new RegExp('^' + body + '($|\\.)');
+}
+
 export class MemoryAdapter {
   private _disabled: boolean;
   private tables: TableDefinition[];
@@ -117,19 +138,12 @@ export class MemoryAdapter {
         });
       }
       this.namespaceRules = newRules;
-    } catch (error) {
-      // Table might not exist yet or still be named vector_ranking_rules during migration
-      try {
-        // Fallback for backward compatibility during migration
-        const res = await this.db.query('SELECT pattern, bonus FROM app.vector_ranking_rules');
-        const newRules = new Map<string, NamespaceRule>();
-        for (const row of res.rows) {
-          newRules.set(row.pattern, { bonus: Number(row.bonus) });
-        }
-        this.namespaceRules = newRules;
-      } catch {
-        // Silent ignore
-      }
+    } catch (err) {
+      // Only reachable before the migrations have run (fresh container racing
+      // V32) — every installed schema has app.vector_namespace_rules. Keeping
+      // the previously held rules is the safe outcome: an empty map would
+      // silently drop every ranking bonus and every instruction template.
+      logger.warn({ err }, 'Could not load namespace rules — keeping the previous set');
     }
   }
 
@@ -138,29 +152,21 @@ export class MemoryAdapter {
     await this.loadNamespaceRules();
   }
 
+  /**
+   * Returns the instruction template of the best-matching namespace rule, or
+   * undefined when no rule with a template applies. Longer pattern wins, so a
+   * specific rule beats a wildcard covering the same namespace.
+   */
   getInstructionForNamespace(namespace: string): string | undefined {
     let bestMatch: string | undefined = undefined;
     let bestPriority = -1;
 
-    // 1. Check DB Rules (Pattern Match)
     for (const [pattern, rule] of this.namespaceRules.entries()) {
       if (!rule.instruction) continue;
-      
-      const safePattern = pattern
-          .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // escape all regex chars first
-          .replace(/\\\$(\\{[^}]+\\})/g, '[^.]+') // handle escaped ${...}
-          .replace(/\\\*/g, '.*'); // convert back escaped * to .* (wildcard)
-          
-      // Handle the literal ${user_id} etc which might have been escaped above
-      const finalPattern = safePattern.replace(/\\\$\\\{([^}]+)\\\}/g, '[^.]+');
-
-      const regex = new RegExp('^' + finalPattern + '$');
-      if (regex.test(namespace)) {
-        // Simple priority: longer pattern = higher priority
-        if (pattern.length > bestPriority) {
-          bestMatch = rule.instruction;
-          bestPriority = pattern.length;
-        }
+      if (!namespacePatternToRegex(pattern).test(namespace)) continue;
+      if (pattern.length > bestPriority) {
+        bestMatch = rule.instruction;
+        bestPriority = pattern.length;
       }
     }
     return bestMatch;
@@ -318,28 +324,21 @@ export class MemoryAdapter {
     // 1. Database Rules (Dynamic) - Multiplicative Bonus
     if (this.namespaceRules.size > 0) {
       for (const [pattern, rule] of this.namespaceRules.entries()) {
-        const regexPattern = pattern
-          .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-          .replace(/\\\*/g, '.*')
-          .replace(/\\\$\\\{([^}]+)\\\}/g, '[^.]+');
-        const regex = new RegExp('^' + regexPattern + '($|\\.)');
-
-        if (regex.test(hit.namespace)) {
+        if (namespacePatternToRegex(pattern).test(hit.namespace)) {
           multiplier += rule.bonus;
         }
       }
     }
 
     // 2. Config File Rules (Static) - Multiplicative
+    // Second, older path for the same thing as (1). Every priority currently
+    // shipped in embedding.config.json is a no-op: some are 1.0, the rest name
+    // namespaces no installation has. app.vector_namespace_rules is the live
+    // path — edit rules there, not here. Left in place deliberately: removing
+    // it belongs with the ranking rework, not with a cleanup.
     if (this.rankingConfig?.priorities) {
       for (const [pattern, priority] of Object.entries(this.rankingConfig.priorities)) {
-        const regexPattern = pattern
-          .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-          .replace(/\\\*/g, '.*')
-          .replace(/\\\$\\\{([^}]+)\\\}/g, '[^.]+');
-        const regex = new RegExp('^' + regexPattern + '($|\\.)');
-
-        if (regex.test(hit.namespace)) {
+        if (namespacePatternToRegex(pattern).test(hit.namespace)) {
           multiplier += (priority - 1.0);
         }
       }
