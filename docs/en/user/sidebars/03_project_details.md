@@ -16,4 +16,4 @@ Right-click (or click the menu icon) on a project to:
 ## 3. Technical Background
 Every project has a unique ID. When a chat runs inside a project, that ID is recorded as `project_id` in the metadata of the memory entries it produces.
 
-Dedicated `vector.project.*` namespaces no longer exist — project content lives in the user's regular namespaces (`vector.user.*` / `vector.agent.*`). The `project_id` serves as a **filter** and can be used in the Admin Console and through the API to narrow a search. Automatic memory retrieval in chat does not filter by it: an agent sees the user's entries regardless of which project they came from.
+Everything is stored in the user's regular namespaces (`vector.user.*` / `vector.agent.*`) — a project is a way to organise, not a separate store. The `project_id` serves as a **filter**: in the Admin Console and through the API a search can be narrowed to one project. Automatic memory retrieval in chat does not use that filter — an agent sees the user's entries regardless of which project they came from.

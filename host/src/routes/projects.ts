@@ -107,8 +107,9 @@ export function registerProjectRoutes(server: FastifyInstance, context: RouteCon
         await client.query(`DELETE FROM app.projects WHERE id = ANY($1::uuid[])`, [ids]);
         return ids;
       });
-      // Note: vector.project.* namespaces have been removed; project memory
-      // is now stored under the user's own namespaces (vector.user.* / vector.agent.*).
+      // No vector cleanup here: a project owns no namespace of its own. Its
+      // memory lives under vector.user.* / vector.agent.* and is only tagged
+      // with metadata.project_id, so deleting the project must not touch it.
       reply.code(204);
       return null;
     } catch (error) {
