@@ -44,13 +44,25 @@ Kombiniertes Suchformular und Schreibformular für Memory-Einträge.
 | Sprache | Text | Optionaler Metadaten-Filter für Sprachcode (z. B. `de`). |
 | TTL (Sekunden) | Zahl | Ablaufzeit eines neuen Eintrags in Sekunden. |
 | Tags | Text | Kommagetrennte Tags für den neuen Eintrag. |
-| Metadaten (Filter, JSON) | Textarea | JSON-Objekt als Metadaten-Filter bei der Suche oder als Metadaten beim Schreiben. |
+| Gedächtnisklasse | Dropdown | Klasse des neuen Eintrags. **Aus Namespace-Regel** übernimmt den Standard des Ziel-Namespace — das ist der Normalfall. Eine ausdrückliche Wahl überschreibt ihn für genau diesen Eintrag. |
+| Beobachtet am | Datum | Wann der Sachverhalt gilt, im Unterschied dazu, wann er gespeichert wurde. Leer lassen, wenn unbekannt. |
+| Metadaten (Filter, JSON) | Textarea | JSON-Objekt als Metadaten-Filter bei der Suche oder als Metadaten beim Schreiben. Reservierte Felder (`source`, `agent_id`, `status`, …) werden verworfen — s. [Policies & Templates](/de/admin/memory_audit/03_policies_and_templates/). |
 | Inhalt | Textarea | Text des neuen Memory-Eintrags (Pflichtfeld beim Schreiben). |
+| Gelöschte und abgelöste einbeziehen | Checkbox | Zeigt zusätzlich Einträge, die gelöscht, abgelaufen oder von einem neueren abgelöst wurden. Für einen Agenten sind diese unsichtbar; hier ist es der einzige Weg, eine falsche Ablösung zurückzunehmen. |
+| Mindest-Score | Zahl (0–1) | Standard `0.3` — niedriger als die `0.4` eines Agenten, weil hier gesucht wird, was **existiert**, nicht der beste Kontext. `0` liefert immer so viele Treffer wie das Limit erlaubt, auch schwache. |
 | Limit | Dropdown | Anzahl der Suchergebnisse: 5, 10, 20, 50. |
+
+> **Ohne Namespace-Filter** wird über alles gesucht, was die Sitzung lesen darf: die eigenen `vector.agent.*`- und `vector.user.*`-Namespaces sowie `vector.global.*`. Bei null Treffern zeigt die Ansicht, worin gesucht wurde — „nicht vorhanden" und „am falschen Ort gesucht" sind sonst nicht zu unterscheiden.
+>
+> Der **relative Cutoff** ist hier abgeschaltet. Er misst den Abstand zum besten Treffer und würde bei einem Volltreffer dessen Nachbarn ausblenden — in einer Verwaltungsansicht genau verkehrt.
 
 Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeiten) · **[Abbrechen]** (beim Bearbeiten) · **[Alle auswählen]** · **[Ausgewählte löschen]** · **[Namespace leeren]** (mit Bestätigung).
 
-**Suchergebnis-Tabelle:** Spalten: Auswahl-Checkbox, Namespace, Score, Inhalt, Bearbeiten-Icon.
+**Suchergebnis-Tabelle:** Spalten: Auswahl-Checkbox, Namespace, Score, **Klasse**, **Status**, Inhalt, Aktionen.
+
+Die Status-Spalte zeigt `Unbestätigt` / `Bestätigt` / `Abgelöst`. Ist ein Eintrag gelöscht oder abgelöst, steht das an dieser Stelle — es beantwortet die Frage, warum er im Kontext eines Agenten fehlt.
+
+Aktionen je Zeile: **Bearbeiten** (Stift) füllt das Formular mit allen Feldern des Eintrags. **Wiederherstellen** (Kreispfeil) erscheint nur bei gelöschten oder abgelösten Einträgen und holt sie zurück in die Suche.
 
 ---
 
@@ -161,4 +173,4 @@ Button: **[Konvertieren]**
 
 Tabelle aller protokollierten Memory-Aktionen. Spalten: **Zeit**, **Aktion**, **Namespace**, **Detail** (JSON).
 
-Filter: Namespace-Filterfeld in der Tab-Kopfzeile. Weitere Filterung über Agent-/Task-Auswahl im Tab „Agent-/Task-Policy".
+Filter: Namespace-Filterfeld in der Tab-Kopfzeile. Ein `*` am Ende sucht nach Präfix — `vector.global.*` liefert alle Einträge unterhalb, ohne `*` muss der Namespace exakt stimmen. Zusätzlich wirken Agent- und Task-Auswahl aus dem Tab „Agent-/Task-Policy".

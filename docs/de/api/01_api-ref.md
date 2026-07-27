@@ -180,14 +180,20 @@ Interaktion mit dem Langzeitgedächtnis (pgvector).
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `POST` | `/memory/search` | Führt eine semantische Suche im Memory aus. |
-| `POST` | `/memory/write` | Speichert neue Dokumente/Informationen im Memory (Upsert). |
-| `POST` | `/memory/delete` | Löscht Einträge aus dem Memory. |
+| `GET` | `/memory/search` | Semantische Suche. Query-Parameter: `namespace` (mehrfach), `query`, `top_k`, `min_score` (Standard `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Antwortet mit `{ namespaces, hits }` — `namespaces` nennt, worin tatsächlich gesucht wurde. |
+| `POST` | `/memory/documents` | Legt Einträge an (Array oder Einzelobjekt). Felder: `namespace`, `content`, `metadata`, `ttl_seconds`, `class`, `observed_at`. |
+| `PUT` | `/memory/documents/:id` | Bearbeitet einen Eintrag. Zusätzlich zu den Feldern oben: `restore: true` hebt Löschung und Ablösung auf. Erreicht auch Einträge, die aus der Suche gefallen sind. |
+| `DELETE` | `/memory/documents` | Löscht Einträge (Soft-Delete) anhand von `namespace` + `content`. |
+| `DELETE` | `/memory/namespace` | Leert einen ganzen Namespace. |
 | `GET` | `/memory/namespaces` | Listet alle für den Benutzer zugänglichen Namespaces auf. |
 | `GET` | `/memory/health` | Status-Check des Memory-Systems (pgvector-Verbindung). |
 | `POST` | `/memory/reembed` | ⚠️ **Experimentell** – Fügt Einträge zur Re-Embedding-Warteschlange hinzu. Der Worker ist noch nicht vollständig implementiert. |
-| `GET` | `/memory/audit` | Liefert Audit-Logs über Memory-Zugriffe. |
+| `GET` | `/memory/audit` | Audit-Logs. Query-Parameter: `limit`, `namespace` (mit `*` als Präfixsuche), `agent_id`, `task_id`. |
 | `GET` | `/memory/stats` | Liefert Statistiken zur Memory-Belegung nach Namespace. |
+| `POST` | `/memory/ingest/directory` | Verzeichnis-Import mit Fortschrittsmeldung (SSE). |
+| `POST` | `/memory/convert/pdf2md` | Wandelt PDF-Dateien eines Verzeichnisses in Markdown um. |
+| `POST` | `/memory/maintenance/cleanup` | Dublettenbereinigung (hart löschend, mit vorherigem Backup). |
+| `POST` | `/memory/maintenance/cleanup-expired` | Löscht abgelaufene Einträge endgültig. |
 
 ---
 

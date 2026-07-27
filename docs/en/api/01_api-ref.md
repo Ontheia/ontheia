@@ -180,15 +180,20 @@ Interaction with long-term memory (pgvector).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/memory/search` | Performs a semantic search in memory. |
+| `GET` | `/memory/search` | Semantic search. Query parameters: `namespace` (repeatable), `query`, `top_k`, `min_score` (default `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Responds with `{ namespaces, hits }` — `namespaces` names where it actually looked. |
 | `GET` | `/memory/namespaces` | Lists all namespaces accessible to the user. |
 | `GET` | `/memory/health` | Status check of the memory system (pgvector connection). |
-| `POST` | `/memory/documents` | Saves new documents/information in memory (Upsert). |
-| `DELETE` | `/memory/documents` | Deletes entries from memory. |
-| `PUT` | `/memory/documents/:id` | Updates a specific memory entry. |
+| `POST` | `/memory/documents` | Creates entries (array or single object). Fields: `namespace`, `content`, `metadata`, `ttl_seconds`, `class`, `observed_at`. |
+| `DELETE` | `/memory/documents` | Deletes entries (soft delete) by `namespace` + `content`. |
+| `PUT` | `/memory/documents/:id` | Edits an entry. In addition to the fields above: `restore: true` clears deletion and supersession. Reaches entries that have dropped out of search. |
+| `DELETE` | `/memory/namespace` | Clears an entire namespace. |
 | `POST` | `/memory/reembed` | ⚠️ **Experimental** – Adds entries to the re-embedding queue. The worker is not yet fully implemented. |
-| `GET` | `/memory/audit` | Returns audit logs about memory access. |
+| `GET` | `/memory/audit` | Audit logs. Query parameters: `limit`, `namespace` (with `*` as prefix search), `agent_id`, `task_id`. |
 | `GET` | `/memory/stats` | Returns statistics on memory usage. |
+| `POST` | `/memory/ingest/directory` | Directory import with progress reporting (SSE). |
+| `POST` | `/memory/convert/pdf2md` | Converts PDF files in a directory to Markdown. |
+| `POST` | `/memory/maintenance/cleanup` | Duplicate cleanup (hard delete, with a backup taken first). |
+| `POST` | `/memory/maintenance/cleanup-expired` | Permanently deletes expired entries. |
 
 ---
 

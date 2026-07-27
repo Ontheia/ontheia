@@ -44,13 +44,25 @@ Combined search form and write form for memory entries.
 | Language | Text | Optional metadata filter for language code (e.g. `de`). |
 | TTL (Seconds) | Number | Expiry time of a new entry in seconds. |
 | Tags | Text | Comma-separated tags for the new entry. |
-| Metadata (Filter, JSON) | Textarea | JSON object as metadata filter when searching or as metadata when writing. |
+| Memory Class | Dropdown | Class of the new entry. **From namespace rule** takes the target namespace's default, which is the normal case. An explicit choice overrides it for this one entry. |
+| Observed on | Date | When the fact holds, as opposed to when it was stored. Leave empty when unknown. |
+| Metadata (Filter, JSON) | Textarea | JSON object as metadata filter when searching or as metadata when writing. Reserved fields (`source`, `agent_id`, `status`, …) are dropped — see [Policies & Templates](/en/admin/memory_audit/03_policies_and_templates/). |
 | Content | Textarea | Text of the new memory entry (required when writing). |
+| Include deleted and superseded | Checkbox | Additionally shows entries that are deleted, expired or replaced by a newer one. An agent never sees these; here it is the only way to undo a wrong supersession. |
+| Min. score | Number (0–1) | Default `0.3` — below an agent's `0.4`, because this view looks for what **exists** rather than for the best context. `0` always returns as many hits as the limit allows, weak ones included. |
 | Limit | Dropdown | Number of search results: 5, 10, 20, 50. |
+
+> **Without a namespace filter** the search covers everything the session may read: its own `vector.agent.*` and `vector.user.*` namespaces plus `vector.global.*`. On an empty result the view lists where it looked — "not there" and "looked in the wrong place" are otherwise indistinguishable.
+>
+> The **relative cutoff** is switched off here. It measures distance to the best hit and would hide that hit's neighbours whenever one stands out — the opposite of what a management view needs.
 
 Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]** (when editing) · **[Select All]** · **[Delete Selected]** · **[Clear Namespace]** (with confirmation).
 
-**Search Results Table:** Columns: Selection checkbox, Namespace, Score, Content, Edit icon.
+**Search Results Table:** Columns: Selection checkbox, Namespace, Score, **Class**, **Status**, Content, Actions.
+
+The status column shows `Unconfirmed` / `Confirmed` / `Superseded`. When an entry is deleted or superseded, that is what appears there — it answers why the entry is missing from an agent's context.
+
+Per-row actions: **Edit** (pencil) fills the form with all of the entry's fields. **Restore** (circular arrow) appears only on deleted or superseded entries and brings them back into search.
 
 ---
 
@@ -161,4 +173,4 @@ Button: **[Convert]**
 
 Table of all logged memory actions. Columns: **Time**, **Action**, **Namespace**, **Detail** (JSON).
 
-Filter: Namespace filter field in the tab header. Further filtering via Agent-/Task-Policy tab selection.
+Filter: Namespace filter field in the tab header. A trailing `*` searches by prefix — `vector.global.*` returns everything below it, without the `*` the namespace has to match exactly. The agent and task selection from the Agent-/Task-Policy tab applies as well.
