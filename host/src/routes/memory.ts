@@ -34,7 +34,7 @@ import {
   LoadedSession 
 } from './types.js';
 import { buildReadableNamespaces, slugifySegment, isGlobalNamespace } from '../memory/namespaces.js';
-import type { MemoryHit, MemoryWriteInput } from '../memory/types.js';
+import type { MemoryClass, MemoryHit, MemoryWriteInput } from '../memory/types.js';
 import { stripReservedMetadata } from '../memory/metadata.js';
 import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, memoryTools } from '../mcp/plugins/memory.js';
 import { handleDelegation } from '../mcp/plugins/delegation.js';
@@ -60,6 +60,15 @@ export const mapHitToEvent = (hit: MemoryHit) => {
     metadata: hit.metadata,
     created_at: isoDate,
     createdAt: isoDate,
+    // Lifecycle fields. Listed explicitly because this mapper builds a fresh
+    // object — a field added to MemoryHit and not named here is silently lost
+    // on its way to the UI and the run trace.
+    updatedAt: hit.updatedAt,
+    observedAt: hit.observedAt,
+    status: hit.status,
+    class: hit.class,
+    deletedAt: hit.deletedAt,
+    supersededBy: hit.supersededBy,
     duplicates: hit.duplicates?.map(d => ({
       ...d,
       created_at: (d as any).createdAt || (d as any).created_at || isoDate,
@@ -242,6 +251,10 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
 
     const topK = query?.top_k ? Math.min(Math.max(parseInt(query.top_k, 10), 1), 200) : 5;
     const searchQuery = query?.query || query?.q;
+    // Deleted, expired and superseded entries are invisible to an agent by
+    // design. An admin needs to reach them — a wrong supersession is otherwise
+    // only fixable in the database.
+    const includeHidden = query?.include_hidden === 'true' || query?.include_hidden === true;
 
     const filters = {
       projectId: (typeof query?.project_id === 'string' && query.project_id.trim()) || undefined,
@@ -260,7 +273,14 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     const { hits, allowedNamespaces, allowedUserIds } = await withRls(db, session.userId, session.role, async (client) => {
       const { namespaces: allowed, allowedUserIds: uids } = await filterNamespacesForSession(db, namespacesToUse, session, client);
       if (allowed.length === 0) return { hits: [], allowedNamespaces: [], allowedUserIds: uids };
-      const results = await memoryAdapter.search(allowed, { topK, query: searchQuery, filters }, client);
+      // A management view must find, not rank. The relevance floors exist to
+      // keep weak hits out of an agent's context; here they would hide an
+      // entry the admin knows is there, and nothing would say it was filtered.
+      const results = await memoryAdapter.search(
+        allowed,
+        { topK, query: searchQuery, filters, minScore: 0, relativeCutoff: 0, includeHidden },
+        client
+      );
       return { hits: results, allowedNamespaces: allowed, allowedUserIds: uids };
     });
 
@@ -312,7 +332,12 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
         // an entry is trusted — see memory/metadata.ts.
         const doc: MemoryWriteInput = {
           content,
-          metadata: stripReservedMetadata(entry.metadata, { what: 'memory write request' }) as any
+          metadata: stripReservedMetadata(entry.metadata, { what: 'memory write request' }) as any,
+          // Columns, not metadata — the adapter validates both and drops what
+          // it cannot use. An unknown class or an unparseable date leaves the
+          // field empty rather than storing a guess.
+          class: typeof entry.class === 'string' ? (entry.class as MemoryClass) : undefined,
+          observedAt: typeof entry.observed_at === 'string' ? entry.observed_at : undefined
         };
         if (typeof entry.ttl_seconds === 'number') (doc.metadata as any).ttl_seconds = entry.ttl_seconds;
         const existing = batches.get(allowedNamespaces[0]) ?? [];
@@ -384,6 +409,87 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
         }
       };
     });
+  });
+
+  /**
+   * Edit a single entry.
+   *
+   * The admin console has always called this route; it was never built, so the
+   * edit button in Memory → Search & Write failed with a 404 and the adapter's
+   * updateDocument() sat there without a caller.
+   *
+   * `restore: true` clears deleted_at and superseded_by — the way back from a
+   * wrong supersession, which is otherwise only reachable in the database.
+   */
+  server.put('/memory/documents/:id', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { session } = auth;
+    const { id } = request.params as { id: string };
+    const body = request.body as Record<string, unknown>;
+
+    if (!isUuid(id)) {
+      reply.code(400);
+      return { error: 'invalid_id' };
+    }
+
+    const namespace = typeof body?.namespace === 'string' ? body.namespace.trim() : '';
+    if (namespace) {
+      const { namespaces: allowed } = await withRls(db, session.userId, session.role, async (client) =>
+        filterNamespacesForSession(db, [namespace], session, client)
+      );
+      if (allowed.length === 0) {
+        reply.code(403);
+        return { error: 'memory_namespace_forbidden' };
+      }
+    }
+
+    try {
+      const updated = await withRls(db, session.userId, session.role, async (client) =>
+        memoryAdapter.updateDocument(
+          id,
+          {
+            namespace: namespace || undefined,
+            content: typeof body?.content === 'string' ? body.content : undefined,
+            metadata: isPlainObject(body?.metadata)
+              ? (stripReservedMetadata(body.metadata, { what: 'memory update request' }) as Record<string, unknown>)
+              : undefined,
+            ttlSeconds: typeof body?.ttl_seconds === 'number' ? body.ttl_seconds : undefined,
+            class: typeof body?.class === 'string' ? (body.class as MemoryClass) : undefined,
+            observedAt: typeof body?.observed_at === 'string' ? body.observed_at : undefined,
+            restore: body?.restore === true
+          },
+          client
+        )
+      );
+
+      if (!updated) {
+        reply.code(404);
+        return { error: 'not_found' };
+      }
+
+      // memory_audit had no record of changes at all, which is why the moved
+      // entries from the January traces could never be traced back.
+      await withRls(db, session.userId, session.role, async (client) =>
+        logMemoryAudit(db, {
+          namespace: namespace || null,
+          action: 'write',
+          detail: {
+            operation: 'update',
+            actor_id: session.userId,
+            id,
+            ...(body?.restore === true ? { restored: true } : {}),
+            ...(typeof body?.class === 'string' ? { class: body.class } : {})
+          }
+        }, client)
+      );
+
+      return { ok: true, id };
+    } catch (error) {
+      request.log.error({ err: error, id }, 'Memory document update failed');
+      reply.code(500);
+      return { error: 'update_failed', message: (error as Error).message };
+    }
   });
 
   server.delete('/memory/documents', async (request, reply) => {

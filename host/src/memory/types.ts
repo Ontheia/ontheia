@@ -53,6 +53,9 @@ export interface MemoryHit {
   observedAt?: string;
   status?: MemoryStatus;
   class?: MemoryClass;
+  /** Set only for an admin search with includeHidden — otherwise not returned. */
+  deletedAt?: string;
+  supersededBy?: string;
   created_at?: string;
   duplicates?: {
     namespace: string;

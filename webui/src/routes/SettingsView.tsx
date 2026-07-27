@@ -118,7 +118,9 @@ import {
   getSkillAgents,
   triggerSkillScan,
   type SkillEntry,
-  type SkillAgentEntry
+  type SkillAgentEntry,
+  MEMORY_CLASSES,
+  type MemoryClass
 } from '../lib/api';
 import { useChatSidebar, type McpStatusEntry } from '../context/chat-sidebar-context';
 import { useProviderContext } from '../context/provider-context';
@@ -1271,6 +1273,13 @@ function MemorySection({
     content: string;
     metadata?: Record<string, unknown>;
     created_at?: string;
+    updatedAt?: string;
+    observedAt?: string;
+    status?: string;
+    class?: MemoryClass;
+    /** Only present when the hidden entries are included. */
+    deletedAt?: string;
+    supersededBy?: string;
   };
 
   type MemoryTabId = 'dashboard' | 'search' | 'agentPolicy' | 'maintenance' | 'ingest' | 'auditLog' | 'ranking' | 'namespaces';
@@ -1281,6 +1290,11 @@ function MemorySection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchLimit, setSearchLimit] = useState(20);
+  // Deleted, expired and superseded entries are hidden from agents by design.
+  // Off by default here too, so the list matches what an agent would see.
+  const [includeHidden, setIncludeHidden] = useState(false);
+  const [writeClass, setWriteClass] = useState<MemoryClass | ''>('');
+  const [writeObservedAt, setWriteObservedAt] = useState('');
   const [metaProjectId, setMetaProjectId] = useState('');
   const [metaLang, setMetaLang] = useState('');
   const [metaTags, setMetaTags] = useState('');
@@ -1753,6 +1767,7 @@ function MemorySection({
       const q = searchQuery.trim();
       if (q) params.append('query', q);
       params.append('top_k', String(searchLimit));
+      if (includeHidden) params.append('include_hidden', 'true');
       if (metaProjectId.trim()) params.append('project_id', metaProjectId.trim());
       if (metaLang.trim()) params.append('lang', metaLang.trim());
       if (metaMetadata.trim()) params.append('metadata', metaMetadata.trim());
@@ -1783,7 +1798,7 @@ function MemorySection({
     } finally {
       setSearchLoading(false);
     }
-  }, [namespaceFilter, searchQuery, searchLimit, metaProjectId, metaLang, metaTags, metaMetadata, t]);
+  }, [namespaceFilter, searchQuery, searchLimit, includeHidden, metaProjectId, metaLang, metaTags, metaMetadata, t]);
 
   const handleMemoryWrite = useCallback(async () => {
     setStatusMessage(null);
@@ -1833,7 +1848,9 @@ function MemorySection({
           namespace: ns,
           content: writeContent.trim(),
           metadata: metadata,
-          ttl_seconds: metadata.ttl_seconds
+          ttl_seconds: metadata.ttl_seconds,
+          class: writeClass || undefined,
+          observed_at: writeObservedAt || undefined
         };
         const response = await fetch(`${API_BASE}/memory/documents/${encodeURIComponent(editingId)}`, {
           method: 'PUT',
@@ -1860,13 +1877,17 @@ function MemorySection({
         setEditingId(null);
         setWriteContent('');
         setMetaMetadata('');
+        setWriteClass('');
+        setWriteObservedAt('');
       } else {
         // Create
         const payload = [
           {
             namespace: ns,
             content: writeContent.trim(),
-            metadata
+            metadata,
+            class: writeClass || undefined,
+            observed_at: writeObservedAt || undefined
           }
         ];
         const response = await fetch(`${API_BASE}/memory/documents`, {
@@ -1881,6 +1902,8 @@ function MemorySection({
         setStatusMessage(t('memory.documentSaved'));
         setWriteContent('');
         setMetaMetadata('');
+        setWriteClass('');
+        setWriteObservedAt('');
       }
       setTimeout(() => setStatusMessage(null), 3000);
       onHasChanges?.(true);
@@ -1888,7 +1911,7 @@ function MemorySection({
       setErrorMessage(localizeError(error, t, 'common:saveError'));
       setTimeout(() => setErrorMessage(null), 3000);
     }
-  }, [namespaceFilter, writeContent, metaProjectId, metaLang, metaTags, metaTtlSeconds, metaMetadata, editingId, onHasChanges, t]);
+  }, [namespaceFilter, writeContent, metaProjectId, metaLang, metaTags, metaTtlSeconds, metaMetadata, writeClass, writeObservedAt, editingId, onHasChanges, t]);
 
   const handleToggleHit = useCallback((hitId: string) => {
     setSelectedHits((prev) => {
@@ -2298,6 +2321,27 @@ function MemorySection({
             />
           </label>
           <label className="settings-field">
+            <span>{t('memory.class')}</span>
+            <AppSelect
+              value={writeClass || APP_SELECT_EMPTY_VALUE}
+              onValueChange={(next) =>
+                setWriteClass(next === APP_SELECT_EMPTY_VALUE ? '' : (next as MemoryClass))
+              }
+              options={[
+                { value: APP_SELECT_EMPTY_VALUE, label: t('memory.classFromRule') },
+                ...MEMORY_CLASSES.map((cls) => ({ value: cls, label: t(`memory.rules.class.${cls}`) }))
+              ]}
+            />
+          </label>
+          <label className="settings-field">
+            <span>{t('memory.observedAt')}</span>
+            <Input
+              type="date"
+              value={writeObservedAt}
+              onChange={(e) => setWriteObservedAt(e.target.value)}
+            />
+          </label>
+          <label className="settings-field">
             <span>{t('memory.metadata')}</span>
             <textarea
               className="settings-textarea"
@@ -2323,6 +2367,18 @@ function MemorySection({
           className="admin-form-actions"
           style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
         >
+          {/* Deleted, expired and superseded entries are invisible to agents by
+              design. Without this switch a wrong supersession could only be
+              undone in the database. */}
+          <label className="flex items-center gap-2 mr-2 text-xs text-slate-400 cursor-pointer">
+            <input
+              type="checkbox"
+              style={{ accentColor: '#38BDF8' }}
+              checked={includeHidden}
+              onChange={(e) => setIncludeHidden(e.target.checked)}
+            />
+            {t('memory.includeHidden')}
+          </label>
           <div className="flex items-center gap-2 mr-2">
             <span className="text-xs text-slate-400">Limit:</span>
             <AppSelect
@@ -2426,6 +2482,8 @@ function MemorySection({
                   </th>
                   <th className="p-3">Namespace</th>
                   <th className="p-3 w-20 text-right">Score</th>
+                  <th className="p-3 w-28">{t('memory.class')}</th>
+                  <th className="p-3 w-28">{t('memory.status')}</th>
                   <th className="p-3">Content</th>
                   <th className="p-3 w-16"></th>
                 </tr>
@@ -2446,6 +2504,23 @@ function MemorySection({
                       <td className="p-3 align-top font-mono text-xs text-sky-300 break-all">{hit.namespace}</td>
                       <td className="p-3 align-top text-right font-mono text-slate-400">
                         {typeof hit.score === 'number' ? hit.score.toFixed(3) : '—'}
+                      </td>
+                      <td className="p-3 align-top text-xs text-slate-300">
+                        {hit.class ? t(`memory.rules.class.${hit.class}`) : <span className="text-slate-600 italic">{t('notSet', { ns: 'common' })}</span>}
+                      </td>
+                      <td className="p-3 align-top text-xs">
+                        {/* Deleted and superseded outrank the status column:
+                            they say why an entry is absent from an agent's
+                            context, which is what one is looking for here. */}
+                        {hit.deletedAt ? (
+                          <span className="text-red-400">{t('memory.stateDeleted')}</span>
+                        ) : hit.supersededBy ? (
+                          <span className="text-amber-400">{t('memory.stateSuperseded')}</span>
+                        ) : hit.status ? (
+                          <span className="text-slate-300">{t(`memory.status_${hit.status}`)}</span>
+                        ) : (
+                          <span className="text-slate-600 italic">{t('notSet', { ns: 'common' })}</span>
+                        )}
                       </td>
                       <td className="p-3 align-top text-slate-300">
                         <div style={{
@@ -2482,6 +2557,8 @@ function MemorySection({
                                 setMetaTtlSeconds(ttl);
                                 const { project_id, lang, tags, ttl_seconds, ...rest } = meta as any;
                                 setMetaMetadata(Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '');
+                                setWriteClass(hit.class ?? '');
+                                setWriteObservedAt(hit.observedAt ? hit.observedAt.slice(0, 10) : '');
                               }}
                             >
                               <Pencil size={16} />

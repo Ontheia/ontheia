@@ -42,6 +42,15 @@ type SearchOptions = {
   minScore?: number;
   /** Drop hits below this fraction of the best score. 0 disables. */
   relativeCutoff?: number;
+  /**
+   * Include entries that are deleted, expired or superseded.
+   *
+   * For an agent these are excluded by definition — they are not the current
+   * statement. An administrator needs the opposite: without this there is no
+   * way to look at a superseded entry or undo a wrong supersession short of
+   * opening the database.
+   */
+  includeHidden?: boolean;
   filters?: {
     projectId?: string;
     lang?: string;
@@ -300,12 +309,13 @@ export class MemoryAdapter {
     }
 
     const { conditions, params: filterParams } = buildMetadataFilters(options?.filters);
-    const ttlFilter = `(expires_at IS NULL OR expires_at > now())`;
-    const deleteFilter = `deleted_at IS NULL`;
-    // An exclusion criterion, not a weight: a superseded entry is not "less
+    // Exclusion criteria, not weights: a superseded entry is not "less
     // relevant", it is no longer the current statement. Plan §2.3 forbids
-    // mixing that into the score.
-    const supersededFilter = `superseded_by IS NULL`;
+    // mixing that into the score. An admin view lifts all three at once —
+    // half a view of the corpus is worse than none.
+    const visibilityFilters = options?.includeHidden
+      ? []
+      : [`deleted_at IS NULL`, `(expires_at IS NULL OR expires_at > now())`, `superseded_by IS NULL`];
 
     // Build namespace WHERE clause supporting both exact and wildcard patterns
     const buildNamespaceCondition = (params: any[], startIdx: number): { sql: string; nextIdx: number } => {
@@ -329,7 +339,7 @@ export class MemoryAdapter {
       const params: any[] = [];
       const { sql: nsCond, nextIdx } = buildNamespaceCondition(params, 1);
       let idx = nextIdx;
-      const whereParts = [nsCond, deleteFilter, ttlFilter, supersededFilter];
+      const whereParts = [nsCond, ...visibilityFilters];
       if (conditions.length > 0) {
         for (const cond of conditions) {
           whereParts.push(cond.replace(/\$\d+/g, () => `$${idx++}`));
@@ -340,7 +350,7 @@ export class MemoryAdapter {
       const limitParam = `$${idx}`;
       const fallback = await db.query(
         `SELECT id, namespace, content, metadata, created_at,
-                updated_at, observed_at, status, class
+                updated_at, observed_at, status, class, deleted_at, superseded_by
            FROM ${table.name}
           WHERE ${whereParts.join(' AND ')}
           ORDER BY updated_at DESC
@@ -354,7 +364,7 @@ export class MemoryAdapter {
         const params: any[] = [encodedVector];
         const { sql: nsCond, nextIdx } = buildNamespaceCondition(params, 2);
         let idx = nextIdx;
-        const whereParts = [nsCond, deleteFilter, ttlFilter, supersededFilter];
+        const whereParts = [nsCond, ...visibilityFilters];
         if (conditions.length > 0) {
           for (const cond of conditions) {
             whereParts.push(cond.replace(/\$\d+/g, () => `$${idx++}`));
@@ -388,6 +398,8 @@ export class MemoryAdapter {
                   observed_at,
                   status,
                   class,
+                  deleted_at,
+                  superseded_by,
                   1 - (${table.column} <=> $1::vector) AS score
              FROM ${table.name}
             WHERE ${whereParts.join(' AND ')}
@@ -634,6 +646,13 @@ export class MemoryAdapter {
       content?: string;
       metadata?: Record<string, unknown>;
       ttlSeconds?: number | null;
+      class?: MemoryClass | null;
+      observedAt?: string | null;
+      /**
+       * Bring a deleted or superseded entry back into search. A wrong
+       * supersession is otherwise only fixable in the database.
+       */
+      restore?: boolean;
     },
     client?: PoolClient
   ): Promise<boolean> {
@@ -649,7 +668,10 @@ export class MemoryAdapter {
 
     for (const table of this.tables) {
       const res = await db.query(
-        `SELECT namespace, content, metadata, ${table.column} AS vector FROM ${table.name} WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+        // No deleted_at filter: an admin edits exactly the entries that have
+        // dropped out of search, and refusing to load them would leave a wrong
+        // supersession unfixable outside the database.
+        `SELECT namespace, content, metadata, ${table.column} AS vector FROM ${table.name} WHERE id = $1 LIMIT 1`,
         [trimmedId]
       );
       if (res.rowCount && res.rows[0]) {
@@ -703,11 +725,22 @@ export class MemoryAdapter {
               ${foundTable.column} = $4::vector,
               metadata = $5::jsonb,
               expires_at = $6,
-              deleted_at = NULL,
+              class = COALESCE($7, class),
+              observed_at = COALESCE($8, observed_at),
               created_at = created_at,
               updated_at = now()
+              ${patch.restore ? ", deleted_at = NULL, superseded_by = NULL, status = 'unconfirmed'" : ''}
         WHERE id = $1`,
-      [trimmedId, nextNamespace, nextContent, nextVector, JSON.stringify(nextMetadata), expiresAt]
+      [
+        trimmedId,
+        nextNamespace,
+        nextContent,
+        nextVector,
+        JSON.stringify(nextMetadata),
+        expiresAt,
+        isMemoryClass(patch.class) ? patch.class : null,
+        normalizeObservedAt(patch.observedAt) ?? null
+      ]
     );
 
     return (result.rowCount ?? 0) > 0;
@@ -991,7 +1024,11 @@ function mapRowToHit(row: any, score: number): MemoryHit {
     updatedAt: toIsoOrUndefined(row.updated_at),
     observedAt: toIsoOrUndefined(row.observed_at),
     status: row.status ?? undefined,
-    class: isMemoryClass(row.class) ? row.class : undefined
+    class: isMemoryClass(row.class) ? row.class : undefined,
+    // Only ever set when includeHidden was on — otherwise these rows never
+    // reach a caller. The admin view uses them to mark what it is showing.
+    deletedAt: toIsoOrUndefined(row.deleted_at),
+    supersededBy: row.superseded_by ?? undefined
   };
 }
 
