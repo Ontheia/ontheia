@@ -139,3 +139,27 @@ Afterwards, verify via the **Audit Log** tab (filterable by agent/task).
 
 ## 5. RLS Enforcement
 The system uses **FORCE Row Level Security**. This means that the isolation of user data takes effect even if the application user has administrative privileges. Exceptions are only explicitly shared namespaces (such as `vector.global.*`), to which all authorized system users have shared access.
+
+## 3. Maintenance in the memory tab
+
+Two actions under **Maintenance**, both behind a confirmation dialog and both **hard deletes** — unlike deleting a single entry, which only hides it.
+
+### Duplicate cleanup
+
+Removes rows with identical content in the same namespace. A database backup is taken automatically beforehand.
+
+Which of the identical rows survives follows a ranking, not the date alone:
+
+| Rank | Criterion | Why |
+| :--- | :--- | :--- |
+| 1 | not deleted | Since version 0.6.0 rewriting the same text no longer resurrects a deleted entry, so such pairs exist by design — and the survivor must be the one the user still has |
+| 2 | not superseded | same reason |
+| 3 | confirmed over unconfirmed | `status` |
+| 4 | has a class, has an observation date | otherwise a cleanup silently undoes a classification or an edit |
+| 5 | newest `created_at` | |
+
+### Expired entry cleanup
+
+Permanently deletes whatever has passed its TTL.
+
+> **Both actions clear incoming supersessions.** `superseded_by` deliberately carries no foreign key — a re-embedding run can move a namespace into a different dimension table, and a key cannot span them. So when an entry that had superseded another disappears, that other one becomes **visible again**. Without this it would stay hidden forever behind a pointer to a row that no longer exists.

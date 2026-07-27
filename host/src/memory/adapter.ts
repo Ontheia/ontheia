@@ -893,11 +893,24 @@ export class MemoryAdapter {
             SELECT id,
                    ROW_NUMBER() OVER (
                        PARTITION BY namespace, md5(content)
-                       -- A live entry always outranks a deleted one with the
-                       -- same text. Since the upsert no longer resurrects
-                       -- deleted rows, such pairs exist by design, and the
-                       -- surviving row must be the one the user still has.
-                       ORDER BY (deleted_at IS NULL) DESC, created_at DESC, id DESC
+                       -- Which of two identical rows survives, in order:
+                       --
+                       --  1. live over deleted — since the upsert stopped
+                       --     resurrecting deleted rows such pairs exist by
+                       --     design, and the survivor must be the one the user
+                       --     still has;
+                       --  2. current over superseded, for the same reason;
+                       --  3. confirmed over unconfirmed;
+                       --  4. classified over unclassified, and with an
+                       --     observation date over without — otherwise a
+                       --     cleanup silently undoes a backfill or an edit;
+                       --  5. newest last, as before.
+                       ORDER BY (deleted_at IS NULL) DESC,
+                                (superseded_by IS NULL) DESC,
+                                (status = 'confirmed') DESC,
+                                (class IS NOT NULL) DESC,
+                                (observed_at IS NOT NULL) DESC,
+                                created_at DESC, id DESC
                    ) as row_num
             FROM ${table.name}
         )

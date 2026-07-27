@@ -244,6 +244,28 @@ test('duplicate cleanup keeps the live entry, not the deleted twin', async () =>
   // Such pairs exist by design since the upsert stopped resurrecting deleted
   // rows — and the survivor must be the one the user still has.
   assert.match(dedupe!.sql, /\(deleted_at IS NULL\) DESC/);
+  assert.match(dedupe!.sql, /\(superseded_by IS NULL\) DESC/);
+});
+
+test('duplicate cleanup keeps the better-described of two identical rows', () => {
+  const recorded: Recorded[] = [];
+  const db = {
+    connect: async () => ({ query: async () => ({ rowCount: 0, rows: [] }), release: () => {} }),
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      return { rowCount: 0, rows: [] };
+    }
+  };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  return adapter.cleanupDuplicates().then(() => {
+    const dedupe = recorded.find((r) => r.sql.includes('ROW_NUMBER()'))!;
+    // Without these a cleanup silently undoes a backfill: of two identical
+    // rows the newer one wins on date alone, even if the older carried the
+    // class and the observation date.
+    assert.match(dedupe.sql, /\(class IS NOT NULL\) DESC/);
+    assert.match(dedupe.sql, /\(observed_at IS NOT NULL\) DESC/);
+    assert.match(dedupe.sql, /\(status = 'confirmed'\) DESC/);
+  });
 });
 
 /*

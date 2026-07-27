@@ -139,3 +139,27 @@ Anschließend Audit-Abgleich über den Tab **Audit-Log** (filterbar nach Agent/T
 
 ## 5. RLS-Erzwingung
 Das System nutzt **FORCE Row Level Security**. Das bedeutet, dass die Isolation der Nutzerdaten selbst dann greift, wenn der Applikations-User administrative Privilegien besitzt. Ausnahmen bilden nur explizit freigegebene Namespaces (wie `vector.global.*`), auf die alle autorisierten Systembenutzer gemeinsamen Zugriff haben.
+
+## 3. Wartung im Memory-Tab
+
+Zwei Aktionen im Tab **Wartung**, beide mit Bestätigungsdialog und beide **hart löschend** — anders als das Löschen einzelner Einträge, das nur ausblendet.
+
+### Dublettenbereinigung
+
+Entfernt Zeilen mit identischem Inhalt im selben Namespace. Vorab wird automatisch ein Datenbank-Backup erstellt.
+
+Welche der identischen Zeilen überlebt, entscheidet eine Rangfolge — nicht allein das Datum:
+
+| Rang | Kriterium | Warum |
+| :--- | :--- | :--- |
+| 1 | nicht gelöscht | Seit Version 0.6.0 belebt ein erneutes Schreiben einen gelöschten Eintrag nicht mehr wieder; solche Paare entstehen also planmäßig, und erhalten bleiben muss der, den der Nutzer noch hat |
+| 2 | nicht abgelöst | derselbe Grund |
+| 3 | bestätigt vor unbestätigt | `status` |
+| 4 | mit Klasse, mit Beobachtungsdatum | sonst macht ein Bereinigungslauf still eine Klassifizierung oder eine Bearbeitung rückgängig |
+| 5 | neuestes `created_at` | |
+
+### Bereinigung abgelaufener Einträge
+
+Löscht endgültig, was seine TTL überschritten hat.
+
+> **Beide Aktionen lösen eingehende Supersessions auf.** `superseded_by` trägt bewusst keinen Fremdschlüssel — ein Re-Embedding kann einen Namespace in eine andere Dimensionstabelle verschieben, und ein Schlüssel kann das nicht überspannen. Verschwindet also ein Eintrag, der einen anderen abgelöst hatte, wird dieser andere **wieder sichtbar**. Ohne das bliebe er für immer hinter einem Verweis auf eine Zeile verborgen, die es nicht mehr gibt.
