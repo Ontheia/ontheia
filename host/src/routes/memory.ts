@@ -266,6 +266,15 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     // design. An admin needs to reach them — a wrong supersession is otherwise
     // only fixable in the database.
     const includeHidden = query?.include_hidden === 'true' || query?.include_hidden === true;
+    // Lower than the 0.4 an agent gets, because an admin looks for entries that
+    // exist rather than for the best context — but not zero: without a floor a
+    // vector search always fills topK, and a two-hit query came back with
+    // eighteen unrelated rows behind it. Settable down to 0 for the rare case
+    // where the weakest match is the one being hunted.
+    const minScore = (() => {
+      const raw = Number(query?.min_score);
+      return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : 0.3;
+    })();
 
     const filters = {
       projectId: (typeof query?.project_id === 'string' && query.project_id.trim()) || undefined,
@@ -289,7 +298,10 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       // entry the admin knows is there, and nothing would say it was filtered.
       const results = await memoryAdapter.search(
         allowed,
-        { topK, query: searchQuery, filters, minScore: 0, relativeCutoff: 0, includeHidden },
+        // relativeCutoff stays off: it measures distance to the best hit, so a
+        // single strong match would hide everything else — the opposite of what
+        // a management view needs.
+        { topK, query: searchQuery, filters, minScore, relativeCutoff: 0, includeHidden },
         client
       );
       return { hits: results, allowedNamespaces: allowed, allowedUserIds: uids };

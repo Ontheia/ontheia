@@ -1296,6 +1296,9 @@ function MemorySection({
   // Which namespaces the last search actually covered. An empty result is
   // otherwise indistinguishable from "looked in the wrong place".
   const [searchedNamespaces, setSearchedNamespaces] = useState<string[]>([]);
+  // Below the 0.4 an agent gets — an admin looks for what exists, not for the
+  // best context. Zero is allowed but fills topK with noise.
+  const [searchMinScore, setSearchMinScore] = useState('0.3');
   const [writeClass, setWriteClass] = useState<MemoryClass | ''>('');
   const [writeObservedAt, setWriteObservedAt] = useState('');
   const [metaProjectId, setMetaProjectId] = useState('');
@@ -1812,6 +1815,7 @@ function MemorySection({
       if (q) params.append('query', q);
       params.append('top_k', String(searchLimit));
       if (includeHidden) params.append('include_hidden', 'true');
+      if (searchMinScore.trim()) params.append('min_score', searchMinScore.trim());
       if (metaProjectId.trim()) params.append('project_id', metaProjectId.trim());
       if (metaLang.trim()) params.append('lang', metaLang.trim());
       if (metaMetadata.trim()) params.append('metadata', metaMetadata.trim());
@@ -1844,7 +1848,7 @@ function MemorySection({
     } finally {
       setSearchLoading(false);
     }
-  }, [namespaceFilter, searchQuery, searchLimit, includeHidden, metaProjectId, metaLang, metaTags, metaMetadata, t]);
+  }, [namespaceFilter, searchQuery, searchLimit, includeHidden, searchMinScore, metaProjectId, metaLang, metaTags, metaMetadata, t]);
 
   const handleMemoryWrite = useCallback(async () => {
     setStatusMessage(null);
@@ -2425,6 +2429,18 @@ function MemorySection({
           className="admin-form-actions"
           style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
         >
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-xs text-slate-400">{t('memory.minScoreShort')}:</span>
+            <Input
+              type="number"
+              min={0}
+              max={1}
+              step={0.05}
+              className="app-input w-20"
+              value={searchMinScore}
+              onChange={(e) => setSearchMinScore(e.target.value)}
+            />
+          </div>
           <div className="flex items-center gap-2 mr-2">
             <span className="text-xs text-slate-400">Limit:</span>
             <AppSelect
