@@ -162,4 +162,12 @@ Welche der identischen Zeilen überlebt, entscheidet eine Rangfolge — nicht al
 
 Löscht endgültig, was seine TTL überschritten hat.
 
+### Abgeleitete Einträge
+
+Schreibt Ontheia nach einem Lauf die Antwort des Agenten automatisch ins Gedächtnis (`run_output`), merkt sich der neue Eintrag, **welche Treffer** in diesen Lauf eingingen. Zitiert die Antwort einen davon, ist das Zitat sonst ein eigenständiger, durchsuchbarer Eintrag mit eigener ID — und das Löschen des Originals ließe ihn unberührt.
+
+Beim Löschen eines Eintrags werden daraus abgeleitete Einträge deshalb **mit gelöscht**, und zwar über beliebig viele Stufen: was aus dem Abgeleiteten wiederum hervorging, folgt ebenfalls.
+
+> Das geschieht immer als **Soft-Delete**, auch wenn der Auslöser eine endgültige Löschung war. Eine abgeleitete Antwort enthält in der Regel mehr als das Zitat; über den Wiederherstellen-Knopf im Tab „Suche & Schreiben" lässt sie sich zurückholen.
+
 > **Beide Aktionen lösen eingehende Supersessions auf.** `superseded_by` trägt bewusst keinen Fremdschlüssel — ein Re-Embedding kann einen Namespace in eine andere Dimensionstabelle verschieben, und ein Schlüssel kann das nicht überspannen. Verschwindet also ein Eintrag, der einen anderen abgelöst hatte, wird dieser andere **wieder sichtbar**. Ohne das bliebe er für immer hinter einem Verweis auf eine Zeile verborgen, die es nicht mehr gibt.

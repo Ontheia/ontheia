@@ -324,3 +324,83 @@ test('a rewrite still applies a class the caller names explicitly', async () => 
   const params = find('UPDATE vector.test')[0].params as unknown[];
   assert.equal(params[5], 'semantic');
 });
+
+/*
+ * After a run the agent's answer is stored as run_output. When it quotes a
+ * memory hit, the quote becomes an independent, searchable entry — and
+ * deleting the original used to leave it in place, inside the very store the
+ * deletion was meant to clear.
+ */
+test('a written entry records what it was derived from', async () => {
+  const { db, find } = mockDb();
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  await adapter.writeDocuments('vector.user.x.memory', [
+    { content: 'the answer', derivedFrom: ['hit-1', 'hit-2', 'hit-1'] }
+  ]);
+
+  const params = find('INSERT INTO vector.test')[0].params as unknown[];
+  // Deduplicated: the same hit can appear twice in one result list.
+  assert.deepEqual(params[7], ['hit-1', 'hit-2']);
+});
+
+test('an empty derivation is stored as null, not as an empty array', async () => {
+  const { db, find } = mockDb();
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  await adapter.writeDocuments('vector.user.x.memory', [{ content: 'x', derivedFrom: [] }]);
+  assert.equal((find('INSERT INTO vector.test')[0].params as unknown[])[7], null);
+});
+
+test('deleting an entry soft-deletes what came out of it', async () => {
+  const recorded: Recorded[] = [];
+  let round = 0;
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('SET deleted_at = now()') && sql.includes('content = ANY')) {
+        return { rowCount: 1, rows: [{ id: 'source-1' }] };
+      }
+      if (sql.includes('derived_from &&')) {
+        // One generation of derived entries, then nothing — a chain has to end.
+        return round++ === 0 ? { rowCount: 1, rows: [{ id: 'derived-1' }] } : { rowCount: 0, rows: [] };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+
+  const affected = await adapter.deleteDocuments('vector.user.x.memory', ['gone']);
+
+  const propagations = recorded.filter((r) => r.sql.includes('derived_from &&'));
+  assert.ok(propagations.length >= 2, 'it should follow the chain, not stop after one round');
+  assert.deepEqual(propagations[0].params, [['source-1']]);
+  assert.deepEqual(propagations[1].params, [['derived-1']]);
+  // Always soft, even here: a derived entry usually carries more than the quote.
+  for (const p of propagations) assert.match(p.sql, /SET\s+deleted_at = now\(\)/);
+  assert.equal(affected, 2, 'the count covers the source and what came out of it');
+});
+
+test('propagation stops instead of looping when entries point at each other', async () => {
+  const recorded: Recorded[] = [];
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('SET deleted_at = now()') && sql.includes('id = $2')) {
+        return { rowCount: 1, rows: [{ id: 'a' }] };
+      }
+      // Always answers with an id already seen — a cycle.
+      if (sql.includes('derived_from &&')) return { rowCount: 1, rows: [{ id: 'a' }] };
+      return { rowCount: 0, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+
+  await adapter.deleteDocumentById('vector.user.x.memory', 'a');
+  const rounds = recorded.filter((r) => r.sql.includes('derived_from &&')).length;
+  assert.ok(rounds <= 10, `expected the loop to be bounded, ran ${rounds} rounds`);
+});

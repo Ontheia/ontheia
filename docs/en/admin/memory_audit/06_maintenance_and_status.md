@@ -162,4 +162,12 @@ Which of the identical rows survives follows a ranking, not the date alone:
 
 Permanently deletes whatever has passed its TTL.
 
+### Derived entries
+
+When Ontheia stores an agent's answer after a run (`run_output`), the new entry records **which hits** went into that run. If the answer quoted one of them, the quote would otherwise be an independent, searchable entry with its own id — and deleting the original would leave it untouched.
+
+Deleting an entry therefore also deletes what was derived from it, across any number of steps: whatever came out of the derived entry follows as well.
+
+> This is always a **soft delete**, even when the trigger was a permanent one. A derived answer usually carries more than the quote; the restore button under "Search & Write" brings it back.
+
 > **Both actions clear incoming supersessions.** `superseded_by` deliberately carries no foreign key — a re-embedding run can move a namespace into a different dimension table, and a key cannot span them. So when an entry that had superseded another disappears, that other one becomes **visible again**. Without this it would stay hidden forever behind a pointer to a row that no longer exists.

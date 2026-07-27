@@ -619,8 +619,8 @@ export class MemoryAdapter {
             const res = await dbClient.query(
               `INSERT INTO ${table.name}
                  (namespace, content, ${table.column}, metadata, expires_at, deleted_at,
-                  observed_at, class)
-               VALUES ($1, $2, $3::vector, $4::jsonb, $5, NULL, $6, $7)
+                  observed_at, class, derived_from)
+               VALUES ($1, $2, $3::vector, $4::jsonb, $5, NULL, $6, $7, $8::uuid[])
             RETURNING id`,
               [
                 trimmed,
@@ -629,7 +629,8 @@ export class MemoryAdapter {
                 JSON.stringify(doc.metadata),
                 expiresAt,
                 observedAt,
-                docClass
+                docClass,
+                doc.derivedFrom && doc.derivedFrom.length > 0 ? doc.derivedFrom : null
               ]
             );
             writtenId = res.rows[0].id;
@@ -800,13 +801,18 @@ export class MemoryAdapter {
     let affected = 0;
     try {
       if (ownClient) await dbClient.query('BEGIN');
+      const removed: string[] = [];
       for (const table of this.tables) {
         const sql = options?.hard
-          ? `DELETE FROM ${table.name} WHERE namespace = $1 AND content = ANY($2)`
-          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now() WHERE namespace = $1 AND content = ANY($2)`;
+          ? `DELETE FROM ${table.name} WHERE namespace = $1 AND content = ANY($2) RETURNING id`
+          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now()
+              WHERE namespace = $1 AND content = ANY($2) AND deleted_at IS NULL RETURNING id`;
         const res = await dbClient.query(sql, [trimmed, targets]);
         affected += res.rowCount ?? 0;
+        removed.push(...res.rows.map((row: { id: string }) => row.id));
       }
+      affected += await this.propagateDeletion(dbClient, removed);
+      if (options?.hard) await this.clearSupersededEdges(dbClient, removed);
       if (ownClient) await dbClient.query('COMMIT');
     } catch (error) {
       if (ownClient) await dbClient.query('ROLLBACK');
@@ -833,13 +839,18 @@ export class MemoryAdapter {
     let affected = 0;
     try {
       if (ownClient) await dbClient.query('BEGIN');
+      const removed: string[] = [];
       for (const table of this.tables) {
         const sql = options?.hard
-          ? `DELETE FROM ${table.name} WHERE namespace = $1 AND id = $2`
-          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now() WHERE namespace = $1 AND id = $2`;
+          ? `DELETE FROM ${table.name} WHERE namespace = $1 AND id = $2 RETURNING id`
+          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now()
+              WHERE namespace = $1 AND id = $2 AND deleted_at IS NULL RETURNING id`;
         const res = await dbClient.query(sql, [trimmedNs, trimmedId]);
         affected += res.rowCount ?? 0;
+        removed.push(...res.rows.map((row: { id: string }) => row.id));
       }
+      affected += await this.propagateDeletion(dbClient, removed);
+      if (options?.hard) await this.clearSupersededEdges(dbClient, removed);
       if (ownClient) await dbClient.query('COMMIT');
     } catch (error) {
       if (ownClient) await dbClient.query('ROLLBACK');
@@ -865,6 +876,54 @@ export class MemoryAdapter {
     }
 
     return { deleted: totalDeleted };
+  }
+
+  /**
+   * Soft-deletes everything derived from the given entries, then everything
+   * derived from those, and so on.
+   *
+   * The case this exists for: after a run, the agent's answer is stored as
+   * `run_output`. If that answer quoted a memory hit, the quote is now an
+   * independent entry with its own id — and deleting the original left it in
+   * place, searchable, inside the store the deletion was meant to clear.
+   *
+   * Always soft, never hard, even when the trigger was a hard delete: a derived
+   * entry usually carries more than the quote, and the admin console can bring
+   * it back. The loop is bounded because a chain of derivations is finite, and
+   * ids already handled are never revisited.
+   */
+  private async propagateDeletion(db: Pool | PoolClient, sourceIds: string[]): Promise<number> {
+    let frontier = sourceIds.filter(Boolean);
+    if (frontier.length === 0) return 0;
+
+    const handled = new Set(frontier);
+    let total = 0;
+
+    for (let depth = 0; depth < 10 && frontier.length > 0; depth++) {
+      const next: string[] = [];
+      for (const table of this.tables) {
+        const res = await db.query(
+          `UPDATE ${table.name}
+              SET deleted_at = now(), updated_at = now()
+            WHERE derived_from && $1::uuid[] AND deleted_at IS NULL
+        RETURNING id`,
+          [frontier]
+        );
+        total += res.rowCount ?? 0;
+        for (const row of res.rows as { id: string }[]) {
+          if (!handled.has(row.id)) {
+            handled.add(row.id);
+            next.push(row.id);
+          }
+        }
+      }
+      frontier = next;
+    }
+
+    if (total > 0) {
+      logger.info({ count: total, from: sourceIds.length }, 'Deleted entries that were derived from the removed ones');
+    }
+    return total;
   }
 
   /**
@@ -983,6 +1042,7 @@ type PreparedDocument = {
   observedAt?: string;
   class?: MemoryClass;
   supersedes?: string;
+  derivedFrom?: string[];
 };
 
 function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
@@ -1005,7 +1065,10 @@ function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
     // trustworthy, and NULL says "unknown" honestly.
     observedAt: normalizeObservedAt(doc.observedAt),
     class: isMemoryClass(doc.class) ? doc.class : undefined,
-    supersedes: typeof doc.supersedes === 'string' && doc.supersedes.trim() ? doc.supersedes.trim() : undefined
+    supersedes: typeof doc.supersedes === 'string' && doc.supersedes.trim() ? doc.supersedes.trim() : undefined,
+    derivedFrom: Array.isArray(doc.derivedFrom)
+      ? Array.from(new Set(doc.derivedFrom.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)))
+      : undefined
   };
 }
 
@@ -1053,7 +1116,8 @@ function mapRowToHit(row: any, score: number): MemoryHit {
     // Only ever set when includeHidden was on — otherwise these rows never
     // reach a caller. The admin view uses them to mark what it is showing.
     deletedAt: toIsoOrUndefined(row.deleted_at),
-    supersededBy: row.superseded_by ?? undefined
+    supersededBy: row.superseded_by ?? undefined,
+    derivedFrom: Array.isArray(row.derived_from) ? row.derived_from : undefined
   };
 }
 

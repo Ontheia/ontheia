@@ -56,6 +56,7 @@ export interface MemoryHit {
   /** Set only for an admin search with includeHidden — otherwise not returned. */
   deletedAt?: string;
   supersededBy?: string;
+  derivedFrom?: string[];
   created_at?: string;
   duplicates?: {
     namespace: string;
@@ -80,6 +81,12 @@ export interface MemoryWriteInput {
   class?: MemoryClass;
   /** Id of the entry this one replaces. That row gets superseded_by + status. */
   supersedes?: string;
+  /**
+   * Ids of the entries this one came out of — the hits that went into the run
+   * whose output is being stored. Deleting one of them soft-deletes this entry
+   * too, so a copy cannot outlive what it copied.
+   */
+  derivedFrom?: string[];
 }
 
 export interface MemoryOptions {

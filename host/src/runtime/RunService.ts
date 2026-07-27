@@ -24,6 +24,7 @@ import type { Pool, PoolClient } from 'pg';
 import { randomUUID } from 'crypto';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
+import type { MemoryWriteInput } from '../memory/types.js';
 import {
   RunRequest,
   RunEvent,
@@ -570,6 +571,10 @@ export class RunService {
       // 4. Memory Integration
       const memoryConfig = normalizeMemoryOptions(enrichedInput.memory);
       let memoryContextText: string | undefined;
+      // Ids of the hits that went into this run. The answer is stored as
+      // run_output afterwards, and when it quotes one of them the quote becomes
+      // an independent entry — deleting the original has to reach it.
+      let injectedHitIds: string[] = [];
       if (memoryConfig.enabled) {
         // `policy` is already loaded in step 3b.
 
@@ -619,6 +624,7 @@ export class RunService {
               }
             });
 
+            injectedHitIds = hits.map((hit) => hit.id).filter((id): id is string => typeof id === 'string');
             memoryContextText = formatMemoryContext(hits, (ns) =>
               this.memoryAdapter.getInstructionForNamespace(ns)
             );
@@ -728,7 +734,7 @@ export class RunService {
         const output = typeof completeEvent?.output === 'string' ? completeEvent.output.trim() : '';
         const userQuery = buildMemoryQuery(enrichedInput.messages);
 
-        const docsToWrite: { content: string; metadata: Record<string, unknown> }[] = [];
+        const docsToWrite: MemoryWriteInput[] = [];
         if (userQuery && userQuery.length >= 80) {
           docsToWrite.push({
             content: userQuery,
@@ -738,7 +744,10 @@ export class RunService {
         if (output.length > 0) {
           docsToWrite.push({
             content: output,
-            metadata: { source: 'run_output', chat_id: chatId, task_id: enrichedInput.task_id, agent_id: enrichedInput.agent_id, user_id: userId, session_id: runId }
+            metadata: { source: 'run_output', chat_id: chatId, task_id: enrichedInput.task_id, agent_id: enrichedInput.agent_id, user_id: userId, session_id: runId },
+            // Only the answer carries the derivation: run_input is what the
+            // user typed and owes nothing to the memory hits.
+            derivedFrom: injectedHitIds.length > 0 ? injectedHitIds : undefined
           });
         }
 
