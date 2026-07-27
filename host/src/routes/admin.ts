@@ -841,7 +841,14 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
         // Sliding window: 1000 tokens (~750 words), 10% overlap
         const chunks = chunkText(
           content,
-          { source: relPath, file_name: path.basename(file), ingested_at: new Date().toISOString() },
+          // `source` names the write channel, not the file — the path goes in
+          // `relative_path`, matching the other ingest route.
+          {
+            source: 'directory_ingest',
+            relative_path: relPath,
+            file_name: path.basename(file),
+            ingested_at: new Date().toISOString()
+          },
           1000,
           10,
           'sliding-window'

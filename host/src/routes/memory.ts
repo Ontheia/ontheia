@@ -35,6 +35,7 @@ import {
 } from './types.js';
 import { buildReadableNamespaces, slugifySegment, isGlobalNamespace } from '../memory/namespaces.js';
 import type { MemoryHit, MemoryWriteInput } from '../memory/types.js';
+import { stripReservedMetadata } from '../memory/metadata.js';
 import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, memoryTools } from '../mcp/plugins/memory.js';
 import { handleDelegation } from '../mcp/plugins/delegation.js';
 import { enqueueReembedJobs } from '../memory/reembed.js';
@@ -307,7 +308,12 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
         if (!namespace || !content) continue;
         const { namespaces: allowedNamespaces } = await filterNamespacesForSession(db, [namespace], session, client);
         if (allowedNamespaces.length === 0) continue;
-        const doc: MemoryWriteInput = { content, metadata: (entry.metadata || {}) as any };
+        // The body may carry metadata, but not the fields that decide how much
+        // an entry is trusted — see memory/metadata.ts.
+        const doc: MemoryWriteInput = {
+          content,
+          metadata: stripReservedMetadata(entry.metadata, { what: 'memory write request' }) as any
+        };
         if (typeof entry.ttl_seconds === 'number') (doc.metadata as any).ttl_seconds = entry.ttl_seconds;
         const existing = batches.get(allowedNamespaces[0]) ?? [];
         existing.push(doc);

@@ -746,25 +746,17 @@ export class OrchestratorService {
         return handler(params.name, params.arguments, context) as Promise<TResult>;
       }
       
-      // Built-in fallback for memory if no explicit handler registered
-      if (serverName === 'memory' && this.memoryAdapter) {
-        if (params.name === 'memory-search') {
-          const { query, namespaces, topK } = params.arguments as any;
-          const hits = await this.memoryAdapter.search(namespaces, { query, topK }, context?.db);
-          return { hits } as any;
-        }
-        if (params.name === 'memory-write') {
-          const { content, namespace, metadata } = params.arguments as any;
-          const count = await this.memoryAdapter.writeDocuments(namespace, [{ content, metadata }], undefined, context?.db);
-          return { count } as any;
-        }
-        if (params.name === 'memory-delete') {
-          const { content, namespace, hard, id } = params.arguments as any;
-          const count = id
-            ? await this.memoryAdapter.deleteDocumentById(namespace, id, { hard }, context?.db)
-            : await this.memoryAdapter.deleteDocuments(namespace, [content], { hard }, context?.db);
-          return { count } as any;
-        }
+      // There used to be a built-in memory fallback here for the case that no
+      // handler is registered. It called the adapter directly and thereby
+      // skipped the memory policy, the namespace whitelist, the RLS session
+      // and the audit log — and it passed caller-supplied metadata straight
+      // through. `registerMemoryRoutes` always registers the real handler, so
+      // it was unreachable; failing loudly beats degrading into a path that
+      // bypasses every check.
+      if (serverName === 'memory') {
+        throw new Error(
+          'Memory tool handler is not registered. Memory calls must go through registerMemoryRoutes.'
+        );
       }
     }
     const client = this.clients.get(serverName);

@@ -25,6 +25,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { EmbeddingConfig } from './config.js';
 import { logger } from '../logger.js';
 import type { EmbeddingProvider } from './provider.js';
+import { sanitizeMetadata } from './metadata.js';
 import type { MemoryHit, MemoryWriteInput } from './types.js';
 
 type TableDefinition = {
@@ -785,17 +786,6 @@ function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
     metadata,
     embedding: doc.embedding
   };
-}
-
-function sanitizeMetadata(input?: Record<string, unknown>): Record<string, unknown> {
-  if (!input || typeof input !== 'object') {
-    return {};
-  }
-  const cloned = JSON.parse(JSON.stringify(input));
-  if (Array.isArray(cloned.embedding)) {
-    delete cloned.embedding;
-  }
-  return cloned;
 }
 
 function encodeVector(values: number[]): string {
