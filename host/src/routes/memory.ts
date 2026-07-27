@@ -246,7 +246,18 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     }
     const query = request.query as any;
     const requestedNamespaces = (Array.isArray(query?.namespace) ? query.namespace : [query?.namespace]).concat(Array.isArray(query?.namespaces) ? query.namespaces : [query?.namespaces]).filter(Boolean);
-    const fallbackNamespaces = defaultUserNamespaces(session);
+    // Without a filter this used to search two namespaces — the `.memory` pair
+    // from defaultUserNamespaces() — so an entry in `.preferences` or any other
+    // suffix simply did not turn up, and the empty result said nothing about
+    // where it had looked. A management view should search everything the
+    // session may read; filterNamespacesForSession still vets each pattern, and
+    // a bare `vector.agent.*` is rejected there because its segment is no UUID.
+    const ownSlug = slugifySegment(session.userId) ?? session.userId;
+    const fallbackNamespaces = [
+      `vector.agent.${ownSlug}.*`,
+      `vector.user.${ownSlug}.*`,
+      'vector.global.*'
+    ];
     const namespacesToUse = requestedNamespaces.length > 0 ? requestedNamespaces : fallbackNamespaces;
 
     const topK = query?.top_k ? Math.min(Math.max(parseInt(query.top_k, 10), 1), 200) : 5;

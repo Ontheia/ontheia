@@ -1293,6 +1293,9 @@ function MemorySection({
   // Deleted, expired and superseded entries are hidden from agents by design.
   // Off by default here too, so the list matches what an agent would see.
   const [includeHidden, setIncludeHidden] = useState(false);
+  // Which namespaces the last search actually covered. An empty result is
+  // otherwise indistinguishable from "looked in the wrong place".
+  const [searchedNamespaces, setSearchedNamespaces] = useState<string[]>([]);
   const [writeClass, setWriteClass] = useState<MemoryClass | ''>('');
   const [writeObservedAt, setWriteObservedAt] = useState('');
   const [metaProjectId, setMetaProjectId] = useState('');
@@ -1831,11 +1834,13 @@ function MemorySection({
       }
       const hits: MemorySearchHit[] = Array.isArray(data?.hits) ? data.hits : [];
       setSearchResults(hits);
+      setSearchedNamespaces(Array.isArray(data?.namespaces) ? data.namespaces : []);
       setSelectedHits(new Set());
       setEditingId(null);
     } catch (error: any) {
       setErrorMessage(localizeError(error, t, 'memory.searchFailed'));
       setSearchResults([]);
+      setSearchedNamespaces([]);
     } finally {
       setSearchLoading(false);
     }
@@ -2503,6 +2508,13 @@ function MemorySection({
           </AlertDialog>
         </div>
       </div>
+      {searchResults.length === 0 && searchedNamespaces.length > 0 && (
+        <div className="p-3 text-xs text-slate-400 bg-[#0B1424] border border-[#1E293B] rounded-md">
+          {t('memory.noHitsIn')}
+          <div className="mt-1 font-mono text-sky-300/80 break-all">{searchedNamespaces.join(' · ')}</div>
+        </div>
+      )}
+
       {searchResults.length > 0 && (
           <div className="border border-[#1E293B] rounded-md overflow-hidden">
             <table className="w-full text-sm text-left">
