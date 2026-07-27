@@ -17,7 +17,25 @@ Dies ist ein mächtiges Feature, um die Antwortqualität zu erhöhen. Findet die
 
 > Der Text landet nicht im System-Prompt, sondern am Ende der letzten Nutzernachricht. Grund ist das Prompt-Caching; Details in der [technischen Referenz](/de/admin/memory_audit/10_ranking_algorithm/).
 
-## 3. Pattern Matching
+## 3. Gedächtnisklasse
+
+Eine Regel kann eine **Standard-Klasse** für ihren Namespace festlegen. Jeder Eintrag, der dorthin geschrieben wird, bekommt sie automatisch — der Agent muss nichts angeben.
+
+| Klasse | Wofür |
+| :--- | :--- |
+| **Episodisch** | Etwas, das geschehen ist, zu einer Zeit |
+| **Semantisch** | Ein Fakt, der gilt, bis er ersetzt wird |
+| **Prozedural** | Eine Regel oder Arbeitsanweisung |
+| **Arbeitskontext** | Nur für die laufende Aufgabe nötig |
+| **Dokument (Korpus)** | Eingelesenes Quellmaterial, kein Gedächtnis |
+
+> **Die Regel ist ein Standard, keine Festlegung.** Ein Namespace enthält in der Praxis gemischte Klassen — `…preferences` etwa trägt neben echten Präferenzen auch Fakten und Arbeitsanweisungen. Deshalb kann jeder einzelne Eintrag beim Schreiben eine abweichende Klasse führen, und eine spätere Änderung der Regel wirkt **nicht** rückwirkend auf den Bestand.
+>
+> Die Klasse steht bewusst **nicht** im Namespace-Namen. Sie kann sich ändern — eine Episode, die sich als dauerhafter Fakt erweist, wechselt die Klasse, ohne den Namespace zu verlassen. Ohne Klasse bleibt das Feld leer; das ist ehrlicher als ein geratener Wert.
+
+Feld leer lassen (**„Kein Standard"**), wenn ein Namespace zu gemischt ist, um eine sinnvolle Vorgabe zu tragen.
+
+## 4. Pattern Matching
 Regeln gelten für Namespace-Muster, nicht für einzelne Namespaces:
 
 | Schreibweise | Bedeutung |

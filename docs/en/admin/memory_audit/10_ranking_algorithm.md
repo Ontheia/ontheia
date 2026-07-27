@@ -29,6 +29,20 @@ Hits below 70 % of the best hit are discarded. With a top hit of `0.81` everythi
 
 The value can be overridden per agent in the memory policy via `relative_cutoff`; `0` disables it. Values from `0.8` upwards are risky: at `0.9` every third hit would vanish, many of them legitimate.
 
+### 1.4 Exclusion criteria, applied before scoring
+
+Three groups drop out of the query before anything is scored — as a condition in the `WHERE` clause, not as a penalty:
+
+| Condition | Meaning |
+| :--- | :--- |
+| `deleted_at IS NULL` | soft-deleted |
+| `expires_at IS NULL OR expires_at > now()` | expired |
+| `superseded_by IS NULL` | **replaced by a newer entry** |
+
+The third arrived with version 0.6.0. A superseded entry is not "less relevant" — it is no longer the statement that holds. Penalising it through the score would leave it to the cosine to decide whether the old or the new version wins.
+
+The superseded entry is kept and stays readable by its id. It disappears from search, not from the database.
+
 ### 1.2 Namespace Mixing
 Namespaces are not searched sequentially. The query runs across all target namespaces simultaneously (`namespace = ANY(...)`), enabling true relevance mixing across namespace boundaries.
 
@@ -48,6 +62,10 @@ To prefer recent information (e.g. from the current session), a time-dependent s
 
 **Formula:**
 $$Share_{age} = \frac{recency\_decay}{1 + Age\_in\_Days}$$
+
+> **Measured on `updated_at`, not `created_at`.** Up to version 0.6.0 the write path set `created_at` to now() whenever the same content was written again — the field already behaved like a modification date, and the ranking was calibrated on that. Now that the creation time is preserved, `updated_at` carries the role explicitly.
+>
+> `observed_at` is deliberately **not** used here: recency means how fresh the entry is in the system, not how old the fact is.
 
 *   **recency_decay:** Configurable in `embedding.config.json` (default: `0.05`).
 *   **Characteristic:** The share halves after the first day and asymptotically approaches zero after 30 days.

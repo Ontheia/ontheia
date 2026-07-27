@@ -26,7 +26,7 @@ import type { EmbeddingConfig } from './config.js';
 import { logger } from '../logger.js';
 import type { EmbeddingProvider } from './provider.js';
 import { sanitizeMetadata } from './metadata.js';
-import type { MemoryHit, MemoryWriteInput } from './types.js';
+import { MEMORY_CLASSES, type MemoryClass, type MemoryHit, type MemoryWriteInput } from './types.js';
 
 type TableDefinition = {
   name: string;
@@ -52,6 +52,8 @@ type SearchOptions = {
 type NamespaceRule = {
   bonus: number;
   instruction?: string;
+  /** Default class for entries written here. Overridable per row. */
+  memoryClass?: MemoryClass;
 };
 
 // Similarity floor for a hit to reach the model. 0.2 accepted almost anything:
@@ -161,12 +163,15 @@ export class MemoryAdapter {
 
   async loadNamespaceRules(): Promise<void> {
     try {
-      const res = await this.db.query('SELECT pattern, bonus, instruction_template FROM app.vector_namespace_rules');
+      const res = await this.db.query(
+        'SELECT pattern, bonus, instruction_template, memory_class FROM app.vector_namespace_rules'
+      );
       const newRules = new Map<string, NamespaceRule>();
       for (const row of res.rows) {
         newRules.set(row.pattern, {
           bonus: Number(row.bonus),
-          instruction: typeof row.instruction_template === 'string' && row.instruction_template.trim().length > 0 ? row.instruction_template.trim() : undefined
+          instruction: typeof row.instruction_template === 'string' && row.instruction_template.trim().length > 0 ? row.instruction_template.trim() : undefined,
+          memoryClass: isMemoryClass(row.memory_class) ? row.memory_class : undefined
         });
       }
       this.namespaceRules = newRules;
@@ -182,6 +187,59 @@ export class MemoryAdapter {
   async refreshConfig(): Promise<void> {
     if (this.disabled) return;
     await this.loadNamespaceRules();
+  }
+
+  /**
+   * Default class for a namespace, taken from the namespace rules. Longest
+   * matching pattern wins, so a specific rule beats a wildcard — same
+   * precedence as the instruction templates.
+   *
+   * Returns undefined when no rule carries a class. That leaves the column
+   * NULL, which is the honest outcome: an unclassified entry is better than a
+   * guessed one.
+   */
+  resolveClassForNamespace(namespace: string): MemoryClass | undefined {
+    let bestMatch: MemoryClass | undefined;
+    let bestLength = -1;
+
+    for (const [pattern, rule] of this.namespaceRules.entries()) {
+      if (!rule.memoryClass) continue;
+      if (!namespacePatternToRegex(pattern).test(namespace)) continue;
+      if (pattern.length > bestLength) {
+        bestMatch = rule.memoryClass;
+        bestLength = pattern.length;
+      }
+    }
+    return bestMatch;
+  }
+
+  /**
+   * Records that `newId` replaces `oldId`. The old row keeps its content and
+   * stays readable by id — it is excluded from search, not deleted.
+   *
+   * Searches every dimension table because superseded_by carries no foreign
+   * key and a re-embedding run can move a namespace between them.
+   */
+  private async markSuperseded(
+    db: Pool | PoolClient,
+    oldId: string,
+    newId: string
+  ): Promise<boolean> {
+    if (oldId === newId) {
+      logger.warn({ id: oldId }, 'Ignoring an entry that would supersede itself');
+      return false;
+    }
+    for (const table of this.tables) {
+      const res = await db.query(
+        `UPDATE ${table.name}
+            SET superseded_by = $2, status = 'superseded', updated_at = now()
+          WHERE id = $1 AND deleted_at IS NULL`,
+        [oldId, newId]
+      );
+      if (res.rowCount && res.rowCount > 0) return true;
+    }
+    logger.warn({ oldId, newId }, 'Entry to supersede was not found — the new entry stands alone');
+    return false;
   }
 
   /**
@@ -244,6 +302,10 @@ export class MemoryAdapter {
     const { conditions, params: filterParams } = buildMetadataFilters(options?.filters);
     const ttlFilter = `(expires_at IS NULL OR expires_at > now())`;
     const deleteFilter = `deleted_at IS NULL`;
+    // An exclusion criterion, not a weight: a superseded entry is not "less
+    // relevant", it is no longer the current statement. Plan §2.3 forbids
+    // mixing that into the score.
+    const supersededFilter = `superseded_by IS NULL`;
 
     // Build namespace WHERE clause supporting both exact and wildcard patterns
     const buildNamespaceCondition = (params: any[], startIdx: number): { sql: string; nextIdx: number } => {
@@ -267,7 +329,7 @@ export class MemoryAdapter {
       const params: any[] = [];
       const { sql: nsCond, nextIdx } = buildNamespaceCondition(params, 1);
       let idx = nextIdx;
-      const whereParts = [nsCond, deleteFilter, ttlFilter];
+      const whereParts = [nsCond, deleteFilter, ttlFilter, supersededFilter];
       if (conditions.length > 0) {
         for (const cond of conditions) {
           whereParts.push(cond.replace(/\$\d+/g, () => `$${idx++}`));
@@ -277,10 +339,11 @@ export class MemoryAdapter {
       params.push(fetchLimit);
       const limitParam = `$${idx}`;
       const fallback = await db.query(
-        `SELECT id, namespace, content, metadata, created_at
+        `SELECT id, namespace, content, metadata, created_at,
+                updated_at, observed_at, status, class
            FROM ${table.name}
           WHERE ${whereParts.join(' AND ')}
-          ORDER BY created_at DESC
+          ORDER BY updated_at DESC
           LIMIT ${limitParam}`,
         params
       );
@@ -291,7 +354,7 @@ export class MemoryAdapter {
         const params: any[] = [encodedVector];
         const { sql: nsCond, nextIdx } = buildNamespaceCondition(params, 2);
         let idx = nextIdx;
-        const whereParts = [nsCond, deleteFilter, ttlFilter];
+        const whereParts = [nsCond, deleteFilter, ttlFilter, supersededFilter];
         if (conditions.length > 0) {
           for (const cond of conditions) {
             whereParts.push(cond.replace(/\$\d+/g, () => `$${idx++}`));
@@ -321,6 +384,10 @@ export class MemoryAdapter {
                   content,
                   metadata,
                   created_at,
+                  updated_at,
+                  observed_at,
+                  status,
+                  class,
                   1 - (${table.column} <=> $1::vector) AS score
              FROM ${table.name}
             WHERE ${whereParts.join(' AND ')}
@@ -373,8 +440,15 @@ export class MemoryAdapter {
       }
     }
 
-    if (this.rankingConfig?.recency_decay && hit.createdAt) {
-      const ageInDays = Math.max(0, (Date.now() - new Date(hit.createdAt).getTime()) / 86_400_000);
+    // Recency runs on updated_at, not created_at. Before V76 the upsert reset
+    // created_at on every rewrite, so the field already behaved like
+    // updated_at — and the ranking was calibrated on that. Fixing the upsert
+    // without moving the anchor would have changed the ranking silently.
+    // "Recency" here means how fresh the entry is in the system, not how old
+    // the fact is, so observed_at is deliberately not used.
+    const anchor = hit.updatedAt ?? hit.createdAt;
+    if (this.rankingConfig?.recency_decay && anchor) {
+      const ageInDays = Math.max(0, (Date.now() - new Date(anchor).getTime()) / 86_400_000);
       multiplier += this.rankingConfig.recency_decay / (1 + ageInDays);
     }
 
@@ -469,33 +543,70 @@ export class MemoryAdapter {
               : null;
           const expiresAt = ttlSeconds ? new Date(Date.now() + ttlSeconds * 1000) : null;
           
-          // Check for existing document to prevent duplicates
+          // The class comes from the namespace rules unless the caller named
+          // one — a namespace holds mixed classes often enough that the rule
+          // can only be a default (plan §9.6.5).
+          const docClass = doc.class ?? this.resolveClassForNamespace(trimmed) ?? null;
+          const observedAt = doc.observedAt ? new Date(doc.observedAt) : null;
+
+          // A deleted entry is not a duplicate. Rewriting the same text used to
+          // resurrect it — silently, and without an audit entry.
           const existingRes = await dbClient.query(
-            `SELECT id FROM ${table.name} WHERE namespace = $1 AND content = $2 LIMIT 1`,
+            `SELECT id FROM ${table.name}
+              WHERE namespace = $1 AND content = $2 AND deleted_at IS NULL
+              LIMIT 1`,
             [trimmed, doc.content]
           );
-          
+
+          let writtenId: string;
           if (existingRes.rowCount && existingRes.rowCount > 0) {
-            // Update existing document (restore if deleted, refresh timestamp and metadata)
-            await dbClient.query(
-              `UPDATE ${table.name} 
-                  SET expires_at = $2, 
-                      created_at = now(), 
-                      deleted_at = NULL,
-                      metadata = $3::jsonb,
+            // Refresh in place. created_at is preserved — it used to be reset
+            // to now(), which made a months-old fact look brand new in the
+            // injected block while the prompt told the model to trust the date.
+            const res = await dbClient.query(
+              `UPDATE ${table.name}
+                  SET expires_at  = $2,
+                      updated_at  = now(),
+                      metadata    = $3::jsonb,
+                      observed_at = COALESCE($5, observed_at),
+                      class       = COALESCE($6, class),
                       ${table.column} = $4::vector
-                WHERE id = $1`,
-              [existingRes.rows[0].id, expiresAt, JSON.stringify(doc.metadata), encodeVector(doc.embedding)]
+                WHERE id = $1
+            RETURNING id`,
+              [
+                existingRes.rows[0].id,
+                expiresAt,
+                JSON.stringify(doc.metadata),
+                encodeVector(doc.embedding),
+                observedAt,
+                docClass
+              ]
             );
+            writtenId = res.rows[0].id;
             inserted++;
           } else {
-            // Insert new document
-            await dbClient.query(
-              `INSERT INTO ${table.name} (namespace, content, ${table.column}, metadata, expires_at, deleted_at)
-               VALUES ($1, $2, $3::vector, $4::jsonb, $5, NULL)`,
-              [trimmed, doc.content, encodeVector(doc.embedding), JSON.stringify(doc.metadata), expiresAt]
+            const res = await dbClient.query(
+              `INSERT INTO ${table.name}
+                 (namespace, content, ${table.column}, metadata, expires_at, deleted_at,
+                  observed_at, class)
+               VALUES ($1, $2, $3::vector, $4::jsonb, $5, NULL, $6, $7)
+            RETURNING id`,
+              [
+                trimmed,
+                doc.content,
+                encodeVector(doc.embedding),
+                JSON.stringify(doc.metadata),
+                expiresAt,
+                observedAt,
+                docClass
+              ]
             );
+            writtenId = res.rows[0].id;
             inserted++;
+          }
+
+          if (doc.supersedes) {
+            await this.markSuperseded(dbClient, doc.supersedes, writtenId);
           }
         }
       }
@@ -586,7 +697,8 @@ export class MemoryAdapter {
               metadata = $5::jsonb,
               expires_at = $6,
               deleted_at = NULL,
-              created_at = created_at
+              created_at = created_at,
+              updated_at = now()
         WHERE id = $1`,
       [trimmedId, nextNamespace, nextContent, nextVector, JSON.stringify(nextMetadata), expiresAt]
     );
@@ -639,7 +751,7 @@ export class MemoryAdapter {
       for (const table of this.tables) {
         const sql = options?.hard
           ? `DELETE FROM ${table.name} WHERE namespace = $1 AND content = ANY($2)`
-          : `UPDATE ${table.name} SET deleted_at = now() WHERE namespace = $1 AND content = ANY($2)`;
+          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now() WHERE namespace = $1 AND content = ANY($2)`;
         const res = await dbClient.query(sql, [trimmed, targets]);
         affected += res.rowCount ?? 0;
       }
@@ -672,7 +784,7 @@ export class MemoryAdapter {
       for (const table of this.tables) {
         const sql = options?.hard
           ? `DELETE FROM ${table.name} WHERE namespace = $1 AND id = $2`
-          : `UPDATE ${table.name} SET deleted_at = now() WHERE namespace = $1 AND id = $2`;
+          : `UPDATE ${table.name} SET deleted_at = now(), updated_at = now() WHERE namespace = $1 AND id = $2`;
         const res = await dbClient.query(sql, [trimmedNs, trimmedId]);
         affected += res.rowCount ?? 0;
       }
@@ -694,11 +806,41 @@ export class MemoryAdapter {
       const res = await db.query(`
         DELETE FROM ${table.name}
         WHERE expires_at IS NOT NULL AND expires_at < now()
+        RETURNING id
       `);
       totalDeleted += res.rowCount ?? 0;
+      await this.clearSupersededEdges(db, res.rows.map((row: { id: string }) => row.id));
     }
 
     return { deleted: totalDeleted };
+  }
+
+  /**
+   * Does what `ON DELETE SET NULL` would do, if superseded_by had a foreign
+   * key. It deliberately has none (a re-embedding run can move a namespace
+   * into another dimension table, and a key cannot span them), so a hard
+   * delete has to clear the incoming edges by hand.
+   *
+   * Leaving them dangling would hide the superseded entry forever: the search
+   * gate gives up on `superseded_by IS NULL` and never asks whether the target
+   * still exists.
+   */
+  private async clearSupersededEdges(db: Pool | PoolClient, removedIds: string[]): Promise<void> {
+    if (removedIds.length === 0) return;
+    for (const table of this.tables) {
+      const res = await db.query(
+        `UPDATE ${table.name}
+            SET superseded_by = NULL, status = 'unconfirmed'
+          WHERE superseded_by = ANY($1::uuid[])`,
+        [removedIds]
+      );
+      if (res.rowCount && res.rowCount > 0) {
+        logger.info(
+          { table: table.name, restored: res.rowCount },
+          'Superseding entries were deleted — the older entries are visible again'
+        );
+      }
+    }
   }
 
   async cleanupDuplicates(client?: PoolClient): Promise<{ deleted: number }> {
@@ -710,19 +852,25 @@ export class MemoryAdapter {
         WITH duplicates AS (
             SELECT id,
                    ROW_NUMBER() OVER (
-                       PARTITION BY namespace, md5(content) 
-                       ORDER BY created_at DESC, id DESC
+                       PARTITION BY namespace, md5(content)
+                       -- A live entry always outranks a deleted one with the
+                       -- same text. Since the upsert no longer resurrects
+                       -- deleted rows, such pairs exist by design, and the
+                       -- surviving row must be the one the user still has.
+                       ORDER BY (deleted_at IS NULL) DESC, created_at DESC, id DESC
                    ) as row_num
             FROM ${table.name}
         )
         DELETE FROM ${table.name}
         WHERE id IN (
-            SELECT id 
-            FROM duplicates 
+            SELECT id
+            FROM duplicates
             WHERE row_num > 1
         )
+        RETURNING id
       `);
       totalDeleted += res.rowCount ?? 0;
+      await this.clearSupersededEdges(db, res.rows.map((row: { id: string }) => row.id));
     }
 
     return { deleted: totalDeleted };
@@ -767,6 +915,9 @@ type PreparedDocument = {
   content: string;
   metadata: Record<string, unknown>;
   embedding?: number[];
+  observedAt?: string;
+  class?: MemoryClass;
+  supersedes?: string;
 };
 
 function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
@@ -784,8 +935,18 @@ function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
   return {
     content,
     metadata,
-    embedding: doc.embedding
+    embedding: doc.embedding,
+    // A malformed date is dropped rather than stored: observed_at exists to be
+    // trustworthy, and NULL says "unknown" honestly.
+    observedAt: isValidDate(doc.observedAt) ? doc.observedAt : undefined,
+    class: isMemoryClass(doc.class) ? doc.class : undefined,
+    supersedes: typeof doc.supersedes === 'string' && doc.supersedes.trim() ? doc.supersedes.trim() : undefined
   };
+}
+
+function isValidDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  return !Number.isNaN(new Date(value).getTime());
 }
 
 function encodeVector(values: number[]): string {
@@ -800,8 +961,23 @@ function mapRowToHit(row: any, score: number): MemoryHit {
     content: row.content,
     metadata: row.metadata ?? {},
     score: normalizedScore,
-    createdAt: row.created_at?.toISOString?.() ?? new Date(row.created_at).toISOString()
+    createdAt: toIsoOrUndefined(row.created_at) ?? new Date(row.created_at).toISOString(),
+    updatedAt: toIsoOrUndefined(row.updated_at),
+    observedAt: toIsoOrUndefined(row.observed_at),
+    status: row.status ?? undefined,
+    class: isMemoryClass(row.class) ? row.class : undefined
   };
+}
+
+function toIsoOrUndefined(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (value instanceof Date) return value.toISOString();
+  const parsed = new Date(value as string);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
+
+function isMemoryClass(value: unknown): value is MemoryClass {
+  return typeof value === 'string' && (MEMORY_CLASSES as readonly string[]).includes(value);
 }
 
 function clamp(value: number, min: number, max: number): number {

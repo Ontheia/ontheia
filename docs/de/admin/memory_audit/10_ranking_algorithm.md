@@ -29,6 +29,20 @@ Treffer unterhalb von 70 % des besten Treffers werden verworfen. Bei einem Spitz
 
 Der Wert lässt sich pro Agent in der Memory-Policy über `relative_cutoff` überschreiben; `0` schaltet ihn ab. Werte ab `0.8` sind riskant: bei `0.9` verschwände jeder dritte Treffer, viele davon berechtigt.
 
+### 1.4 Ausschlusskriterien vor dem Scoring
+
+Vor jeder Bewertung fallen drei Gruppen aus der Abfrage — nicht als Abwertung, sondern als Bedingung in der `WHERE`-Klausel:
+
+| Bedingung | Bedeutung |
+| :--- | :--- |
+| `deleted_at IS NULL` | gelöscht (weich) |
+| `expires_at IS NULL OR expires_at > now()` | abgelaufen |
+| `superseded_by IS NULL` | **von einem neueren Eintrag abgelöst** |
+
+Die dritte Zeile kam mit Version 0.6.0. Ein abgelöster Eintrag ist nicht „weniger relevant" — er ist nicht mehr die geltende Aussage. Ihn über den Score zu benachteiligen hieße, den Kosinus darüber entscheiden zu lassen, ob die alte oder die neue Fassung gewinnt.
+
+Der abgelöste Eintrag bleibt erhalten und über seine ID lesbar. Er verschwindet aus der Suche, nicht aus der Datenbank.
+
 ### 1.2 Namespace-Mischung
 Namespaces werden nicht sequentiell durchsucht. Die Abfrage erfolgt über alle Ziel-Namespaces gleichzeitig (`namespace = ANY(...)`), was eine echte Relevanz-Mischung über Namespace-Grenzen hinweg ermöglicht.
 
@@ -48,6 +62,10 @@ Um aktuelle Informationen (z.B. aus der laufenden Session) zu bevorzugen, geht e
 
 **Formel:**
 $$Anteil_{age} = \frac{recency\_decay}{1 + Alter\_in\_Tagen}$$
+
+> **Gemessen wird `updated_at`, nicht `created_at`.** Bis Version 0.6.0 setzte der Schreibpfad `created_at` bei jedem erneuten Schreiben desselben Inhalts auf „jetzt" — das Feld verhielt sich also bereits wie ein Änderungsdatum, und das Ranking war darauf eingestellt. Seit die Anlagezeit erhalten bleibt, trägt `updated_at` diese Rolle ausdrücklich.
+>
+> `observed_at` wird hier **nicht** verwendet: Rezenz meint, wie frisch der Eintrag im System ist, nicht wie alt der Sachverhalt ist.
 
 *   **recency_decay:** Konfigurierbar in `embedding.config.json` (Standard: `0.05`).
 *   **Charakteristik:** Der Anteil halbiert sich nach dem ersten Tag und nähert sich nach 30 Tagen asymptotisch der Null.

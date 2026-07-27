@@ -29,6 +29,8 @@ import {
   createNamespaceRule,
   updateNamespaceRule,
   deleteNamespaceRule,
+  MEMORY_CLASSES,
+  type MemoryClass,
   type NamespaceRule
 } from '../lib/api';
 import { Button } from './ui/button';
@@ -53,6 +55,7 @@ export function NamespaceRulesEditor() {
   const [bonus, setBonus] = useState('');
   const [description, setDescription] = useState('');
   const [instructionTemplate, setInstructionTemplate] = useState('');
+  const [memoryClass, setMemoryClass] = useState<MemoryClass | ''>('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -82,6 +85,7 @@ export function NamespaceRulesEditor() {
     setBonus(String(rule.bonus));
     setDescription(rule.description || '');
     setInstructionTemplate(rule.instructionTemplate || '');
+    setMemoryClass(rule.memoryClass || '');
     setError(null);
   };
 
@@ -91,6 +95,7 @@ export function NamespaceRulesEditor() {
     setBonus('');
     setDescription('');
     setInstructionTemplate('');
+    setMemoryClass('');
     setError(null);
   };
 
@@ -108,7 +113,8 @@ export function NamespaceRulesEditor() {
           pattern: pattern.trim(),
           bonus: bonusVal,
           description: description.trim() || null,
-          instructionTemplate: instructionTemplate.trim() || null
+          instructionTemplate: instructionTemplate.trim() || null,
+          memoryClass: memoryClass || null
         });
         setRules(prev => prev.map(r => r.id === editingId ? updated : r).sort((a, b) => a.pattern.localeCompare(b.pattern)));
         handleCancel(); // Reset form
@@ -117,13 +123,15 @@ export function NamespaceRulesEditor() {
           pattern: pattern.trim(),
           bonus: bonusVal,
           description: description.trim() || null,
-          instructionTemplate: instructionTemplate.trim() || null
+          instructionTemplate: instructionTemplate.trim() || null,
+          memoryClass: memoryClass || null
         });
         setRules(prev => [...prev, created].sort((a, b) => a.pattern.localeCompare(b.pattern)));
         setPattern('');
         setBonus('');
         setDescription('');
         setInstructionTemplate('');
+        setMemoryClass('');
       }
     } catch (err) {
       setError(localizeError(err, t, 'memory.rules.saveError'));
@@ -196,16 +204,29 @@ export function NamespaceRulesEditor() {
               className="bg-[#121B2B] border-[#1E293B]"
             />
           </div>
-          <div className="md:col-span-6 space-y-1.5">
+          <div className="md:col-span-3 space-y-1.5">
+            <label className="text-xs font-medium text-slate-400">{t('memory.rules.memoryClass')}</label>
+            <select
+              value={memoryClass}
+              onChange={e => setMemoryClass(e.target.value as MemoryClass | '')}
+              className="flex h-9 w-full rounded-md border border-[#1E293B] bg-[#121B2B] px-3 py-1 text-sm"
+            >
+              <option value="">{t('memory.rules.memoryClassNone')}</option>
+              {MEMORY_CLASSES.map(cls => (
+                <option key={cls} value={cls}>{t(`memory.rules.class.${cls}`)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-3 space-y-1.5">
             <label className="text-xs font-medium text-slate-400">{t('memory.rules.descriptionLabel')}</label>
-            <Input 
-              value={description} 
-              onChange={e => setDescription(e.target.value)} 
-              placeholder={t('memory.rules.descriptionPlaceholder')} 
+            <Input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder={t('memory.rules.descriptionPlaceholder')}
               className="bg-[#121B2B] border-[#1E293B]"
             />
           </div>
-          
+
           <div className="md:col-span-10 space-y-1.5">
             <label className="text-xs font-medium text-slate-400">{t('memory.rules.instructionTemplate')}</label>
             <Input 
@@ -254,6 +275,7 @@ export function NamespaceRulesEditor() {
             <tr>
               <th className="p-3 w-1/4">{t('memory.rules.pattern')}</th>
               <th className="p-3 w-20 text-right">{t('memory.rules.bonus')}</th>
+              <th className="p-3 w-28">{t('memory.rules.memoryClass')}</th>
               <th className="p-3 w-1/3">{t('memory.rules.instructionTemplate')}</th>
               <th className="p-3">{t('memory.rules.descriptionLabel')}</th>
               <th className="p-3 w-24"></th>
@@ -262,7 +284,7 @@ export function NamespaceRulesEditor() {
           <tbody className="divide-y divide-[#1E293B] bg-[#020817]">
             {rules.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-muted-foreground italic">
+                <td colSpan={6} className="p-8 text-center text-muted-foreground italic">
                   {t('memory.rules.noRules')}
                 </td>
               </tr>
@@ -271,6 +293,13 @@ export function NamespaceRulesEditor() {
                 <tr key={rule.id} className={`bg-[#121B2B] hover:bg-[#1e293b] transition-colors ${editingId === rule.id ? 'ring-1 ring-inset ring-sky-500/50' : ''}`}>
                   <td className="p-3 font-mono text-xs text-sky-300">{rule.pattern}</td>
                   <td className="p-3 text-right font-mono">{rule.bonus > 0 ? '+' : ''}{rule.bonus.toFixed(2)}</td>
+                  <td className="p-3 text-xs">
+                    {rule.memoryClass ? (
+                      <span className="text-slate-300">{t(`memory.rules.class.${rule.memoryClass}`)}</span>
+                    ) : (
+                      <span className="text-slate-600 italic">{t('notSet', { ns: 'common' })}</span>
+                    )}
+                  </td>
                   <td className="p-3 text-xs text-slate-300 truncate max-w-[200px]">
                     {rule.instructionTemplate ? (
                       <Tooltip>

@@ -164,5 +164,51 @@ test('formatMemoryContext returns an empty string for no hits', () => {
 
 test('formatMemoryContext tolerates a missing createdAt', () => {
   const out = formatMemoryContext([{ namespace: 'vector.global.docs', content: 'X', metadata: {}, score: 0.5 } as any]);
-  assert.match(out, /Stored on Unknown/);
+  // Not "Stored on Unknown" — a storage date we do not have is better stated
+  // as unknown than as a date-shaped placeholder.
+  assert.match(out, /Date unknown/);
+});
+
+test('formatMemoryContext prefers observed_at over the storage date', () => {
+  const out = formatMemoryContext([
+    {
+      namespace: 'vector.agent.x.memory',
+      content: 'Battery ordered',
+      metadata: {},
+      score: 0.9,
+      createdAt: '2026-05-11T10:00:00.000Z',
+      observedAt: '2026-03-14T09:00:00.000Z'
+    } as any
+  ]);
+  assert.match(out, /Observed on 3\/14\/2026, stored 5\/11\/2026/);
+});
+
+test('formatMemoryContext names a rewrite instead of hiding it', () => {
+  const out = formatMemoryContext([
+    {
+      namespace: 'vector.agent.x.memory',
+      content: 'Y',
+      metadata: {},
+      score: 0.9,
+      createdAt: '2026-01-19T10:00:00.000Z',
+      updatedAt: '2026-05-11T10:00:00.000Z'
+    } as any
+  ]);
+  assert.match(out, /Stored on 1\/19\/2026, updated 5\/11\/2026/);
+});
+
+test('formatMemoryContext stays terse when nothing changed', () => {
+  const out = formatMemoryContext([
+    {
+      namespace: 'vector.agent.x.memory',
+      content: 'Z',
+      metadata: {},
+      score: 0.9,
+      createdAt: '2026-01-19T10:00:00.000Z',
+      updatedAt: '2026-01-19T18:00:00.000Z'
+    } as any
+  ]);
+  // Same day: no second date, no extra tokens.
+  assert.match(out, /Stored on 1\/19\/2026,/);
+  assert.doesNotMatch(out, /updated/);
 });

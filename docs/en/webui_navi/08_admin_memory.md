@@ -111,6 +111,7 @@ Namespace rules editor: Configures ranking bonuses and LLM instruction templates
 | --- | --- | --- |
 | Namespace Pattern | Text | Namespace pattern the rule applies to. `${user_id}` stands for exactly one segment, `*` for the remainder — e.g. `vector.agent.${user_id}.howto` or `vector.global.*`. Sub-namespaces are included. |
 | Ranking Bonus | Number | Percentage surcharge on the relevance score: `0.1` means +10 %. The rules shipped by default range from `0.03` to `0.12`. |
+| Memory Class | Dropdown | Default class for entries in this namespace: `Episodic`, `Semantic`, `Procedural`, `Working context`, `Document (corpus)` or **No default**. It is applied automatically on write; a single entry may differ, and changing it later does not reclassify existing rows. |
 | Rule Description | Text | Human-readable identifier for the rule. |
 | LLM Instruction Template | Textarea | Text placed before this namespace's results in the context. The only placeholder is **`{{content}}`** — that is where the results are inserted; if it is missing, they are appended. When several results match the same rule, the text appears **once** above all of them. |
 

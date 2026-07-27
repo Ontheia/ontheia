@@ -17,7 +17,25 @@ This is a powerful feature to increase response quality. When the AI finds a hit
 
 > The text does not go into the system prompt but to the end of the last user message. The reason is prompt caching; details in the [technical reference](/en/admin/memory_audit/10_ranking_algorithm/).
 
-## 3. Pattern Matching
+## 3. Memory class
+
+A rule can define a **default class** for its namespace. Every entry written there gets it automatically — the agent does not have to say anything.
+
+| Class | For |
+| :--- | :--- |
+| **Episodic** | Something that happened, at a time |
+| **Semantic** | A fact that holds until it is replaced |
+| **Procedural** | A rule or how-to |
+| **Working context** | Needed for the current task only |
+| **Document (corpus)** | Ingested source material, not memory |
+
+> **The rule is a default, not a verdict.** In practice a namespace holds mixed classes — `…preferences`, for instance, carries facts and working instructions alongside actual preferences. That is why any single entry may carry a different class when written, and why changing the rule later does **not** reclassify the existing rows.
+
+> The class is deliberately **not** part of the namespace name. It can change — an episode that turns out to be a lasting fact changes class without leaving its namespace. Where no rule applies the field stays empty, which is more honest than a guess.
+
+Leave the field on **"No default"** when a namespace is too mixed to carry a sensible one.
+
+## 4. Pattern Matching
 Rules apply to namespace patterns, not to individual namespaces:
 
 | Notation | Meaning |

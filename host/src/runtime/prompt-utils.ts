@@ -135,6 +135,41 @@ function substituteContent(template: string, entriesText: string): string {
   }, '');
 }
 
+const asDay = (value?: string): string | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleDateString('en-US');
+};
+
+/**
+ * The date line of a memory entry.
+ *
+ * The system prompt tells the model to pay attention to the storage date, so
+ * the date has to mean what it says. Three cases:
+ *
+ *   observed known   → "Observed on X, stored Y" — when the fact holds beats
+ *                      when we wrote it down
+ *   rewritten since  → "Stored on X, updated Y" — before V76 the rewrite reset
+ *                      created_at and the entry looked new; now both are shown
+ *   neither          → "Stored on X", as before
+ *
+ * The extra date is emitted only when it differs by a day, so the common case
+ * costs no extra tokens.
+ */
+export function describeDates(hit: MemoryHit): string {
+  const created = asDay(hit.createdAt);
+  const observed = asDay(hit.observedAt);
+  const updated = asDay(hit.updatedAt);
+
+  if (observed) {
+    return created && created !== observed
+      ? `Observed on ${observed}, stored ${created}`
+      : `Observed on ${observed}`;
+  }
+  if (!created) return 'Date unknown';
+  return updated && updated !== created ? `Stored on ${created}, updated ${updated}` : `Stored on ${created}`;
+}
+
 /**
  * Renders retrieved memory hits into the block that goes to the model.
  *
@@ -161,8 +196,7 @@ export function formatMemoryContext(
   const groups = new Map<string, string[]>();
   for (const hit of hits) {
     const instruction = resolveInstruction?.(hit.namespace) ?? '';
-    const dateStr = hit.createdAt ? new Date(hit.createdAt).toLocaleDateString('en-US') : 'Unknown';
-    const entry = `--- MEMORY ENTRY (Stored on ${dateStr}, Namespace: ${hit.namespace}) ---\n${hit.content}`;
+    const entry = `--- MEMORY ENTRY (${describeDates(hit)}, Namespace: ${hit.namespace}) ---\n${hit.content}`;
     const bucket = groups.get(instruction);
     if (bucket) bucket.push(entry);
     else groups.set(instruction, [entry]);

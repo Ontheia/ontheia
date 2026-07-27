@@ -31,13 +31,28 @@ export interface MemoryMetadata extends Record<string, unknown> {
   ttl_seconds?: number;
 }
 
+/** The five memory classes. `document` is corpus, the other four are memory. */
+export const MEMORY_CLASSES = ['episodic', 'semantic', 'procedural', 'working', 'document'] as const;
+export type MemoryClass = (typeof MEMORY_CLASSES)[number];
+
+/** Maturity of a statement, not a confidence score — see plan §9.6.6. */
+export const MEMORY_STATUSES = ['unconfirmed', 'confirmed', 'superseded'] as const;
+export type MemoryStatus = (typeof MEMORY_STATUSES)[number];
+
 export interface MemoryHit {
   id?: string;
   namespace: string;
   content: string;
   metadata: MemoryMetadata;
   score: number;
+  /** Creation time. Since V76 this is the real one — the upsert no longer resets it. */
   createdAt: string;
+  /** Last write. The recency anchor for ranking. */
+  updatedAt?: string;
+  /** When the fact was observed, if known. Readers fall back to createdAt. */
+  observedAt?: string;
+  status?: MemoryStatus;
+  class?: MemoryClass;
   created_at?: string;
   duplicates?: {
     namespace: string;
@@ -53,6 +68,15 @@ export interface MemoryWriteInput {
   content: string;
   metadata?: MemoryMetadata;
   embedding?: number[];
+  /**
+   * Lifecycle fields. Deliberately not part of `metadata` — they are columns,
+   * and `metadata.observed_at` alongside an `observed_at` column would be an
+   * invitation to read the wrong one (see memory/metadata.ts).
+   */
+  observedAt?: string;
+  class?: MemoryClass;
+  /** Id of the entry this one replaces. That row gets superseded_by + status. */
+  supersedes?: string;
 }
 
 export interface MemoryOptions {

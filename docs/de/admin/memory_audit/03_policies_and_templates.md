@@ -63,6 +63,14 @@ Beim Speichern von Informationen (manuell oder via Tool) können zusätzliche St
 - **Tags:** Kommagetrennte Schlagworte (z. B. `rechnung, 2024, prioritär`), die eine spätere Filterung oder thematische Gruppierung ermöglichen.
 - **Metadata (JSON):** Ein beliebiges JSON-Objekt für fortgeschrittene Filterungen (z. B. `{"kunde_id": 123, "status": "archiviert"}`).
 
+Ab Version 0.6.0 kann ein Agent beim Schreiben zusätzlich drei Angaben machen:
+
+- **`observed_at`:** Wann der Sachverhalt beobachtet wurde — nicht, wann gespeichert wird. Nur zu setzen, wenn das Gespräch eine Zeit nennt („seit März", „gestern bestellt"). Ohne Angabe bleibt das Feld leer; ein geratenes Datum wäre schlechter als keines.
+- **`supersedes`:** Die ID eines Eintrags, den dieser ersetzt. Der alte Eintrag bleibt lesbar, fällt aber aus der Suche — die Korrektur wird damit festgehalten, statt den Widerspruch durch Löschen zu tilgen.
+- **`class`:** Die [Gedächtnisklasse](/de/admin/memory_audit/08_namespace_rules_details/). Ohne Angabe gilt der Standard des Namespace.
+
+> **Reservierte Felder.** `source`, `agent_id`, `task_id`, `status`, `observed_at` und die übrigen Systemfelder vergibt Ontheia selbst. Werden sie in einem Metadaten-JSON mitgeschickt, verwirft der Server sie und protokolliert das. Sie entscheiden mit darüber, wie sehr einem Eintrag vertraut wird — und dürfen deshalb nicht von der Seite kommen, über die geurteilt wird.
+
 ## Automatisches Speichern (Auto-Memory-Write)
 
 Nach jedem erfolgreichen Run schreibt Ontheia automatisch bis zu zwei Einträge in den konfigurierten Write-Namespace:

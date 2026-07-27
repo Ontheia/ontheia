@@ -1510,11 +1510,17 @@ export function getUserAuditApi() {
   }>;
 }
 
+/** The four memory classes plus `document` for corpus material. */
+export const MEMORY_CLASSES = ['episodic', 'semantic', 'procedural', 'working', 'document'] as const;
+export type MemoryClass = (typeof MEMORY_CLASSES)[number];
+
 export type NamespaceRule = {
   id: string;
   pattern: string;
   bonus: number;
   instructionTemplate: string | null;
+  /** Default class for entries written to a matching namespace. */
+  memoryClass: MemoryClass | null;
   description: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1524,14 +1530,14 @@ export function listNamespaceRules() {
   return request('/admin/namespace-rules', { method: 'GET' }) as Promise<NamespaceRule[]>;
 }
 
-export function createNamespaceRule(payload: { pattern: string; bonus: number; instructionTemplate?: string | null; description?: string | null }) {
+export function createNamespaceRule(payload: { pattern: string; bonus: number; instructionTemplate?: string | null; memoryClass?: MemoryClass | null; description?: string | null }) {
   return request('/admin/namespace-rules', {
     method: 'POST',
     body: JSON.stringify(payload)
   }) as Promise<NamespaceRule>;
 }
 
-export function updateNamespaceRule(id: string, payload: { pattern?: string; bonus?: number; instructionTemplate?: string | null; description?: string | null }) {
+export function updateNamespaceRule(id: string, payload: { pattern?: string; bonus?: number; instructionTemplate?: string | null; memoryClass?: MemoryClass | null; description?: string | null }) {
   return request(`/admin/namespace-rules/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload)

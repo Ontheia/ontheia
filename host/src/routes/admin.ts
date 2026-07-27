@@ -58,6 +58,7 @@ import {
 import { loadServerTools } from './mcp-utils.js';
 import { RouteContext } from './types.js';
 import { reloadMemoryRuntime } from '../memory/runtime.js';
+import { MEMORY_CLASSES } from '../memory/types.js';
 import { CronService } from '../runtime/CronService.js';
 import { chunkText } from '../runtime/ingest/chunker.js';
 
@@ -568,10 +569,19 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     pattern: row.pattern,
     bonus: row.bonus,
     instructionTemplate: row.instruction_template ?? null,
+    memoryClass: row.memory_class ?? null,
     description: row.description ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });
+
+  /**
+   * An unknown class would be rejected by the CHECK constraint as a 500. Null
+   * is the legitimate "no default for this namespace", so anything unusable
+   * becomes null rather than an error.
+   */
+  const readMemoryClass = (value: unknown): string | null =>
+    typeof value === 'string' && (MEMORY_CLASSES as readonly string[]).includes(value) ? value : null;
 
   server.get('/admin/namespace-rules', async (request, reply) => {
     const auth = await requireSession(db, request, reply, { requireAdmin: true });
@@ -589,9 +599,15 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     try {
       const result = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         return client.query(
-          `INSERT INTO app.vector_namespace_rules (pattern, bonus, instruction_template, description)
-           VALUES ($1, $2, $3, $4) RETURNING *`,
-          [body.pattern, body.bonus || 0, body.instructionTemplate || null, body.description || null]
+          `INSERT INTO app.vector_namespace_rules (pattern, bonus, instruction_template, description, memory_class)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [
+            body.pattern,
+            body.bonus || 0,
+            body.instructionTemplate || null,
+            body.description || null,
+            readMemoryClass(body.memoryClass)
+          ]
         );
       });
       await memoryAdapter.refreshConfig();
@@ -610,8 +626,11 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     try {
       const result = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         return client.query(
-          `UPDATE app.vector_namespace_rules SET pattern = $1, bonus = $2, instruction_template = $3, description = $4, updated_at = now() WHERE id = $5 RETURNING *`,
-          [body.pattern, body.bonus, body.instructionTemplate, body.description, id]
+          `UPDATE app.vector_namespace_rules
+              SET pattern = $1, bonus = $2, instruction_template = $3, description = $4,
+                  memory_class = $5, updated_at = now()
+            WHERE id = $6 RETURNING *`,
+          [body.pattern, body.bonus, body.instructionTemplate, body.description, readMemoryClass(body.memoryClass), id]
         );
       });
       await memoryAdapter.refreshConfig();

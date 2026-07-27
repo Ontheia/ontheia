@@ -88,7 +88,23 @@ export function buildMemoryToolSpecs(options?: { userId?: string }): MemoryToolS
           content: { type: 'string', description: 'The text content to store.' },
           namespace: { type: 'string', description: namespaceHint },
           tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags for filtering.' },
-          ttl_seconds: { type: 'number', description: 'Optional time-to-live in seconds.' }
+          ttl_seconds: { type: 'number', description: 'Optional time-to-live in seconds.' },
+          observed_at: {
+            type: 'string',
+            description:
+              'When the fact was observed, ISO 8601 — not when you are storing it. Set it only when the conversation states a time ("since March", "yesterday I ordered"). Omit it when you do not know; a guessed date is worse than none.'
+          },
+          supersedes: {
+            type: 'string',
+            description:
+              'Id of an entry this one replaces, taken from a memory-search hit. Use this instead of deleting when a fact changed: the old entry stays readable but drops out of search, so the correction is recorded rather than the contradiction erased.'
+          },
+          class: {
+            type: 'string',
+            enum: ['episodic', 'semantic', 'procedural', 'working'],
+            description:
+              'Kind of memory: episodic (something that happened, at a time), semantic (a fact that holds until replaced), procedural (a rule or how-to), working (needed for the current task only). Omit it to use the namespace default.'
+          }
         },
         required: ['content', 'namespace']
       }

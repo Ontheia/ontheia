@@ -63,6 +63,14 @@ Additional control parameters can be specified when saving information (manually
 - **Tags:** Comma-separated keywords (e.g., `invoice, 2024, priority`) that enable later filtering or thematic grouping.
 - **Metadata (JSON):** An arbitrary JSON object for advanced filtering (e.g., `{"customer_id": 123, "status": "archived"}`).
 
+From version 0.6.0 an agent can supply three more fields when writing:
+
+- **`observed_at`:** When the fact was observed — not when it is being stored. Set it only when the conversation states a time ("since March", "ordered yesterday"). Without it the field stays empty; a guessed date would be worse than none.
+- **`supersedes`:** The id of an entry this one replaces. The old entry stays readable but drops out of search — the correction is recorded instead of the contradiction being erased by deletion.
+- **`class`:** The [memory class](/en/admin/memory_audit/08_namespace_rules_details/). Without it the namespace default applies.
+
+> **Reserved fields.** `source`, `agent_id`, `task_id`, `status`, `observed_at` and the other system fields are assigned by Ontheia. If they arrive inside a metadata JSON the server drops them and logs it. They help decide how much an entry is trusted, and must therefore not come from the party being judged.
+
 ## Automatic Storage (Auto-Memory-Write)
 
 After each successful run, Ontheia automatically writes up to two entries into the configured write namespace:

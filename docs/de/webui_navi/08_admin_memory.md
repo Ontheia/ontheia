@@ -111,6 +111,7 @@ Namespace-Regeln-Editor: Konfiguriert Ranking-Boni und LLM-Instruktionsvorlagen 
 | --- | --- | --- |
 | Namespace-Muster | Text | Namespace-Pattern, auf das die Regel zutrifft. `${user_id}` steht für genau ein Segment, `*` für den Rest — z. B. `vector.agent.${user_id}.howto` oder `vector.global.*`. Unter-Namespaces sind eingeschlossen. |
 | Ranking-Bonus | Zahl | Prozentualer Aufschlag auf den Relevanz-Score: `0.1` entspricht +10 %. Die mitgelieferten Regeln liegen zwischen `0.03` und `0.12`. |
+| Gedächtnisklasse | Dropdown | Standard-Klasse für Einträge in diesem Namespace: `Episodisch`, `Semantisch`, `Prozedural`, `Arbeitskontext`, `Dokument (Korpus)` oder **Kein Standard**. Sie wird beim Schreiben automatisch gesetzt; ein einzelner Eintrag kann davon abweichen, und eine spätere Änderung wirkt nicht rückwirkend. |
 | Regel-Beschreibung | Text | Lesbarer Bezeichner der Regel. |
 | LLM-Instruktions-Vorlage | Textarea | Text, der den Treffern dieses Namespace im Kontext vorangestellt wird. Einziger Platzhalter ist **`{{content}}`** — dort werden die Treffer eingesetzt; fehlt er, werden sie angehängt. Bei mehreren Treffern derselben Regel erscheint der Text **einmal** über allen. |
 

@@ -23,6 +23,7 @@
 import { FastifyInstance } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import type { MemoryAdapter } from '../../memory/adapter.js';
+import type { MemoryClass } from '../../memory/types.js';
 import { logger } from '../../logger.js';
 import {
   buildReadableNamespaces,
@@ -45,7 +46,7 @@ import { loadMemoryPolicy } from '../../routes/policy-utils.js';
  */
 export const MEMORY_TOOL_HANDLED_ARGS: Record<string, readonly string[]> = {
   'memory-search': ['query', 'namespaces', 'top_k'],
-  'memory-write': ['content', 'namespace', 'tags', 'ttl_seconds'],
+  'memory-write': ['content', 'namespace', 'tags', 'ttl_seconds', 'observed_at', 'supersedes', 'class'],
   'memory-delete': ['id', 'content', 'namespace']
 };
 
@@ -160,7 +161,15 @@ export async function handleMemorySearch(
 export async function handleMemoryWrite(
   db: Pool | PoolClient,
   memoryAdapter: MemoryAdapter,
-  args: { content: string; namespace?: string; tags?: string[]; ttl_seconds?: number },
+  args: {
+    content: string;
+    namespace?: string;
+    tags?: string[];
+    ttl_seconds?: number;
+    observed_at?: string;
+    supersedes?: string;
+    class?: MemoryClass;
+  },
   context?: { run?: Pick<RunRequest, 'agent_id' | 'task_id' | 'options'>; db?: Pool | PoolClient }
 ) {
   if (!args?.content) {
@@ -229,7 +238,12 @@ export async function handleMemoryWrite(
       agent_id: context?.run?.agent_id,
       task_id: context?.run?.task_id,
       source: 'llm_tool_write'
-    }
+    },
+    // Columns, not metadata — the adapter validates them and drops what it
+    // cannot use rather than storing a guess.
+    observedAt: args.observed_at,
+    class: args.class,
+    supersedes: args.supersedes
   }], undefined, dbClient as PoolClient);
 
   countMemoryWrites(context?.run?.agent_id, context?.run?.task_id, inserted);
@@ -243,7 +257,15 @@ export async function handleMemoryWrite(
       taskId: context?.run?.task_id,
       namespace: targetNamespace,
       action: 'write',
-      detail: { tool_call: true, items: inserted }
+      detail: {
+        tool_call: true,
+        items: inserted,
+        // Supersession is a change to a second entry and has to be visible in
+        // the audit log — the write alone does not show it.
+        ...(args.supersedes ? { supersedes: args.supersedes } : {}),
+        ...(args.class ? { class: args.class } : {}),
+        ...(args.observed_at ? { observed_at: args.observed_at } : {})
+      }
     }, dbClient as PoolClient);
   }
 
