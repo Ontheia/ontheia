@@ -938,15 +938,34 @@ function prepareDocument(doc: MemoryWriteInput): PreparedDocument | null {
     embedding: doc.embedding,
     // A malformed date is dropped rather than stored: observed_at exists to be
     // trustworthy, and NULL says "unknown" honestly.
-    observedAt: isValidDate(doc.observedAt) ? doc.observedAt : undefined,
+    observedAt: normalizeObservedAt(doc.observedAt),
     class: isMemoryClass(doc.class) ? doc.class : undefined,
     supersedes: typeof doc.supersedes === 'string' && doc.supersedes.trim() ? doc.supersedes.trim() : undefined
   };
 }
 
-function isValidDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !value.trim()) return false;
-  return !Number.isNaN(new Date(value).getTime());
+/**
+ * Parses an observation date, reading a missing timezone as UTC.
+ *
+ * JavaScript splits on exactly this: `2026-06-01` is UTC, `2026-06-01T00:00:00`
+ * is local time. A model wrote the second form for "since June", the container
+ * runs in Europe/Berlin, and the entry was stored as 31 May — a day earlier
+ * than anyone said. The date would then have been shown that way in the
+ * injected block, which is the silent shift observed_at exists to prevent.
+ *
+ * Returns undefined for anything unparseable; NULL says "unknown" honestly.
+ */
+export function normalizeObservedAt(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(trimmed);
+  const hasTime = /\d{2}:\d{2}/.test(trimmed);
+  const candidate = !hasZone && hasTime ? `${trimmed}Z` : trimmed;
+
+  const parsed = new Date(candidate);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 }
 
 function encodeVector(values: number[]): string {

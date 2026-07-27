@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MemoryAdapter } from './adapter.js';
+import { MemoryAdapter, normalizeObservedAt } from './adapter.js';
 
 const CONFIG = {
   tables: { '3': { name: 'vector.test', column: 'embedding', dimension: 3 } },
@@ -244,4 +244,33 @@ test('duplicate cleanup keeps the live entry, not the deleted twin', async () =>
   // Such pairs exist by design since the upsert stopped resurrecting deleted
   // rows — and the survivor must be the one the user still has.
   assert.match(dedupe!.sql, /\(deleted_at IS NULL\) DESC/);
+});
+
+/*
+ * The bug: a model wrote "2026-06-01T00:00:00" for "since June". JavaScript
+ * reads a date-time without a zone as local time, the container runs in
+ * Europe/Berlin, and the entry was stored as 31 May — a day before anyone
+ * said. A plain date has the opposite default and was unaffected, which is
+ * why the first live test did not catch it.
+ */
+test('an observation time without a timezone is read as UTC', () => {
+  assert.equal(normalizeObservedAt('2026-06-01T00:00:00'), '2026-06-01T00:00:00.000Z');
+  assert.equal(normalizeObservedAt('2026-06-01T09:30'), '2026-06-01T09:30:00.000Z');
+});
+
+test('an explicit timezone is respected', () => {
+  assert.equal(normalizeObservedAt('2026-06-01T00:00:00Z'), '2026-06-01T00:00:00.000Z');
+  assert.equal(normalizeObservedAt('2026-06-01T02:00:00+02:00'), '2026-06-01T00:00:00.000Z');
+  assert.equal(normalizeObservedAt('2026-06-01T02:00:00+0200'), '2026-06-01T00:00:00.000Z');
+});
+
+test('a plain date keeps its day', () => {
+  assert.equal(normalizeObservedAt('2026-06-01'), '2026-06-01T00:00:00.000Z');
+  assert.equal(normalizeObservedAt('2026-03-01'), '2026-03-01T00:00:00.000Z');
+});
+
+test('anything unparseable becomes undefined, not a guess', () => {
+  for (const bad of ['', '   ', 'last tuesday', 'irgendwann', 42, null, undefined, {}]) {
+    assert.equal(normalizeObservedAt(bad), undefined, `${JSON.stringify(bad)} should be dropped`);
+  }
 });

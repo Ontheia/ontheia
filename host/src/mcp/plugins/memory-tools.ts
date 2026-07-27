@@ -105,7 +105,7 @@ export function buildMemoryToolSpecs(options?: {
           observed_at: {
             type: 'string',
             description:
-              'When the fact was observed, ISO 8601 — not when you are storing it. Set it only when the conversation states a time ("since March", "yesterday I ordered"). Omit it when you do not know; a guessed date is worse than none.'
+              'When the fact was observed, ISO 8601 — not when you are storing it. A plain date like "2026-06-01" is preferred; a time without a timezone is read as UTC. Set it only when the conversation states a time ("since March", "yesterday I ordered"). Omit it when you do not know; a guessed date is worse than none.'
           },
           supersedes: {
             type: 'string',
