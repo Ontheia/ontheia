@@ -37,6 +37,7 @@ import {
 } from '../secrets/resolver.js';
 import type { ServerStatusUpdateParams } from './server-config.repository.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
+import { buildMemoryMcpTools } from '../mcp/plugins/memory-tools.js';
 import { countMemoryHits, countMemoryWarning } from '../metrics.js';
 
 const execFileAsync = promisify(execFile);
@@ -568,48 +569,7 @@ export class OrchestratorService {
 
   async listTools(serverName: string, options?: { force?: boolean }): Promise<McpToolDefinition[]> {
     if (serverName === 'memory') {
-      return [
-        {
-          name: 'memory-search',
-          description: 'Searches for relevant documents in long-term memory.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query' },
-              namespaces: { type: 'array', items: { type: 'string' } },
-              topK: { type: 'integer', default: 5 }
-            },
-            required: ['query', 'namespaces']
-          }
-        },
-        {
-          name: 'memory-write',
-          description: 'Permanently stores new information in memory.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              content: { type: 'string', description: 'Text to store' },
-              namespace: { type: 'string', description: 'Target namespace' },
-              metadata: { type: 'object' }
-            },
-            required: ['content', 'namespace']
-          }
-        },
-        {
-          name: 'memory-delete',
-          description: 'Deletes information from memory (soft-delete or permanent). Prefer deleting by id (taken from a memory-search hit) — content matching is exact and fails on any whitespace or formatting difference.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', description: 'Id of the entry to delete, as returned in memory-search hits (preferred).' },
-              content: { type: 'string', description: 'Exact content of the document to delete — fallback when no id is available; must match the stored content verbatim.' },
-              namespace: { type: 'string', description: 'Namespace' },
-              hard: { type: 'boolean', default: false, description: 'Delete permanently (true) or just mark (false)' }
-            },
-            required: ['namespace']
-          }
-        }
-      ];
+      return buildMemoryMcpTools();
     }
 
     if (serverName === 'delegation') {

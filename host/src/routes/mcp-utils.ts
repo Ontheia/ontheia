@@ -23,6 +23,7 @@
 import type { Pool } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { RunToolDefinition } from '../runtime/types.js';
+import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
 import { isPlainObject } from './utils.js';
 
 export const sanitizeFunctionSegment = (value: string, fallback: string) => {
@@ -69,50 +70,7 @@ export const loadServerTools = async (
   
   for (const serverName of uniqueServers) {
     if (serverName === 'memory') {
-      resolved.push(
-        {
-          name: 'memory-search',
-          server: 'memory',
-          description: 'Search the long-term memory for relevant information.',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search term or question.' },
-              top_k: { type: 'number', description: 'Number of hits (default 5).' },
-              namespaces: { type: 'array', items: { type: 'string' }, description: 'Optional list of namespaces.' }
-            },
-            required: ['query']
-          }
-        },
-        {
-          name: 'memory-write',
-          server: 'memory',
-          description: 'Store an important piece of information or fact in long-term memory.',
-          parameters: {
-            type: 'object',
-            properties: {
-              content: { type: 'string', description: 'The text content to store.' },
-              namespace: { type: 'string', description: userId ? `Target namespace. Your user ID is "${userId}". Use namespaces like "vector.user.${userId}.memory" or "vector.user.${userId}.preferences". Only your own namespaces are permitted.` : 'Target namespace (e.g. vector.user.<your-user-id>.memory).' },
-              tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags for filtering.' },
-              ttl_seconds: { type: 'number', description: 'Optional time-to-live in seconds.' }
-            },
-            required: ['content', 'namespace']
-          }
-        },
-        {
-          name: 'memory-delete',
-          server: 'memory',
-          description: 'Delete outdated or incorrect information from memory.',
-          parameters: {
-            type: 'object',
-            properties: {
-              content: { type: 'string', description: 'The exact content of the entry to delete.' },
-              namespace: { type: 'string', description: 'Namespace to delete from.' }
-            },
-            required: ['content', 'namespace']
-          }
-        }
-      );
+      resolved.push(...buildMemoryRunTools({ userId }));
       continue;
     }
 

@@ -35,6 +35,21 @@ import { countMemoryHits, countMemoryWarning, countMemoryWrites } from '../../me
 import { loadMemoryPolicy } from '../../routes/policy-utils.js';
 
 /**
+ * What the handlers below actually read out of `args` — mirroring their
+ * parameter types, which do not survive into the runtime.
+ *
+ * `memory-tools.spec.ts` compares this against the tool schemas in
+ * `./memory-tools.ts`. Both lists have to be extended together: a parameter
+ * declared but never read is dropped without a word, and a parameter read but
+ * never declared is one no model will ever send.
+ */
+export const MEMORY_TOOL_HANDLED_ARGS: Record<string, readonly string[]> = {
+  'memory-search': ['query', 'namespaces', 'top_k'],
+  'memory-write': ['content', 'namespace', 'tags', 'ttl_seconds'],
+  'memory-delete': ['id', 'content', 'namespace']
+};
+
+/**
  * Resolves namespace templates, skipping the ones that cannot be resolved.
  * Was a local copy of the generic text substitution, which inserted raw values
  * and turned a missing key into `vector.agent..memory`.

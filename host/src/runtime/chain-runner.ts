@@ -28,6 +28,7 @@ import { logMemoryAudit, countHitsForNamespace } from '../routes/utils.js';
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery } from '../routes/run-utils.js';
 import { isGlobalNamespace, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
+import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
@@ -403,48 +404,7 @@ export class ChainRunner {
 
   private getInternalTools(): RunToolDefinition[] {
     return [
-      {
-        name: 'memory-search',
-        server: 'memory',
-        description: 'Search the long-term memory for relevant information.',
-        parameters: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Search term or question.' },
-            top_k: { type: 'number', description: 'Number of results (default 5).' },
-            namespaces: { type: 'array', items: { type: 'string' }, description: 'Optional list of namespaces.' }
-          },
-          required: ['query']
-        }
-      },
-      {
-        name: 'memory-write',
-        server: 'memory',
-        description: 'Store an important piece of information or fact in long-term memory.',
-        parameters: {
-          type: 'object',
-          properties: {
-            content: { type: 'string', description: 'The text content to be stored.' },
-            namespace: { type: 'string', description: 'Target namespace (e.g. vector.agent.${user_id}.howto).' },
-            tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags for filtering.' },
-            ttl_seconds: { type: 'number', description: 'Optional time-to-live in seconds.' }
-          },
-          required: ['content', 'namespace']
-        }
-      },
-      {
-        name: 'memory-delete',
-        server: 'memory',
-        description: 'Delete outdated or incorrect information from memory.',
-        parameters: {
-          type: 'object',
-          properties: {
-            content: { type: 'string', description: 'The exact content of the entry to be deleted.' },
-            namespace: { type: 'string', description: 'Namespace to delete from.' }
-          },
-          required: ['content', 'namespace']
-        }
-      },
+      ...buildMemoryRunTools({ userId: this.templateContext.user_id }),
       {
         name: 'delegate-to-agent',
         server: 'delegation',
