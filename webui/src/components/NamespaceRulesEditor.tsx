@@ -190,7 +190,7 @@ export function NamespaceRulesEditor() {
               onChange={e => setPattern(e.target.value)} 
               placeholder={t('memory.rules.patternPlaceholder')} 
               required
-              className="bg-[#121B2B] border-[#1E293B]"
+              className="app-input"
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">
@@ -202,7 +202,7 @@ export function NamespaceRulesEditor() {
               onChange={e => setBonus(e.target.value)} 
               placeholder="0.05" 
               required
-              className="bg-[#121B2B] border-[#1E293B]"
+              className="app-input"
             />
           </div>
           <div className="md:col-span-3 space-y-1.5">
@@ -229,7 +229,7 @@ export function NamespaceRulesEditor() {
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder={t('memory.rules.descriptionPlaceholder')}
-              className="bg-[#121B2B] border-[#1E293B]"
+              className="app-input"
             />
           </div>
 
@@ -239,7 +239,7 @@ export function NamespaceRulesEditor() {
               value={instructionTemplate} 
               onChange={e => setInstructionTemplate(e.target.value)} 
               placeholder={t('memory.rules.instructionPlaceholder')} 
-              className="bg-[#121B2B] border-[#1E293B]"
+              className="app-input"
             />
             <p className="text-[10px] text-muted-foreground">{t('memory.rules.placeholderHint')}</p>
           </div>

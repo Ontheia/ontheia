@@ -2376,6 +2376,11 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
+/* Text and number inputs that sit next to an AppSelect. Defined here rather
+   than as Tailwind overrides so the two controls cannot drift apart: whatever
+   the trigger looks like, the input matches. Comes after @tailwind utilities,
+   so it wins over the Input component's own base classes. */
+.app-input,
 .app-select-trigger,
 .app-multiselect-trigger {
   width: 100%;
@@ -2395,12 +2400,15 @@
   box-shadow: 0 2px 8px rgba(2, 8, 23, 0.35);
 }
 
+.app-input:hover:not(:disabled),
 .app-select-trigger:hover,
 .app-multiselect-trigger:hover {
   border-color: rgba(148, 163, 184, 0.7);
   background-color: rgba(18, 27, 43, 0.95);
 }
 
+.app-input:focus,
+.app-input:focus-visible,
 .app-select-trigger:focus-visible,
 .app-multiselect-trigger:focus-visible,
 .app-select-trigger[data-state='open'],
@@ -2408,6 +2416,24 @@
   outline: none;
   border-color: rgba(56, 189, 248, 0.95);
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.app-input::placeholder {
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.app-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A textarea needs to grow; the shared rule pins a control height. */
+textarea.app-input {
+  height: auto;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.5;
+  resize: vertical;
 }
 
 .app-select-trigger span,

@@ -2325,16 +2325,12 @@ function MemorySection({
         >
           <div className="flex items-center gap-2 mr-2">
             <span className="text-xs text-slate-400">Limit:</span>
-            <select
-              className="bg-[#121B2B] border-[#1E293B] text-xs h-[2.25rem] rounded-md px-2"
-              value={searchLimit}
-              onChange={(e) => setSearchLimit(Number(e.target.value))}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+            <AppSelect
+              className="w-20"
+              value={String(searchLimit)}
+              onValueChange={(next) => setSearchLimit(Number(next))}
+              options={[5, 10, 20, 50].map((n) => ({ value: String(n), label: String(n) }))}
+            />
           </div>
           <button
             type="button"
