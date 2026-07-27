@@ -274,3 +274,31 @@ test('anything unparseable becomes undefined, not a guess', () => {
     assert.equal(normalizeObservedAt(bad), undefined, `${JSON.stringify(bad)} should be dropped`);
   }
 });
+
+test('a rewrite does not reset a class someone set on that row', async () => {
+  const { db, find } = mockDb({
+    existingId: 'existing-1',
+    rules: [{ pattern: 'vector.agent.${user_id}.memory', bonus: 0, instruction_template: null, memory_class: 'episodic' }]
+  });
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  await adapter.loadNamespaceRules();
+  await adapter.writeDocuments('vector.agent.abc.memory', [{ content: 'same text' }]);
+
+  const params = find('UPDATE vector.test')[0].params as unknown[];
+  // COALESCE(NULL, class) keeps what the row has. Passing the rule default
+  // here would snap a row moved to `semantic` back to `episodic`.
+  assert.equal(params[5], null);
+});
+
+test('a rewrite still applies a class the caller names explicitly', async () => {
+  const { db, find } = mockDb({
+    existingId: 'existing-1',
+    rules: [{ pattern: 'vector.agent.${user_id}.memory', bonus: 0, instruction_template: null, memory_class: 'episodic' }]
+  });
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  await adapter.loadNamespaceRules();
+  await adapter.writeDocuments('vector.agent.abc.memory', [{ content: 'same text', class: 'semantic' }]);
+
+  const params = find('UPDATE vector.test')[0].params as unknown[];
+  assert.equal(params[5], 'semantic');
+});

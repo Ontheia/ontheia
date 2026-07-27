@@ -546,7 +546,14 @@ export class MemoryAdapter {
           // The class comes from the namespace rules unless the caller named
           // one — a namespace holds mixed classes often enough that the rule
           // can only be a default (plan §9.6.5).
-          const docClass = doc.class ?? this.resolveClassForNamespace(trimmed) ?? null;
+          //
+          // The rule applies to NEW entries only. On a rewrite it would undo a
+          // class someone set deliberately on that one row: an entry moved from
+          // episodic to semantic would snap back to the namespace default the
+          // next time the same text is written. "Rule is the default, the row
+          // holds the truth" only works if the default stops at creation.
+          const explicitClass = doc.class ?? null;
+          const docClass = explicitClass ?? this.resolveClassForNamespace(trimmed) ?? null;
           const observedAt = doc.observedAt ? new Date(doc.observedAt) : null;
 
           // A deleted entry is not a duplicate. Rewriting the same text used to
@@ -579,7 +586,7 @@ export class MemoryAdapter {
                 JSON.stringify(doc.metadata),
                 encodeVector(doc.embedding),
                 observedAt,
-                docClass
+                explicitClass
               ]
             );
             writtenId = res.rows[0].id;
