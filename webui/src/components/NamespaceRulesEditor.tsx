@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localizeError } from '../lib/error-utils';
-import { Plus, Trash2, RefreshCw, AlertTriangle, Pencil, X, Save, Database, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, AlertTriangle, Pencil, X, Save, Database } from 'lucide-react';
 import {
   listNamespaceRules,
   createNamespaceRule,
@@ -33,6 +33,7 @@ import {
   type MemoryClass,
   type NamespaceRule
 } from '../lib/api';
+import { AppSelect, APP_SELECT_EMPTY_VALUE } from './AppSelect';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -206,29 +207,21 @@ export function NamespaceRulesEditor() {
           </div>
           <div className="md:col-span-3 space-y-1.5">
             <label className="text-xs font-medium text-slate-400">{t('memory.rules.memoryClass')}</label>
-            {/* appearance-none plus our own chevron: the native arrow ignores
-                the dark theme and was the one control here rendering as a
-                browser default. */}
-            <div className="relative">
-              <select
-                value={memoryClass}
-                onChange={e => setMemoryClass(e.target.value as MemoryClass | '')}
-                className="flex h-9 w-full appearance-none rounded-md border border-[#1E293B] bg-[#121B2B] pl-3 pr-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {/* Chromium renders the open list from the option's own
-                    colours, not the select's — without these it drops to a
-                    white menu on the dark form. */}
-                <option value="" className="bg-[#121B2B] text-slate-200">
-                  {t('memory.rules.memoryClassNone')}
-                </option>
-                {MEMORY_CLASSES.map(cls => (
-                  <option key={cls} value={cls} className="bg-[#121B2B] text-slate-200">
-                    {t(`memory.rules.class.${cls}`)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            </div>
+            {/* AppSelect, as used for the provider pickers under
+                Administration → General. A native <select> cannot be styled
+                past the browser's own widget, which is why this control looked
+                out of place next to the Input fields beside it. */}
+            <AppSelect
+              value={memoryClass || APP_SELECT_EMPTY_VALUE}
+              onValueChange={(next) =>
+                setMemoryClass(next === APP_SELECT_EMPTY_VALUE ? '' : (next as MemoryClass))
+              }
+              options={[
+                { value: APP_SELECT_EMPTY_VALUE, label: t('memory.rules.memoryClassNone') },
+                ...MEMORY_CLASSES.map((cls) => ({ value: cls, label: t(`memory.rules.class.${cls}`) }))
+              ]}
+              placeholder={t('memory.rules.memoryClassNone')}
+            />
           </div>
           <div className="md:col-span-3 space-y-1.5">
             <label className="text-xs font-medium text-slate-400">{t('memory.rules.descriptionLabel')}</label>
