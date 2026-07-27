@@ -107,7 +107,7 @@ export function applyRelativeCutoff(hits: MemoryHit[], cutoff: number): MemoryHi
  * meant a namespace could earn a rule's bonus while never receiving its
  * instruction.
  */
-function namespacePatternToRegex(pattern: string): RegExp {
+export function namespacePatternToRegex(pattern: string): RegExp {
   const body = pattern
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // escape every regex metacharacter
     .replace(/\\\*/g, '.*') // then restore the wildcard

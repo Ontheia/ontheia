@@ -10,7 +10,8 @@
     "lint": "eslint src --ext .ts",
     "test": "npm run build && node --test \"dist/**/*.spec.js\"",
     "memory:reembed": "node dist/scripts/reembed_worker.js",
-    "memory:verify": "node dist/scripts/memory_verify.js"
+    "memory:verify": "node dist/scripts/memory_verify.js",
+    "memory:classify": "node dist/scripts/backfill_memory_class.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
