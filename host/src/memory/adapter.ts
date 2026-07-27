@@ -137,6 +137,18 @@ export class MemoryAdapter {
     return this._disabled;
   }
 
+  /**
+   * The document tables in use, fully qualified.
+   *
+   * Routes outside the adapter used to name `vector.documents` and
+   * `vector.documents_768` literally — nine places, none of which knew about a
+   * third dimension. Statistics, the dashboard and, worst, account deletion
+   * would each have missed whatever lived there.
+   */
+  get tableNames(): string[] {
+    return this.tables.map((table) => table.name);
+  }
+
   constructor(
     private db: Pool,
     private provider: EmbeddingProvider,

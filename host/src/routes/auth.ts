@@ -462,7 +462,9 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
     // 1. Alle Vector-Einträge löschen, in deren Namespace die User-ID als Pfadsegment vorkommt.
     //    Erfasst z.B.: vector.user.<id>.*, vector.agent.<agent-id>.<id>.*, etc.
     //    Als Admin ausführen, damit auch Einträge mit owner_id = NULL erfasst werden.
-    const vectorTables = ['vector.documents', 'vector.documents_768'];
+    // Taken from the adapter rather than listed here: a dimension table that
+    // exists but is not named would keep the user's entries after deletion.
+    const vectorTables = memoryAdapter.tableNames;
     const vectorClient = await db.connect();
     try {
       await vectorClient.query('BEGIN');
@@ -572,11 +574,9 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
       );
       // RLS filters vector entries by owner_id automatically
       const memoryRes = await client.query(
-        `SELECT namespace, content, created_at FROM vector.documents
-         WHERE deleted_at IS NULL
-         UNION ALL
-         SELECT namespace, content, created_at FROM vector.documents_768
-         WHERE deleted_at IS NULL
+        `${memoryAdapter.tableNames
+            .map((table) => `SELECT namespace, content, created_at FROM ${table} WHERE deleted_at IS NULL`)
+            .join(' UNION ALL ')}
          ORDER BY created_at DESC LIMIT 5000`
       ).catch(() => ({ rows: [] as any[] }));
 

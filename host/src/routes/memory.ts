@@ -198,6 +198,17 @@ export const filterNamespacesForSession = async (
   return { namespaces: filtered, allowedUserIds };
 };
 
+/**
+ * Builds a UNION ALL across every configured document table.
+ *
+ * These queries named `vector.documents` and `vector.documents_768` literally.
+ * A third dimension table existed in the database without appearing in any of
+ * them, so statistics, the namespace list and the health count would all have
+ * been short by whatever lived there.
+ */
+const unionOver = (adapter: { tableNames: string[] }, select: string, where = ''): string =>
+  adapter.tableNames.map((table) => `${select} FROM ${table} ${where}`).join('\n UNION ALL ');
+
 export function registerMemoryRoutes(server: FastifyInstance, context: RouteContext) {
   const { db, memoryAdapter, orchestrator } = context;
 
@@ -389,8 +400,37 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     if (!auth) return;
     const query = request.query as any;
     const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 1), 200);
+
+    // The console has always sent namespace, agent_id and task_id; the route
+    // read none of them, so typing in the filter field simply did nothing.
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    const namespace = typeof query?.namespace === 'string' ? query.namespace.trim() : '';
+    if (namespace) {
+      // A trailing * is a prefix search, matching the namespace syntax used
+      // everywhere else. Without it the value must match exactly.
+      params.push(namespace.endsWith('*') ? `${namespace.slice(0, -1)}%` : namespace);
+      conditions.push(namespace.endsWith('*') ? `namespace LIKE $${params.length}` : `namespace = $${params.length}`);
+    }
+    if (isUuid(query?.agent_id)) {
+      params.push(query.agent_id);
+      conditions.push(`agent_id = $${params.length}`);
+    }
+    if (isUuid(query?.task_id)) {
+      params.push(query.task_id);
+      conditions.push(`task_id = $${params.length}`);
+    }
+
+    params.push(limit);
     const result = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
-      return client.query(`SELECT * FROM app.memory_audit ORDER BY created_at DESC LIMIT $1`, [limit]);
+      return client.query(
+        `SELECT * FROM app.memory_audit
+          ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}
+          ORDER BY created_at DESC
+          LIMIT $${params.length}`,
+        params
+      );
     });
     return result.rows;
   });
@@ -405,9 +445,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
                MAX(created_at) AS latest,
                SUM(LENGTH(content)) AS content_bytes
           FROM (
-            SELECT namespace, created_at, content FROM vector.documents WHERE deleted_at IS NULL
-            UNION ALL
-            SELECT namespace, created_at, content FROM vector.documents_768 WHERE deleted_at IS NULL
+            ${unionOver(memoryAdapter, 'SELECT namespace, created_at, content', 'WHERE deleted_at IS NULL')}
           ) AS combined
          GROUP BY namespace
          ORDER BY docs DESC
@@ -722,9 +760,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
             const exists = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
               const res = await client.query(
                 `SELECT 1 FROM (
-                   SELECT metadata FROM vector.documents WHERE namespace = $1 AND deleted_at IS NULL
-                   UNION ALL
-                   SELECT metadata FROM vector.documents_768 WHERE namespace = $1 AND deleted_at IS NULL
+                   ${unionOver(memoryAdapter, 'SELECT metadata', 'WHERE namespace = $1 AND deleted_at IS NULL')}
                  ) AS combined WHERE metadata->>'file_name' = $2 LIMIT 1`,
                 [targetNamespace, fileName]
               );
@@ -900,9 +936,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       const result = await client.query(
         `SELECT DISTINCT namespace
            FROM (
-             SELECT namespace FROM vector.documents WHERE deleted_at IS NULL
-             UNION
-             SELECT namespace FROM vector.documents_768 WHERE deleted_at IS NULL
+             ${unionOver(memoryAdapter, 'SELECT namespace', 'WHERE deleted_at IS NULL')}
            ) AS combined
           ORDER BY namespace`,
         []
@@ -929,9 +963,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     try {
       const result = await db.query(`
         SELECT COUNT(*) AS total FROM (
-          SELECT id FROM vector.documents WHERE deleted_at IS NULL
-          UNION ALL
-          SELECT id FROM vector.documents_768 WHERE deleted_at IS NULL
+          ${unionOver(memoryAdapter, 'SELECT id', 'WHERE deleted_at IS NULL')}
         ) AS combined
       `);
       return {

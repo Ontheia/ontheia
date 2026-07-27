@@ -661,6 +661,10 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
 
     try {
       const { tableStats, indexStats } = await withRls(db, session.userId, session.role, async (client) => {
+        // pg_stat_all_tables holds bare relation names, the adapter carries them
+        // schema-qualified. Listing them by hand here is what left a third
+        // dimension table out of the dashboard.
+        const bareTableNames = memoryAdapter.tableNames.map((name) => name.split('.').pop() as string);
         const tableRes = await client.query(
           `SELECT relname,
                   n_live_tup,
@@ -683,8 +687,9 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
                   last_autoanalyze
              FROM pg_stat_all_tables
             WHERE schemaname = 'vector'
-              AND relname IN ('documents','documents_768')
-            ORDER BY relname`
+              AND relname = ANY($1::text[])
+            ORDER BY relname`,
+          [bareTableNames]
         );
         const indexRes = await client.query(
           `SELECT indexrelname,
@@ -696,8 +701,9 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
                   pg_size_pretty(pg_relation_size(indexrelid)) AS size
              FROM pg_stat_all_indexes
             WHERE schemaname = 'vector'
-              AND relname IN ('documents','documents_768')
-            ORDER BY relname, indexrelname`
+              AND relname = ANY($1::text[])
+            ORDER BY relname, indexrelname`,
+          [bareTableNames]
         );
         return { tableStats: tableRes.rows, indexStats: indexRes.rows };
       });
