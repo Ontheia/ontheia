@@ -24,7 +24,7 @@ import React, { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
-import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -1757,6 +1757,47 @@ function MemorySection({
   const currentAgent = agents.find((agent) => agent.id === selectedAgent);
   const taskOptions = currentAgent?.tasks ?? [];
 
+  /**
+   * Brings a deleted or superseded entry back into search. The route clears
+   * deleted_at, superseded_by and status in one step — undoing a wrong
+   * supersession by hand would otherwise mean opening the database.
+   */
+  const handleRestoreHit = useCallback(async (hit: MemorySearchHit) => {
+    if (!hit.id) return;
+    setErrorMessage(null);
+    try {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('mcp.session.token') : null;
+      const response = await fetch(`${API_BASE}/memory/documents/${encodeURIComponent(hit.id)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ namespace: hit.namespace, restore: true })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const err: any = new Error(data?.message || t('memory.restoreError'));
+        if (data?.error) err.code = data.error;
+        throw err;
+      }
+      // Clear the marks locally instead of re-running the search: with the
+      // hidden entries switched off, a refresh would make the row vanish just
+      // as it was restored.
+      setSearchResults((prev) =>
+        prev.map((entry) =>
+          entry.id === hit.id
+            ? { ...entry, deletedAt: undefined, supersededBy: undefined, status: 'unconfirmed' }
+            : entry
+        )
+      );
+      setStatusMessage(t('memory.restored'));
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (error: any) {
+      setErrorMessage(localizeError(error, t, 'memory.restoreError'));
+    }
+  }, [t]);
+
   const handleMemorySearch = useCallback(async () => {
     setSearchLoading(true);
     setErrorMessage(null);
@@ -2363,22 +2404,22 @@ function MemorySection({
             />
           </label>
         </div>
+        {/* Own row: deleted, expired and superseded entries are hidden from
+            agents by design, and this is the only way back to them — it should
+            not compete for space with the limit and the buttons. */}
+        <label className="flex items-center gap-2 mt-3 text-xs text-slate-400 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            style={{ accentColor: '#38BDF8' }}
+            checked={includeHidden}
+            onChange={(e) => setIncludeHidden(e.target.checked)}
+          />
+          {t('memory.includeHidden')}
+        </label>
         <div
           className="admin-form-actions"
           style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
         >
-          {/* Deleted, expired and superseded entries are invisible to agents by
-              design. Without this switch a wrong supersession could only be
-              undone in the database. */}
-          <label className="flex items-center gap-2 mr-2 text-xs text-slate-400 cursor-pointer">
-            <input
-              type="checkbox"
-              style={{ accentColor: '#38BDF8' }}
-              checked={includeHidden}
-              onChange={(e) => setIncludeHidden(e.target.checked)}
-            />
-            {t('memory.includeHidden')}
-          </label>
           <div className="flex items-center gap-2 mr-2">
             <span className="text-xs text-slate-400">Limit:</span>
             <AppSelect
@@ -2534,7 +2575,22 @@ function MemorySection({
                           {hit.content}
                         </div>
                       </td>
-                      <td className="p-3 align-top text-right">
+                      <td className="p-3 align-top text-right whitespace-nowrap">
+                        {(hit.deletedAt || hit.supersededBy) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-2 hover:bg-white/5 rounded-md text-amber-400/80 transition-colors disabled:opacity-50"
+                                disabled={!hit.id}
+                                onClick={() => void handleRestoreHit(hit)}
+                              >
+                                <RotateCcw size={16} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('memory.restore')}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button

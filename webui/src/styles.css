@@ -2317,6 +2317,10 @@
 .settings-field input[type='email'],
 .settings-field input[type='password'],
 .settings-field input[type='url'],
+/* date was missing here, so the picker kept the browser's own darker fill
+   and border while every field beside it followed the theme. */
+.settings-field input[type='date'],
+.settings-field input[type='datetime-local'],
 .settings-field input:not([type]) {
   background: #121B2B;
   color: inherit;
@@ -2328,6 +2332,19 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.settings-field input[type='date']::-webkit-calendar-picker-indicator,
+.settings-field input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+.settings-field input[type='date']:focus,
+.settings-field input[type='datetime-local']:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
 .settings-field input:read-only {
