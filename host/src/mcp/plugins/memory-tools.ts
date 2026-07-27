@@ -50,16 +50,29 @@ export interface MemoryToolSpec {
 }
 
 /**
- * `userId` is used only to make the namespace hint concrete. It was present on
- * the `mcp-utils` path and missing on the chain path, so a chain agent had to
+ * `userId` makes the namespace hint concrete. It was present on the
+ * `mcp-utils` path and missing on the chain path, so a chain agent had to
  * guess its own namespaces.
+ *
+ * `writeNamespaces` are the resolved patterns the agent's policy actually
+ * permits. Naming them beats inventing examples: the hint used to offer
+ * `vector.user.<id>.memory` to every agent, including those whose policy only
+ * allows `vector.agent.<id>.preferences`. A model called that out mid-run —
+ * "the memory tool seems to allow only the user's namespace, which feels
+ * contradictory" — and spent a reasoning step on a contradiction we wrote.
  */
-export function buildMemoryToolSpecs(options?: { userId?: string }): MemoryToolSpec[] {
+export function buildMemoryToolSpecs(options?: {
+  userId?: string;
+  writeNamespaces?: string[];
+}): MemoryToolSpec[] {
   const userId = typeof options?.userId === 'string' && options.userId.trim() ? options.userId.trim() : null;
+  const writable = (options?.writeNamespaces ?? []).filter((ns) => typeof ns === 'string' && ns.trim());
 
-  const namespaceHint = userId
-    ? `Target namespace. Your user ID is "${userId}". Use namespaces like "vector.user.${userId}.memory" or "vector.user.${userId}.preferences". Only your own namespaces are permitted.`
-    : 'Target namespace (e.g. vector.user.<your-user-id>.memory). Only namespaces permitted by your policy are accepted.';
+  const namespaceHint = writable.length > 0
+    ? `Target namespace. Your policy permits: ${writable.join(', ')}. Anything else is rejected.`
+    : userId
+      ? `Target namespace. Your user ID is "${userId}" — use it wherever a namespace contains a user id. Only namespaces your policy permits are accepted; a rejected write names the allowed patterns.`
+      : 'Target namespace. Only namespaces your policy permits are accepted; a rejected write names the allowed patterns.';
 
   return [
     {
@@ -134,7 +147,7 @@ export function buildMemoryToolSpecs(options?: { userId?: string }): MemoryToolS
 }
 
 /** Shape used by the run path and the chain runner. */
-export function buildMemoryRunTools(options?: { userId?: string }): RunToolDefinition[] {
+export function buildMemoryRunTools(options?: { userId?: string; writeNamespaces?: string[] }): RunToolDefinition[] {
   return buildMemoryToolSpecs(options).map((spec) => ({
     name: spec.name,
     server: 'memory',
@@ -144,7 +157,7 @@ export function buildMemoryRunTools(options?: { userId?: string }): RunToolDefin
 }
 
 /** Shape used by `OrchestratorService.listTools`. */
-export function buildMemoryMcpTools(options?: { userId?: string }): Array<{
+export function buildMemoryMcpTools(options?: { userId?: string; writeNamespaces?: string[] }): Array<{
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;

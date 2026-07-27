@@ -58,7 +58,9 @@ export const loadServerTools = async (
   forceRefresh = false,
   logger?: any,
   userId?: string,
-  agentSkills?: import('../runtime/SkillService.js').SkillRecord[]
+  agentSkills?: import('../runtime/SkillService.js').SkillRecord[],
+  /** Resolved write namespaces from the agent's memory policy, for the tool hint. */
+  memoryWriteNamespaces?: string[]
 ): Promise<RunToolDefinition[]> => {
   if (!Array.isArray(serverNames) || serverNames.length === 0) {
     return [];
@@ -70,7 +72,7 @@ export const loadServerTools = async (
   
   for (const serverName of uniqueServers) {
     if (serverName === 'memory') {
-      resolved.push(...buildMemoryRunTools({ userId }));
+      resolved.push(...buildMemoryRunTools({ userId, writeNamespaces: memoryWriteNamespaces }));
       continue;
     }
 

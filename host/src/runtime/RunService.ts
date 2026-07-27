@@ -533,9 +533,27 @@ export class RunService {
         }
       }
 
+      // 3b. Memory policy — loaded here rather than in step 4 because the
+      // memory-write tool description names the namespaces the agent may
+      // write to. Guessing them was worse than saying nothing: a model
+      // noticed that the hint offered vector.user.* while its policy only
+      // allowed vector.agent.*, and spent a reasoning step on it.
+      let policy: MemoryPolicy = {};
+      let toolWriteNamespaces: string[] | undefined;
+      if (activeMcpServers.includes('memory') || normalizeMemoryOptions(enrichedInput.memory).enabled) {
+        policy = await withRls(this.db, userId, role, async (client) => {
+          return loadMemoryPolicy(this.db, enrichedInput.agent_id, enrichedInput.task_id, client);
+        });
+        if (Array.isArray(policy.allowedWriteNamespaces) && policy.allowedWriteNamespaces.length > 0) {
+          toolWriteNamespaces = resolvePolicyNamespaces(
+            policy.allowedWriteNamespaces, templateContext, logger, 'allowedWriteNamespaces'
+          );
+        }
+      }
+
       if (activeMcpServers.length > 0) {
         const tools = await loadServerTools(
-          this.orchestrator, activeMcpServers, false, logger, userId, agentSkills
+          this.orchestrator, activeMcpServers, false, logger, userId, agentSkills, toolWriteNamespaces
         );
         // Internal servers are subject to the agent's tool selection like any
         // other server. Only 'skills' bypasses it: its availability is already
@@ -551,12 +569,9 @@ export class RunService {
 
       // 4. Memory Integration
       const memoryConfig = normalizeMemoryOptions(enrichedInput.memory);
-      let policy: MemoryPolicy = {};
       let memoryContextText: string | undefined;
       if (memoryConfig.enabled) {
-        policy = await withRls(this.db, userId, role, async (client) => {
-          return loadMemoryPolicy(this.db, enrichedInput.agent_id, enrichedInput.task_id, client);
-        });
+        // `policy` is already loaded in step 3b.
 
         // Resolve namespaces: policy templates are applied (placeholders + wildcards kept as-is).
         // auto_read_enabled=false suppresses ALL auto-injection (policy namespaces and derived

@@ -60,12 +60,30 @@ test('both output shapes carry the same schema', () => {
   }
 });
 
-test('the write hint names the user id when it is known', () => {
-  const write = buildMemoryToolSpecs({ userId: 'abc-123' }).find((s) => s.name === 'memory-write');
-  assert.match(String(write?.schema.properties.namespace.description), /abc-123/);
+const writeHint = (options?: Parameters<typeof buildMemoryToolSpecs>[0]) =>
+  String(buildMemoryToolSpecs(options).find((s) => s.name === 'memory-write')?.schema.properties.namespace.description);
 
-  const anonymous = buildMemoryToolSpecs().find((s) => s.name === 'memory-write');
-  assert.doesNotMatch(String(anonymous?.schema.properties.namespace.description), /abc-123/);
+test('the write hint names the user id when it is known', () => {
+  assert.match(writeHint({ userId: 'abc-123' }), /abc-123/);
+  assert.doesNotMatch(writeHint(), /abc-123/);
+});
+
+test('the write hint names the permitted namespaces over any example', () => {
+  const hint = writeHint({
+    userId: 'abc-123',
+    writeNamespaces: ['vector.agent.abc-123.preferences', 'vector.agent.abc-123.howto']
+  });
+  assert.match(hint, /vector\.agent\.abc-123\.preferences/);
+  assert.match(hint, /vector\.agent\.abc-123\.howto/);
+  // The old hint offered vector.user.* to everyone, including agents whose
+  // policy never allowed it — a model called out the contradiction mid-run.
+  assert.doesNotMatch(hint, /vector\.user\./);
+});
+
+test('the write hint invents no namespace when the policy is unknown', () => {
+  for (const hint of [writeHint(), writeHint({ userId: 'abc-123' }), writeHint({ writeNamespaces: ['  ', ''] })]) {
+    assert.doesNotMatch(hint, /vector\.(user|agent|global)\./);
+  }
 });
 
 test('deletion by id is offered, and neither id nor content is required alone', () => {

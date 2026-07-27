@@ -402,9 +402,42 @@ export class ChainRunner {
 
   private isInsideRetry = false;
 
-  private getInternalTools(): RunToolDefinition[] {
+  /**
+   * The write namespaces of a memory policy, with templates resolved. Returns
+   * undefined when there is nothing to name — the tool description then says
+   * so instead of inventing an example.
+   */
+  private async resolveWriteNamespaces(agentId?: string, taskId?: string): Promise<string[] | undefined> {
+    if (!agentId && !taskId) return undefined;
+    try {
+      const policy = await loadMemoryPolicy(null, agentId, taskId, this.client);
+      const patterns = policy.allowedWriteNamespaces;
+      if (!Array.isArray(patterns) || patterns.length === 0) return undefined;
+      const ctx = { ...this.templateContext, agent_id: agentId, task_id: taskId } as Record<string, string | undefined>;
+      const resolved = patterns.flatMap((pattern) => {
+        try {
+          return [resolveNamespaceTemplate(pattern, ctx)];
+        } catch {
+          // An unusable pattern is left out of the hint, not turned into one.
+          return [];
+        }
+      });
+      return resolved.length > 0 ? resolved : undefined;
+    } catch (err) {
+      // A tool hint is not worth failing a chain over.
+      this.debug(`Could not resolve write namespaces for the tool hint: ${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * `writeNamespaces` are the resolved patterns the agent may write to. They
+   * go into the memory-write description so the model is told the truth about
+   * its own policy rather than an example that may contradict it.
+   */
+  private getInternalTools(writeNamespaces?: string[]): RunToolDefinition[] {
     return [
-      ...buildMemoryRunTools({ userId: this.templateContext.user_id }),
+      ...buildMemoryRunTools({ userId: this.templateContext.user_id, writeNamespaces }),
       {
         name: 'delegate-to-agent',
         server: 'delegation',
@@ -505,8 +538,10 @@ export class ChainRunner {
       try {
         const defaultTools = Array.isArray(profile.default_tools) ? profile.default_tools : [];
         
-        const allInternalTools = this.getInternalTools();
-        
+        const allInternalTools = this.getInternalTools(
+          await this.resolveWriteNamespaces(profile.id, profile.task_id ?? undefined)
+        );
+
         // Inject Internal Memory Tools if 'memory' is in mcpServers
         if (mcpServers.includes('memory')) {
           const memoryTools = allInternalTools.filter(t => t.server === 'memory');
@@ -1080,7 +1115,9 @@ ${contextSnippet}
     const mcpServers = Array.isArray(step.params?.mcp_servers) ? step.params.mcp_servers : [];
     
     if (mcpServers.length > 0) {
-      const allInternalTools = this.getInternalTools();
+      const allInternalTools = this.getInternalTools(
+        await this.resolveWriteNamespaces(this.templateContext.agent_id, this.templateContext.task_id)
+      );
       for (const serverName of mcpServers) {
         if (serverName === 'memory' || serverName === 'delegation') {
           // If the step params define specific tools, we should ideally filter here too.
