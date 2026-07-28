@@ -75,11 +75,13 @@ An Agent cannot delegate tasks to itself. This prevents "circular thinking" and 
 ### 4. Identity Injection
 Sub-Agents automatically receive an extended system instruction informing them of their own role and identity within the system. This encourages the use of their own specialized tools rather than re-delegating.
 
-### 5. System Context Inheritance
-Sub-Agents inherit the full system context of the Master:
-- **Time/Date:** Current timestamps are automatically injected.
-- **User Context:** Information about the requesting user (ID, name, role) is passed.
-- **SOPs:** All behavioral rules (`context_prompt`) defined in the selected Task are set as the primary `system` message.
+### 5. The Sub-Agent's Instructions (Task Context)
+A sub-agent builds its system prompt **itself** — it does **not** inherit one from the master:
+- **Task context:** The behavioural rules (`context_prompt`) defined in **the sub-agent's own** task are set as the primary `system` message. The master's task context stays out of it.
+- **User context:** Information about the requesting user (ID, name, role) is resolved into the template variables.
+- **Time/Date:** Current timestamps are injected automatically — into the volatile suffix, not the system prompt.
+
+What the sub-agent does take from the master is the conversation history (point 6), not its instructions. The full delineation is in [How Memory and Context Work](../memory_audit/00_context_and_memory_flow.md).
 
 ### 6. History Continuity (History Flow)
 With every delegation, the relevant conversation history is passed to the Sub-Agent. This ensures that the Sub-Agent understands the context of the entire conversation.

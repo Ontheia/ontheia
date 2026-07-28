@@ -75,11 +75,13 @@ Ein Agent kann Aufgaben nicht an sich selbst delegieren. Dies verhindert "Kreisd
 ### 4. Identitäts-Injektion
 Sub-Agenten erhalten automatisch eine erweiterte System-Instruktion, die ihnen ihre eigene Rolle und Identität im System mitteilt. Dies fördert die Nutzung der eigenen spezialisierten Tools gegenüber einer erneuten Delegation.
 
-### 5. System-Kontext-Vererbung
-Sub-Agenten erben den vollständigen System-Kontext des Masters:
-- **Zeit/Datum:** Aktuelle Zeitangaben werden automatisch injiziert.
-- **User-Kontext:** Informationen über den anfragenden Benutzer (ID, Name, Rolle) werden übergeben.
-- **SOPs:** Alle im gewählten Task definierten Verhaltensregeln (`context_prompt`) werden als primäre `system`-Nachricht gesetzt.
+### 5. Instruktionen des Sub-Agenten (Task-Kontext)
+Der Sub-Agent baut seinen System-Prompt **selbst** auf — er erbt ihn **nicht** vom Master:
+- **Task-Kontext:** Die im Task **des Sub-Agenten** definierten Verhaltensregeln (`context_prompt`) werden als primäre `system`-Nachricht gesetzt. Der Task-Kontext des Masters bleibt außen vor.
+- **User-Kontext:** Informationen über den anfragenden Benutzer (ID, Name, Rolle) werden in die Template-Variablen aufgelöst.
+- **Zeit/Datum:** Aktuelle Zeitangaben werden automatisch injiziert — im volatilen Suffix, nicht im System-Prompt.
+
+Was der Sub-Agent vom Master übernimmt, ist die Gesprächshistorie (Punkt 6), nicht dessen Instruktionen. Die vollständige Abgrenzung steht in [Wie Memory und Kontext funktionieren](../memory_audit/00_context_and_memory_flow.md).
 
 ### 6. Historien-Kontinuität (History Flow)
 Bei jeder Delegation wird die relevante Gesprächshistorie an den Sub-Agenten weitergegeben. Dies stellt sicher, dass der Sub-Agent den Kontext des gesamten Gesprächs versteht.

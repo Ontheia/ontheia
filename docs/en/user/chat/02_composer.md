@@ -4,7 +4,7 @@ In the Composer, you configure your Run before sending the message.
 
 ## 1. Selectors (Pickers)
 Before sending a message, you choose who should respond:
-- **Agent or Provider:** Select a specialized AI persona or a direct AI provider (e.g., OpenAI).
+- **Agent or Provider:** Select a specialized agent or a direct AI provider (e.g., OpenAI).
 - **Task or Chain:** Select a specific task or a multi-stage workflow (Chain).
 - **Preselection:** Ontheia remembers your last selection for new chats. You can permanently change this default in your user settings.
 - **Saved per chat:** Within an existing chat, your selection is saved for that specific chat and persists across chat switches and page reloads. Switching to an agent automatically adopts that agent's administrator-configured tool authorization (see section 3) for this chat — overwriting any authorization you set manually before. Switching to a provider instead leaves the current tool authorization unchanged.

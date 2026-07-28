@@ -7,7 +7,9 @@ In the Admin Console, you can edit existing Tasks or define new specialized duti
 - **Description:** A brief explanation for the user on what this Task accomplishes.
 
 ## 2. Task Context (System Prompt)
-This is the most important field. The text stored here is sent to the AI model as part of the system prompt.
+This is the most important field. The text stored here is sent to the AI model as the first `system` message — it is the **only** source of an agent's instructions. An agent can have several tasks and therefore one task context per task; only the one belonging to the selected task takes effect.
+
+> For the distinction between system context, task context and system prompt see [How Memory and Context Work](../memory_audit/00_context_and_memory_flow.md#1-what-is-context).
 - **Content:** Define behavioral rules, response formats, or specific process knowledge here.
 - **Best Practice:** Use clear instructions (e.g., "Analyze the code for security vulnerabilities and output the result as a Markdown table.").
 

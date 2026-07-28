@@ -7,7 +7,9 @@ In der Admin-Konsole können Sie bestehende Tasks bearbeiten oder neue spezialis
 - **Beschreibung:** Eine kurze Erklärung für den Nutzer, was dieser Task bewirkt.
 
 ## 2. Task-Kontext (System-Prompt)
-Dies ist das wichtigste Feld. Der hier hinterlegte Text wird als Teil des System-Prompts an das KI-Modell gesendet.
+Dies ist das wichtigste Feld. Der hier hinterlegte Text wird als erste `system`-Nachricht an das KI-Modell gesendet — er ist die **einzige** Quelle für die Instruktionen eines Agenten. Ein Agent kann mehrere Tasks haben und damit je Task einen eigenen Task-Kontext; wirksam ist immer nur der der gewählten Task.
+
+> Zur Abgrenzung von System-Kontext, Task-Kontext und System-Prompt siehe [Wie Memory und Kontext funktionieren](../memory_audit/00_context_and_memory_flow.md#1-was-ist-kontext).
 - **Inhalt:** Definieren Sie hier Verhaltensregeln, Antwortformate oder spezifisches Prozesswissen.
 - **Best Practice:** Nutzen Sie klare Anweisungen (z. B. "Analysiere den Code auf Sicherheitslücken und gib das Ergebnis als Markdown-Tabelle aus.").
 

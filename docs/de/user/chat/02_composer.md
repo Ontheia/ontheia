@@ -4,7 +4,7 @@ Im Composer konfigurierst du deinen Run, bevor du die Nachricht abschickst.
 
 ## 1. Selektoren (Picker)
 Bevor du eine Nachricht sendest, wählst du aus, wer antworten soll:
-- **Agent oder Provider:** Wähle eine spezialisierte KI-Persona oder einen direkten AI-Provider (z. B. OpenAI).
+- **Agent oder Provider:** Wähle einen spezialisierten Agenten oder einen direkten AI-Provider (z. B. OpenAI).
 - **Task oder Chain:** Wähle eine spezifische Aufgabe (Task) oder einen mehrstufigen Workflow (Chain) aus.
 - **Vorauswahl:** Ontheia merkt sich deine letzte Auswahl für neue Chats. Du kannst diese Voreinstellung in deinen Benutzereinstellungen dauerhaft ändern.
 - **Pro Chat gespeichert:** Innerhalb eines bestehenden Chats wird deine Auswahl für genau diesen Chat gespeichert und bleibt auch nach einem Chat-Wechsel oder Neuladen der Seite erhalten. Wechselst du dabei zu einem Agenten, übernimmt Ontheia automatisch dessen vom Administrator konfigurierte Tool-Freigabe (siehe Abschnitt 3) für diesen Chat — eine zuvor manuell gesetzte Freigabe wird dadurch überschrieben. Wechselst du stattdessen zu einem Provider, bleibt die aktuelle Tool-Freigabe unverändert.

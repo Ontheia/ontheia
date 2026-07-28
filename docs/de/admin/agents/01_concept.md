@@ -1,6 +1,6 @@
 # Agenten-Konzept in Ontheia
 
-Ein Agent ist in Ontheia mehr als nur eine Verbindung zu einem KI-Modell. Er stellt eine konfigurierte **KI-Identität (Persona)** dar, die für spezifische Rollen oder Aufgaben optimiert ist.
+Ein Agent ist in Ontheia mehr als nur eine Verbindung zu einem KI-Modell. Er stellt eine konfigurierte **KI-Identität** dar, die für spezifische Rollen oder Aufgaben optimiert ist. Sein Verhalten bestimmt der **Task-Kontext** der jeweils gewählten Task.
 
 ## Kernkomponenten eines Agenten
 

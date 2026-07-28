@@ -1,6 +1,6 @@
 # Agent Concept in Ontheia
 
-An Agent in Ontheia is more than just a connection to an AI model. It represents a configured **AI identity (Persona)**, optimized for specific roles or tasks.
+An Agent in Ontheia is more than just a connection to an AI model. It represents a configured **AI identity**, optimized for specific roles or tasks. Its behaviour comes from the **task context** of whichever task is selected.
 
 ## Core Components of an Agent
 

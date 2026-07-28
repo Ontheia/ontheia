@@ -8,10 +8,24 @@ This document explains how Ontheia assembles context for an agent, how long-term
 
 Every time an agent processes a task, it receives a **context** — everything the language model (LLM) "knows" at the start of its work. The context is assembled from multiple sources and passed to the LLM as an ordered sequence of messages.
 
-Context consists of **two parts**:
+### Terminology
 
-- **System prompt** — Background information that controls the agent's behavior (not visible to the user)
-- **Chat history** — The conversation history between the user and the agent so far
+These three terms are used throughout the documentation with exactly these meanings:
+
+| Term | Meaning |
+| :--- | :--- |
+| **System context** | The **entire** context available to the LLM for a run — including the task context, skill catalog, tool hint, chat history, memory hits and date/time. The umbrella term. |
+| **Task context** | Belongs to an agent's **task** and describes what that task is (`app.tasks.context_prompt`). An agent can have **several tasks** and therefore one task context per task; only the one belonging to the selected task takes effect. |
+| **System prompt** | The technical form in which the task context reaches the model: as a `system` message at the head of the message sequence. Not a separate piece of content, but the delivery. |
+
+> The task context is therefore a **part** of the system context, not a synonym for it. Up to and including version 0.5.0 there was a second source of instructions alongside it — the persona on the agent. Version 0.6.0 removes it from the code and the database; the task context is the only one.
+
+### Structure
+
+The system context consists of **two parts**:
+
+- **System messages** — Background information that controls the agent's behavior (not visible to the user): task context, skill catalog, tool hint
+- **Chat history** — The conversation history between the user and the agent so far, plus the volatile additions appended to the last user message
 
 ---
 
@@ -23,8 +37,8 @@ The LLM receives an ordered list of messages. The order is fixed:
 ┌─────────────────────────────────────────────────────────────────┐
 │ STABLE PREFIX (cacheable — see note below)                      │
 │                                                                 │
-│ [system] 1. Agent Persona / Task Context                        │
-│    → From agent or task configuration                           │
+│ [system] 1. Task Context (system prompt)                        │
+│    → From the task configuration (app.tasks.context_prompt)     │
 │    → Template variables (${user_name} …) are resolved here      │
 │    → For sub-agents: anti-self-delegation notice                │
 │ [system] 2. Skill Catalog                                       │
@@ -56,7 +70,7 @@ The system blocks (1–3) are placed **before** the existing chat history. The L
 
 ### Template Variables in the System Prompt
 
-In the agent persona block (block 1), the following placeholders can be used — they are resolved at runtime from the session context:
+In the task context (block 1), the following placeholders can be used — they are resolved at runtime from the session context:
 
 | Variable | Content |
 |---|---|
@@ -68,7 +82,7 @@ In the agent persona block (block 1), the following placeholders can be used —
 | `${current_date}` | Localized date (user's language + timezone) |
 | `${current_time}` | Localized time (HH:mm, user's timezone) |
 
-> **Don't put `${current_date}`/`${current_time}` in the system prompt.** Date and time are provided automatically in the suffix anyway (see above). If you also write them into the agent persona/task context, the per-minute time ends up in the **cached prefix** and breaks caching every minute (higher cost). The variables remain available for special cases but should be avoided in the system prompt.
+> **Don't put `${current_date}`/`${current_time}` in the system prompt.** Date and time are provided automatically in the suffix anyway (see above). If you also write them into the task context, the per-minute time ends up in the **cached prefix** and breaks caching every minute (higher cost). The variables remain available for special cases but should be avoided in the system prompt.
 
 ---
 
@@ -159,7 +173,7 @@ Sub-agent receives:
 The sub-agent builds its context **independently** from the master:
 
 ```
-    ✅ Its own system prompt / persona (from sub-agent configuration)
+    ✅ Its own task context (from the sub-agent's task)
     ✅ Its own memory policy (own namespaces, own topK)
     ✅ Its own memory search (based on the delegation input)
     ✅ Its own toolset
@@ -169,7 +183,7 @@ The sub-agent builds its context **independently** from the master:
 ### What the Sub-Agent Does NOT Get from the Master
 
 ```
-    ❌ Master system prompt / persona
+    ❌ The master's task context
     ❌ Master memory context (memory hits loaded by the master)
     ❌ Master tools
     ❌ Master run ID

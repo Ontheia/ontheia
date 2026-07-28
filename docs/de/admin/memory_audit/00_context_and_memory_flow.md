@@ -8,10 +8,24 @@ Dieses Dokument erklärt, wie Ontheia den Kontext für einen Agenten aufbaut, wi
 
 Jedes Mal, wenn ein Agent eine Aufgabe bearbeitet, bekommt er einen **Kontext** — das ist alles, was das Sprachmodell (LLM) zu Beginn seiner Arbeit „weiß". Der Kontext wird aus mehreren Quellen zusammengebaut und als geordnete Nachrichtenfolge an das LLM übergeben.
 
-Der Kontext besteht aus **zwei Teilen**:
+### Begriffe
 
-- **System-Prompt** — Hintergrundinformationen, die das Verhalten des Agents steuern (für den Nutzer nicht sichtbar)
-- **Chat-Verlauf** — Die bisherige Gesprächshistorie zwischen Nutzer und Agent
+Diese drei Begriffe werden in der gesamten Dokumentation in genau dieser Bedeutung verwendet:
+
+| Begriff | Bedeutung |
+| :--- | :--- |
+| **System-Kontext** | Der **gesamte** dem LLM zugängliche Kontext eines Laufs — einschließlich Task-Kontext, Skill-Katalog, Tool-Hinweis, Chat-Verlauf, Gedächtnis-Treffer und Datum/Uhrzeit. Der Oberbegriff. |
+| **Task-Kontext** | Gehört zur **Task** eines Agenten und beschreibt deren Aufgabe (`app.tasks.context_prompt`). Ein Agent kann **mehrere Tasks** haben und damit je Task einen eigenen Task-Kontext; wirksam ist immer nur der der gewählten Task. |
+| **System-Prompt** | Die technische Form, in der der Task-Kontext ans Modell geht: als `system`-Nachricht am Anfang der Nachrichtenfolge. Kein eigener Inhalt, sondern die Zustellung. |
+
+> Der Task-Kontext ist damit ein **Teil** des System-Kontexts, nicht dessen Synonym. Bis einschließlich Version 0.5.0 gab es daneben eine zweite Quelle für Instruktionen — die Persona am Agenten. Sie ist mit Version 0.6.0 aus Code und Datenbank entfernt; der Task-Kontext ist die einzige.
+
+### Aufbau
+
+Der System-Kontext besteht aus **zwei Teilen**:
+
+- **System-Nachrichten** — Hintergrundinformationen, die das Verhalten des Agents steuern (für den Nutzer nicht sichtbar): Task-Kontext, Skill-Katalog, Tool-Hinweis
+- **Chat-Verlauf** — Die bisherige Gesprächshistorie zwischen Nutzer und Agent, ergänzt um die volatilen Anhänge an der letzten Nutzernachricht
 
 ---
 
@@ -23,8 +37,8 @@ Das LLM empfängt eine geordnete Liste von Nachrichten. Die Reihenfolge ist fest
 ┌─────────────────────────────────────────────────────────────────┐
 │ STABILER PREFIX (cachebar — siehe Hinweis unten)                │
 │                                                                 │
-│ [system] 1. Agent-Persona / Task-Kontext                        │
-│    → Aus Agent- oder Task-Konfiguration                         │
+│ [system] 1. Task-Kontext (System-Prompt)                        │
+│    → Aus der Task-Konfiguration (app.tasks.context_prompt)      │
 │    → Template-Variablen (${user_name} …) werden hier aufgelöst  │
 │    → Bei Sub-Agents: Anti-Selbst-Delegations-Hinweis            │
 │ [system] 2. Skill-Katalog                                       │
@@ -56,7 +70,7 @@ Die System-Blöcke (1–3) werden **vor** die bestehende Chat-History gesetzt. D
 
 ### Template-Variablen im System-Prompt
 
-Im Agent-Persona-Block (Block 1) können folgende Platzhalter verwendet werden — sie werden zur Laufzeit aus dem Sitzungskontext aufgelöst:
+Im Task-Kontext (Block 1) können folgende Platzhalter verwendet werden — sie werden zur Laufzeit aus dem Sitzungskontext aufgelöst:
 
 | Variable | Inhalt |
 |---|---|
@@ -68,7 +82,7 @@ Im Agent-Persona-Block (Block 1) können folgende Platzhalter verwendet werden �
 | `${current_date}` | Lokalisiertes Datum (Sprache + Zeitzone des Nutzers) |
 | `${current_time}` | Lokalisierte Uhrzeit (HH:mm, Zeitzone des Nutzers) |
 
-> **`${current_date}`/`${current_time}` nicht in den System-Prompt aufnehmen.** Datum und Uhrzeit werden ohnehin automatisch im Suffix bereitgestellt (siehe oben). Schreibst du sie zusätzlich in den Agent-Persona-/Task-Kontext, landet die minütlich wechselnde Uhrzeit im **gecachten Prefix** und bricht das Caching bei jeder Minute (höhere Kosten). Die Variablen bleiben für Sonderfälle verfügbar, sollten im System-Prompt aber gemieden werden.
+> **`${current_date}`/`${current_time}` nicht in den System-Prompt aufnehmen.** Datum und Uhrzeit werden ohnehin automatisch im Suffix bereitgestellt (siehe oben). Schreibst du sie zusätzlich in den Task-Kontext, landet die minütlich wechselnde Uhrzeit im **gecachten Prefix** und bricht das Caching bei jeder Minute (höhere Kosten). Die Variablen bleiben für Sonderfälle verfügbar, sollten im System-Prompt aber gemieden werden.
 
 ---
 
@@ -159,7 +173,7 @@ Sub-Agent bekommt:
 Der Sub-Agent baut seinen Kontext **unabhängig** vom Master auf:
 
 ```
-    ✅ Eigener System-Prompt / Persona (aus Sub-Agent-Konfiguration)
+    ✅ Eigener Task-Kontext (aus der Task des Sub-Agenten)
     ✅ Eigene Memory Policy (eigene Namespaces, eigenes topK)
     ✅ Eigene Memory-Suche (basierend auf dem Delegations-Input)
     ✅ Eigenes Toolset
@@ -169,7 +183,7 @@ Der Sub-Agent baut seinen Kontext **unabhängig** vom Master auf:
 ### Was der Sub-Agent NICHT vom Master bekommt
 
 ```
-    ❌ Master-System-Prompt / Persona
+    ❌ Task-Kontext des Masters
     ❌ Master Memory-Kontext (geladene Memory-Treffer des Masters)
     ❌ Master-Tools
     ❌ Master-Run-ID
