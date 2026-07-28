@@ -269,32 +269,37 @@ export class MemoryAdapter {
    *
    * The hits stored on a chat message are frozen at run time, so a confirmation
    * made afterwards is invisible there — reloading a chat would show every
-   * confirmation as lost. `superseded` is reported too, so a view can stop
-   * offering an entry that has meanwhile been replaced.
+   * confirmation as lost.
    *
-   * Ids the caller may not see are simply absent: this runs under RLS and does
-   * not distinguish "not yours" from "gone".
+   * Deleted rows are included and flagged rather than filtered out. Leaving them
+   * absent looks the same as "not found", and the caller would fall back to its
+   * snapshot and keep offering an entry that no longer exists. Same reasoning
+   * for `superseded`.
+   *
+   * Ids the caller may not see are absent: this runs under RLS and does not
+   * distinguish "not yours" from "never existed".
    */
   async getStatuses(
     db: Pool | PoolClient,
     ids: string[]
-  ): Promise<Record<string, { status: string; statusChangedAt?: string; superseded: boolean }>> {
+  ): Promise<Record<string, { status: string; statusChangedAt?: string; superseded: boolean; deleted: boolean }>> {
     const wanted = Array.from(new Set(ids.filter((id) => typeof id === 'string' && id.trim()))).map((id) => id.trim());
-    const out: Record<string, { status: string; statusChangedAt?: string; superseded: boolean }> = {};
+    const out: Record<string, { status: string; statusChangedAt?: string; superseded: boolean; deleted: boolean }> = {};
     if (wanted.length === 0) return out;
 
     for (const table of this.tables) {
       const res = await db.query(
-        `SELECT id, status, status_changed_at, superseded_by
+        `SELECT id, status, status_changed_at, superseded_by, deleted_at
            FROM ${table.name}
-          WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+          WHERE id = ANY($1::uuid[])`,
         [wanted]
       );
       for (const row of res.rows) {
         out[row.id] = {
           status: row.status,
           statusChangedAt: row.status_changed_at ? new Date(row.status_changed_at).toISOString() : undefined,
-          superseded: Boolean(row.superseded_by)
+          superseded: Boolean(row.superseded_by),
+          deleted: Boolean(row.deleted_at)
         };
       }
     }

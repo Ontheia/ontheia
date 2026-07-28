@@ -76,14 +76,15 @@ export function MemoryConfirmButton({ hits, messageId, timezone, overrides }: Pr
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Deduplicated because the same entry can be injected and then returned by a
-  // memory-search in the same run. An entry the lookup reports as superseded
-  // drops out: offering it would only ever earn a 409.
+  // memory-search in the same run. Entries the lookup reports as superseded or
+  // deleted drop out: offering them could only ever earn a 409 or a 404.
   const entries = useMemo(() => {
     const seen = new Set<string>();
     return hits.filter((hit): hit is ConfirmableHit & { id: string } => {
       if (typeof hit?.id !== 'string' || hit.id.length === 0) return false;
       if (seen.has(hit.id)) return false;
-      if (overrides?.[hit.id]?.superseded) return false;
+      const live = overrides?.[hit.id];
+      if (live?.superseded || live?.deleted) return false;
       seen.add(hit.id);
       return true;
     });

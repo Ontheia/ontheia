@@ -1106,7 +1106,12 @@ export function deleteChatMessage(chatId: string, messageId: string) {
   });
 }
 
-export type MemoryStatusEntry = { status: string; statusChangedAt?: string; superseded: boolean };
+export type MemoryStatusEntry = {
+  status: string;
+  statusChangedAt?: string;
+  superseded: boolean;
+  deleted: boolean;
+};
 
 /**
  * Current status of the memory entries a chat refers to. The hits stored on a

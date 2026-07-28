@@ -546,3 +546,35 @@ test('writeDocuments without the collector still returns just the count', async 
   const inserted = await adapter.writeDocuments('vector.agent.x.memory', [{ content: 'a fact' }]);
   assert.equal(inserted, 1, 'the six existing callers use the number arithmetically');
 });
+
+test('getStatuses flags deleted and superseded instead of hiding them', async () => {
+  const recorded: Recorded[] = [];
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('status_changed_at, superseded_by, deleted_at')) {
+        return {
+          rows: [
+            { id: 'a', status: 'confirmed', status_changed_at: null, superseded_by: null, deleted_at: null },
+            { id: 'b', status: 'superseded', status_changed_at: null, superseded_by: 'c', deleted_at: null },
+            { id: 'c', status: 'unconfirmed', status_changed_at: null, superseded_by: null, deleted_at: new Date() }
+          ]
+        };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+
+  const out = await adapter.getStatuses(db as any, ['a', 'b', 'c']);
+  // Absent would look like "not found", and the caller would fall back to its
+  // snapshot and keep offering an entry that is gone.
+  assert.equal(out.c?.deleted, true);
+  assert.equal(out.b?.superseded, true);
+  assert.equal(out.a?.deleted, false);
+  const lookup = recorded.find((r) => r.sql.includes('superseded_by, deleted_at'))!;
+  assert.doesNotMatch(lookup.sql, /deleted_at IS NULL/, 'the deleted rows are the point');
+});
