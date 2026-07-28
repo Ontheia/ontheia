@@ -686,6 +686,164 @@
   border-color: rgba(248, 113, 113, 0.45);
 }
 
+/* Confirmation of a memory entry. Follows the copy/delete buttons: invisible
+   until the message is hovered — with one exception. An already confirmed entry
+   stays visible, because the mark is a statement about the entry and not an
+   affordance that only matters on approach. */
+.memory-confirm {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.message-subconfirm {
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.35rem;
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(241, 245, 249, 0.95);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.message-container:hover .message-subconfirm,
+.message-subconfirm:focus-visible,
+.message-subconfirm.is-confirmed {
+  opacity: 1;
+}
+
+.message-subconfirm:hover {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.message-subconfirm.is-confirmed {
+  color: #34d399;
+}
+
+.message-subconfirm:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.memory-confirm-count {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+
+.memory-confirm-error {
+  font-size: 0.7rem;
+  color: rgba(248, 113, 113, 0.9);
+  white-space: nowrap;
+}
+
+.memory-confirm-popover {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 40;
+  width: min(30rem, 70vw);
+  padding: 0.6rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #0f172a;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
+  text-align: left;
+}
+
+.memory-confirm-popover-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 0.25rem 0.45rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.memory-confirm-popover-head strong {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.memory-confirm-popover-head span {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.memory-confirm-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.memory-confirm-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.55rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.memory-confirm-item:hover {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.memory-confirm-item.is-confirmed {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.memory-confirm-item svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+/* Three lines are enough to recognise an entry; the full text belongs in the
+   memory view, not in a popover over the conversation. */
+.memory-confirm-item-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* "used" or "stored" — in a correction turn the two are different entries, and
+   which one is being confirmed has to be readable before the click. */
+.memory-confirm-origin {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.35rem;
+  background: rgba(148, 163, 184, 0.18);
+  color: rgba(203, 213, 225, 0.75);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: 0.05rem;
+}
+
 .message-timestamp {
   margin-right: 8px;
 }

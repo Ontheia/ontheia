@@ -52,6 +52,8 @@ export interface MemoryHit {
   /** When the fact was observed, if known. Readers fall back to createdAt. */
   observedAt?: string;
   status?: MemoryStatus;
+  /** When `status` last changed. Undefined means never changed since creation. */
+  statusChangedAt?: string;
   class?: MemoryClass;
   /** Set only for an admin search with includeHidden — otherwise not returned. */
   deletedAt?: string;

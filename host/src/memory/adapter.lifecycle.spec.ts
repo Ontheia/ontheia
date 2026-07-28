@@ -404,3 +404,145 @@ test('propagation stops instead of looping when entries point at each other', as
   const rounds = recorded.filter((r) => r.sql.includes('derived_from &&')).length;
   assert.ok(rounds <= 10, `expected the loop to be bounded, ran ${rounds} rounds`);
 });
+
+/**
+ * The confirmation path. `status` had three values from V76 on, but nothing in
+ * the codebase ever wrote 'confirmed' — the duplicate ranking sorted by a
+ * criterion that could not become true.
+ */
+
+function statusDb(row: { status?: string; superseded_by?: string | null } | null) {
+  const recorded: Recorded[] = [];
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('SELECT namespace, status, superseded_by')) {
+        return row
+          ? { rowCount: 1, rows: [{ namespace: 'vector.agent.x.preferences', status: row.status ?? 'unconfirmed', superseded_by: row.superseded_by ?? null }] }
+          : { rowCount: 0, rows: [] };
+      }
+      if (sql.includes('RETURNING namespace, status, status_changed_at')) {
+        return {
+          rowCount: 1,
+          rows: [{ namespace: 'vector.agent.x.preferences', status: (params as any[])[1], status_changed_at: new Date('2026-07-28T10:00:00Z') }]
+        };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  return { db, recorded, find: (needle: string) => recorded.filter((r) => r.sql.includes(needle)) };
+}
+
+test('confirming sets status_changed_at and leaves updated_at alone', async () => {
+  const { db, find } = statusDb({ status: 'unconfirmed' });
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const result = await adapter.setStatus(db as any, 'entry-1', 'confirmed');
+
+  assert.equal(result.ok, true);
+  const update = find('SET status = $2')[0];
+  assert.ok(update, 'the status should be written');
+  assert.match(update.sql, /status_changed_at = now\(\)/);
+  // The whole point of the separate column: a click changed no content, so it
+  // must not hand the entry the full recency bonus in calculateRankingScore.
+  assert.doesNotMatch(update.sql, /updated_at/);
+});
+
+test('the toggle back to unconfirmed reports the previous value for the audit', async () => {
+  const { db } = statusDb({ status: 'confirmed' });
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const result = await adapter.setStatus(db as any, 'entry-1', 'unconfirmed');
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ok && result.previousStatus, 'confirmed');
+  assert.equal(result.ok && result.status, 'unconfirmed');
+});
+
+test('a superseded entry cannot be confirmed', async () => {
+  const { db, find } = statusDb({ status: 'superseded', superseded_by: 'newer-1' });
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const result = await adapter.setStatus(db as any, 'entry-1', 'confirmed');
+
+  assert.equal(result.ok, false);
+  assert.equal(!result.ok && result.reason, 'superseded');
+  // Setting it would erase the marker while superseded_by still points at the
+  // successor — status carries maturity and lifecycle in one column.
+  assert.equal(find('SET status = $2').length, 0, 'nothing should have been written');
+});
+
+test('an entry that is gone reports not_found rather than silently succeeding', async () => {
+  const { db } = statusDb(null);
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const result = await adapter.setStatus(db as any, 'entry-1', 'confirmed');
+
+  assert.equal(result.ok, false);
+  assert.equal(!result.ok && result.reason, 'not_found');
+});
+
+test('editing the text of a confirmed entry drops the confirmation', async () => {
+  const recorded: Recorded[] = [];
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('SELECT')) {
+        return { rowCount: 1, rows: [{ id: 'entry-1', namespace: 'vector.agent.x.preferences', content: 'old text', metadata: {} }] };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+
+  await adapter.updateDocument('entry-1', { content: 'new text' }, client as any);
+  const update = recorded.filter((r) => r.sql.includes('UPDATE vector.test'))[0];
+  assert.ok(update, 'the entry should be updated');
+  // A confirmation is bound to a wording — otherwise it carries over to a
+  // sentence nobody confirmed.
+  assert.match(update.sql, /status = CASE WHEN status = 'confirmed' AND content IS DISTINCT FROM \$3/);
+  assert.match(update.sql, /status_changed_at = CASE WHEN/);
+});
+
+test('restoring sets unconfirmed exactly once — two assignments would not parse', async () => {
+  const recorded: Recorded[] = [];
+  const client = {
+    query: async (sql: string, params?: unknown[]) => {
+      recorded.push({ sql, params });
+      if (sql.includes('vector_namespace_rules')) return { rows: [] };
+      if (sql.includes('SELECT')) {
+        return { rowCount: 1, rows: [{ id: 'entry-1', namespace: 'vector.agent.x.preferences', content: 'text', metadata: {} }] };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {}
+  };
+  const db = { connect: async () => client, query: client.query };
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+
+  await adapter.updateDocument('entry-1', { content: 'text', restore: true }, client as any);
+  const update = recorded.filter((r) => r.sql.includes('UPDATE vector.test'))[0];
+  const assignments = (update.sql.match(/\bstatus\s*=/g) ?? []).length;
+  assert.equal(assignments, 1, `status assigned ${assignments} times`);
+  assert.match(update.sql, /status = 'unconfirmed'/);
+});
+
+test('writeDocuments hands back the ids it wrote', async () => {
+  const { db } = mockDb();
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const writtenIds: string[] = [];
+  await adapter.writeDocuments('vector.agent.x.memory', [{ content: 'a fact' }], undefined, undefined, writtenIds);
+
+  // Without them the confirmation button under an answer can only offer the
+  // entry a correction replaced, never the one it stored.
+  assert.deepEqual(writtenIds, ['new-id']);
+});
+
+test('writeDocuments without the collector still returns just the count', async () => {
+  const { db } = mockDb();
+  const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
+  const inserted = await adapter.writeDocuments('vector.agent.x.memory', [{ content: 'a fact' }]);
+  assert.equal(inserted, 1, 'the six existing callers use the number arithmetically');
+});

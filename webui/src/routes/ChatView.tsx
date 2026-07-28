@@ -58,12 +58,15 @@ import {
   getUserSettingsApi,
   listChatMessages,
   deleteChatMessage,
-  getMotd
+  getMotd,
+  getMemoryStatuses,
+  type MemoryStatusEntry
 } from '../lib/api';
 import { useChatSidebar, type ToolApprovalMode, type WarningEntry } from '../context/chat-sidebar-context';
 import { CombinedPicker } from '../components/CombinedPicker';
 import { MarkdownMessage } from '../components/MarkdownMessage';
 import { TracePanel } from '../components/TracePanel';
+import { MemoryConfirmButton, type ConfirmableHit } from '../components/MemoryConfirmButton';
 import { ArtifactCard, type ArtifactFileRef } from '../components/ArtifactCard';
 import { ArtifactPanel, type ArtifactPanelSource } from '../components/ArtifactPanel';
 import type { PrimarySelection, SecondarySelection } from '../App';
@@ -118,12 +121,13 @@ type MessageBubbleProps = {
   metadata?: ChatMessage['metadata'];
   timezone?: string;
   onDelete?: (id: string) => void;
+  memoryStatuses?: Record<string, MemoryStatusEntry>;
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, onDelete }: MessageBubbleProps) => {
+const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, onDelete, memoryStatuses }: MessageBubbleProps) => {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -146,6 +150,16 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
   const showRoleBadge = role === 'tool' || role === 'system';
   
   const usage = useMemo(() => usageTotals(metadata?.usage), [metadata?.usage]);
+
+  // RunService stores the injected hits on the agent message, which is what
+  // makes a per-bubble confirmation possible at all — the ids survive a reload.
+  const memoryHits = useMemo<ConfirmableHit[]>(() => {
+    const injected = Array.isArray(metadata?.memoryHits) ? (metadata.memoryHits as ConfirmableHit[]) : [];
+    const written = Array.isArray(metadata?.memoryWrites) ? (metadata.memoryWrites as ConfirmableHit[]) : [];
+    // Written first: in a correction turn that is the current fact, and the
+    // injected hit is the one it replaced.
+    return [...written, ...injected];
+  }, [metadata?.memoryHits, metadata?.memoryWrites]);
 
   const { t, i18n } = useTranslation(['chat', 'common']);
 
@@ -218,6 +232,9 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
               <Trash2 width={14} height={14} aria-hidden="true" />
             </button>
           )}
+          {normalizedRole === 'agent' && memoryHits.length > 0 && (
+            <MemoryConfirmButton hits={memoryHits} messageId={id} timezone={timezone} overrides={memoryStatuses} />
+          )}
           {formattedTime && (
             <div className="message-timestamp">
               {formattedTime}
@@ -249,7 +266,15 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
   prev.role === next.role &&
   prev.content === next.content &&
   prev.createdAt === next.createdAt &&
-  JSON.stringify(prev.metadata) === JSON.stringify(next.metadata));
+  // Without this the status lookup arrives and nothing re-renders: the
+  // confirmation button would keep showing the run snapshot forever. The object
+  // is state and only changes when the lookup actually returns.
+  prev.memoryStatuses === next.memoryStatuses &&
+  // Reference first. Since the injected hits live in metadata now, stringifying
+  // it compares whole memory entries — a single HowTo runs to kilobytes, and
+  // this ran for every bubble on every render.
+  (prev.metadata === next.metadata ||
+    JSON.stringify(prev.metadata) === JSON.stringify(next.metadata)));
 
 type ToastWarning = WarningEntry & { toastId: string };
 
@@ -316,6 +341,50 @@ export function ChatView({
   // accumulation would miss or mistarget them — this ref carries the run
   // total and is attached to whichever agent message is current/created.
   const runUsageRef = useRef<ReturnType<typeof accumulateUsage> | null>(null);
+  /**
+   * The hits injected into this run. RunService stores them on the agent
+   * message, but only the reload sees that — during the run the message is
+   * assembled here, so without this the confirmation button appeared only after
+   * a browser refresh. Filled from the memory_hits event, which always arrives
+   * before the agent message exists (step 4, ahead of the provider request).
+   *
+   * Deliberately only the auto-injected hits, not what a memory-search tool call
+   * returned: the persisted metadata holds exactly those, and the button must
+   * mean the same thing before and after a reload.
+   */
+  const runMemoryHitsRef = useRef<ConfirmableHit[] | null>(null);
+  /** What the run stored. In a correction turn this — not the injected hit — is
+   *  what the answer asserts, so it belongs under the same button. */
+  const runMemoryWritesRef = useRef<ConfirmableHit[] | null>(null);
+
+  const agentMessageMetadata = useCallback(() => {
+    const meta: Record<string, unknown> = {};
+    if (runUsageRef.current) meta.usage = runUsageRef.current;
+    if (runMemoryHitsRef.current?.length) meta.memoryHits = runMemoryHitsRef.current;
+    if (runMemoryWritesRef.current?.length) meta.memoryWrites = runMemoryWritesRef.current;
+    return Object.keys(meta).length > 0 ? { metadata: meta } : {};
+  }, []);
+
+  const captureMemoryHits = useCallback((event: any) => {
+    if (event?.type === 'memory_hits' && Array.isArray(event.hits)) {
+      runMemoryHitsRef.current = event.hits as ConfirmableHit[];
+      return;
+    }
+    if (event?.type === 'tool_call' && event.tool === 'memory-write' && event.status === 'success') {
+      const ids = Array.isArray(event.result?.ids) ? event.result.ids : [];
+      const written = ids
+        .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+        .map((id: string) => ({
+          id,
+          content: event.result?.content ?? event.arguments?.content,
+          status: 'unconfirmed',
+          written: true
+        }));
+      if (written.length > 0) {
+        runMemoryWritesRef.current = [...(runMemoryWritesRef.current ?? []), ...written];
+      }
+    }
+  }, []);
   const lastScrollRef = useRef<{ targetId: string; reason: string } | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const serverRunIdRef = useRef<string | null>(null);
@@ -874,6 +943,52 @@ export function ChatView({
     return [...historyTools, ...currentTools];
   }, [events, messages]);
 
+  /**
+   * Live status of every memory entry this chat refers to.
+   *
+   * The hits on a message are a snapshot of the run and keep saying
+   * "unconfirmed" forever, so without this a confirmation looked lost after
+   * every reload. Keyed on the id set, so a click — which changes no id —
+   * cannot trigger a refetch that would overwrite its own result.
+   */
+  const [memoryStatuses, setMemoryStatuses] = useState<Record<string, MemoryStatusEntry>>({});
+  const [memoryStatusNonce, setMemoryStatusNonce] = useState(0);
+
+  const memoryHitIdKey = useMemo(() => {
+    const ids = new Set<string>();
+    for (const msg of messages) {
+      const meta = msg.metadata as Record<string, unknown> | undefined;
+      for (const key of ['memoryHits', 'memoryWrites']) {
+        const list = meta?.[key];
+        if (!Array.isArray(list)) continue;
+        for (const hit of list) {
+          const id = (hit as { id?: unknown })?.id;
+          if (typeof id === 'string' && id) ids.add(id);
+        }
+      }
+    }
+    return Array.from(ids).sort().join(',');
+  }, [messages]);
+
+  useEffect(() => {
+    if (!memoryHitIdKey) {
+      setMemoryStatuses({});
+      return;
+    }
+    let cancelled = false;
+    getMemoryStatuses(memoryHitIdKey.split(','))
+      .then((data) => {
+        if (!cancelled) setMemoryStatuses(data.statuses ?? {});
+      })
+      .catch(() => {
+        // A failed lookup leaves the snapshot in place — the button still works,
+        // it just shows the state of the run until the next load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [memoryHitIdKey, memoryStatusNonce]);
+
   const memoryHits = useMemo(() => {
     const autoHits = events
       .filter((evt): evt is Extract<RunEvent, { type: 'memory_hits' }> => evt.type === 'memory_hits')
@@ -1324,6 +1439,11 @@ export function ChatView({
       const finishRun = (status: 'success' | 'error', detail?: string) => {
         if (finished) return;
         finished = true;
+        // A run can supersede an entry it was itself given — a correction turn
+        // does exactly that. The id set does not change then, so the lookup
+        // needs a second trigger or the button would keep offering an entry
+        // that can only answer with a 409.
+        setMemoryStatusNonce((n) => n + 1);
 
         // --- FIXED: Maintenance of Run-ID for pending approvals ---
         // We only clear the run ID if there are REALLY no approvals pending.
@@ -1357,11 +1477,14 @@ export function ChatView({
         onStarted: (hostRunId) => {
           serverRunIdRef.current = hostRunId;
           runUsageRef.current = null;
+          runMemoryHitsRef.current = null;
+          runMemoryWritesRef.current = null;
           setEvents([]);
           setActiveRunForChat(effectiveChatId, hostRunId);
         },
         onEvent: (event: any) => {
           applyComposerStatus(event);
+          captureMemoryHits(event);
           if (event.type === 'run_token') {
             const text = typeof event.text === 'string' ? event.text : '';
             if (!text) return;
@@ -1381,7 +1504,7 @@ export function ChatView({
                   role: 'agent',
                   content: text,
                   createdAt,
-                  ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+                  ...agentMessageMetadata()
                 }];
               });
             });
@@ -1420,7 +1543,7 @@ export function ChatView({
                 role: 'agent',
                 content: output,
                 createdAt,
-                ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+                ...agentMessageMetadata()
               }]);
               if (activeChatId) {
                 upsertMessage({ id: activeChatId, preview: makePreview(output), timestamp: createdAt });
@@ -1556,6 +1679,11 @@ export function ChatView({
       const finishRun = (status: 'success' | 'error', detail?: string) => {
         if (finished) return;
         finished = true;
+        // A run can supersede an entry it was itself given — a correction turn
+        // does exactly that. The id set does not change then, so the lookup
+        // needs a second trigger or the button would keep offering an entry
+        // that can only answer with a 409.
+        setMemoryStatusNonce((n) => n + 1);
 
         // Only clear run ID and pending approvals if we are NOT waiting for tool approval.
         // If status is success but we have pending approvals, it means the stream ended but
@@ -1600,9 +1728,12 @@ export function ChatView({
         onStarted: () => {
           serverRunIdRef.current = hostRunId;
           runUsageRef.current = null;
+          runMemoryHitsRef.current = null;
+          runMemoryWritesRef.current = null;
         },
         onEvent: (event: any) => {
           applyComposerStatus(event);
+          captureMemoryHits(event);
           if (event.type === 'warning') {
             const warningEntry: WarningEntry = {
               id: `${runId}-warn-${Date.now().toString(36)}`,
@@ -1642,7 +1773,7 @@ export function ChatView({
                   role: 'agent',
                   content: text,
                   createdAt,
-                  ...(runUsageRef.current ? { metadata: { usage: runUsageRef.current } } : {})
+                  ...agentMessageMetadata()
                 }];
               });
             });
@@ -1739,7 +1870,10 @@ export function ChatView({
           if ('output' in event && typeof event.output === 'string' && event.output.trim().length > 0) {
             const outputText = event.output as string;
             const createdAt = new Date().toISOString();
-            setMessages((prev) => [...prev.filter((msg) => msg.role !== 'agent'), { id: makeId('msg'), role: 'agent', content: outputText, createdAt }]);
+            setMessages((prev) => [
+              ...prev.filter((msg) => msg.role !== 'agent'),
+              { id: makeId('msg'), role: 'agent', content: outputText, createdAt, ...agentMessageMetadata() }
+            ]);
             streamingMessageRef.current = null;
           }
         },
@@ -2273,6 +2407,7 @@ export function ChatView({
                   metadata={msg.metadata}
                   createdAt={msg.createdAt}
                   timezone={runtimeSettings.timezone}
+                  memoryStatuses={memoryStatuses}
                   onDelete={async (messageId) => {
                     if (!activeChatId) return;
                     try {

@@ -24,7 +24,7 @@ import React, { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
-import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw, BadgeCheck } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -120,6 +120,7 @@ import {
   type SkillEntry,
   type SkillAgentEntry,
   MEMORY_CLASSES,
+  setMemoryStatus,
   type MemoryClass
 } from '../lib/api';
 import { useChatSidebar, type McpStatusEntry } from '../context/chat-sidebar-context';
@@ -1276,6 +1277,7 @@ function MemorySection({
     updatedAt?: string;
     observedAt?: string;
     status?: string;
+    statusChangedAt?: string;
     class?: MemoryClass;
     /** Only present when the hidden entries are included. */
     deletedAt?: string;
@@ -1801,6 +1803,33 @@ function MemorySection({
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (error: any) {
       setErrorMessage(localizeError(error, t, 'memory.restoreError'));
+    }
+  }, [t]);
+
+  /**
+   * The same toggle as the button under a chat bubble, for entries that never
+   * reach a conversation. Deliberately not part of the edit form: a status is
+   * not content, and the save there would have to decide what wins when the
+   * text changed in the same step (editing drops a confirmation, see
+   * adapter.updateDocument).
+   */
+  const handleToggleStatus = useCallback(async (hit: MemorySearchHit) => {
+    if (!hit.id) return;
+    setErrorMessage(null);
+    const next = hit.status === 'confirmed' ? 'unconfirmed' : 'confirmed';
+    try {
+      const result = await setMemoryStatus(hit.id, next);
+      setSearchResults((prev) =>
+        prev.map((entry) =>
+          entry.id === hit.id
+            ? { ...entry, status: result.status as MemorySearchHit['status'], statusChangedAt: result.status_changed_at }
+            : entry
+        )
+      );
+      setStatusMessage(t(next === 'confirmed' ? 'memory.statusConfirmed' : 'memory.statusUnconfirmed'));
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (error: any) {
+      setErrorMessage(localizeError(error, t, 'memory.statusChangeError'));
     }
   }, [t]);
 
@@ -2604,6 +2633,25 @@ function MemorySection({
                         </div>
                       </td>
                       <td className="p-3 align-top text-right whitespace-nowrap">
+                        {!hit.deletedAt && !hit.supersededBy && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className={`p-2 hover:bg-white/5 rounded-md transition-colors disabled:opacity-50 ${
+                                  hit.status === 'confirmed' ? 'text-emerald-400' : 'text-white/40'
+                                }`}
+                                disabled={!hit.id}
+                                onClick={() => void handleToggleStatus(hit)}
+                              >
+                                <BadgeCheck size={16} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {hit.status === 'confirmed' ? t('memory.statusUndo') : t('memory.statusConfirm')}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {(hit.deletedAt || hit.supersededBy) && (
                           <Tooltip>
                             <TooltipTrigger asChild>

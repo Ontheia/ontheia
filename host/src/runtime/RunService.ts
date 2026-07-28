@@ -172,6 +172,38 @@ export class RunService {
         }
       }
 
+      // CAPTURE MEMORY WRITES the same way. The confirmation button under an
+      // answer has to offer what the answer *asserts*, and in a correction turn
+      // that is the entry just written — the injected hit is the one it
+      // replaced, and confirming that would be exactly wrong.
+      if (
+        event.type === 'tool_call' &&
+        event.tool === 'memory-write' &&
+        event.status === 'success' &&
+        Array.isArray((event.result as Record<string, unknown> | null)?.ids)
+      ) {
+        const result = event.result as { ids: string[]; namespace?: string; content?: string };
+        const written = result.ids
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+          .map((id) => ({
+            id,
+            namespace: result.namespace,
+            content: result.content ?? (event.arguments as any)?.content,
+            written: true
+          }));
+        if (written.length > 0) {
+          let snapshot = runAgentSnapshots.get(runId);
+          if (!snapshot) {
+            snapshot = { chatId: chatId || '', text: '', metadata: { memoryWrites: written } };
+            runAgentSnapshots.set(runId, snapshot);
+          } else {
+            if (!snapshot.metadata) snapshot.metadata = {};
+            const prev = Array.isArray(snapshot.metadata.memoryWrites) ? snapshot.metadata.memoryWrites : [];
+            snapshot.metadata.memoryWrites = [...prev, ...written];
+          }
+        }
+      }
+
       // FILE ENVELOPE: a successful files-skill read carries per-file headers
       // (path, sha256, size) in its stdout. Parse them once here so the
       // structured envelope reaches BOTH the SSE stream (webui artifact card)

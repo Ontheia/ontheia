@@ -1106,6 +1106,39 @@ export function deleteChatMessage(chatId: string, messageId: string) {
   });
 }
 
+export type MemoryStatusEntry = { status: string; statusChangedAt?: string; superseded: boolean };
+
+/**
+ * Current status of the memory entries a chat refers to. The hits stored on a
+ * message are frozen at run time, so without this every reload would show a
+ * confirmation as lost and keep offering entries that have been replaced since.
+ */
+export function getMemoryStatuses(ids: string[]): Promise<{ statuses: Record<string, MemoryStatusEntry> }> {
+  return request('/memory/documents/statuses', {
+    method: 'POST',
+    body: JSON.stringify({ ids })
+  }) as Promise<{ statuses: Record<string, MemoryStatusEntry> }>;
+}
+
+/**
+ * Confirms a memory entry, or takes the confirmation back. The response carries
+ * the resulting state — the hits stored on a chat message are a snapshot of
+ * that run, so the caller's idea of the status may be out of date.
+ *
+ * Throws with `status` 409 when the entry has since been superseded and 404
+ * when it is gone.
+ */
+export function setMemoryStatus(
+  id: string,
+  status: 'confirmed' | 'unconfirmed',
+  messageId?: string
+): Promise<{ ok: boolean; id: string; status: string; status_changed_at: string }> {
+  return request(`/memory/documents/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, ...(messageId ? { message_id: messageId } : {}) })
+  }) as Promise<{ ok: boolean; id: string; status: string; status_changed_at: string }>;
+}
+
 export function deleteChat(chatId: string) {
   return request(`/chats/${encodeURIComponent(chatId)}`, { method: 'DELETE' });
 }

@@ -66,6 +66,7 @@ export const mapHitToEvent = (hit: MemoryHit) => {
     updatedAt: hit.updatedAt,
     observedAt: hit.observedAt,
     status: hit.status,
+    statusChangedAt: hit.statusChangedAt,
     class: hit.class,
     deletedAt: hit.deletedAt,
     supersededBy: hit.supersededBy,
@@ -550,6 +551,102 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       request.log.error({ err: error, id }, 'Memory document update failed');
       reply.code(500);
       return { error: 'update_failed', message: (error as Error).message };
+    }
+  });
+
+  /**
+   * Current status of the entries a chat refers to.
+   *
+   * A read, but a POST: the id list comes from every message of a chat and does
+   * not belong in a URL. Without it the confirmation button would rebuild
+   * itself from the run snapshot on every reload and show every confirmation as
+   * lost.
+   */
+  server.post('/memory/documents/statuses', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { session } = auth;
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const ids = Array.isArray(body.ids) ? body.ids.filter((id): id is string => typeof id === 'string' && isUuid(id)) : [];
+    if (ids.length === 0) return { statuses: {} };
+
+    const statuses = await withRls(db, session.userId, session.role, async (client) =>
+      memoryAdapter.getStatuses(client, ids)
+    );
+    return { statuses };
+  });
+
+  /**
+   * Confirm an entry, or take a confirmation back.
+   *
+   * Deliberately a route and not an MCP tool. A tool would have the model
+   * interpret the user's words and write its interpretation; here the user
+   * states it themselves. That dissolves the open question of plan §9.6.3 (a) —
+   * how narrowly agreement should be detected — because silence can no longer
+   * be misread and there is no threshold to tune. It also keeps the tool schema
+   * out of every single request.
+   *
+   * The response carries the resulting state: the hits stored on a chat message
+   * are a snapshot of that run, so a button rendered from them may be stale by
+   * the time it is clicked.
+   */
+  server.post('/memory/documents/:id/status', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { session } = auth;
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as Record<string, unknown>;
+
+    if (!isUuid(id)) {
+      reply.code(400);
+      return { error: 'invalid_id' };
+    }
+
+    const requested = typeof body.status === 'string' ? body.status : '';
+    if (requested !== 'confirmed' && requested !== 'unconfirmed') {
+      reply.code(400);
+      return { error: 'invalid_status', allowed: ['confirmed', 'unconfirmed'] };
+    }
+
+    try {
+      const result = await withRls(db, session.userId, session.role, async (client) =>
+        memoryAdapter.setStatus(client, id, requested)
+      );
+
+      if (!result.ok) {
+        reply.code(result.reason === 'superseded' ? 409 : 404);
+        return { error: result.reason };
+      }
+
+      // The column looks untouched after confirm → unconfirm, so the audit log
+      // is the only place the sequence survives. That is what makes the toggle
+      // safe rather than lossy. memory_audit has no user_id column, so the
+      // actor goes into detail — for a confirmation, who confirmed *is* the
+      // evidence.
+      await withRls(db, session.userId, session.role, async (client) =>
+        logMemoryAudit(db, {
+          namespace: result.namespace,
+          action: 'status',
+          detail: {
+            id,
+            actor_id: session.userId,
+            from: result.previousStatus,
+            to: result.status,
+            ...(typeof body.message_id === 'string' ? { message_id: body.message_id } : {})
+          }
+        }, client)
+      );
+
+      return {
+        ok: true,
+        id,
+        status: result.status,
+        status_changed_at: result.statusChangedAt
+      };
+    } catch (error) {
+      request.log.error({ err: error, id }, 'Memory status change failed');
+      reply.code(500);
+      return { error: 'status_change_failed', message: (error as Error).message };
     }
   });
 

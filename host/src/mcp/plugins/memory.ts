@@ -229,6 +229,9 @@ export async function handleMemoryWrite(
     );
   }
 
+  // The ids travel back in the tool result so the run can record what it
+  // stored. Without them a correction turn offers only the entry it replaced.
+  const writtenIds: string[] = [];
   const inserted = await memoryAdapter.writeDocuments(targetNamespace, [{
     content: args.content,
     metadata: {
@@ -244,7 +247,7 @@ export async function handleMemoryWrite(
     observedAt: args.observed_at,
     class: args.class,
     supersedes: args.supersedes
-  }], undefined, dbClient as PoolClient);
+  }], undefined, dbClient as PoolClient, writtenIds);
 
   countMemoryWrites(context?.run?.agent_id, context?.run?.task_id, inserted);
 
@@ -269,7 +272,7 @@ export async function handleMemoryWrite(
     }, dbClient as PoolClient);
   }
 
-  return { success: true, inserted, namespace: targetNamespace };
+  return { success: true, inserted, namespace: targetNamespace, ids: writtenIds, content: args.content };
 }
 
 export async function handleMemoryDelete(

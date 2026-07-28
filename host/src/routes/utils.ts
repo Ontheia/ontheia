@@ -141,7 +141,7 @@ export const logMemoryAudit = async (db: Pool | null, entry: {
   agentId?: string;
   taskId?: string;
   namespace?: string | null;
-  action: 'read' | 'write' | 'warning' | 'maintenance';
+  action: 'read' | 'write' | 'warning' | 'maintenance' | 'status';
   detail?: Record<string, unknown>;
 }, client: PoolClient | null = null) => {
   const runner = client ?? db;

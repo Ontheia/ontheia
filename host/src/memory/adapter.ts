@@ -253,7 +253,8 @@ export class MemoryAdapter {
     for (const table of this.tables) {
       const res = await db.query(
         `UPDATE ${table.name}
-            SET superseded_by = $2, status = 'superseded', updated_at = now()
+            SET superseded_by = $2, status = 'superseded',
+                status_changed_at = now(), updated_at = now()
           WHERE id = $1 AND deleted_at IS NULL`,
         [oldId, newId]
       );
@@ -261,6 +262,100 @@ export class MemoryAdapter {
     }
     logger.warn({ oldId, newId }, 'Entry to supersede was not found — the new entry stands alone');
     return false;
+  }
+
+  /**
+   * Current status of a set of entries, for correcting a stale view.
+   *
+   * The hits stored on a chat message are frozen at run time, so a confirmation
+   * made afterwards is invisible there — reloading a chat would show every
+   * confirmation as lost. `superseded` is reported too, so a view can stop
+   * offering an entry that has meanwhile been replaced.
+   *
+   * Ids the caller may not see are simply absent: this runs under RLS and does
+   * not distinguish "not yours" from "gone".
+   */
+  async getStatuses(
+    db: Pool | PoolClient,
+    ids: string[]
+  ): Promise<Record<string, { status: string; statusChangedAt?: string; superseded: boolean }>> {
+    const wanted = Array.from(new Set(ids.filter((id) => typeof id === 'string' && id.trim()))).map((id) => id.trim());
+    const out: Record<string, { status: string; statusChangedAt?: string; superseded: boolean }> = {};
+    if (wanted.length === 0) return out;
+
+    for (const table of this.tables) {
+      const res = await db.query(
+        `SELECT id, status, status_changed_at, superseded_by
+           FROM ${table.name}
+          WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+        [wanted]
+      );
+      for (const row of res.rows) {
+        out[row.id] = {
+          status: row.status,
+          statusChangedAt: row.status_changed_at ? new Date(row.status_changed_at).toISOString() : undefined,
+          superseded: Boolean(row.superseded_by)
+        };
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Sets the maturity of an entry. Only `unconfirmed` and `confirmed` are
+   * reachable here — the two ends of a toggle. `unconfirmed` is not a negative
+   * but the initial state ("maturity not established", plan §9.6.6), so taking
+   * a confirmation back is lossless in the column. The sequence survives in
+   * app.memory_audit, which is what makes the toggle safe.
+   *
+   * `superseded` is deliberately unreachable. The column carries two axes —
+   * maturity and lifecycle — and setting a superseded row to confirmed would
+   * erase the marker while superseded_by still points at its successor. Such a
+   * row never reaches a search result anyway; the guard belongs here rather
+   * than in the caller's willingness to offer the button.
+   *
+   * Returns the resulting state so the caller can correct a stale UI: the hits
+   * stored on a chat message are a snapshot of the run, and the entry may have
+   * moved on since.
+   */
+  async setStatus(
+    db: Pool | PoolClient,
+    id: string,
+    status: 'unconfirmed' | 'confirmed'
+  ): Promise<
+    | { ok: true; namespace: string; status: string; previousStatus: string; statusChangedAt: string }
+    | { ok: false; reason: 'not_found' | 'superseded' }
+  > {
+    const trimmed = typeof id === 'string' ? id.trim() : '';
+    if (!trimmed) return { ok: false, reason: 'not_found' };
+
+    for (const table of this.tables) {
+      const found = await db.query(
+        `SELECT namespace, status, superseded_by FROM ${table.name}
+          WHERE id = $1 AND deleted_at IS NULL`,
+        [trimmed]
+      );
+      if (!found.rowCount) continue;
+      if (found.rows[0].superseded_by) return { ok: false, reason: 'superseded' };
+      const previousStatus: string = found.rows[0].status;
+
+      const res = await db.query(
+        `UPDATE ${table.name}
+            SET status = $2, status_changed_at = now()
+          WHERE id = $1 AND deleted_at IS NULL AND superseded_by IS NULL
+      RETURNING namespace, status, status_changed_at`,
+        [trimmed, status]
+      );
+      if (!res.rowCount) return { ok: false, reason: 'superseded' };
+      return {
+        ok: true,
+        namespace: res.rows[0].namespace,
+        status: res.rows[0].status,
+        previousStatus,
+        statusChangedAt: new Date(res.rows[0].status_changed_at).toISOString()
+      };
+    }
+    return { ok: false, reason: 'not_found' };
   }
 
   /**
@@ -362,7 +457,7 @@ export class MemoryAdapter {
       const limitParam = `$${idx}`;
       const fallback = await db.query(
         `SELECT id, namespace, content, metadata, created_at,
-                updated_at, observed_at, status, class, deleted_at, superseded_by
+                updated_at, observed_at, status, status_changed_at, class, deleted_at, superseded_by
            FROM ${table.name}
           WHERE ${whereParts.join(' AND ')}
           ORDER BY updated_at DESC
@@ -409,6 +504,7 @@ export class MemoryAdapter {
                   updated_at,
                   observed_at,
                   status,
+                  status_changed_at,
                   class,
                   deleted_at,
                   superseded_by,
@@ -502,7 +598,19 @@ export class MemoryAdapter {
     return Array.from(unique.values());
   }
 
-  async writeDocuments(namespace: string, docs: MemoryWriteInput[], dimension?: number, client?: PoolClient): Promise<number> {
+  /**
+   * `writtenIds` is filled in place when given. An out-parameter rather than a
+   * richer return type because six callers use the count arithmetically, and
+   * only the tool handler needs the ids — so that the confirmation button can
+   * offer what an answer *stored*, not only what went into it.
+   */
+  async writeDocuments(
+    namespace: string,
+    docs: MemoryWriteInput[],
+    dimension?: number,
+    client?: PoolClient,
+    writtenIds?: string[]
+  ): Promise<number> {
     if (this.disabled) return 0;
     const trimmed = namespace?.trim();
     if (!trimmed || !Array.isArray(docs) || docs.length === 0) {
@@ -637,6 +745,8 @@ export class MemoryAdapter {
             inserted++;
           }
 
+          if (writtenIds) writtenIds.push(writtenId);
+
           if (doc.supersedes) {
             await this.markSuperseded(dbClient, doc.supersedes, writtenId);
           }
@@ -731,6 +841,21 @@ export class MemoryAdapter {
       }
     }
 
+    // A confirmation is bound to a wording. Editing the text of a confirmed
+    // entry would otherwise carry the confirmation over to a sentence nobody
+    // ever confirmed. The column references on the right-hand side are the old
+    // values, so this compares the stored text against the incoming one.
+    // Restore already forces 'unconfirmed', and two assignments to the same
+    // column would be a syntax error — hence the either/or.
+    const confirmationDecay = `,
+              status = CASE WHEN status = 'confirmed' AND content IS DISTINCT FROM $3
+                            THEN 'unconfirmed' ELSE status END,
+              status_changed_at = CASE WHEN status = 'confirmed' AND content IS DISTINCT FROM $3
+                            THEN now() ELSE status_changed_at END`;
+    const statusClause = patch.restore
+      ? ", deleted_at = NULL, superseded_by = NULL, status = 'unconfirmed', status_changed_at = now()"
+      : confirmationDecay;
+
     const result = await db.query(
       `UPDATE ${foundTable.name}
           SET namespace = $2,
@@ -742,7 +867,7 @@ export class MemoryAdapter {
               observed_at = COALESCE($8, observed_at),
               created_at = created_at,
               updated_at = now()
-              ${patch.restore ? ", deleted_at = NULL, superseded_by = NULL, status = 'unconfirmed'" : ''}
+              ${statusClause}
         WHERE id = $1`,
       [
         trimmedId,
@@ -1112,6 +1237,7 @@ function mapRowToHit(row: any, score: number): MemoryHit {
     updatedAt: toIsoOrUndefined(row.updated_at),
     observedAt: toIsoOrUndefined(row.observed_at),
     status: row.status ?? undefined,
+    statusChangedAt: toIsoOrUndefined(row.status_changed_at),
     class: isMemoryClass(row.class) ? row.class : undefined,
     // Only ever set when includeHidden was on — otherwise these rows never
     // reach a caller. The admin view uses them to mark what it is showing.
