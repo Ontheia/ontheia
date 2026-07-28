@@ -23,7 +23,10 @@ Willkommen bei Ontheia. Diese Dokumentation hilft dir dabei, dich in der Web-Obe
 ### 4. [Persönliche Einstellungen](./account/01_profile.md)
 - [Profil, Avatar & Datenschutz](./account/01_profile.md)
 - [Oberfläche (Sprache, Theme)](./general/01_interface.md)
+- [Limits & Vorauswahl](./general/02_limits_and_preselection.md)
 - [Kontoaktivität & API-Token](./info/01_account_activity.md)
+
+### 5. [Tastaturkürzel](./01_keyboard_shortcuts.md)
 
 ---
 

@@ -23,6 +23,7 @@ Welcome to Ontheia. This documentation helps you navigate the web interface and 
 ### 4. [Personal Settings](./account/01_profile.md)
 - [Profile, Avatar & Privacy](./account/01_profile.md)
 - [Interface (Language, Theme)](./general/01_interface.md)
+- [Limits & Preselection](./general/02_limits_and_preselection.md)
 - [Account Activity & API Tokens](./info/01_account_activity.md)
 
 ### 5. [Keyboard Shortcuts](./01_keyboard_shortcuts.md)
