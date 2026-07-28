@@ -180,10 +180,12 @@ Interaktion mit dem Langzeitgedächtnis (pgvector).
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `GET` | `/memory/search` | Semantische Suche. Query-Parameter: `namespace` (mehrfach), `query`, `top_k`, `min_score` (Standard `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Antwortet mit `{ namespaces, hits }` — `namespaces` nennt, worin tatsächlich gesucht wurde. |
+| `GET` | `/memory/search` | Semantische Suche. Query-Parameter: `namespace` (mehrfach), `query`, `top_k`, `min_score` (Standard `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Antwortet mit `{ namespaces, hits }` — `namespaces` nennt, worin tatsächlich gesucht wurde. Jeder Treffer trägt `similarity` (roher Kosinus, `0…1`) **und** `relevance` (nach Namespace-Bonus und Rezenz, **kann über 1 liegen**); `min_score` prüft die `relevance`. |
 | `POST` | `/memory/documents` | Legt Einträge an (Array oder Einzelobjekt). Felder: `namespace`, `content`, `metadata`, `ttl_seconds`, `class`, `observed_at`. |
 | `PUT` | `/memory/documents/:id` | Bearbeitet einen Eintrag. Zusätzlich zu den Feldern oben: `restore: true` hebt Löschung und Ablösung auf. Erreicht auch Einträge, die aus der Suche gefallen sind. |
 | `DELETE` | `/memory/documents` | Löscht Einträge (Soft-Delete) anhand von `namespace` + `content`. |
+| `POST` | `/memory/documents/:id/status` | Setzt die Reife eines Eintrags: `{ "status": "confirmed" \| "unconfirmed" }`. Antwortet mit `{ ok, id, status, status_changed_at }`. `409` wenn der Eintrag inzwischen abgelöst wurde, `404` wenn er gelöscht ist. `superseded` lässt sich hierüber **nicht** setzen. |
+| `POST` | `/memory/documents/statuses` | Aktueller Stand mehrerer Einträge: `{ "ids": [...] }` → `{ statuses: { id: { status, statusChangedAt, superseded, deleted } } }`. Ein Lesevorgang als `POST`, weil die Id-Liste nicht in eine URL gehört. Gelöschte und abgelöste Einträge werden **mit Kennzeichnung** zurückgegeben, nicht weggelassen — sonst wäre „gelöscht" von „unbekannt" nicht zu unterscheiden. |
 | `DELETE` | `/memory/namespace` | Leert einen ganzen Namespace. |
 | `GET` | `/memory/namespaces` | Listet alle für den Benutzer zugänglichen Namespaces auf. |
 | `GET` | `/memory/health` | Status-Check des Memory-Systems (pgvector-Verbindung). |

@@ -16,7 +16,7 @@ The panel is divided into four specialized areas:
 All information that the agent has retrieved from long-term memory is listed here.
 - **Preview:** Entries are initially displayed compactly (max. 5 lines).
 - **Details:** The "Show All" button can be used to display the full context of an entry.
-- **Relevance:** The score indicates how well the found document fits the question asked.
+- **Relevance:** What the entry is worth for this question — the similarity after namespace bonus and recency. The value can exceed 1. When the raw similarity differs, it is shown next to it.
 
 ### 2. Tools
 Track every action the agent has performed via MCP servers (Model Context Protocol).

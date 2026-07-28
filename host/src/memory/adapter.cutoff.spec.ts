@@ -25,17 +25,18 @@ import assert from 'node:assert/strict';
 import { applyRelativeCutoff } from './adapter.js';
 import type { MemoryHit } from './types.js';
 
-const hits = (...scores: number[]): MemoryHit[] =>
-  scores.map((score, i) => ({
+const hits = (...values: number[]): MemoryHit[] =>
+  values.map((value, i) => ({
     id: String(i + 1),
     namespace: 'vector.agent.u1.preferences',
     content: `c${i + 1}`,
     metadata: {},
-    score,
+    similarity: value,
+    relevance: value,
     createdAt: '2026-07-21T10:00:00Z'
   }));
 
-const scores = (list: MemoryHit[]) => list.map((h) => h.score);
+const scores = (list: MemoryHit[]) => list.map((h) => h.relevance);
 
 // The two runs that started this: one strong hit, two pieces of by-catch.
 test('applyRelativeCutoff keeps the standout hit and drops the by-catch', () => {

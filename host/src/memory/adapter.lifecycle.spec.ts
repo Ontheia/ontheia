@@ -188,16 +188,16 @@ test('recency runs on updated_at, falling back to createdAt', async () => {
   const { db } = mockDb({
     rows: [
       // Created long ago, rewritten today: recent by the new anchor.
-      { id: '1', namespace: 'vector.a', content: 'A', metadata: {}, created_at: old, updated_at: now, score: 0.5 },
+      { id: '1', namespace: 'vector.a', content: 'A', metadata: {}, created_at: old, updated_at: now, similarity: 0.5 },
       // Created and last written long ago.
-      { id: '2', namespace: 'vector.b', content: 'B', metadata: {}, created_at: old, updated_at: old, score: 0.5 }
+      { id: '2', namespace: 'vector.b', content: 'B', metadata: {}, created_at: old, updated_at: old, similarity: 0.5 }
     ]
   });
   const adapter = new MemoryAdapter(db as any, PROVIDER as any, CONFIG as any);
   const hits = await adapter.search(['vector.a', 'vector.b'], { query: 'x', minScore: 0 });
 
   assert.equal(hits[0].content, 'A');
-  assert.ok(hits[0].score > hits[1].score, 'the rewritten entry should rank higher');
+  assert.ok(hits[0].relevance > hits[1].relevance, 'the rewritten entry should rank higher');
 });
 
 /**

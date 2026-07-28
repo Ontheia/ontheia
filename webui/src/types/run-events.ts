@@ -59,7 +59,13 @@ export type RunEvent = (
 export interface MemoryHit {
   id?: string;
   namespace: string;
-  score: number;
+  /** Cosine similarity between query and entry, 0..1. */
+  similarity: number;
+  /**
+   * What the entry is worth for this query after namespace bonus and recency.
+   * Ranking sorts on this and min_score filters it. **Can exceed 1.**
+   */
+  relevance: number;
   content: string;
   snippet?: string;
   source?: string;

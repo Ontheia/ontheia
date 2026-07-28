@@ -49,7 +49,7 @@ Kombiniertes Suchformular und Schreibformular für Memory-Einträge.
 | Metadaten (Filter, JSON) | Textarea | JSON-Objekt als Metadaten-Filter bei der Suche oder als Metadaten beim Schreiben. Reservierte Felder (`source`, `agent_id`, `status`, …) werden verworfen — s. [Policies & Templates](/de/admin/memory_audit/03_policies_and_templates/). |
 | Inhalt | Textarea | Text des neuen Memory-Eintrags (Pflichtfeld beim Schreiben). |
 | Gelöschte und abgelöste einbeziehen | Checkbox | Zeigt zusätzlich Einträge, die gelöscht, abgelaufen oder von einem neueren abgelöst wurden. Für einen Agenten sind diese unsichtbar; hier ist es der einzige Weg, eine falsche Ablösung zurückzunehmen. |
-| Mindest-Score | Zahl (0–1) | Standard `0.3` — niedriger als die `0.4` eines Agenten, weil hier gesucht wird, was **existiert**, nicht der beste Kontext. `0` liefert immer so viele Treffer wie das Limit erlaubt, auch schwache. |
+| Mindest-Relevanz | Zahl (0–1) | Standard `0.3` — niedriger als die `0.4` eines Agenten, weil hier gesucht wird, was **existiert**, nicht der beste Kontext. `0` liefert immer so viele Treffer wie das Limit erlaubt, auch schwache. Geprüft wird die Relevanz nach Bonus und Rezenz, nicht die rohe Ähnlichkeit. |
 | Limit | Dropdown | Anzahl der Suchergebnisse: 5, 10, 20, 50. |
 
 > **Ohne Namespace-Filter** wird über alles gesucht, was die Sitzung lesen darf: die eigenen `vector.agent.*`- und `vector.user.*`-Namespaces sowie `vector.global.*`. Bei null Treffern zeigt die Ansicht, worin gesucht wurde — „nicht vorhanden" und „am falschen Ort gesucht" sind sonst nicht zu unterscheiden.
@@ -58,7 +58,7 @@ Kombiniertes Suchformular und Schreibformular für Memory-Einträge.
 
 Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeiten) · **[Abbrechen]** (beim Bearbeiten) · **[Alle auswählen]** · **[Ausgewählte löschen]** · **[Namespace leeren]** (mit Bestätigung).
 
-**Suchergebnis-Tabelle:** Spalten: Auswahl-Checkbox, Namespace, Score, **Klasse**, **Status**, Inhalt, Aktionen.
+**Suchergebnis-Tabelle:** Spalten: Auswahl-Checkbox, Namespace, **Relevanz**, **Klasse**, **Status**, Inhalt, Aktionen. Die Relevanz-Spalte zeigt den gewichteten Wert (kann über 1 liegen); der Tooltip nennt die rohe Ähnlichkeit.
 
 Die Status-Spalte zeigt `Unbestätigt` / `Bestätigt` / `Abgelöst`. Ist ein Eintrag gelöscht oder abgelöst, steht das an dieser Stelle — es beantwortet die Frage, warum er im Kontext eines Agenten fehlt.
 
@@ -76,7 +76,7 @@ Aktionen je Zeile: **Bearbeiten** (Stift) füllt das Formular mit allen Feldern 
 | Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, findet keinerlei automatische Injektion statt — die Lese-Namespaces bleiben aber per LLM Memory Tool erreichbar. |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | Liste der Namespaces, aus denen der Agent lesen darf. |
 | Top K | Zahl | Maximale Anzahl zurückgegebener Memory-Treffer (1–20). |
-| Mindest-Score | Zahl (0–1) | Verwirft Treffer unterhalb dieser Ähnlichkeit. Leer = Standard `0.4`. Höher setzen, wenn ein unruhiger Korpus zu viel Beifang liefert. |
+| Mindest-Relevanz | Zahl (0–1) | Verwirft Treffer unterhalb dieser Relevanz. Leer = Standard `0.4`. Höher setzen, wenn ein unruhiger Korpus zu viel Beifang liefert. Der Konfigurationsschlüssel heißt weiterhin `min_score`. |
 | Relativer Cutoff | Zahl (0–1) | Verwirft zusätzlich Treffer unter diesem Anteil des **besten** Treffers. Leer = Standard `0.7`, `0` schaltet ab. Wirkt nur, wenn ein Treffer deutlich heraussticht — s. [Ranking-Algorithmus 1.3](/de/admin/memory_audit/10_ranking_algorithm/). |
 | Schreiben erlauben (Auto) | Checkbox | Erlaubt dem Agent, automatisch in den Schreib-Namespace zu speichern. |
 | Schreiben (Namespace) | Text | Namespace, in den der Agent automatisch schreibt. |
@@ -102,7 +102,7 @@ Nach dem Speichern prüft der Server jedes Namespace-Muster. Ein struktureller F
 | Automatisch in Kontext injizieren (bei jedem Run) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Lesen (Namespaces, einer pro Zeile) | Textarea | |
 | Top K | Zahl | Leer lassen = vom Agent erben. |
-| Mindest-Score | Zahl (0–1) | Leer lassen = vom Agent erben. |
+| Mindest-Relevanz | Zahl (0–1) | Leer lassen = vom Agent erben. |
 | Relativer Cutoff | Zahl (0–1) | Leer lassen = vom Agent erben. |
 | Schreiben erlauben (Auto) | Tri-State-Dropdown | `Aktiv`, `Inaktiv` oder vom Agent erben (= Standard). |
 | Schreiben (Namespace) | Text | |
@@ -122,7 +122,7 @@ Namespace-Regeln-Editor: Konfiguriert Ranking-Boni und LLM-Instruktionsvorlagen 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Namespace-Muster | Text | Namespace-Pattern, auf das die Regel zutrifft. `${user_id}` steht für genau ein Segment, `*` für den Rest — z. B. `vector.agent.${user_id}.howto` oder `vector.global.*`. Unter-Namespaces sind eingeschlossen. |
-| Ranking-Bonus | Zahl | Prozentualer Aufschlag auf den Relevanz-Score: `0.1` entspricht +10 %. Die mitgelieferten Regeln liegen zwischen `0.03` und `0.12`. |
+| Ranking-Bonus | Zahl | Prozentualer Aufschlag auf die Relevanz: `0.1` entspricht +10 %. Die mitgelieferten Regeln liegen zwischen `0.03` und `0.12`. |
 | Gedächtnisklasse | Dropdown | Standard-Klasse für Einträge in diesem Namespace: `Episodisch`, `Semantisch`, `Prozedural`, `Arbeitskontext`, `Dokument (Korpus)` oder **Kein Standard**. Sie wird beim Schreiben automatisch gesetzt; ein einzelner Eintrag kann davon abweichen, und eine spätere Änderung wirkt nicht rückwirkend. |
 | Regel-Beschreibung | Text | Lesbarer Bezeichner der Regel. |
 | LLM-Instruktions-Vorlage | Textarea | Text, der den Treffern dieses Namespace im Kontext vorangestellt wird. Einziger Platzhalter ist **`{{content}}`** — dort werden die Treffer eingesetzt; fehlt er, werden sie angehängt. Bei mehreren Treffern derselben Regel erscheint der Text **einmal** über allen. |

@@ -55,7 +55,12 @@ export const mapHitToEvent = (hit: MemoryHit) => {
   return {
     id: hit.id,
     namespace: hit.namespace,
-    score: hit.score,
+    // Two numbers, because they answer different questions. `similarity` is
+    // what the vector search measured; `relevance` is what ranking sorts on and
+    // what min_score filters — it can exceed 1. Until 2026-07-28 only the
+    // second existed, under the name `score`, and read like the first.
+    similarity: hit.similarity,
+    relevance: hit.relevance,
     content: hit.content,
     metadata: hit.metadata,
     created_at: isoDate,

@@ -27,6 +27,7 @@ import { jsonrepair } from 'jsonrepair';
 import { logMemoryAudit, countHitsForNamespace } from '../routes/utils.js';
 import { loadMemoryPolicy } from '../routes/policy-utils.js';
 import { buildMemoryQuery } from '../routes/run-utils.js';
+import { mapHitToEvent } from '../routes/memory.js';
 import { isGlobalNamespace, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
 import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
@@ -1463,7 +1464,9 @@ ${contextSnippet}
       output: JSON.stringify({ hits }),
       hits
     };
-    this.emit({ type: 'memory_hits', hits });
+    // Through the same mapper as the chat path, so a chain trace carries the
+    // lifecycle fields too rather than a bare hit.
+    this.emit({ type: 'memory_hits', hits: hits.map(mapHitToEvent) });
   }
 
   private async handleMemoryWriteStep(step: ChainStep) {

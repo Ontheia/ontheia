@@ -1270,7 +1270,8 @@ function MemorySection({
   type MemorySearchHit = {
     id?: string;
     namespace: string;
-    score?: number;
+    similarity?: number;
+    relevance?: number;
     content: string;
     metadata?: Record<string, unknown>;
     created_at?: string;
@@ -2579,7 +2580,7 @@ function MemorySection({
                     />
                   </th>
                   <th className="p-3">Namespace</th>
-                  <th className="p-3 w-20 text-right">Score</th>
+                  <th className="p-3 w-20 text-right">{t('memory.relevanceShort')}</th>
                   <th className="p-3 w-28">{t('memory.class')}</th>
                   <th className="p-3 w-28">{t('memory.status')}</th>
                   <th className="p-3">Content</th>
@@ -2600,8 +2601,11 @@ function MemorySection({
                         />
                       </td>
                       <td className="p-3 align-top font-mono text-xs text-sky-300 break-all">{hit.namespace}</td>
-                      <td className="p-3 align-top text-right font-mono text-slate-400">
-                        {typeof hit.score === 'number' ? hit.score.toFixed(3) : '—'}
+                      <td
+                        className="p-3 align-top text-right font-mono text-slate-400"
+                        title={typeof hit.similarity === 'number' ? `${t('memory.similarityShort')}: ${hit.similarity.toFixed(3)}` : undefined}
+                      >
+                        {typeof hit.relevance === 'number' ? hit.relevance.toFixed(3) : '—'}
                       </td>
                       <td className="p-3 align-top text-xs text-slate-300">
                         {hit.class ? t(`memory.rules.class.${hit.class}`) : <span className="text-slate-600 italic">{t('notSet', { ns: 'common' })}</span>}

@@ -30,9 +30,9 @@ test('MemoryAdapter search deduplicates hits', async () => {
   };
 
   const mockRows = [
-    { id: '1', namespace: 'ns1', content: 'duplicate content', metadata: { source: 'a' }, created_at: new Date(), score: 0.9 },
-    { id: '2', namespace: 'ns2', content: 'duplicate content', metadata: { source: 'b' }, created_at: new Date(), score: 0.9 },
-    { id: '3', namespace: 'ns3', content: 'unique content', metadata: { source: 'c' }, created_at: new Date(), score: 0.8 }
+    { id: '1', namespace: 'ns1', content: 'duplicate content', metadata: { source: 'a' }, created_at: new Date(), similarity: 0.9 },
+    { id: '2', namespace: 'ns2', content: 'duplicate content', metadata: { source: 'b' }, created_at: new Date(), similarity: 0.9 },
+    { id: '3', namespace: 'ns3', content: 'unique content', metadata: { source: 'c' }, created_at: new Date(), similarity: 0.8 }
   ];
 
   const mockClient = {

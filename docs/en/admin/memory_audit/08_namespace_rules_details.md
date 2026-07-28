@@ -4,7 +4,7 @@ Namespace rules allow administrators to globally control the behavior of AI sear
 
 ## 1. Ranking Bonuses
 With the ranking bonus, you can control which information sources should be preferred.
-- **Principle:** A bonus between `0.0` and `1.0` acts as a **percentage surcharge** on the score. `0.2` therefore means +20 % — not `+0.2` as an absolute value.
+- **Principle:** A bonus between `0.0` and `1.0` acts as a **percentage surcharge** on the similarity, yielding the relevance. `0.2` therefore means +20 % — not `+0.2` as an absolute value.
 - **Use Case:** Give `vector.global.knowledge.faq` a bonus of `0.2` so that official answers always appear above random chat notes.
 - **Keep it moderate:** Values above `0.3` push weak results past the minimum-score threshold that their own similarity would never have reached. The rules shipped by default range from `0.03` to `0.12`.
 

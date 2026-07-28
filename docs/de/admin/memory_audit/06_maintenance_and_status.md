@@ -158,6 +158,33 @@ Welche der identischen Zeilen überlebt, entscheidet eine Rangfolge — nicht al
 | 4 | mit Klasse, mit Beobachtungsdatum | sonst macht ein Bereinigungslauf still eine Klassifizierung oder eine Bearbeitung rückgängig |
 | 5 | neuestes `created_at` | |
 
+### Einträge bestätigen
+
+Jeder Eintrag trägt eine **Reife** in der Spalte `status`:
+
+| Wert | Bedeutung |
+| :--- | :--- |
+| `unconfirmed` | Ausgangszustand — die Aussage steht da, aber niemand hat für sie eingestanden. Kein Negativ. |
+| `confirmed` | Ein Mensch hat sie ausdrücklich bestätigt. |
+| `superseded` | Von einem neueren Eintrag abgelöst; wird von der Route nicht gesetzt, sondern von `supersedes` beim Schreiben. |
+
+**Bestätigt wird per Klick, nicht per Tool.** Unter jeder Agenten-Antwort steht ein Knopf, der das Gedächtnis hinter dieser Antwort auflistet. Ein Tool-Aufruf hätte das Modell die Worte des Nutzers deuten und seine Deutung speichern lassen; hier sagt es der Nutzer selbst. Damit kann Schweigen nie als Zustimmung gelesen werden, und es gibt keine Erkennungsschwelle zu justieren.
+
+Die Liste enthält zweierlei, jeweils gekennzeichnet:
+
+*   **verwendet** — die Treffer, die in den Lauf injiziert wurden.
+*   **gespeichert** — was der Lauf selbst geschrieben hat.
+
+Bei einer Korrektur sind das verschiedene Einträge: die Antwort stützt sich auf den neu geschriebenen, während der injizierte Treffer der ist, den er ersetzt. Abgelöste und gelöschte Einträge fallen aus der Liste.
+
+Ein zweiter Klick nimmt die Bestätigung zurück — `unconfirmed` ist der Ausgangszustand, es geht dabei nichts verloren. Nachvollziehbar bleibt der Verlauf im Audit-Log (`action = status`, mit `from` und `to`).
+
+> **Eine Bestätigung hängt am Wortlaut.** Wird der Text eines bestätigten Eintrags über den Bearbeiten-Dialog geändert, fällt die Bestätigung automatisch auf `unconfirmed` zurück — sonst würde sie für einen Satz gelten, den niemand bestätigt hat.
+
+> **`status_changed_at` statt `updated_at`.** Eine Bestätigung ändert keinen Inhalt und darf deshalb den Rezenz-Anker des Rankings nicht bewegen. Sie bekommt einen eigenen Zeitstempel; `updated_at` bleibt „letzte Schreibung am Inhalt".
+
+Dieselbe Umschaltung gibt es in der Admin-Konsole unter **Suche & Schreiben** als Symbol in der Trefferzeile — für Einträge, die nie in einem Gespräch auftauchen.
+
 ### Bereinigung abgelaufener Einträge
 
 Löscht endgültig, was seine TTL überschritten hat.

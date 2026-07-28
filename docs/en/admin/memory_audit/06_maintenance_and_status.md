@@ -158,6 +158,33 @@ Which of the identical rows survives follows a ranking, not the date alone:
 | 4 | has a class, has an observation date | otherwise a cleanup silently undoes a classification or an edit |
 | 5 | newest `created_at` | |
 
+### Confirming Entries
+
+Every entry carries a **maturity** in the `status` column:
+
+| Value | Meaning |
+| :--- | :--- |
+| `unconfirmed` | Initial state — the statement is there, but nobody has vouched for it. Not a negative. |
+| `confirmed` | A human confirmed it explicitly. |
+| `superseded` | Replaced by a newer entry; not set through the route but by `supersedes` on write. |
+
+**Confirmation is a click, not a tool.** Below every agent answer sits a button listing the memory behind that answer. A tool would have the model interpret the user's words and store its interpretation; here the user says it. Silence can therefore never be read as agreement, and there is no detection threshold to tune.
+
+The list holds two kinds, each labelled:
+
+*   **used** — the hits injected into the run.
+*   **stored** — what the run itself wrote.
+
+In a correction turn these are different entries: the answer rests on the newly written one, while the injected hit is the one it replaced. Superseded and deleted entries drop out of the list.
+
+A second click takes the confirmation back — `unconfirmed` is the initial state, so nothing is lost in the column. The sequence survives in the audit log (`action = status`, with `from` and `to`).
+
+> **A confirmation is bound to a wording.** Editing the text of a confirmed entry through the edit dialog drops it back to `unconfirmed` — otherwise it would apply to a sentence nobody confirmed.
+
+> **`status_changed_at`, not `updated_at`.** A confirmation changes no content and must therefore not move the ranking's recency anchor. It gets its own timestamp; `updated_at` remains "last write to the content".
+
+The same toggle exists in the admin console under **Search & Write** as an icon in the result row — for entries that never surface in a conversation.
+
 ### Expired entry cleanup
 
 Permanently deletes whatever has passed its TTL.

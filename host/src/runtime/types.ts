@@ -89,7 +89,10 @@ export interface RunMemoryOptions {
 export interface MemoryHitEvent {
   id?: string;
   namespace: string;
-  score: number;
+  /** Cosine similarity, 0..1. */
+  similarity: number;
+  /** After namespace bonus and recency. Can exceed 1 — see MemoryHit. */
+  relevance: number;
   content: string;
   metadata?: Record<string, unknown>;
   created_at?: string;

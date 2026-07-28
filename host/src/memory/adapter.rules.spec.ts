@@ -41,7 +41,7 @@ test('MemoryAdapter uses database ranking rules', async () => {
         content: 'Important Doc', 
         metadata: {}, 
         created_at: new Date(), 
-        score: 0.5 
+        similarity: 0.5 
     },
     { 
         id: '2', 
@@ -49,7 +49,7 @@ test('MemoryAdapter uses database ranking rules', async () => {
         content: 'Global Info', 
         metadata: {}, 
         created_at: new Date(), 
-        score: 0.5 
+        similarity: 0.5 
     }
   ];
 
@@ -108,8 +108,8 @@ test('MemoryAdapter uses database ranking rules', async () => {
   assert.ok(hit1);
   assert.ok(hit2);
 
-  assert.ok(Math.abs(hit1.score - 0.75) < 0.001, `Expected 0.75, got ${hit1.score}`);
-  assert.ok(Math.abs(hit2.score - 0.55) < 0.001, `Expected 0.55, got ${hit2.score}`);
+  assert.ok(Math.abs(hit1.relevance - 0.75) < 0.001, `Expected 0.75, got ${hit1.relevance}`);
+  assert.ok(Math.abs(hit2.relevance - 0.55) < 0.001, `Expected 0.55, got ${hit2.relevance}`);
 });
 
 test('getInstructionForNamespace resolves the live rule patterns', async () => {

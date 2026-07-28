@@ -49,7 +49,7 @@ Combined search form and write form for memory entries.
 | Metadata (Filter, JSON) | Textarea | JSON object as metadata filter when searching or as metadata when writing. Reserved fields (`source`, `agent_id`, `status`, …) are dropped — see [Policies & Templates](/en/admin/memory_audit/03_policies_and_templates/). |
 | Content | Textarea | Text of the new memory entry (required when writing). |
 | Include deleted and superseded | Checkbox | Additionally shows entries that are deleted, expired or replaced by a newer one. An agent never sees these; here it is the only way to undo a wrong supersession. |
-| Min. score | Number (0–1) | Default `0.3` — below an agent's `0.4`, because this view looks for what **exists** rather than for the best context. `0` always returns as many hits as the limit allows, weak ones included. |
+| Min. relevance | Number (0–1) | Default `0.3` — below an agent's `0.4`, because this view looks for what **exists** rather than for the best context. `0` always returns as many hits as the limit allows, weak ones included. What is checked is the relevance after bonus and recency, not the raw similarity. |
 | Limit | Dropdown | Number of search results: 5, 10, 20, 50. |
 
 > **Without a namespace filter** the search covers everything the session may read: its own `vector.agent.*` and `vector.user.*` namespaces plus `vector.global.*`. On an empty result the view lists where it looked — "not there" and "looked in the wrong place" are otherwise indistinguishable.
@@ -58,7 +58,7 @@ Combined search form and write form for memory entries.
 
 Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]** (when editing) · **[Select All]** · **[Delete Selected]** · **[Clear Namespace]** (with confirmation).
 
-**Search Results Table:** Columns: Selection checkbox, Namespace, Score, **Class**, **Status**, Content, Actions.
+**Search Results Table:** Columns: Selection checkbox, Namespace, **Relevance**, **Class**, **Status**, Content, Actions. The relevance column shows the weighted value (which can exceed 1); the tooltip gives the raw similarity.
 
 The status column shows `Unconfirmed` / `Confirmed` / `Superseded`. When an entry is deleted or superseded, that is what appears there — it answers why the entry is missing from an agent's context.
 
@@ -76,7 +76,7 @@ Per-row actions: **Edit** (pencil) fills the form with all of the entry's fields
 | Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, no automatic injection takes place at all — the read namespaces remain reachable via the LLM Memory Tool. |
 | Read (Namespaces, one per line) | Textarea | List of namespaces the agent may read from. |
 | Top K | Number | Maximum number of memory hits returned (1–20). |
-| Minimum score | Number (0–1) | Discards hits below this similarity. Empty = default `0.4`. Raise it when a noisy corpus produces too much by-catch. |
+| Minimum relevance | Number (0–1) | Discards hits below this relevance. Empty = default `0.4`. Raise it when a noisy corpus produces too much by-catch. The config key is still named `min_score`. |
 | Relative cutoff | Number (0–1) | Additionally discards hits below this fraction of the **best** hit. Empty = default `0.7`, `0` disables it. Only has an effect when one hit stands out clearly — see [Ranking algorithm 1.3](/en/admin/memory_audit/10_ranking_algorithm/). |
 | Allow Writing (Auto) | Checkbox | Allows the agent to automatically save to the write namespace. |
 | Write (Namespace) | Text | Namespace the agent automatically writes to. |
@@ -102,7 +102,7 @@ On save the server checks every namespace pattern. A structural mistake (empty s
 | Auto-inject into Context (on every Run) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Read (Namespaces, one per line) | Textarea | |
 | Top K | Number | Leave empty = inherit from agent. |
-| Minimum score | Number (0–1) | Leave empty = inherit from agent. |
+| Minimum relevance | Number (0–1) | Leave empty = inherit from agent. |
 | Relative cutoff | Number (0–1) | Leave empty = inherit from agent. |
 | Allow Writing (Auto) | Tri-state Dropdown | `Active`, `Inactive`, or inherit from agent (= default). |
 | Write (Namespace) | Text | |

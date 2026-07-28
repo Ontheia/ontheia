@@ -16,7 +16,7 @@ Das Panel ist in vier spezialisierte Bereiche unterteilt:
 Hier werden alle Informationen aufgelistet, die der Agent aus dem Langzeitgedächtnis abgerufen hat.
 - **Vorschau:** Einträge werden zunächst kompakt (max. 5 Zeilen) angezeigt.
 - **Details:** Über die Schaltfläche "Alles anzeigen" kann der vollständige Kontext eines Eintrags eingeblendet werden.
-- **Relevanz:** Der Score zeigt an, wie gut das gefundene Dokument zur gestellten Frage passt.
+- **Relevanz:** Wie viel der Eintrag für diese Frage wert ist — die Ähnlichkeit nach Namespace-Bonus und Rezenz. Der Wert kann über 1 liegen. Weicht die rohe Ähnlichkeit davon ab, steht sie daneben.
 
 ### 2. Tools (Werkzeuge)
 Verfolge jede Aktion, die der Agent über MCP-Server (Model Context Protocol) ausgeführt hat.

@@ -4,7 +4,7 @@ Namespace-Regeln ermöglichen es Administratoren, das Verhalten der KI-Suche glo
 
 ## 1. Ranking-Boni
 Mit dem Ranking-Bonus kannst du steuern, welche Informationsquellen bevorzugt werden sollen.
-- **Prinzip:** Ein Bonus zwischen `0.0` und `1.0` wirkt als **prozentualer Aufschlag** auf den Score. `0.2` bedeutet also +20 % — nicht `+0.2` als absoluter Wert.
+- **Prinzip:** Ein Bonus zwischen `0.0` und `1.0` wirkt als **prozentualer Aufschlag** auf die Ähnlichkeit und ergibt die Relevanz. `0.2` bedeutet also +20 % — nicht `+0.2` als absoluter Wert.
 - **Anwendungsfall:** Gib `vector.global.knowledge.faq` einen Bonus von `0.2`, damit offizielle Antworten immer über zufälligen Chat-Notizen erscheinen.
 - **Augenmaß:** Werte über `0.3` heben schwache Treffer über die Mindest-Score-Schwelle, die sie aus eigener Ähnlichkeit nie erreicht hätten. Die mitgelieferten Regeln bewegen sich zwischen `0.03` und `0.12`.
 

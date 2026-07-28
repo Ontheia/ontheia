@@ -102,7 +102,7 @@ test('appendDateTimeContext is a no-op when there is no user message', () => {
 // --- formatMemoryContext -----------------------------------------------------
 
 const hit = (namespace: string, content: string, createdAt = '2026-07-21T10:00:00Z') =>
-  ({ namespace, content, createdAt, metadata: {}, score: 0.5 }) as any;
+  ({ namespace, content, createdAt, metadata: {}, relevance: 0.5 }) as any;
 
 const PREF = 'NUTZERPRÄFERENZ: berücksichtige sie: {{content}}';
 const MEM = 'ERINNERUNG: aus einem früheren Gespräch: {{content}}';
@@ -163,7 +163,7 @@ test('formatMemoryContext returns an empty string for no hits', () => {
 });
 
 test('formatMemoryContext tolerates a missing createdAt', () => {
-  const out = formatMemoryContext([{ namespace: 'vector.global.docs', content: 'X', metadata: {}, score: 0.5 } as any]);
+  const out = formatMemoryContext([{ namespace: 'vector.global.docs', content: 'X', metadata: {}, relevance: 0.5 } as any]);
   // Not "Stored on Unknown" — a storage date we do not have is better stated
   // as unknown than as a date-shaped placeholder.
   assert.match(out, /Date unknown/);
@@ -175,7 +175,7 @@ test('formatMemoryContext prefers observed_at over the storage date', () => {
       namespace: 'vector.agent.x.memory',
       content: 'Battery ordered',
       metadata: {},
-      score: 0.9,
+      relevance: 0.9,
       createdAt: '2026-05-11T10:00:00.000Z',
       observedAt: '2026-03-14T09:00:00.000Z'
     } as any
@@ -189,7 +189,7 @@ test('formatMemoryContext names a rewrite instead of hiding it', () => {
       namespace: 'vector.agent.x.memory',
       content: 'Y',
       metadata: {},
-      score: 0.9,
+      relevance: 0.9,
       createdAt: '2026-01-19T10:00:00.000Z',
       updatedAt: '2026-05-11T10:00:00.000Z'
     } as any
@@ -203,7 +203,7 @@ test('formatMemoryContext stays terse when nothing changed', () => {
       namespace: 'vector.agent.x.memory',
       content: 'Z',
       metadata: {},
-      score: 0.9,
+      relevance: 0.9,
       createdAt: '2026-01-19T10:00:00.000Z',
       updatedAt: '2026-01-19T18:00:00.000Z'
     } as any

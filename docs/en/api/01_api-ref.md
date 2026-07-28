@@ -180,11 +180,13 @@ Interaction with long-term memory (pgvector).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/memory/search` | Semantic search. Query parameters: `namespace` (repeatable), `query`, `top_k`, `min_score` (default `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Responds with `{ namespaces, hits }` — `namespaces` names where it actually looked. |
+| `GET` | `/memory/search` | Semantic search. Query parameters: `namespace` (repeatable), `query`, `top_k`, `min_score` (default `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Responds with `{ namespaces, hits }` — `namespaces` names where it actually looked. Every hit carries `similarity` (raw cosine, `0…1`) **and** `relevance` (after namespace bonus and recency, **can exceed 1**); `min_score` checks the `relevance`. |
 | `GET` | `/memory/namespaces` | Lists all namespaces accessible to the user. |
 | `GET` | `/memory/health` | Status check of the memory system (pgvector connection). |
 | `POST` | `/memory/documents` | Creates entries (array or single object). Fields: `namespace`, `content`, `metadata`, `ttl_seconds`, `class`, `observed_at`. |
 | `DELETE` | `/memory/documents` | Deletes entries (soft delete) by `namespace` + `content`. |
+| `POST` | `/memory/documents/:id/status` | Sets the maturity of an entry: `{ "status": "confirmed" \| "unconfirmed" }`. Responds with `{ ok, id, status, status_changed_at }`. `409` if the entry has since been superseded, `404` if it is deleted. `superseded` **cannot** be set through this route. |
+| `POST` | `/memory/documents/statuses` | Current state of several entries: `{ "ids": [...] }` → `{ statuses: { id: { status, statusChangedAt, superseded, deleted } } }`. A read as `POST`, because the id list does not belong in a URL. Deleted and superseded entries are returned **with a flag** rather than omitted — otherwise "deleted" would be indistinguishable from "unknown". |
 | `PUT` | `/memory/documents/:id` | Edits an entry. In addition to the fields above: `restore: true` clears deletion and supersession. Reaches entries that have dropped out of search. |
 | `DELETE` | `/memory/namespace` | Clears an entire namespace. |
 | `POST` | `/memory/reembed` | ⚠️ **Experimental** – Adds entries to the re-embedding queue. The worker is not yet fully implemented. |

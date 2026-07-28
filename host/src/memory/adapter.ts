@@ -97,10 +97,10 @@ const DEFAULT_RELATIVE_CUTOFF = 0.7;
  */
 export function applyRelativeCutoff(hits: MemoryHit[], cutoff: number): MemoryHit[] {
   if (!(cutoff > 0) || hits.length < 2) return hits;
-  const best = hits[0]?.score ?? 0;
+  const best = hits[0]?.relevance ?? 0;
   if (!(best > 0)) return hits;
   const floor = best * cutoff;
-  return hits.filter((hit) => hit.score >= floor);
+  return hits.filter((hit) => hit.relevance >= floor);
 }
 
 /**
@@ -513,7 +513,7 @@ export class MemoryAdapter {
                   class,
                   deleted_at,
                   superseded_by,
-                  1 - (${table.column} <=> $1::vector) AS score
+                  1 - (${table.column} <=> $1::vector) AS similarity
              FROM ${table.name}
             WHERE ${whereParts.join(' AND ')}
             ORDER BY (${table.column} <=> $1::vector) - ${bonusSql} ASC
@@ -524,23 +524,23 @@ export class MemoryAdapter {
         // exists precisely to lift borderline hits. Cutting on the raw cosine
         // first would discard the hits the bonus is meant to rescue.
         return result.rows
-          .map((row: any) => mapRowToHit(row, typeof row.score === 'number' ? row.score : 0));
+          .map((row: any) => mapRowToHit(row, typeof row.similarity === 'number' ? row.similarity : 0));
       }, client);
     }
 
     // Phase 3: Re-Ranking
     if (this.rankingConfig || this.namespaceRules.size > 0) {
       hits.forEach((hit) => {
-        hit.score = this.calculateRankingScore(hit);
+        hit.relevance = this.calculateRelevance(hit);
       });
-      hits.sort((a, b) => b.score - a.score);
+      hits.sort((a, b) => b.relevance - a.relevance);
     }
 
     // Apply the floor to the final score — the one the UI and the trace show.
     // Filtering earlier would compare against a number nobody ever sees, making
     // the threshold impossible to calibrate against observed results.
     // Browsing without a query yields score 1.0 and is therefore unaffected.
-    const scored = hits.filter((hit) => hit.score >= minScore);
+    const scored = hits.filter((hit) => hit.relevance >= minScore);
 
     const deduped = this.deduplicateHits(scored);
     return applyRelativeCutoff(deduped, relativeCutoff).slice(0, requestedLimit);
@@ -555,8 +555,7 @@ export class MemoryAdapter {
    * it was removed because the two silently added up — see
    * warnOnRemovedPriorities() in config.ts.
    */
-  private calculateRankingScore(hit: MemoryHit): number {
-    const score = hit.score;
+  private calculateRelevance(hit: MemoryHit): number {
     let multiplier = 1.0;
 
     for (const [pattern, rule] of this.namespaceRules.entries()) {
@@ -577,7 +576,9 @@ export class MemoryAdapter {
       multiplier += this.rankingConfig.recency_decay / (1 + ageInDays);
     }
 
-    return score * multiplier;
+    // Reads `similarity`, never `relevance` — so calling this twice on the same
+    // hit cannot compound the bonus.
+    return hit.similarity * multiplier;
   }
 
   private deduplicateHits(hits: MemoryHit[]): MemoryHit[] {
@@ -592,7 +593,7 @@ export class MemoryAdapter {
         existing.duplicates.push({
           namespace: hit.namespace,
           metadata: hit.metadata,
-          score: hit.score,
+          relevance: hit.relevance,
           id: hit.id,
           createdAt: hit.createdAt
         });
@@ -1230,14 +1231,17 @@ function encodeVector(values: number[]): string {
   return `[${values.map((value) => Number(value) || 0).join(',')}]`;
 }
 
-function mapRowToHit(row: any, score: number): MemoryHit {
-  const normalizedScore = clamp(Number.isFinite(score) ? score : 0, 0, 1);
+function mapRowToHit(row: any, similarity: number): MemoryHit {
+  // The cosine is clamped here and kept; relevance starts equal to it and is
+  // overwritten in phase 3 when a bonus or the recency term applies.
+  const normalized = clamp(Number.isFinite(similarity) ? similarity : 0, 0, 1);
   return {
     id: row.id,
     namespace: row.namespace,
     content: row.content,
     metadata: row.metadata ?? {},
-    score: normalizedScore,
+    similarity: normalized,
+    relevance: normalized,
     createdAt: toIsoOrUndefined(row.created_at) ?? new Date(row.created_at).toISOString(),
     updatedAt: toIsoOrUndefined(row.updated_at),
     observedAt: toIsoOrUndefined(row.observed_at),

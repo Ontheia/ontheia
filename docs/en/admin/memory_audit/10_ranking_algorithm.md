@@ -6,24 +6,43 @@ This document describes the mathematical and logical operation of the Ontheia me
 
 The search is based on vector similarity within a Postgres database using the `pgvector` extension.
 
-### 1.1 Similarity Measure
-Ontheia uses **Cosine Similarity**. The database calculates the *Cosine Distance* (`<=>`). The base score is normalized as follows:
+### 1.0 Two Numbers, Two Questions
 
-$$Score_{base} = 1 - (Vector_{Search} \cdot Vector_{Document})$$
+A hit carries **two** values, and they are regularly confused:
+
+| Field | Meaning | Range |
+| :--- | :--- | :--- |
+| `similarity` | Cosine similarity between query and entry. What the vector search actually measured. | `[0.0, 1.0]` |
+| `relevance` | What the entry is worth for **this** query, after namespace bonus and recency. Ranking sorts on it, `min_score` filters it, and it is what the trace and the admin console display. | **can exceed 1** |
+
+> ⚠️ **`relevance` is not a similarity.** As soon as a bonus or the recency
+> share applies, the multiplier is greater than 1, so the value can exceed the
+> similarity. `1.03` was observed on a correction whose wording nearly matched
+> the stored entry (`similarity` 0.994, plus the same-day recency share).
+>
+> Up to version 0.6.0 this field was called `score` — carrying the name of the
+> similarity measure without being one — and the raw similarity was overwritten
+> during re-ranking, so it could not be retrieved at all. Both values are kept
+> now. **Breaking change** for anyone reading `hit.score`.
+
+### 1.1 Similarity Measure
+Ontheia uses **Cosine Similarity**. The database calculates the *Cosine Distance* (`<=>`). Similarity is normalized as follows:
+
+$$similarity = 1 - (Vector_{Search} \cdot Vector_{Document})$$
 
 Value range: `[0.0, 1.0]`. A value of `1.0` means identity. Due to the characteristics of modern embedding models (e.g. `text-embedding-3-small`), values from `0.4` are already considered thematically significant.
 
-> **Minimum score (default `0.4`).** Hits below this threshold are discarded before they reach the context. Up to version 0.5.0 the threshold was `0.2`, which meant almost every request filled `top_k` completely — even when the namespace held nothing relevant — and every one of those hits was paid for as prompt tokens. The value can be overridden per agent in the memory policy via `min_score`; a corpus with uniformly low scores may warrant a lower one.
+> **Minimum relevance (default `0.4`, config key `min_score`).** Hits below this threshold are discarded before they reach the context. Up to version 0.5.0 the threshold was `0.2`, which meant almost every request filled `top_k` completely — even when the namespace held nothing relevant — and every one of those hits was paid for as prompt tokens. The value can be overridden per agent in the memory policy via `min_score`; a corpus with uniformly low values may warrant a lower one. The key is still named `min_score` — it sits in existing policies in the database and was not renamed along with the field; what it checks is the **relevance**, not the similarity (see 3.).
 >
 > Without a search term (plain browsing of a namespace, e.g. in the admin console) the threshold does not apply — there is no similarity to judge.
 
 ### 1.3 Relative Cutoff (default `0.7`)
 
-A second filter after the minimum score, answering a **different** question. The minimum score asks: *is this hit related to the topic at all?* The relative cutoff asks: *is it still competitive within this result list?*
+A second filter after the minimum relevance, answering a **different** question. The minimum relevance asks: *is this hit related to the topic at all?* The relative cutoff asks: *is it still competitive within this result list?* It works on `relevance` too.
 
 Hits below 70 % of the best hit are discarded. With a top hit of `0.81` everything below `0.57` drops out — even though it clears `0.4`.
 
-**Why both are needed.** Measured across 3786 hits from 906 runs: in 227 runs even the *best* hit scored below `0.4`. A purely relative filter would have let 750 hits through there, because it only knows the distance to the best hit, not its quality. Conversely the minimum score alone keeps hits that stand no chance in comparison. The two do not replace each other.
+**Why both are needed.** Measured across 3786 hits from 906 runs: in 227 runs even the *best* hit scored below `0.4`. A purely relative filter would have let 750 hits through there, because it only knows the distance to the best hit, not its quality. Conversely the minimum relevance alone keeps hits that stand no chance in comparison. The two do not replace each other.
 
 **Characteristic.** The filter acts as a *tail trimmer*: the gap between the first two hits is irrelevant to it. A list of `0.999 / 0.999 / 0.994 / 0.688` loses only its last entry. In practice it fires in roughly 7 % of runs and removes 3.6 % of hits there — cosine scores sit close together by nature.
 
@@ -39,7 +58,7 @@ Three groups drop out of the query before anything is scored — as a condition 
 | `expires_at IS NULL OR expires_at > now()` | expired |
 | `superseded_by IS NULL` | **replaced by a newer entry** |
 
-The third arrived with version 0.6.0. A superseded entry is not "less relevant" — it is no longer the statement that holds. Penalising it through the score would leave it to the cosine to decide whether the old or the new version wins.
+The third arrived with version 0.6.0. A superseded entry is not "less relevant" — it is no longer the statement that holds. Penalising it through the relevance would leave it to the cosine to decide whether the old or the new version wins.
 
 The superseded entry is kept and stays readable by its id. It disappears from search, not from the database.
 
@@ -53,9 +72,13 @@ Namespaces are not searched sequentially. The query runs across all target names
 After the database query, a re-ranking is performed to weight context relevance and recency.
 
 > **Both factors are multiplicative.** They are summed into a *single*
-> multiplier, which the base score is then multiplied by. A bonus of `0.1`
-> therefore means **+10 % relative**, not `+0.1` absolute. On a base score of
+> multiplier, which the similarity is then multiplied by. A bonus of `0.1`
+> therefore means **+10 % relative**, not `+0.1` absolute. On a similarity of
 > `0.5` that is `+0.05`; on `0.8` it is `+0.08`.
+>
+> The calculation always starts from `similarity`, never from an already
+> weighted `relevance` — otherwise the bonus would compound on repeated
+> evaluation.
 
 ### 2.1 Recency Decay
 To prefer recent information (e.g. from the current session), a time-dependent share is added to the multiplier.
@@ -97,15 +120,17 @@ In the `app.vector_namespace_rules` table, bonuses can be defined per namespace 
 
 ## 3. Overall Algorithm (Summary)
 
-The final score of a result is the base score times a multiplier that both factors feed into:
+The relevance of a result is its similarity times a multiplier that both factors feed into:
 
-$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + Share_{age}\right)$$
+$$relevance = similarity \times \left(1 + \sum Bonus_{rule} + Share_{age}\right)$$
 
-> **The minimum-score threshold applies to the *final* score**, not the base score. A result can therefore cross a threshold its own similarity would not reach. This is intended: the threshold is calibrated against the values visible in the admin console and the trace.
+The multiplier is therefore **at least** 1, and in practice almost always more — every entry picks up a small share from recency alone. That is why `relevance` regularly sits above `similarity` and can pass 1.
+
+> **The threshold applies to the *relevance***, not to the similarity. A result can therefore cross a threshold its own similarity would not reach. This is intended: the threshold is calibrated against the values visible in the admin console and the trace.
 
 ### 3.1 Deduplication
 Before results are passed to the LLM, content-based deduplication takes place (SHA-256 hash of content).
-*   For identical content across different namespaces, the result with the **highest score** wins.
+*   For identical content across different namespaces, the result with the **highest relevance** wins.
 *   The other instances are stored as `duplicates` in the winner result's metadata object.
 
 ### 3.2 Namespace Instructions
@@ -143,4 +168,4 @@ A rule always covers the **sub-namespaces** of its pattern as well: `vector.agen
 
 *   **Configuration file:** `config/embedding.config.json`
 *   **Database rules:** `SELECT * FROM app.vector_namespace_rules;`
-*   **Audit log:** Read and write operations are recorded in `app.memory_audit` for analysis of relevance decisions. Changes to existing entries do not appear there.
+*   **Audit log:** Read and write operations are recorded in `app.memory_audit`, as are edits to existing entries (`write` with `operation: update`) and status changes (`status`, with `from` and `to`).

@@ -6,24 +6,44 @@ Dieses Dokument beschreibt die mathematische und logische Funktionsweise der Ont
 
 Die Suche basiert auf Vektorsimilarität innerhalb einer Postgres-Datenbank mit der `pgvector`-Erweiterung.
 
-### 1.1 Ähnlichkeitsmaß
-Ontheia nutzt die **Cosine Similarity**. In der Datenbank wird die *Cosine Distance* (`<=>`) berechnet. Der Basis-Score wird wie folgt normalisiert:
+### 1.0 Zwei Zahlen, zwei Fragen
 
-$$Score_{base} = 1 - (Vektor_{Search} \cdot Vektor_{Document})$$
+Ein Treffer trägt **zwei** Werte, und sie werden regelmäßig verwechselt:
+
+| Feld | Bedeutung | Wertebereich |
+| :--- | :--- | :--- |
+| `similarity` | Kosinus-Ähnlichkeit zwischen Anfrage und Eintrag. Das, was die Vektorsuche gemessen hat. | `[0.0, 1.0]` |
+| `relevance` | Was der Eintrag für **diese** Anfrage wert ist — nach Namespace-Bonus und Rezenz. Danach wird sortiert, darauf greift `min_score`, das steht in Trace und Admin-Konsole. | **kann > 1 sein** |
+
+> ⚠️ **`relevance` ist kein Ähnlichkeitsmaß.** Sobald ein Bonus oder der
+> Rezenz-Anteil greift, ist der Multiplikator größer als 1 — der Wert kann die
+> Ähnlichkeit also übersteigen. Beobachtet wurde `1.03` bei einer Korrektur,
+> deren Wortlaut dem gespeicherten Eintrag fast entsprach (`similarity` 0.994,
+> plus Rezenz-Anteil desselben Tages).
+>
+> Bis Version 0.6.0 hieß dieses Feld `score` und trug damit den Namen des
+> Ähnlichkeitsmaßes, ohne eines zu sein; die rohe Ähnlichkeit wurde beim
+> Re-Ranking überschrieben und war gar nicht mehr abrufbar. Seitdem werden beide
+> Werte geführt. **Breaking Change** für alle, die `hit.score` auswerten.
+
+### 1.1 Ähnlichkeitsmaß
+Ontheia nutzt die **Cosine Similarity**. In der Datenbank wird die *Cosine Distance* (`<=>`) berechnet. Die Ähnlichkeit wird wie folgt normalisiert:
+
+$$similarity = 1 - (Vektor_{Search} \cdot Vektor_{Document})$$
 
 Wertebereich: `[0.0, 1.0]`. Ein Wert von `1.0` bedeutet Identität. Aufgrund der Charakteristik moderner Embedding-Modelle (z.B. `text-embedding-3-small`) gelten Werte ab `0.4` bereits als thematisch signifikant.
 
-> **Mindest-Score (Standard `0.4`).** Treffer unterhalb dieser Schwelle werden verworfen, bevor sie in den Kontext gelangen. Bis Version 0.5.0 lag die Schwelle bei `0.2` — praktisch jede Anfrage schöpfte damit `top_k` voll aus, auch wenn im Namespace nichts Passendes stand, und jeder dieser Treffer wurde als Prompt-Token bezahlt. Der Wert lässt sich pro Agent in der Memory-Policy über `min_score` überschreiben; bei einem Korpus mit durchweg niedrigen Scores kann ein kleinerer Wert sinnvoll sein.
+> **Mindest-Relevanz (Standard `0.4`, Konfigurationsschlüssel `min_score`).** Treffer unterhalb dieser Schwelle werden verworfen, bevor sie in den Kontext gelangen. Bis Version 0.5.0 lag die Schwelle bei `0.2` — praktisch jede Anfrage schöpfte damit `top_k` voll aus, auch wenn im Namespace nichts Passendes stand, und jeder dieser Treffer wurde als Prompt-Token bezahlt. Der Wert lässt sich pro Agent in der Memory-Policy über `min_score` überschreiben; bei einem Korpus mit durchweg niedrigen Werten kann ein kleinerer sinnvoll sein. Der Schlüssel heißt weiterhin `min_score` — er steht in bestehenden Policies in der Datenbank und wurde nicht mitumbenannt; geprüft wird damit die **Relevanz**, nicht die Ähnlichkeit (siehe 3.).
 >
 > Ohne Suchbegriff (reines Durchblättern eines Namespace, etwa in der Admin-Konsole) greift die Schwelle nicht — dort gibt es keine Ähnlichkeit zu bewerten.
 
 ### 1.3 Relativer Cutoff (Standard `0.7`)
 
-Ein zweiter Filter nach dem Mindest-Score, der eine **andere** Frage beantwortet. Der Mindest-Score fragt: *Ist dieser Treffer überhaupt themenverwandt?* Der relative Cutoff fragt: *Ist er innerhalb dieser Trefferliste noch konkurrenzfähig?*
+Ein zweiter Filter nach der Mindest-Relevanz, der eine **andere** Frage beantwortet. Die Mindest-Relevanz fragt: *Ist dieser Treffer überhaupt themenverwandt?* Der relative Cutoff fragt: *Ist er innerhalb dieser Trefferliste noch konkurrenzfähig?* Auch er rechnet mit `relevance`.
 
 Treffer unterhalb von 70 % des besten Treffers werden verworfen. Bei einem Spitzentreffer von `0.81` fällt damit alles unter `0.57` heraus — auch wenn es über `0.4` liegt.
 
-**Warum beides nötig ist.** Über 3786 Treffer aus 906 Läufen gemessen: In 227 Läufen lag bereits der *beste* Treffer unter `0.4`. Ein rein relativer Filter hätte dort 750 Treffer durchgelassen, weil er nur den Abstand zum Besten kennt, nicht dessen Güte. Umgekehrt behält der Mindest-Score allein Treffer, die im Vergleich chancenlos sind. Die Kriterien ersetzen einander nicht.
+**Warum beides nötig ist.** Über 3786 Treffer aus 906 Läufen gemessen: In 227 Läufen lag bereits der *beste* Treffer unter `0.4`. Ein rein relativer Filter hätte dort 750 Treffer durchgelassen, weil er nur den Abstand zum Besten kennt, nicht dessen Güte. Umgekehrt behält die Mindest-Relevanz allein Treffer, die im Vergleich chancenlos sind. Die Kriterien ersetzen einander nicht.
 
 **Charakteristik.** Der Filter wirkt als *Schwanz-Abschneider*: Der Abstand zwischen den ersten beiden Treffern ist für ihn unerheblich. Eine Liste `0.999 / 0.999 / 0.994 / 0.688` verliert nur den letzten Eintrag. In der Praxis greift er in etwa 7 % der Läufe und entfernt dort 3,6 % der Treffer — Kosinus-Werte liegen von Natur aus dicht beieinander.
 
@@ -39,7 +59,7 @@ Vor jeder Bewertung fallen drei Gruppen aus der Abfrage — nicht als Abwertung,
 | `expires_at IS NULL OR expires_at > now()` | abgelaufen |
 | `superseded_by IS NULL` | **von einem neueren Eintrag abgelöst** |
 
-Die dritte Zeile kam mit Version 0.6.0. Ein abgelöster Eintrag ist nicht „weniger relevant" — er ist nicht mehr die geltende Aussage. Ihn über den Score zu benachteiligen hieße, den Kosinus darüber entscheiden zu lassen, ob die alte oder die neue Fassung gewinnt.
+Die dritte Zeile kam mit Version 0.6.0. Ein abgelöster Eintrag ist nicht „weniger relevant" — er ist nicht mehr die geltende Aussage. Ihn über die Relevanz zu benachteiligen hieße, den Kosinus darüber entscheiden zu lassen, ob die alte oder die neue Fassung gewinnt.
 
 Der abgelöste Eintrag bleibt erhalten und über seine ID lesbar. Er verschwindet aus der Suche, nicht aus der Datenbank.
 
@@ -53,9 +73,12 @@ Namespaces werden nicht sequentiell durchsucht. Die Abfrage erfolgt über alle Z
 Nach der Datenbank-Abfrage wird ein Re-Ranking durchgeführt, um Kontext-Relevanz und Aktualität zu gewichten.
 
 > **Beide Faktoren wirken multiplikativ.** Sie werden zu *einem* Multiplikator
-> aufsummiert, mit dem der Basis-Score anschließend malgenommen wird. Ein Bonus
-> von `0.1` bedeutet also **+10 % relativ**, nicht `+0.1` absolut. Bei einem
-> Basis-Score von `0.5` sind das `+0.05`, bei `0.8` sind es `+0.08`.
+> aufsummiert, mit dem die Ähnlichkeit anschließend malgenommen wird. Ein Bonus
+> von `0.1` bedeutet also **+10 % relativ**, nicht `+0.1` absolut. Bei einer
+> Ähnlichkeit von `0.5` sind das `+0.05`, bei `0.8` sind es `+0.08`.
+>
+> Gerechnet wird immer aus `similarity`, nie aus einer schon gewichteten
+> `relevance` — sonst würde sich der Bonus bei mehrfacher Auswertung aufmultiplizieren.
 
 ### 2.1 Recency Decay (Zeitlicher Zerfall)
 Um aktuelle Informationen (z.B. aus der laufenden Session) zu bevorzugen, geht ein zeitabhängiger Anteil in den Multiplikator ein.
@@ -98,15 +121,17 @@ In der Tabelle `app.vector_namespace_rules` können Boni pro Namespace-Pattern d
 
 ## 3. Gesamt-Algorithmus (Zusammenfassung)
 
-Der finale Score eines Treffers berechnet sich aus dem Basis-Score und einem Multiplikator, in den beide Faktoren einfließen:
+Die Relevanz eines Treffers berechnet sich aus seiner Ähnlichkeit und einem Multiplikator, in den beide Faktoren einfließen:
 
-$$Score_{final} = Score_{base} \times \left(1 + \sum Bonus_{rule} + Anteil_{age}\right)$$
+$$relevance = similarity \times \left(1 + \sum Bonus_{rule} + Anteil_{age}\right)$$
 
-> **Die Mindest-Score-Schwelle greift auf den *finalen* Score**, nicht auf den Basis-Score. Ein Treffer kann also über einen Bonus eine Schwelle überschreiten, die er aus eigener Ähnlichkeit nicht erreicht. Das ist beabsichtigt: die Schwelle wird gegen die Werte kalibriert, die in Admin-Konsole und Trace sichtbar sind.
+Der Multiplikator ist damit **mindestens** 1 und in der Praxis fast immer größer — jeder Eintrag bekommt schon durch die Rezenz einen kleinen Anteil. Deshalb liegt `relevance` regelmäßig über `similarity` und kann 1 überschreiten.
+
+> **Die Schwelle greift auf die *Relevanz***, nicht auf die Ähnlichkeit. Ein Treffer kann also über einen Bonus eine Schwelle überschreiten, die er aus eigener Ähnlichkeit nicht erreicht. Das ist beabsichtigt: die Schwelle wird gegen die Werte kalibriert, die in Admin-Konsole und Trace sichtbar sind.
 
 ### 3.1 Deduplizierung
 Bevor Treffer an das LLM übergeben werden, findet eine inhaltsbasierte Deduplizierung statt (SHA-256 Hash des Contents).
-*   Bei identischem Inhalt über verschiedene Namespaces hinweg gewinnt der Treffer mit dem **höchsten Score**.
+*   Bei identischem Inhalt über verschiedene Namespaces hinweg gewinnt der Treffer mit der **höchsten Relevanz**.
 *   Die anderen Instanzen werden als `duplicates` im Metadaten-Objekt des Gewinner-Treffers gespeichert.
 
 ### 3.2 Namespace-Instruktionen
@@ -144,4 +169,4 @@ Eine Regel deckt immer auch die **Unter-Namespaces** ihres Musters ab: `vector.a
 
 *   **Konfigurationsdatei:** `config/embedding.config.json`
 *   **Datenbank-Regeln:** `SELECT * FROM app.vector_namespace_rules;`
-*   **Audit-Log:** Lese- und Schreibvorgänge werden in `app.memory_audit` zur Analyse der Relevanz-Entscheidungen protokolliert. Änderungen an bestehenden Einträgen erscheinen dort nicht.
+*   **Audit-Log:** Lese- und Schreibvorgänge werden in `app.memory_audit` protokolliert, ebenso Änderungen an bestehenden Einträgen (`write` mit `operation: update`) und Statuswechsel (`status`, mit `from` und `to`).

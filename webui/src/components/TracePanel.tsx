@@ -178,7 +178,14 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
                         <div key={i} className="trace-item-modern">
                           <div className="trace-item-header">
                             <span className="trace-item-title">{hit.namespace}</span>
-                            <span className="trace-item-meta">Score: {(hit.score ?? 0).toFixed(2)}</span>
+                            {/* Both, because they differ once a bonus applies —
+                                and relevance is the one that can exceed 1. */}
+                            <span className="trace-item-meta" title={t('relevanceTitle')}>
+                              {t('relevanceShort')} {(hit.relevance ?? 0).toFixed(2)}
+                              {typeof hit.similarity === 'number' && hit.similarity !== hit.relevance && (
+                                <> · {t('similarityShort')} {hit.similarity.toFixed(2)}</>
+                              )}
+                            </span>
                           </div>
                           <div className={cn(
                             "trace-item-body snippet",

@@ -44,7 +44,23 @@ export interface MemoryHit {
   namespace: string;
   content: string;
   metadata: MemoryMetadata;
-  score: number;
+  /**
+   * Cosine similarity between query and entry, 0..1. What the vector search
+   * actually measured, untouched by any weighting.
+   *
+   * 1.0 when there is no query — browsing a namespace compares nothing.
+   */
+  similarity: number;
+  /**
+   * What the entry is worth for this query after namespace bonus and recency:
+   * `similarity × multiplier`. This is what ranking sorts on, what `min_score`
+   * filters on, and what the trace shows.
+   *
+   * **Can exceed 1** — the multiplier is greater than 1 whenever a bonus or the
+   * recency term applies. It was called `score` until 2026-07-28 and read like
+   * a similarity, which it never was: a hit was observed at 1.03.
+   */
+  relevance: number;
   /** Creation time. Since V76 this is the real one — the upsert no longer resets it. */
   createdAt: string;
   /** Last write. The recency anchor for ranking. */
@@ -63,7 +79,7 @@ export interface MemoryHit {
   duplicates?: {
     namespace: string;
     metadata: MemoryMetadata;
-    score: number;
+    relevance: number;
     id?: string;
     createdAt: string;
     created_at?: string;

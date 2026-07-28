@@ -39,7 +39,7 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
         content: 'content A', 
         metadata: {}, 
         created_at: now, 
-        score: 0.9 
+        similarity: 0.9 
     },
     { 
         id: '2', 
@@ -47,7 +47,7 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
         content: 'content B',
         metadata: {},
         created_at: oldDate,
-        score: 0.9
+        similarity: 0.9
     },
     { 
         id: '3', 
@@ -55,7 +55,7 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
         content: 'content C', 
         metadata: {}, 
         created_at: oldDate, 
-        score: 0.9 
+        similarity: 0.9 
     }
   ];
 
@@ -129,11 +129,11 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
   assert.equal(results[1].id, '2');
   assert.equal(results[2].id, '3');
 
-  assert.ok(results[0].score > results[1].score);
-  assert.ok(results[1].score > results[2].score);
+  assert.ok(results[0].relevance > results[1].relevance);
+  assert.ok(results[1].relevance > results[2].relevance);
   
   // Verify scores are roughly what we expect (floating point tolerance)
-  assert.ok(Math.abs(results[0].score - 1.035) < 0.001);
+  assert.ok(Math.abs(results[0].relevance - 1.035) < 0.001);
 });
 
 test('MemoryAdapter search ranks hits by pattern matching with placeholders', async () => {
@@ -149,7 +149,7 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
         content: 'content A', 
         metadata: {}, 
         created_at: new Date(), 
-        score: 0.9 
+        similarity: 0.9 
     },
     { 
         id: '2', 
@@ -157,7 +157,7 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
         content: 'content B', 
         metadata: {}, 
         created_at: new Date(), 
-        score: 0.9 
+        similarity: 0.9 
     }
   ];
 
@@ -211,6 +211,6 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
   assert.equal(results.length, 2);
   assert.equal(results[0].id, '1');
   assert.equal(results[1].id, '2');
-  assert.ok(results[0].score > results[1].score);
-  assert.ok(Math.abs(results[0].score - 0.945) < 0.001);
+  assert.ok(results[0].relevance > results[1].relevance);
+  assert.ok(Math.abs(results[0].relevance - 0.945) < 0.001);
 });

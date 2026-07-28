@@ -45,7 +45,7 @@ const FAKE_HIT = {
   content: 'Max Mustermann, CEO',
   metadata: {},
   created_at: new Date(),
-  score: 0.95
+  relevance: 0.95
 };
 
 function makeAdapter(hits: any[] = [FAKE_HIT]) {
