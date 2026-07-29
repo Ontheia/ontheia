@@ -22,6 +22,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
 import type { MemoryStatsEntry } from '../lib/api';
 
 /**
@@ -208,16 +209,21 @@ export function NamespaceTree({
                 <span className="w-[13px] shrink-0" />
               )}
               {node.isNamespace ? (
-                <button
-                  type="button"
-                  title={`${node.path} — ${labels.adopt}`}
-                  onClick={() => onSelect(node.path)}
-                  className={`text-left hover:underline decoration-sky-500/50 ${
-                    node.isEmpty ? 'text-slate-500 italic' : 'text-sky-300'
-                  }`}
-                >
-                  {labelWithUser(node.label, users)}
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(node.path)}
+                      className={`text-left hover:underline decoration-sky-500/50 ${
+                        node.isEmpty ? 'text-slate-500 italic' : 'text-sky-300'
+                      }`}
+                    >
+                      {labelWithUser(node.label, users)}
+                    </button>
+                  </TooltipTrigger>
+                  {/* Full path, because the row shows only the segment this level adds. */}
+                  <TooltipContent>{node.path} — {labels.adopt}</TooltipContent>
+                </Tooltip>
               ) : (
                 <span className="text-slate-300">{labelWithUser(node.label, users)}</span>
               )}
@@ -256,6 +262,7 @@ export function NamespaceTree({
   render(tree, 0);
 
   return (
+    <TooltipProvider>
     <table className="w-full text-left text-sm">
       <thead className="bg-[#0B1220] text-slate-400">
         <tr>
@@ -268,5 +275,6 @@ export function NamespaceTree({
       </thead>
       <tbody className="divide-y divide-[#1E293B] bg-[#020817]">{rows}</tbody>
     </table>
+    </TooltipProvider>
   );
 }
