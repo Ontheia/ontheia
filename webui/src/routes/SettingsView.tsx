@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw, BadgeCheck } from 'lucide-react';
 import { NamespaceTree } from '../components/NamespaceTree';
+import { TaskPromptHistory } from '../components/TaskPromptHistory';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -4813,6 +4814,7 @@ function AgentsSection({
   onUpdateTask,
   onHasChanges,
   onRemoveTask,
+  onRefreshAgents,
   onReplaceSteps
 }: {
   agents: AgentDefinition[];
@@ -4825,6 +4827,8 @@ function AgentsSection({
   onUpdateTask: (agentId: string, taskId: string, patch: { label?: string; contextPrompt?: string | null; description?: string | null; showInComposer?: boolean | null }) => Promise<void> | void;
   onHasChanges: (hasChanges: boolean) => void;
   onRemoveTask: (agentId: string, taskId: string) => Promise<void> | void;
+  /** Reloads agents after a change made outside onUpdateTask, e.g. a version restore. */
+  onRefreshAgents: () => Promise<void> | void;
   onReplaceSteps: (steps: ChainStep[]) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'chat', 'errors']);
@@ -5655,6 +5659,7 @@ function AgentsSection({
         onUpdateTask={onUpdateTask}
         onHasChanges={onHasChanges}
         onRemoveTask={onRemoveTask}
+        onRefreshAgents={onRefreshAgents}
       />}
 
       {agentsTab === 'chains' && <ChainsSection
@@ -5671,7 +5676,8 @@ function TaskEditForm({
   agentId,
   task,
   onUpdate,
-  onRemove
+  onRemove,
+  onRestored
 }: {
   agentId: string;
   task: AgentTaskDefinition;
@@ -5681,6 +5687,8 @@ function TaskEditForm({
     patch: { label?: string; contextPrompt?: string | null; description?: string | null; showInComposer?: boolean | null }
   ) => Promise<void> | void;
   onRemove: (agentId: string, taskId: string) => Promise<void> | void;
+  /** Reloads the agent list after a version was written back into the task. */
+  onRestored?: () => Promise<void> | void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [draft, setDraft] = useState({
@@ -5691,6 +5699,9 @@ function TaskEditForm({
   });
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Bumped after every successful save so the history below reloads — it sits
+  // outside this form and cannot see the save on its own.
+  const [savedTick, setSavedTick] = useState(0);
 
   // Sync draft if external task changes (e.g. reload), BUT only if not dirty to avoid overwrite
   useEffect(() => {
@@ -5719,6 +5730,7 @@ function TaskEditForm({
         showInComposer: draft.showInComposer
       });
       setIsDirty(false);
+      setSavedTick((tick) => tick + 1);
     } catch (error) {
       console.error(t('tasks.updateError'), error);
     } finally {
@@ -5744,6 +5756,19 @@ function TaskEditForm({
           onChange={(e) => handleChange('contextPrompt', e.target.value)}
         />
       </label>
+      <TaskPromptHistory
+        taskId={task.id}
+        currentLength={draft.contextPrompt.length}
+        refreshSignal={savedTick}
+        onLoadIntoEditor={(text) => handleChange('contextPrompt', text)}
+        onRestored={async () => {
+          await onRestored?.();
+          setIsDirty(false);
+        }}
+        formatDate={(iso) => new Date(iso).toLocaleString(undefined, {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        })}
+      />
       <label className="settings-field">
         <span>{t('agents.description')}</span>
         <textarea
@@ -5810,7 +5835,8 @@ function TasksSection({
   onAddTask,
   onUpdateTask,
   onHasChanges,
-  onRemoveTask
+  onRemoveTask,
+  onRefreshAgents
 }: {
   agents: AgentDefinition[];
   onAddTask: (agentId: string, task: AgentTaskDefinition) => Promise<void> | void;
@@ -5821,6 +5847,7 @@ function TasksSection({
   ) => Promise<void> | void;
   onHasChanges: (hasChanges: boolean) => void;
   onRemoveTask: (agentId: string, taskId: string) => Promise<void> | void;
+  onRefreshAgents: () => Promise<void> | void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [selectedAgent, setSelectedAgent] = useState<string>(() => agents[0]?.id ?? '');
@@ -6002,6 +6029,7 @@ function TasksSection({
                                     task={task}
                                     onUpdate={onUpdateTask}
                                     onRemove={onRemoveTask}
+                                    onRestored={onRefreshAgents}
                                   />
                                 )}
                               </div>
@@ -8812,6 +8840,7 @@ export function SettingsView() {
             onUpdateTask={handleUpdateTaskApi}
             onHasChanges={setHasChanges}
             onRemoveTask={handleRemoveTask}
+            onRefreshAgents={refreshAgents}
             onReplaceSteps={(steps) => setChainSteps(steps)}
           />
         );

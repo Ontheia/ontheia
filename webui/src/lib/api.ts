@@ -591,6 +591,28 @@ export function deleteTaskAdmin(taskId: string) {
   }) as Promise<null>;
 }
 
+export type TaskPromptVersion = {
+  version: number;
+  context_prompt: string | null;
+  created_at: string;
+  /** Null when the change came from outside a session, e.g. straight from psql. */
+  author: string | null;
+};
+
+/** Superseded context prompts, newest first. The live one is not among them. */
+export function listTaskPromptVersions(taskId: string) {
+  return request(`/tasks/${encodeURIComponent(taskId)}/versions`) as Promise<{
+    versions: TaskPromptVersion[];
+  }>;
+}
+
+/** Writes an earlier wording back. Recorded as a version itself, so it is undoable. */
+export function restoreTaskPromptVersion(taskId: string, version: number) {
+  return request(`/tasks/${encodeURIComponent(taskId)}/versions/${version}/restore`, {
+    method: 'POST'
+  }) as Promise<TaskAdminEntry>;
+}
+
 export function listPromptTemplates(params: {
   scope: PromptTemplateScope;
   targetId?: string | null;

@@ -915,6 +915,96 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     }
   });
 
+  /**
+   * Superseded context prompts, newest first. The live wording is not in here —
+   * it sits in app.tasks and the console already has it.
+   *
+   * Full text is included rather than a preview: the list is short by nature
+   * (one row per edit of one task) and a restore preview that needs a second
+   * round-trip per version would make comparing two of them tedious.
+   */
+  server.get('/tasks/:id/versions', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
+    const { id } = request.params as { id?: string };
+    const taskId = typeof id === 'string' ? id.trim() : '';
+    if (!taskId || !isUuid(taskId)) {
+      reply.code(400);
+      return { error: 'agents_task_id_invalid', message: 'task id is missing or invalid.' };
+    }
+
+    const rows = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
+      const result = await client.query(
+        `SELECT v.version, v.context_prompt, v.created_at, v.created_by,
+                COALESCE(NULLIF(btrim(u.name), ''), u.email) AS author
+           FROM app.task_versions v
+           LEFT JOIN app.users u ON u.id = v.created_by
+          WHERE v.task_id = $1
+          ORDER BY v.version DESC`,
+        [taskId]
+      );
+      return result.rows;
+    });
+
+    return {
+      versions: rows.map((row: any) => ({
+        version: Number(row.version),
+        context_prompt: row.context_prompt as string | null,
+        created_at: new Date(row.created_at).toISOString(),
+        author: (row.author as string | null) ?? null
+      }))
+    };
+  });
+
+  /**
+   * Puts an earlier wording back into the task.
+   *
+   * This is a normal update, so the trigger records what is being replaced —
+   * restoring the wrong version is itself undoable, and the history stays a
+   * complete record rather than a branch that loses its tip.
+   */
+  server.post('/tasks/:id/versions/:version/restore', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
+    const { id, version } = request.params as { id?: string; version?: string };
+    const taskId = typeof id === 'string' ? id.trim() : '';
+    const wanted = Number(version);
+    if (!taskId || !isUuid(taskId) || !Number.isInteger(wanted) || wanted < 1) {
+      reply.code(400);
+      return { error: 'agents_task_id_invalid', message: 'task id or version is missing or invalid.' };
+    }
+
+    try {
+      const task = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
+        const found = await client.query(
+          `SELECT context_prompt FROM app.task_versions WHERE task_id = $1 AND version = $2`,
+          [taskId, wanted]
+        );
+        if (found.rowCount === 0) throw new Error('version_not_found');
+
+        const updated = await client.query(
+          `UPDATE app.tasks SET context_prompt = $1, updated_at = now() WHERE id = $2 RETURNING *`,
+          [found.rows[0].context_prompt, taskId]
+        );
+        if (updated.rowCount === 0) throw new Error('not_found');
+        return updated.rows[0];
+      });
+      return mapTaskRow(task);
+    } catch (error: any) {
+      if (error?.message === 'version_not_found') {
+        reply.code(404);
+        return { error: 'agents_task_version_not_found', message: 'Version not found for this task.' };
+      }
+      if (error?.message === 'not_found') {
+        reply.code(404);
+        return { error: 'agents_task_not_found', message: 'Task not found.' };
+      }
+      request.log.error({ err: error }, 'Task version restore failed');
+      reply.code(500);
+      return { error: 'agents_task_restore_failed', message: 'Version could not be restored.' };
+    }
+  });
+
   server.delete('/tasks/:id', async (request, reply) => {
     const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
@@ -924,7 +1014,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       reply.code(400);
       return { error: 'agents_task_id_invalid', message: 'task id is missing or invalid.' };
     }
-    
+
     try {
       const agentBindings = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         return client.query(`SELECT DISTINCT agent_id FROM app.agent_tasks WHERE task_id = $1`, [taskId]);
