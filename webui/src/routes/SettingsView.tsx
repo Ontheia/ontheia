@@ -1246,6 +1246,72 @@ function TriStateSelect({
   );
 }
 
+/** One namespace pattern per line, empty lines and surrounding blanks ignored. */
+function parseNamespaceLines(text: string): string[] {
+  return text.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+/**
+ * Multi-line namespace editor that keeps what was typed.
+ *
+ * The textareas used to be controlled straight off the parsed array
+ * (`value={(policy?.x ?? []).join('\n')}`), which made a trailing newline
+ * impossible to enter: pressing Return at the end of a line produced "ns\n",
+ * the parser dropped the empty second line, and the re-render restored "ns"
+ * without the break. Typing a second pattern onto the same line and splitting
+ * it with Return worked, because both halves survived the filter -- the
+ * workaround users found. Leading spaces and blank lines in the middle were
+ * swallowed the same way, moving the caret while typing.
+ *
+ * The raw text now lives here and the parsed array is only derived from it, so
+ * editing is unconstrained while the stored value stays clean. The effect
+ * re-syncs when the array changes from the outside (another agent selected,
+ * policy reloaded) but leaves the text alone while it still parses to the same
+ * patterns -- otherwise every keystroke would fight the re-render.
+ */
+function NamespaceLinesField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 3
+}: {
+  label: string;
+  value: string[] | null | undefined;
+  onChange: (lines: string[] | null) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const patterns = useMemo(() => value ?? [], [value]);
+  const [text, setText] = useState(() => patterns.join('\n'));
+
+  useEffect(() => {
+    const typed = parseNamespaceLines(text);
+    const same = typed.length === patterns.length && typed.every((line, i) => line === patterns[i]);
+    if (!same) setText(patterns.join('\n'));
+    // `text` is deliberately not a dependency: this reacts to outside changes,
+    // not to typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patterns]);
+
+  return (
+    <label className="settings-field">
+      <span>{label}</span>
+      <textarea
+        rows={rows}
+        value={text}
+        onChange={(event) => {
+          const next = event.target.value;
+          setText(next);
+          const lines = parseNamespaceLines(next);
+          onChange(lines.length > 0 ? lines : null);
+        }}
+        placeholder={placeholder}
+      />
+    </label>
+  );
+}
+
 function MemorySection({
   agents,
   onHasChanges,
@@ -2754,21 +2820,15 @@ function MemorySection({
           />
           <span>{t('memory.autoReadEnabled')}</span>
         </label>
-        <label className="settings-field">
-          <span>{t('memory.readNamespacesLabel')}</span>
-          <textarea
-            rows={4}
-            value={(agentPolicy?.read_namespaces ?? []).join('\n')}
-            onChange={(event) => {
-              const lines = event.target.value
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean);
-              updatePolicyField('agent', 'read_namespaces', lines.length > 0 ? lines : null);
-              onHasChanges?.(true);
-            }}
-          />
-        </label>
+        <NamespaceLinesField
+          label={t('memory.readNamespacesLabel')}
+          rows={4}
+          value={agentPolicy?.read_namespaces}
+          onChange={(lines) => {
+            updatePolicyField('agent', 'read_namespaces', lines);
+            onHasChanges?.(true);
+          }}
+        />
         <label className="settings-field">
           <span>{t('memory.topK')}</span>
           <Input
@@ -2896,38 +2956,24 @@ function MemorySection({
               <span>{t('memory.allowDeleteTool')}</span>
             </label>
           </div>
-          <label className="settings-field">
-            <span>{t('memory.toolReadNamespacesLabel')}</span>
-            <textarea
-              rows={3}
-              value={(agentPolicy?.tool_read_namespaces ?? []).join('\n')}
-              onChange={(event) => {
-                const lines = event.target.value
-                  .split('\n')
-                  .map((line) => line.trim())
-                  .filter(Boolean);
-                updatePolicyField('agent', 'tool_read_namespaces', lines.length > 0 ? lines : null);
-                onHasChanges?.(true);
-              }}
-              placeholder={t('memory.namespacePlaceholder')}
-            />
-          </label>
-          <label className="settings-field">
-            <span>{t('memory.allowedWriteNamespacesTool')}</span>
-            <textarea
-              rows={3}
-              value={(agentPolicy?.allowed_write_namespaces ?? []).join('\n')}
-              onChange={(event) => {
-                const lines = event.target.value
-                  .split('\n')
-                  .map((line) => line.trim())
-                  .filter(Boolean);
-                updatePolicyField('agent', 'allowed_write_namespaces', lines.length > 0 ? lines : null);
-                onHasChanges?.(true);
-              }}
-              placeholder={t('memory.namespacePlaceholder')}
-            />
-          </label>
+          <NamespaceLinesField
+            label={t('memory.toolReadNamespacesLabel')}
+            value={agentPolicy?.tool_read_namespaces}
+            placeholder={t('memory.namespacePlaceholder')}
+            onChange={(lines) => {
+              updatePolicyField('agent', 'tool_read_namespaces', lines);
+              onHasChanges?.(true);
+            }}
+          />
+          <NamespaceLinesField
+            label={t('memory.allowedWriteNamespacesTool')}
+            value={agentPolicy?.allowed_write_namespaces}
+            placeholder={t('memory.namespacePlaceholder')}
+            onChange={(lines) => {
+              updatePolicyField('agent', 'allowed_write_namespaces', lines);
+              onHasChanges?.(true);
+            }}
+          />
         </div>
         {agentPolicyWarnings.length > 0 && (
           <ul className="memory-policy-warnings" role="status">
@@ -2990,21 +3036,15 @@ function MemorySection({
                 onHasChanges?.(true);
               }}
             />
-            <label className="settings-field">
-              <span>{t('memory.readNamespacesLabel')}</span>
-              <textarea
-                rows={4}
-                value={(taskPolicy?.read_namespaces ?? []).join('\n')}
-                onChange={(event) => {
-                  const lines = event.target.value
-                    .split('\n')
-                    .map((line) => line.trim())
-                    .filter(Boolean);
-                  updatePolicyField('task', 'read_namespaces', lines.length > 0 ? lines : null);
-                  onHasChanges?.(true);
-                }}
-              />
-            </label>
+            <NamespaceLinesField
+              label={t('memory.readNamespacesLabel')}
+              rows={4}
+              value={taskPolicy?.read_namespaces}
+              onChange={(lines) => {
+                updatePolicyField('task', 'read_namespaces', lines);
+                onHasChanges?.(true);
+              }}
+            />
             <label className="settings-field">
               <span>{t('memory.topK')}</span>
               <Input
@@ -3120,38 +3160,24 @@ function MemorySection({
                   }}
                 />
               </div>
-              <label className="settings-field">
-                <span>{t('memory.toolReadNamespacesLabel')}</span>
-                <textarea
-                  rows={3}
-                  value={(taskPolicy?.tool_read_namespaces ?? []).join('\n')}
-                  onChange={(event) => {
-                    const lines = event.target.value
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter(Boolean);
-                    updatePolicyField('task', 'tool_read_namespaces', lines.length > 0 ? lines : null);
-                    onHasChanges?.(true);
-                  }}
-                  placeholder={t('memory.namespacePlaceholder')}
-                />
-              </label>
-              <label className="settings-field">
-                <span>{t('memory.allowedWriteNamespacesTool')}</span>
-                <textarea
-                  rows={3}
-                  value={(taskPolicy?.allowed_write_namespaces ?? []).join('\n')}
-                  onChange={(event) => {
-                    const lines = event.target.value
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter(Boolean);
-                    updatePolicyField('task', 'allowed_write_namespaces', lines.length > 0 ? lines : null);
-                    onHasChanges?.(true);
-                  }}
-                  placeholder={t('memory.namespacePlaceholder')}
-                />
-              </label>
+              <NamespaceLinesField
+                label={t('memory.toolReadNamespacesLabel')}
+                value={taskPolicy?.tool_read_namespaces}
+                placeholder={t('memory.namespacePlaceholder')}
+                onChange={(lines) => {
+                  updatePolicyField('task', 'tool_read_namespaces', lines);
+                  onHasChanges?.(true);
+                }}
+              />
+              <NamespaceLinesField
+                label={t('memory.allowedWriteNamespacesTool')}
+                value={taskPolicy?.allowed_write_namespaces}
+                placeholder={t('memory.namespacePlaceholder')}
+                onChange={(lines) => {
+                  updatePolicyField('task', 'allowed_write_namespaces', lines);
+                  onHasChanges?.(true);
+                }}
+              />
             </div>
             {taskPolicyWarnings.length > 0 && (
               <ul className="memory-policy-warnings" role="status">
