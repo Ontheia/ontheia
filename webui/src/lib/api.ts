@@ -430,6 +430,7 @@ export function fetchVectorHealth() {
 
 export type MemoryStatsEntry = {
   namespace: string;
+  /** 0 means: named by a rule, but nothing stored there yet. */
   docs: number;
   latest: string | null;
   content_bytes: number | null;
@@ -437,15 +438,21 @@ export type MemoryStatsEntry = {
 
 export type MemoryStatsResponse = {
   namespaces: MemoryStatsEntry[];
+  /** Resolves the user id embedded in vector.user.* / vector.agent.* namespaces. */
+  users?: Array<{ id: string; label: string }>;
   security: {
     warnings_24h: number;
   };
 };
 
-export function fetchMemoryStats(limit = 50) {
-  const search = new URLSearchParams();
-  if (limit) search.set('limit', String(limit));
-  return request(`/memory/stats${limit ? `?${search.toString()}` : ''}`) as Promise<MemoryStatsResponse>;
+/**
+ * The `limit` parameter is accepted for call-site compatibility but the route
+ * has never read it — it always returns every namespace. The console groups and
+ * filters client-side, so a server-side cut would only hide entries from the
+ * totals.
+ */
+export function fetchMemoryStats() {
+  return request('/memory/stats') as Promise<MemoryStatsResponse>;
 }
 
 export type AgentAdminEntry = {

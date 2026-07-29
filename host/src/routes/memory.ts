@@ -464,12 +464,42 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
            AND created_at > now() - interval '24 hours'
       `);
 
+      // Namespaces that a rule names but no entry uses yet. Without them a typo
+      // in a rule pattern is invisible: it produces no error, no warning, and no
+      // empty-result signal — the rule simply never matches. Patterns holding a
+      // wildcard or a ${placeholder} are skipped; they describe a family of
+      // namespaces, not one that could be listed.
+      const configured = await client.query(`
+        SELECT pattern
+          FROM app.vector_namespace_rules
+         WHERE pattern NOT LIKE '%*%'
+           AND position('$' in pattern) = 0
+      `);
+
+      // Namespaces embed the user id. Resolving it here keeps the mapping on the
+      // side that already knows about users — the console only ever sees ids.
+      const users = await client.query(`SELECT id, name, email FROM app.users`);
+
+      const withData = stats.rows.map(row => ({
+        namespace: row.namespace as string,
+        docs: Number(row.docs),
+        latest: row.latest ? new Date(row.latest).toISOString() : null,
+        content_bytes: row.content_bytes ? Number(row.content_bytes) : null
+      }));
+
+      const seen = new Set(withData.map(entry => entry.namespace));
+      const empty = configured.rows
+        .map(row => row.pattern as string)
+        .filter(pattern => !seen.has(pattern))
+        .map(pattern => ({ namespace: pattern, docs: 0, latest: null, content_bytes: null }));
+
       return {
-        namespaces: stats.rows.map(row => ({
-          namespace: row.namespace,
-          docs: Number(row.docs),
-          latest: row.latest ? new Date(row.latest).toISOString() : null,
-          content_bytes: row.content_bytes ? Number(row.content_bytes) : null
+        // docs === 0 marks a namespace that is configured but holds nothing —
+        // the grouping query can never produce a zero on its own.
+        namespaces: [...withData, ...empty],
+        users: users.rows.map(row => ({
+          id: row.id as string,
+          label: (typeof row.name === 'string' && row.name.trim()) || (row.email as string)
         })),
         security: {
           warnings_24h: Number(securityResult.rows[0]?.count ?? 0)

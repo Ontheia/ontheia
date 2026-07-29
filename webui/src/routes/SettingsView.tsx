@@ -25,6 +25,7 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw, BadgeCheck } from 'lucide-react';
+import { NamespaceTree } from '../components/NamespaceTree';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -1390,8 +1391,28 @@ function MemorySection({
   const [memoryStats, setMemoryStats] = useState<MemoryStatsEntry[]>([]);
   const [securityStats, setSecurityStats] = useState<{ warnings_24h: number }>({ warnings_24h: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
-  const [nsPage, setNsPage] = useState(0);
-  const NS_PAGE_SIZE = 20;
+  const [nsFilter, setNsFilter] = useState('');
+  // id -> display name, so vector.agent.<uuid>.preferences reads as a person.
+  const [namespaceUsers, setNamespaceUsers] = useState<Array<{ id: string; label: string }>>([]);
+
+  const namespaceUserLabels = useMemo(
+    () => new Map(namespaceUsers.map((user) => [user.id, user.label])),
+    [namespaceUsers]
+  );
+
+  // Filtering happens on the flat list before the tree is built, so a match
+  // deep in a branch pulls its parents along instead of vanishing with them.
+  const filteredNamespaceStats = useMemo(() => {
+    const needle = nsFilter.trim().toLowerCase();
+    if (!needle) return memoryStats;
+    return memoryStats.filter((row) => {
+      if (row.namespace.toLowerCase().includes(needle)) return true;
+      // Also match what the user actually sees: the resolved person name.
+      return row.namespace
+        .split('.')
+        .some((segment) => (namespaceUserLabels.get(segment) ?? '').toLowerCase().includes(needle));
+    });
+  }, [memoryStats, nsFilter, namespaceUserLabels]);
 
   // Maintenance & Ingest State
   const [ingestPath, setIngestPath] = useState('./sources/vector/global/ontheia');
@@ -1680,13 +1701,14 @@ function MemorySection({
   const loadMemoryStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const response = await fetchMemoryStats(50);
+      const response = await fetchMemoryStats();
       setMemoryStats(response.namespaces);
-      setNsPage(0);
+      setNamespaceUsers(response.users ?? []);
       setSecurityStats(response.security);
     } catch (error) {
       console.error(t('memory.statsError'), error);
       setMemoryStats([]);
+      setNamespaceUsers([]);
     } finally {
       setStatsLoading(false);
     }
@@ -1899,6 +1921,44 @@ function MemorySection({
       setErrorMessage(localizeError(error, t, 'memory.statusChangeError'));
     }
   }, [t]);
+
+  /**
+   * Adopts a namespace from the tree into the search tab, on an empty form.
+   *
+   * Every field survives a tab switch, so whatever the previous visit left
+   * behind is still there. Two ways it hurts: a project id, tag or min_score
+   * silently cuts the result set until the namespace looks empty when it is
+   * not — and the edit button fills the whole write side from a hit, which
+   * would otherwise sit there under a namespace it no longer belongs to.
+   *
+   * Everything the edit button touches is therefore cleared with it. Resetting
+   * editingId alone would leave a contradiction: no entry under edit, but its
+   * content still in the form.
+   */
+  const adoptNamespaceForSearch = useCallback((namespace: string) => {
+    setNamespaceFilter(namespace);
+    // Search side
+    setSearchQuery('');
+    setSearchLimit(20);
+    setIncludeHidden(false);
+    setSearchMinScore('0.3');
+    setMetaProjectId('');
+    setMetaLang('');
+    setMetaTags('');
+    setMetaMetadata('');
+    // Write side — mirrors the edit button's assignments one for one
+    setEditingId(null);
+    setWriteContent('');
+    setWriteClass('');
+    setWriteObservedAt('');
+    setMetaTtlSeconds('');
+    // Results of the previous filter, which would read as this one's answer
+    setSearchResults([]);
+    setSearchedNamespaces([]);
+    setSelectedHits(new Set());
+    setErrorMessage(null);
+    setMemoryTab('search');
+  }, []);
 
   const handleMemorySearch = useCallback(async () => {
     setSearchLoading(true);
@@ -2329,79 +2389,58 @@ function MemorySection({
       </>}
 
       {memoryTab === 'namespaces' && <>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-slate-200">{t('memory.namespacesTitle')}</h4>
-          <button
-            type="button"
-            className="btn-default h-8 text-xs"
-            onClick={loadMemoryStats}
-            disabled={statsLoading}
-          >
-            {statsLoading ? 'Aktualisiere…' : t('refresh', { ns: 'common' })}
-          </button>
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <h4 className="text-sm font-medium text-slate-200 shrink-0">{t('memory.namespacesTitle')}</h4>
+          <div className="flex items-center gap-2 flex-1 justify-end">
+            <Input
+              value={nsFilter}
+              onChange={(event) => setNsFilter(event.target.value)}
+              placeholder={t('memory.namespaceFilter')}
+              className="h-8 max-w-xs text-xs"
+            />
+            <button
+              type="button"
+              className="btn-default h-8 text-xs"
+              onClick={loadMemoryStats}
+              disabled={statsLoading}
+            >
+              {statsLoading ? 'Aktualisiere…' : t('refresh', { ns: 'common' })}
+            </button>
+          </div>
         </div>
         <div className="border border-[#1E293B] rounded-md overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#0B1424] text-slate-400 font-medium border-b border-[#1E293B]">
-              <tr>
-                <th className="p-3">Namespace</th>
-                <th className="p-3">{t('memory.documents')}</th>
-                <th className="p-3">{t('memory.lastModified')}</th>
-                <th className="p-3">Content-Bytes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1E293B] bg-[#020817]">
-              {memoryStats.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-0">
-                    <div className="empty-state-container">
-                      <p className="empty-state-text">{t('memory.noNamespaces')}</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                memoryStats.slice(nsPage * NS_PAGE_SIZE, (nsPage + 1) * NS_PAGE_SIZE).map((row) => (
-                  <tr key={row.namespace} className="bg-[#121B2B] hover:bg-[#1e293b] transition-colors">
-                    <td className="p-3 align-top font-mono text-xs text-sky-300 break-all">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className="cursor-pointer hover:underline decoration-sky-500/50"
-                            onClick={() => {
-                              setNamespaceFilter(row.namespace);
-                              setMemoryTab('search');
-                            }}
-                          >
-                            {row.namespace}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('memory.adoptSearch')}</TooltipContent>
-                      </Tooltip>
-                    </td>
-                    <td className="p-3 align-top">{row.docs.toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US')}</td>
-                    <td className="p-3 align-top text-slate-400">{row.latest ? new Date(row.latest).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
-                      timeZone: timezone || 'Europe/Berlin',
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    }) : '–'}</td>
-                    <td className="p-3 align-top text-slate-400">{row.content_bytes !== null ? formatBytes(row.content_bytes) : '–'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {memoryStats.length > NS_PAGE_SIZE && (
-          <div className="flex items-center justify-between mt-2 text-xs text-slate-400">
-            <span>{nsPage * NS_PAGE_SIZE + 1}–{Math.min((nsPage + 1) * NS_PAGE_SIZE, memoryStats.length)} / {memoryStats.length}</span>
-            <div className="flex gap-1">
-              <button type="button" className="btn-default h-7 px-2" onClick={() => setNsPage(0)} disabled={nsPage === 0}>«</button>
-              <button type="button" className="btn-default h-7 px-2" onClick={() => setNsPage(p => p - 1)} disabled={nsPage === 0}>‹</button>
-              <button type="button" className="btn-default h-7 px-2" onClick={() => setNsPage(p => p + 1)} disabled={(nsPage + 1) * NS_PAGE_SIZE >= memoryStats.length}>›</button>
-              <button type="button" className="btn-default h-7 px-2" onClick={() => setNsPage(Math.ceil(memoryStats.length / NS_PAGE_SIZE) - 1)} disabled={(nsPage + 1) * NS_PAGE_SIZE >= memoryStats.length}>»</button>
+          {filteredNamespaceStats.length === 0 ? (
+            <div className="empty-state-container">
+              <p className="empty-state-text">{t('memory.noNamespaces')}</p>
             </div>
-          </div>
-        )}
+          ) : (
+            <NamespaceTree
+              entries={filteredNamespaceStats}
+              users={namespaceUserLabels}
+              onSelect={adoptNamespaceForSearch}
+              formatBytes={formatBytes}
+              formatDate={(iso) => new Date(iso).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+                timeZone: timezone || 'Europe/Berlin',
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })}
+              labels={{
+                docs: t('memory.documents'),
+                latest: t('memory.lastModified'),
+                size: t('memory.size'),
+                share: t('memory.share'),
+                empty: t('memory.emptyNamespace'),
+                adopt: t('memory.adoptSearch')
+              }}
+            />
+          )}
+        </div>
+        <div className="mt-2 text-xs text-slate-400">
+          {t('memory.namespaceSummary', {
+            namespaces: filteredNamespaceStats.length,
+            documents: filteredNamespaceStats.reduce((sum, row) => sum + row.docs, 0).toLocaleString()
+          })}
+        </div>
       </>}
 
       {memoryTab === 'search' && <>
