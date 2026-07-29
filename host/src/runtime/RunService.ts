@@ -612,8 +612,11 @@ export class RunService {
 
         // Resolve namespaces: policy templates are applied (placeholders + wildcards kept as-is).
         // auto_read_enabled=false suppresses ALL auto-injection (policy namespaces and derived
-        // defaults) without removing readNamespaces from tool access. Namespaces explicitly
-        // requested in the run input are still honored.
+        // defaults). Namespaces explicitly requested in the run input are still honored.
+        //
+        // readNamespaces feeds auto-injection and nothing else: what memory-search may reach
+        // comes solely from toolReadNamespaces (see handleMemorySearch). The two admin fields
+        // are kept disjoint on purpose, so neither list silently widens the other.
         let namespacesToUse = memoryConfig.namespaces;
         const autoReadEnabled = policy.autoReadEnabled !== false;
         if (!namespacesToUse || namespacesToUse.length === 0) {

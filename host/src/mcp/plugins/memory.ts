@@ -95,23 +95,42 @@ export async function handleMemorySearch(
 
   const policy = await loadMemoryPolicy(db as Pool, context?.run?.agent_id, context?.run?.task_id, dbClient as PoolClient);
 
+  // The two lists address two different consumers and are deliberately NOT
+  // merged here:
+  //
+  //   read_namespaces      -> auto-injection only (the memory_context step),
+  //                           i.e. what lands in the prompt without being asked for.
+  //   tool_read_namespaces -> this tool, and this tool alone.
+  //
+  // Mixing them would mean a namespace configured for auto-injection is also
+  // reachable by the tool without ever being listed under tool access, which
+  // makes the admin UI's two fields stop describing what actually happens.
+  // Both branches below therefore resolve against tool_read_namespaces only,
+  // so an explicit request can never reach further than an unspecified one.
+  //
+  // Note for future configs: a policy that sets read_namespaces but leaves
+  // tool_read_namespaces empty gives this tool nothing, and it falls through to
+  // the system defaults below. That is intentional — tool access is opt-in.
+  // Deduplicated because the field is a free-text list, one pattern per line.
+  const toolNamespaces = [...new Set(policy.toolReadNamespaces || [])];
+
   if (Array.isArray(args.namespaces) && args.namespaces.length > 0) {
-    // Filter explicitly requested namespaces against policy access control.
-    // tool_read_namespaces extends the searchable pool without triggering auto-injection.
-    const searchableNamespaces = [
-      ...(policy.readNamespaces || []),
-      ...(policy.toolReadNamespaces || [])
-    ];
+    // Filter explicitly requested namespaces against tool access control.
     namespaces = args.namespaces.filter(ns =>
-      isNamespaceAllowed(ns, searchableNamespaces, ctx)
+      isNamespaceAllowed(ns, toolNamespaces, ctx)
     );
     if (namespaces.length === 0) {
       logger.warn({ namespaces: args.namespaces }, 'All requested namespaces denied by memory policy');
     }
   } else {
-    // No explicit namespaces: resolve from policy templates.
+    // No explicit namespaces: search everything the tool is allowed to see.
     // Wildcards are kept as-is — adapter.search() handles them via LIKE.
-    namespaces = resolveAll(policy.readNamespaces || [], ctx, 'readNamespaces');
+    //
+    // This used to resolve read_namespaces instead, which silently excluded
+    // every tool-only namespace: a policy whose sole global entry was
+    // tool_read `vector.global.*` returned nothing on three well-phrased
+    // searches in a row, until the model happened to name the namespace itself.
+    namespaces = resolveAll(toolNamespaces, ctx, 'toolReadNamespaces');
   }
 
   // Final fallback to system defaults when no policy namespaces are configured
