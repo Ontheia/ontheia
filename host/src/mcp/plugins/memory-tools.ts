@@ -77,16 +77,28 @@ export function buildMemoryToolSpecs(options?: {
   return [
     {
       name: 'memory-search',
-      description: 'Search the long-term memory for relevant information.',
+      description:
+        'Search the long-term memory for relevant information. Ask in full sentences — the search is semantic, so a whole question matches far better than a keyword.',
       schema: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Search term or question.' },
+          // "Search term" invited exactly the wrong behaviour: models shortened
+          // the user's question to a single word, and single words score below
+          // the relevance floor against long source documents. Measured against
+          // an ingested manual, "Timer" scored 0.35 and returned nothing, while
+          // the user's own sentence scored 0.51 on the very page that answered
+          // it. Raising top_k does not help — the floor cuts before the limit.
+          query: {
+            type: 'string',
+            description:
+              "The user's full question, in whole sentences and their own words. Do NOT shorten it to a keyword: short queries score below the relevance threshold and come back empty even when the answer is stored. If a search returns no hits, retry with a longer, more explicit phrasing before concluding that memory holds nothing — and never fill the gap by inventing an answer."
+          },
           top_k: { type: 'number', description: 'Number of hits (default 5).' },
           namespaces: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Optional list of namespaces. Omit to search everything your policy allows.'
+            description:
+              'Optional list of namespaces. Omit (or pass an empty list) to search everything your policy allows, including shared and global sources such as ingested manuals and documentation. Narrow it only when you already know where the answer lives.'
           }
         },
         required: ['query']
