@@ -4847,6 +4847,37 @@ function AgentsSection({
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [agentChains, setAgentChains] = useState<ChainEntry[]>([]);
 
+  /**
+   * Which task the Tasks tab should unfold once it comes up. Handed over as a
+   * one-shot: TasksSection clears it as soon as it has acted, so re-rendering
+   * the tab does not keep forcing the accordion back open after the user has
+   * clicked elsewhere.
+   */
+  const [taskJump, setTaskJump] = useState<{ agentId: string; taskId: string } | null>(null);
+  const jumpToTask = useCallback((agentId: string, taskId: string) => {
+    setTaskJump({ agentId, taskId });
+    setAgentsTab('tasks');
+  }, []);
+  const clearTaskJump = useCallback(() => setTaskJump(null), []);
+
+  // The way back, from an opened task to the agent that owns it. No handover
+  // needed here: the agent accordion lives in this component.
+  const agentRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [pendingAgentScroll, setPendingAgentScroll] = useState<string | null>(null);
+  const jumpToAgent = useCallback((agentId: string) => {
+    setAgentsTab('agents');
+    setOpenAgentId(agentId);
+    setPendingAgentScroll(agentId);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingAgentScroll) return;
+    // One render later the agents tab is mounted and the accordion is open, so
+    // the element the ref points at is the expanded one.
+    agentRefs.current[pendingAgentScroll]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setPendingAgentScroll(null);
+  }, [pendingAgentScroll]);
+
   // Skills
   const [availableSkills, setAvailableSkills] = useState<SkillEntry[]>([]);
   const [agentSkillIds, setAgentSkillIds] = useState<Record<string, string[]>>({});
@@ -5364,7 +5395,13 @@ function AgentsSection({
             {agents.map((agent) => {
               const isOpen = openAgentId === agent.id;
               return (
-                <div key={agent.id} className={`admin-mcp-accordion-item${isOpen ? ' active' : ''}`}>
+                <div
+                  key={agent.id}
+                  ref={(element) => {
+                    agentRefs.current[agent.id] = element;
+                  }}
+                  className={`admin-mcp-accordion-item${isOpen ? ' active' : ''}`}
+                >
                   <button
                     type="button"
                     className="admin-mcp-accordion-trigger"
@@ -5578,7 +5615,23 @@ function AgentsSection({
                           <ul className="admin-task-simple-list">
                             {agent.tasks.map((task) => (
                               <li key={task.id}>
-                                <span className="task-title">{task.label}</span>
+                                {/*
+                                  Editing a task means leaving this tab, picking the same
+                                  agent again in the Tasks tab and hunting the task down in
+                                  its accordion. The link does all three steps at once.
+                                */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="link-button task-title"
+                                      onClick={() => jumpToTask(agent.id, task.id)}
+                                    >
+                                      {task.label}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('tasks.openInTasksTab')}</TooltipContent>
+                                </Tooltip>
                                 <CopyButton text={task.id} />
                               </li>
                             ))}
@@ -5660,6 +5713,9 @@ function AgentsSection({
         onHasChanges={onHasChanges}
         onRemoveTask={onRemoveTask}
         onRefreshAgents={onRefreshAgents}
+        jumpTo={taskJump}
+        onJumpHandled={clearTaskJump}
+        onOpenAgent={jumpToAgent}
       />}
 
       {agentsTab === 'chains' && <ChainsSection
@@ -5674,12 +5730,15 @@ function AgentsSection({
 
 function TaskEditForm({
   agentId,
+  agentLabel,
   task,
   onUpdate,
   onRemove,
-  onRestored
+  onRestored,
+  onOpenAgent
 }: {
   agentId: string;
+  agentLabel: string;
   task: AgentTaskDefinition;
   onUpdate: (
     agentId: string,
@@ -5689,6 +5748,8 @@ function TaskEditForm({
   onRemove: (agentId: string, taskId: string) => Promise<void> | void;
   /** Reloads the agent list after a version was written back into the task. */
   onRestored?: () => Promise<void> | void;
+  /** Counterpart to the task links in the Agents tab: back to the owning agent. */
+  onOpenAgent?: (agentId: string) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [draft, setDraft] = useState({
@@ -5740,6 +5801,23 @@ function TaskEditForm({
 
   return (
     <div className="admin-mcp-accordion-content">
+      {onOpenAgent && (
+        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+          <span>{t('chat:agent')}:</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => onOpenAgent(agentId)}
+              >
+                {agentLabel}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('tasks.openInAgentsTab')}</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
       <label className="settings-field">
         <span>{t('title', { ns: 'common' })}</span>
         <Input
@@ -5836,7 +5914,10 @@ function TasksSection({
   onUpdateTask,
   onHasChanges,
   onRemoveTask,
-  onRefreshAgents
+  onRefreshAgents,
+  jumpTo,
+  onJumpHandled,
+  onOpenAgent
 }: {
   agents: AgentDefinition[];
   onAddTask: (agentId: string, task: AgentTaskDefinition) => Promise<void> | void;
@@ -5848,6 +5929,11 @@ function TasksSection({
   onHasChanges: (hasChanges: boolean) => void;
   onRemoveTask: (agentId: string, taskId: string) => Promise<void> | void;
   onRefreshAgents: () => Promise<void> | void;
+  /** Task to unfold on arrival, set when the Agents tab linked here. */
+  jumpTo?: { agentId: string; taskId: string } | null;
+  onJumpHandled?: () => void;
+  /** Switches to the Agents tab and unfolds the given agent. */
+  onOpenAgent?: (agentId: string) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [selectedAgent, setSelectedAgent] = useState<string>(() => agents[0]?.id ?? '');
@@ -5857,6 +5943,8 @@ function TasksSection({
   const [taskShowInComposer, setTaskShowInComposer] = useState(true);
   const [openTaskAgentId, setOpenTaskAgentId] = useState<string | null>(null);
   const [openAgentTaskIdMap, setOpenAgentTaskIdMap] = useState<Record<string, string | null>>({});
+  const [pendingScroll, setPendingScroll] = useState<string | null>(null);
+  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (!agents.find((agent) => agent.id === selectedAgent)) {
@@ -5889,6 +5977,24 @@ function TasksSection({
       return changed ? next : prev;
     });
   }, [agents]);
+
+  // Declared after the sync above so its reset does not undo the jump on the
+  // first render, when both effects fire in the same commit.
+  useEffect(() => {
+    if (!jumpTo) return;
+    setOpenTaskAgentId(jumpTo.agentId);
+    setOpenAgentTaskIdMap((prev) => ({ ...prev, [jumpTo.agentId]: jumpTo.taskId }));
+    setPendingScroll(jumpTo.taskId);
+    onJumpHandled?.();
+  }, [jumpTo, onJumpHandled]);
+
+  useEffect(() => {
+    if (!pendingScroll) return;
+    // Runs one render after the accordion opened, so the element exists. With a
+    // long agent list the task is otherwise unfolded somewhere off screen.
+    taskRefs.current[pendingScroll]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setPendingScroll(null);
+  }, [pendingScroll]);
 
   const handleAddTask = () => {
     if (!selectedAgent || !taskLabel.trim()) return;
@@ -6003,6 +6109,9 @@ function TasksSection({
                             return (
                               <div
                                 key={task.id}
+                                ref={(element) => {
+                                  taskRefs.current[task.id] = element;
+                                }}
                                 className={`admin-mcp-accordion-item${isTaskOpen ? ' active' : ''}`}
                               >
                                 <button
@@ -6026,10 +6135,12 @@ function TasksSection({
                                 {isTaskOpen && (
                                   <TaskEditForm
                                     agentId={agent.id}
+                                    agentLabel={agent.label}
                                     task={task}
                                     onUpdate={onUpdateTask}
                                     onRemove={onRemoveTask}
                                     onRestored={onRefreshAgents}
+                                    onOpenAgent={onOpenAgent}
                                   />
                                 )}
                               </div>
