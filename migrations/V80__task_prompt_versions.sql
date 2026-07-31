@@ -82,14 +82,13 @@ CREATE TRIGGER task_prompt_version_trg
   FOR EACH ROW
   EXECUTE FUNCTION app.record_task_prompt_version();
 
--- Seed the current wording as version 1. Without it the net is empty until the
--- second edit: the first save after this migration would push the live text
--- into history with nothing behind it to fall back to.
-INSERT INTO app.task_versions (task_id, version, context_prompt, created_at)
-SELECT id, 1, context_prompt, COALESCE(updated_at, created_at)
-  FROM app.tasks
- WHERE context_prompt IS NOT NULL
-   AND btrim(context_prompt) <> '';
+-- No seed of the current wording. It looks like the obvious safety net, but the
+-- trigger already is one: the first save stores the text it replaces, which is
+-- exactly what you need to take that save back. A seeded row adds no way back
+-- that did not already exist — it only shows up a second time under its own
+-- number the moment someone edits, because the trigger then records the same
+-- text again. On a fresh install the question does not arise: no task exists
+-- yet when this runs.
 
 ALTER TABLE app.task_versions ENABLE ROW LEVEL SECURITY;
 
