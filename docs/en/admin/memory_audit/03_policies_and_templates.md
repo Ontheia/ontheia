@@ -35,12 +35,17 @@ A `*` at the end is executed as a prefix search (`LIKE 'vector.global.%'`) and r
 
 ### Example Configuration
 
-**Read Namespaces:**
+**Read Namespaces (readNamespaces)** — what enters the context automatically before every run. Kept deliberately short: every hit occupies context whether it is needed or not.
 ```text
 vector.agent.${user_id}.memory
 vector.agent.${user_id}.howto
-vector.global.business.projects
-vector.global.ontheia.docs
+```
+
+**Tool Read Namespaces (toolReadNamespaces)** — what the agent can search on request. The large sources go here, and so do the personal namespaces again if the agent should be able to search them deliberately — the two lists are **not** merged.
+```text
+vector.user.${user_id}.*
+vector.agent.${user_id}.*
+vector.global.*
 ```
 
 **Write Namespace:**

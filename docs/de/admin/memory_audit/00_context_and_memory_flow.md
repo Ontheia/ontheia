@@ -108,19 +108,24 @@ Bevor das LLM die erste Antwort generiert, durchläuft Ontheia folgende Schritte
 
 ### Namespace-Modell: automatisch vs. Tool-Zugriff
 
-Für den Lese-Zugriff auf Memory unterscheidet Ontheia drei Modi, die pro Agent (und per Task-Override) konfigurierbar sind:
+Für den Lese-Zugriff auf Memory gibt es zwei Wege. Jeder hat **genau ein** eigenes Feld — die beiden Listen werden nirgends vermischt:
 
-| Modus | Konfiguration | Verhalten |
+| Weg | Konfiguration | Verhalten |
 |---|---|---|
 | **Automatisch injiziert** | `read_namespaces` + `auto_read_enabled = true` | Top-K-Treffer werden vor jedem Run automatisch an die aktuelle Nutzer-Nachricht angehängt (volatiles Suffix, siehe Struktur oben). |
-| **Tool-Zugriff (aus `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | Die eingetragenen Namespaces sind für das LLM über das Memory-Suche-Tool erreichbar, werden aber **nicht** automatisch injiziert. |
-| **Tool-Zugriff (dediziert)** | `tool_read_namespaces` | Namespaces, die **ausschließlich** per Tool-Aufruf lesbar sind — unabhängig von `auto_read_enabled`. Nützlich für Wissensdatenbanken, die das LLM gezielt abfragen soll. |
+| **Tool-Zugriff** | `tool_read_namespaces` | Namespaces, die das LLM über das Memory-Suche-Tool erreicht — unabhängig von `auto_read_enabled` und unabhängig davon, was in `read_namespaces` steht. |
+
+Mit `auto_read_enabled = false` ist `read_namespaces` **wirkungslos**: Das Feld speist nur die automatische Injektion und sonst nichts. Was das LLM per Tool durchsuchen darf, steht ausschließlich in `tool_read_namespaces` — soll ein Namespace beides können, muss er in beiden Listen stehen.
+
+> Diese Trennung ist Absicht. Solange die Tool-Suche zusätzlich auf `read_namespaces` zurückfiel, ließ sich nicht mehr steuern, worin sie tatsächlich sucht: Ein Namespace, der bewusst nur automatisch injiziert werden sollte, war für das Tool trotzdem offen — und umgekehrt fehlten globale Quellen, die nur im Tool-Feld standen.
 
 **Typische Anwendungsfälle:**
 
 - `auto_read_enabled = true` — Agents mit persistentem Nutzergedächtnis (z. B. persönlicher Assistent, der Vorlieben kennen soll)
-- `auto_read_enabled = false` — Agents, die gezielt nach Wissen suchen sollen, ohne bei jedem Run automatisch Kontext zu laden
 - `tool_read_namespaces` — Globale Wissensdatenbanken oder Projektwissen, auf das das LLM bei Bedarf zugreift, ohne den Kontext zu befrachten
+- Beides gesetzt — ein Agent, der Vorlieben ungefragt kennt und Handbücher auf Nachfrage durchsucht: die persönlichen Namespaces links, die Handbuch-Namespaces rechts
+
+**Suche ohne Namespace-Angabe:** Ruft das LLM `memory-search` ohne `namespaces` auf (oder mit leerer Liste), werden **alle** Namespaces aus `tool_read_namespaces` durchsucht — das ist der Normalfall und der Grund, warum globale Quellen dort eingetragen gehören. Nennt es dagegen Namespaces ausdrücklich, werden diese gegen `tool_read_namespaces` geprüft; was nicht freigegeben ist, wird verworfen.
 
 ### Automatisches Speichern nach dem Run
 

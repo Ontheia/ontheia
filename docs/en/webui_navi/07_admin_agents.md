@@ -39,7 +39,7 @@ Each agent appears as a collapsible entry. When expanded, inline-editable:
 | MCP Servers | Multiselect | Assigns available MCP servers to the agent. |
 | Tools | Multiselect | Selects individual tools from assigned servers. Buttons: **Select All** · **Clear Selection** · **Refresh Tool List**. |
 | Skills | Multiselect | Assigns available skills to the agent. Selected skills are injected as a catalog into every run's system context; the agent activates them on demand via `activate_skill`. Global skills (installed by admin) and user-scope skills are listed. |
-| Tasks | List (read-only) | Shows tasks linked to this agent. |
+| Tasks | List | Shows tasks linked to this agent. Each name is a **link**: clicking it switches to the "Tasks" tab, unfolds the agent and the task there, and scrolls to it. Next to each is a copy button for the task ID. |
 | Chains | List (read-only) | Shows chains linked to this agent. |
 
 Actions per agent: **Edit** (loads agent into the form above) · **Delete** (with confirmation dialog).
@@ -63,6 +63,10 @@ Button: **[Add Task]**
 **Tasks per Agent (Accordion):**
 
 Lists all agents; each agent is expandable and shows its tasks as nested accordion entries. An expanded task shows an edit form with the same fields (Title, Task Context, Description, Show in Composer).
+
+Above the form sits `Agent: <name>` — the name is a **link** back to the "Agents" tab, unfolding that agent there. It deliberately sits inside the form rather than in the accordion header: the header is itself the expand/collapse button, so a link inside it would collapse the task on the way out.
+
+Below the "Task Context" field sits the collapsible **History** section with the earlier versions of the context. Per version: number, timestamp, author, character count with the difference to the current length, plus the actions **Show** (reveal the text), **Load** (into the editor, unsaved) and **Restore** (write straight back). Covered in detail in [Task Configuration](/en/admin/tasks/02_configuration/#4-task-context-history).
 
 Buttons in the task edit form: **[Save]** · **[Delete Task]** (with confirmation dialog).
 

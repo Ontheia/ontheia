@@ -40,3 +40,23 @@ The task context supports variables in the form `${variable}` or `{{variable}}`.
 
 ## 3. Management
 Changes to a Task take effect immediately for all new Runs. Since Tasks are stored in the database (`app.tasks`), they are preserved even if the system is restarted.
+
+## 4. Task Context History
+
+Every save stores the **superseded** version of the task context in `app.task_versions`. Below the context field, the collapsible **History** section lists the earlier versions, newest first, each with its number, timestamp, author and character count — the difference to the current length is shown alongside, so a version accidentally cut in half stands out at once.
+
+Three actions per version:
+
+| Action | Effect |
+|---|---|
+| **Show** | Unfolds the full text for reading. Changes nothing. |
+| **Load** | Puts the text into the editor **without saving**. For the common case of "what did it say back then" — to compare, or to take individual paragraphs across. Only "Save" makes it the current version. |
+| **Restore** | Writes the version straight back into the task. |
+
+A restore is itself a change and is recorded like any other — so it can be undone in turn.
+
+**What gets recorded:** Only the task context, and only when it actually changed. A save that merely adjusts the title produces no entry. A previously empty version is not stored, because there is nothing in it to restore. Recording happens at the database level via a trigger, so it is independent of whether the change came from the admin console, the API, or directly from `psql`.
+
+**First version:** On introduction, each task's current wording was adopted as version 1. Without that step there would be nothing to fall back to until the second save.
+
+> Before this feature, saving in the console was final — the previous wording was gone. The usual workaround, keeping every prompt as an `.md` file under `sources/prompts` as well, holds only as long as nobody edits directly in the console. Comparing all task prompts against their files found drift caused in exactly that way.

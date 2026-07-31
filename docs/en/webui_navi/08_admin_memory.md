@@ -24,9 +24,15 @@ Buttons: **[VACUUM/ANALYZE]** · **[REINDEX]** · **[Refresh]**
 
 ## Tab: Namespaces
 
-Table of occupied namespaces (top 50, paginated). Columns: **Namespace**, **Documents**, **Last Modified**, **Content Bytes**.
+Tree of all occupied namespaces, grouped by the segments of `vector.[scope].[domain].[category].[topic]`. Columns: **Namespace**, **Documents**, **Share**, **Last Modified**, **Size**.
 
-Clicking a namespace entry copies it as a filter into the "Search & Write" tab.
+A row shows only the segment its level adds; the full path is in the tooltip. Figures on a level are the sum of everything below it, "Share" the fraction of all documents. Intermediate levels without documents of their own are pure structure — a namespace that is empty itself but has filled sub-namespaces is marked `empty`. Chains without branching are collapsed into a single row, so no branch consists of nothing but only children.
+
+For `vector.user.<uuid>` and `vector.agent.<uuid>` the plain-text name is shown next to the UUID.
+
+Above it a **filter field**: typing narrows the tree to matching paths and also searches the resolved plain-text names. Below the tree is the summary "*n* namespaces · *m* documents" — reflecting the filtered set when a filter is active.
+
+Clicking a namespace copies it as a filter into the "Search & Write" tab. Doing so **clears** the other form fields there (query, metadata filters, minimum relevance, limit, and any edit in progress along with its content), so the search takes effect immediately with no leftovers from previous editing.
 
 Button: **[Refresh]**
 
@@ -73,8 +79,8 @@ Per-row actions: **Edit** (pencil) fills the form with all of the entry's fields
 | Field | Type | Description |
 | --- | --- | --- |
 | Select Agent | Dropdown | Selects the agent whose memory policy is being edited. |
-| Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, no automatic injection takes place at all — the read namespaces remain reachable via the LLM Memory Tool. |
-| Read (Namespaces, one per line) | Textarea | List of namespaces the agent may read from. |
+| Auto-inject into Context (on every Run) | Toggle | When active, the read namespaces are semantically searched before each run and the top-K hits are automatically inserted into the context. When disabled, no automatic injection takes place at all — which leaves the "Read" field without effect. |
+| Read (Namespaces, one per line) | Textarea | Namespaces for **automatic injection**, nothing else. They are **not** reachable by the LLM's memory tool — that is governed solely by "Tool-Only Read Namespaces". A namespace that should do both has to appear in both fields. |
 | Top K | Number | Maximum number of memory hits returned (1–20). |
 | Minimum relevance | Number (0–1) | Discards hits below this relevance. Empty = default `0.4`. Raise it when a noisy corpus produces too much by-catch. The config key is still named `min_score`. |
 | Relative cutoff | Number (0–1) | Additionally discards hits below this fraction of the **best** hit. Empty = default `0.7`, `0` disables it. Only has an effect when one hit stands out clearly — see [Ranking algorithm 1.3](/en/admin/memory_audit/10_ranking_algorithm/). |
@@ -87,7 +93,7 @@ Subsection **LLM Memory Tools:**
 | --- | --- | --- |
 | Allow Writing (Tool) | Checkbox | Allows the agent to write via tool call. |
 | Allow Deleting (Tool) | Checkbox | Allows the agent to delete via tool call. |
-| Tool-Only Read Namespaces (one per line) | Textarea | Namespaces the LLM may access for reading exclusively via tool call — independent of "Auto-inject into Context". |
+| Tool-Only Read Namespaces (one per line) | Textarea | Namespaces the LLM may read via tool call — independent of "Auto-inject into Context". **This is the only list the memory tool sees.** When the LLM searches without naming namespaces, everything in this field is searched; global sources such as ingested manuals therefore belong here. |
 | Allowed Write Namespaces (Tool, one per line) | Textarea | Namespaces the agent may write to via tool. |
 
 Button: **[Save Agent Policy]**

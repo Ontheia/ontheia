@@ -108,19 +108,24 @@ Before the LLM generates its first response, Ontheia runs through the following 
 
 ### Namespace Model: Automatic vs. Tool Access
 
-Ontheia distinguishes three modes for read access to memory, configurable per agent (and overridable per task):
+There are two routes for read access to memory. Each has **exactly one** field of its own — the two lists are never mixed:
 
-| Mode | Configuration | Behavior |
+| Route | Configuration | Behavior |
 |---|---|---|
 | **Automatically injected** | `read_namespaces` + `auto_read_enabled = true` | Top-K hits are automatically appended to the current user message before each run (volatile suffix, see structure above). |
-| **Tool access (from `read_namespaces`)** | `read_namespaces` + `auto_read_enabled = false` | The listed namespaces are searchable by the LLM via the memory search tool but are **not** automatically injected. |
-| **Tool access (dedicated)** | `tool_read_namespaces` | Namespaces that are readable **only** via tool call — independent of `auto_read_enabled`. Useful for knowledge bases the LLM should query on demand. |
+| **Tool access** | `tool_read_namespaces` | Namespaces the LLM reaches through the memory search tool — independent of `auto_read_enabled` and independent of what `read_namespaces` contains. |
+
+With `auto_read_enabled = false`, `read_namespaces` has **no effect at all**: the field feeds automatic injection and nothing else. What the LLM may search by tool is listed solely in `tool_read_namespaces` — a namespace that should do both has to appear in both lists.
+
+> The separation is deliberate. As long as the tool search also fell back on `read_namespaces`, there was no way to control what it actually searched: a namespace meant only for automatic injection was open to the tool anyway — and conversely, global sources listed only in the tool field went unsearched.
 
 **Typical use cases:**
 
 - `auto_read_enabled = true` — Agents with persistent user memory (e.g., a personal assistant that should know user preferences)
-- `auto_read_enabled = false` — Agents that should search for knowledge on demand, without loading context automatically on every run
 - `tool_read_namespaces` — Global knowledge bases or project knowledge the LLM accesses when needed, without burdening the context
+- Both set — an agent that knows preferences unprompted and searches manuals on request: the personal namespaces on one side, the manual namespaces on the other
+
+**Search without a namespace argument:** When the LLM calls `memory-search` without `namespaces` (or with an empty list), **all** namespaces from `tool_read_namespaces` are searched — this is the normal case, and the reason global sources belong in that field. When it does name namespaces explicitly, they are checked against `tool_read_namespaces`; anything not granted is dropped.
 
 ### Automatic Saving After a Run
 

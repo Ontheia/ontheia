@@ -35,12 +35,17 @@ Ein `*` am Ende wird als Präfix-Suche (`LIKE 'vector.global.%'`) ausgeführt un
 
 ### Beispiel-Konfiguration
 
-**Read Namespaces:**
+**Read Namespaces (readNamespaces)** — was vor jedem Run automatisch in den Kontext kommt. Bewusst knapp gehalten: Jeder Treffer belegt Kontext, unabhängig davon, ob er gebraucht wird.
 ```text
 vector.agent.${user_id}.memory
 vector.agent.${user_id}.howto
-vector.global.business.projects
-vector.global.ontheia.docs
+```
+
+**Tool Read Namespaces (toolReadNamespaces)** — was der Agent auf Nachfrage durchsuchen kann. Hier stehen die großen Quellen, und hier gehören auch die persönlichen Namespaces noch einmal hin, wenn der Agent gezielt in ihnen suchen können soll — die beiden Listen werden **nicht** vermischt.
+```text
+vector.user.${user_id}.*
+vector.agent.${user_id}.*
+vector.global.*
 ```
 
 **Write Namespace:**

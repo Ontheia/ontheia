@@ -11,16 +11,19 @@ This tool allows the administrator to manually manage namespaces:
 Search results are displayed as a separate table below the form.
 
 ## 2. Namespaces
-The **Namespaces** tab shows a paginated overview of all existing memory namespaces (up to 50 per page):
+The **Namespaces** tab shows all existing memory namespaces as a tree, grouped by the segments of the path:
 
 | Column | Description |
 | --- | --- |
-| Namespace | Full namespace path |
-| Documents | Number of active entries |
+| Namespace | The segment this level adds — the full path is in the tooltip |
+| Documents | Number of active entries; on intermediate levels the sum of everything below |
+| Share | Fraction of all documents |
 | Last Modified | Time of the last write operation |
-| Content Bytes | Total size of stored content |
+| Size | Total size of stored content |
 
-Clicking a namespace entry copies it directly into the search field of the **Search & Write** tab.
+A filter field above the tree narrows it to matching paths; for `vector.user.<uuid>` and `vector.agent.<uuid>` the plain-text name is shown as well and is searchable too.
+
+Clicking a namespace copies it directly into the search field of the **Search & Write** tab and clears the other form fields there, so the search takes effect immediately.
 
 ## 3. Ranking
 The **Ranking** tab defines how the system handles content from specific namespaces:

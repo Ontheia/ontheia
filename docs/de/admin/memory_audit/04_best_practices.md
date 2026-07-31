@@ -14,6 +14,24 @@ Der `topK`-Wert bestimmt, wie viele Memory-Treffer maximal in den Kontext eines 
 - **Zu niedrig** → Wichtige Informationen fehlen im Kontext
 - **Empfehlung:** Mit `topK = 5` starten; für Agents mit komplexem Domänenwissen auf `10` erhöhen
 
+## Namespaces für die Tool-Suche freigeben
+
+Was das LLM mit `memory-search` durchsuchen kann, steht **ausschließlich** im Feld „Nur Tool-Zugriff" — das Feld „Lesen" speist allein die automatische Injektion. Eine eingelesene Wissensbasis, die nur unter „Lesen" steht, ist für das Tool unerreichbar: Der Agent sucht, findet nichts und beantwortet die Frage im Zweifel aus seinem Weltwissen statt aus deinem Handbuch.
+
+Faustregel: Alles, was der Agent **auf Nachfrage** konsultieren soll — Handbücher, Dokumentation, Projektwissen — gehört unter „Nur Tool-Zugriff". Alles, was er **ungefragt** wissen soll — Vorlieben, Gesprächsnotizen — gehört unter „Lesen". Beides ist möglich, erfordert dann aber einen Eintrag in beiden Feldern.
+
+Sucht das LLM ohne Namespace-Angabe, wird alles unter „Nur Tool-Zugriff" durchsucht. Das ist der Normalfall — es ist nicht darauf angewiesen, den passenden Namespace zu erraten.
+
+## Die Suchanfrage in ganzen Sätzen stellen
+
+Die Memory-Suche ist semantisch: Verglichen wird die Bedeutung der Anfrage mit der Bedeutung der gespeicherten Abschnitte. Ein einzelnes Stichwort trägt zu wenig Bedeutung, um verlässlich über der Mindest-Relevanz zu landen.
+
+Gemessen an einem eingelesenen Handbuch: Die Anfrage `Timer` erreichte eine Relevanz von **0.35** und lieferte damit bei der Standardschwelle von `0.4` **nichts**. Dieselbe Frage als ganzer Satz gestellt erreichte **0.51** und traf die richtige Handbuchseite.
+
+Die Tool-Beschreibung weist das LLM inzwischen ausdrücklich an, die Frage des Nutzers vollständig und in dessen eigenen Worten zu übergeben statt sie auf ein Stichwort zu kürzen. Bei eigenen Task-Kontexten lohnt derselbe Hinweis, wenn ein Agent auffällig oft nichts findet.
+
+> **Grenzfall exakte Bezeichner:** Für Zeichenfolgen wie `E0.0` oder `TV00` ist eine semantische Suche das falsche Werkzeug — solche Kürzel tragen kaum Bedeutung, die sich in einen Vektor übersetzen ließe. Hier hilft nur, die Frage um den Zusammenhang zu ergänzen („Wie wird in Web@SPS der Timer `TON` programmiert?").
+
 ## Auto-Write gezielt einsetzen
 
 `allowWrite` bestimmt, ob nach jedem Run automatisch in den Memory-Namespace geschrieben wird.

@@ -39,7 +39,7 @@ Jeder Agent erscheint als aufklappbarer Eintrag. Im geöffneten Zustand inline e
 | MCP-Server | Multiselect | Weist dem Agent verfügbare MCP-Server zu. |
 | Tools | Multiselect | Wählt einzelne Tools aus den zugewiesenen Servern. Buttons: **Alle auswählen** · **Auswahl leeren** · **Tool-Liste aktualisieren**. |
 | Skills | Multiselect | Weist dem Agent verfügbare Skills zu. Zugewiesene Skills werden als Katalog in den System-Kontext jedes Runs injiziert; der Agent aktiviert sie bei Bedarf via `activate_skill`. Globale Skills (vom Admin installiert) und nutzer-eigene Skills werden aufgelistet. |
-| Tasks | Liste (nur lesen) | Zeigt die mit diesem Agent verknüpften Tasks. |
+| Tasks | Liste | Zeigt die mit diesem Agent verknüpften Tasks. Jeder Name ist ein **Link**: Ein Klick wechselt in den Tab „Tasks", klappt dort den Agenten und den Task auf und scrollt hin. Daneben je ein Kopier-Button für die Task-ID. |
 | Chains | Liste (nur lesen) | Zeigt die mit diesem Agent verknüpften Chains. |
 
 Aktionen pro Agent: **Bearbeiten** (lädt Agent in das Formular oben) · **Löschen** (mit Bestätigungsdialog).
@@ -63,6 +63,10 @@ Button: **[Task hinzufügen]**
 **Tasks pro Agent (Akkordeon):**
 
 Listet alle Agents; jeder Agent ist aufklappbar und zeigt seine Tasks als verschachtelte Akkordeon-Einträge. Ein aufgeklappter Task zeigt ein Bearbeitungsformular mit denselben Feldern (Titel, Task-Kontext, Beschreibung, Im Composer anzeigen).
+
+Über dem Formular steht `Agent: <Name>` — der Name ist ein **Link** zurück in den Tab „Agents" und klappt dort den Agenten auf. Er sitzt bewusst im Formular und nicht im Akkordeon-Kopf: Der Kopf ist selbst der Auf-/Zuklapp-Button, ein Link darin würde beim Klick den Task zuklappen.
+
+Unter dem Feld „Task-Kontext" steht der aufklappbare Abschnitt **Verlauf** mit den früheren Fassungen des Kontexts. Je Fassung: Nummer, Zeitpunkt, Urheber, Zeichenzahl mit Differenz zur aktuellen Länge sowie die Aktionen **Anzeigen** (Text einblenden), **Laden** (ungespeichert in den Editor) und **Wiederherstellen** (sofort zurückschreiben). Ausführlich in [Konfiguration von Tasks](/de/admin/tasks/02_configuration/#4-verlauf-des-task-kontexts).
 
 Buttons im Task-Bearbeitungsformular: **[Speichern]** · **[Task löschen]** (mit Bestätigungsdialog).
 

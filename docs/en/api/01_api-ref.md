@@ -41,6 +41,8 @@ Agents are configurations for LLMs; tasks are specific task profiles within an a
 | `POST` | `/tasks` | Creates a new task. |
 | `PATCH` | `/tasks/:id` | Updates a task. |
 | `DELETE` | `/tasks/:id` | Deletes a task. |
+| `GET` | `/tasks/:id/versions` | Lists the superseded versions of the task context, newest first. Admin only. |
+| `POST` | `/tasks/:id/versions/:version/restore` | Writes an earlier version back into the task and returns the updated task. Admin only. |
 | `GET` | `/agents/:agentId/memory` | Returns memory settings for an agent. |
 | `PUT` | `/agents/:agentId/memory` | Updates memory settings for an agent. |
 | `GET` | `/tasks/:taskId/memory` | Returns memory settings for a task. |

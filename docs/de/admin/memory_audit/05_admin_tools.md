@@ -11,16 +11,19 @@ Dieses Werkzeug erlaubt es dem Administrator, Namespaces manuell zu verwalten:
 Die Suchergebnisse werden unterhalb des Formulars als separate Tabelle angezeigt.
 
 ## 2. Namespaces
-Der Tab **Namespaces** zeigt eine paginierte Übersicht aller vorhandenen Memory-Namespaces (bis zu 50 je Seite):
+Der Tab **Namespaces** zeigt alle vorhandenen Memory-Namespaces als Baum, gegliedert nach den Segmenten des Pfades:
 
 | Spalte | Beschreibung |
 | --- | --- |
-| Namespace | Vollständiger Namespace-Pfad |
-| Dokumente | Anzahl aktiver Einträge |
+| Namespace | Das Segment, das diese Ebene hinzufügt — der vollständige Pfad steht im Tooltip |
+| Dokumente | Anzahl aktiver Einträge, auf Zwischenebenen die Summe aller darunterliegenden |
+| Anteil | Anteil an allen Dokumenten |
 | Zuletzt geändert | Zeitpunkt des letzten Schreibvorgangs |
-| Content-Bytes | Gesamtgröße der gespeicherten Inhalte |
+| Größe | Gesamtgröße der gespeicherten Inhalte |
 
-Ein Klick auf einen Namespace-Eintrag übernimmt diesen direkt in das Suchfeld des Tabs **Suche & Schreiben**.
+Ein Filterfeld über dem Baum schränkt auf passende Pfade ein; bei `vector.user.<uuid>` und `vector.agent.<uuid>` wird der Klartextname mit angezeigt und ist ebenfalls durchsuchbar.
+
+Ein Klick auf einen Namespace übernimmt diesen direkt in das Suchfeld des Tabs **Suche & Schreiben** und leert dort die übrigen Formularfelder, damit die Suche sofort greift.
 
 ## 3. Ranking
 Im Tab **Ranking** wird definiert, wie das System mit Inhalten aus bestimmten Namespaces umgeht:

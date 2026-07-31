@@ -40,3 +40,23 @@ Im Task-Kontext können Variablen in der Form `${variable}` oder `{{variable}}` 
 
 ## 3. Verwaltung
 Änderungen an einem Task werden sofort für alle neuen Runs wirksam. Da Tasks in der Datenbank (`app.tasks`) gespeichert werden, bleiben sie auch bei einem Neustart des Systems erhalten.
+
+## 4. Verlauf des Task-Kontexts
+
+Jedes Speichern legt die **abgelöste** Fassung des Task-Kontexts in `app.task_versions` ab. Unter dem Kontext-Feld führt der aufklappbare Abschnitt **Verlauf** die früheren Fassungen auf, neueste zuerst, jeweils mit Nummer, Zeitpunkt, Urheber und Zeichenzahl — die Differenz zur aktuellen Länge steht daneben, damit eine versehentlich halbierte Fassung sofort auffällt.
+
+Drei Aktionen je Fassung:
+
+| Aktion | Wirkung |
+|---|---|
+| **Anzeigen** | Klappt den vollständigen Text zum Nachlesen auf. Ändert nichts. |
+| **Laden** | Legt den Text **ungespeichert** in den Editor. Für den häufigen Fall „wie stand das damals dort" — zum Vergleichen oder um einzelne Absätze zu übernehmen. Erst „Speichern" macht daraus die aktuelle Fassung. |
+| **Wiederherstellen** | Schreibt die Fassung sofort in den Task zurück. |
+
+Ein Wiederherstellen ist selbst eine Änderung und wird wie jede andere aufgezeichnet — es lässt sich also seinerseits zurücknehmen.
+
+**Was aufgezeichnet wird:** Nur der Task-Kontext, und nur wenn er sich tatsächlich geändert hat. Ein Speichern, das lediglich den Titel anpasst, erzeugt keinen Eintrag. Eine zuvor leere Fassung wird nicht abgelegt, weil an ihr nichts wiederherzustellen ist. Aufgezeichnet wird auf Datenbank-Ebene per Trigger, also unabhängig davon, ob die Änderung aus der Admin-Konsole, über die API oder direkt per `psql` kommt.
+
+**Erste Fassung:** Bei der Einführung wurde der jeweils aktuelle Wortlaut als Fassung 1 übernommen. Ohne diesen Schritt gäbe es bis zum zweiten Speichern nichts, worauf man zurückgehen könnte.
+
+> Vor dieser Funktion war ein Speichern in der Konsole endgültig — der vorherige Wortlaut war weg. Der übliche Behelf, jeden Prompt zusätzlich als `.md`-Datei unter `sources/prompts` zu pflegen, trägt nur so lange, wie niemand direkt in der Konsole editiert. Ein Abgleich aller Task-Prompts gegen ihre Dateien fand genau dadurch entstandene Abweichungen.

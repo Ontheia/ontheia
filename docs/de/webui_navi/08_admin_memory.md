@@ -24,9 +24,15 @@ Buttons: **[VACUUM/ANALYZE]** · **[REINDEX]** · **[Aktualisieren]**
 
 ## Tab: Namespaces
 
-Tabelle der belegten Namespaces (Top 50, paginiert). Spalten: **Namespace**, **Dokumente**, **Zuletzt geändert**, **Content-Bytes**.
+Baum aller belegten Namespaces, gegliedert nach den Segmenten von `vector.[Scope].[Domain].[Kategorie].[Thema]`. Spalten: **Namespace**, **Dokumente**, **Anteil**, **Zuletzt geändert**, **Größe**.
 
-Klick auf einen Namespace-Eintrag übernimmt ihn als Filter in den Tab „Suche & Schreiben".
+Eine Zeile zeigt nur das Segment, das ihre Ebene hinzufügt; der vollständige Pfad steht im Tooltip. Zahlen auf einer Ebene sind die Summe aller darunterliegenden Namespaces, „Anteil" der Anteil an allen Dokumenten. Zwischenebenen ohne eigene Dokumente sind reine Gliederung — ein Namespace, der selbst leer ist, aber gefüllte Unter-Namespaces hat, wird als `leer` gekennzeichnet. Ketten ohne Verzweigung werden zu einer Zeile zusammengefasst, damit kein Ast aus lauter Einzelkindern entsteht.
+
+Bei `vector.user.<uuid>` und `vector.agent.<uuid>` wird der Klartextname neben der UUID angezeigt.
+
+Oberhalb ein **Filterfeld**: eine Eingabe schränkt den Baum auf passende Pfade ein und sucht dabei auch in den aufgelösten Klartextnamen. Unter dem Baum steht die Zusammenfassung „*n* Namespaces · *m* Dokumente" — bei aktivem Filter bezogen auf die gefilterte Menge.
+
+Klick auf einen Namespace übernimmt ihn als Filter in den Tab „Suche & Schreiben". Dabei werden die übrigen Formularfelder dort **geleert** (Query, Metadaten-Filter, Mindest-Relevanz, Limit und ein etwaiger Bearbeitungsvorgang samt Inhalt), damit die Suche sofort und ohne Reste einer vorherigen Bearbeitung greift.
 
 Button: **[Aktualisieren]**
 
@@ -73,8 +79,8 @@ Aktionen je Zeile: **Bearbeiten** (Stift) füllt das Formular mit allen Feldern 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
 | Agent auswählen | Dropdown | Wählt den Agent, dessen Memory-Policy bearbeitet wird. |
-| Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, findet keinerlei automatische Injektion statt — die Lese-Namespaces bleiben aber per LLM Memory Tool erreichbar. |
-| Lesen (Namespaces, einer pro Zeile) | Textarea | Liste der Namespaces, aus denen der Agent lesen darf. |
+| Automatisch in Kontext injizieren (bei jedem Run) | Schalter | Wenn aktiv, werden die Lese-Namespaces vor jedem Run semantisch durchsucht und Top-K-Treffer automatisch in den Kontext eingefügt. Wenn deaktiviert, findet keinerlei automatische Injektion statt — und damit bleibt das Feld „Lesen" wirkungslos. |
+| Lesen (Namespaces, einer pro Zeile) | Textarea | Namespaces für die **automatische Injektion**, sonst nichts. Sie sind dem LLM per Memory-Tool **nicht** zugänglich — dafür ist ausschließlich „Nur Tool-Zugriff" zuständig. Soll ein Namespace beides, muss er in beiden Feldern stehen. |
 | Top K | Zahl | Maximale Anzahl zurückgegebener Memory-Treffer (1–20). |
 | Mindest-Relevanz | Zahl (0–1) | Verwirft Treffer unterhalb dieser Relevanz. Leer = Standard `0.4`. Höher setzen, wenn ein unruhiger Korpus zu viel Beifang liefert. Der Konfigurationsschlüssel heißt weiterhin `min_score`. |
 | Relativer Cutoff | Zahl (0–1) | Verwirft zusätzlich Treffer unter diesem Anteil des **besten** Treffers. Leer = Standard `0.7`, `0` schaltet ab. Wirkt nur, wenn ein Treffer deutlich heraussticht — s. [Ranking-Algorithmus 1.3](/de/admin/memory_audit/10_ranking_algorithm/). |
@@ -87,7 +93,7 @@ Unterabschnitt **LLM Memory Tools:**
 | --- | --- | --- |
 | Schreiben erlauben (Tool) | Checkbox | Erlaubt dem Agent, via Tool-Aufruf zu schreiben. |
 | Löschen erlauben (Tool) | Checkbox | Erlaubt dem Agent, via Tool-Aufruf zu löschen. |
-| Nur Tool-Zugriff (Namespaces, einer pro Zeile) | Textarea | Namespaces, auf die das LLM ausschließlich per Tool-Aufruf lesend zugreifen darf — unabhängig von „Automatisch in Kontext injizieren". |
+| Nur Tool-Zugriff (Namespaces, einer pro Zeile) | Textarea | Namespaces, die das LLM per Tool-Aufruf lesen darf — unabhängig von „Automatisch in Kontext injizieren". **Dies ist die einzige Liste, die das Memory-Tool sieht.** Sucht das LLM ohne Namespace-Angabe, werden alle Einträge dieses Feldes durchsucht; globale Quellen wie eingelesene Handbücher gehören deshalb hierher. |
 | Erlaubte Schreib-Namespaces (Tool, einer pro Zeile) | Textarea | Namespaces, in die der Agent per Tool schreiben darf. |
 
 Button: **[Agent-Policy speichern]**
