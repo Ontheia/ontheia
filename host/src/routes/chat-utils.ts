@@ -23,8 +23,7 @@
 import type { Pool, PoolClient } from 'pg';
 import { logger } from '../logger.js';
 import { 
-  isPlainObject, 
-  toIsoString 
+  isPlainObject 
 } from './utils.js';
 
 export type ChatSettingsPatch = {

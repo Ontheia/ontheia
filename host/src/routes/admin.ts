@@ -28,7 +28,7 @@ import fs from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requireSession, sanitizeEmail, mapUserRow } from './security.js';
+import { requireSession, sanitizeEmail } from './security.js';
 import {
   listProviders,
   createOrUpdateProvider,
@@ -45,15 +45,13 @@ import {
 import { 
   listServerConfigs, 
   upsertServerConfig, 
-  deleteServerConfig, 
-  getServerConfigsMap 
+  deleteServerConfig 
 } from '../orchestrator/server-config.repository.js';
 import { 
   normalizeProviderId, 
   withRls, 
   isPlainObject,
-  toIsoString,
-  isUuid
+  toIsoString
 } from './utils.js';
 import { loadServerTools } from './mcp-utils.js';
 import { RouteContext } from './types.js';

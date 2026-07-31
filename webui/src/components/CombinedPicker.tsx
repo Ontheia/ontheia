@@ -22,7 +22,6 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
 import type { ProviderEntry } from '../types/providers';
 import type { AgentDefinition } from '../types/agents';
 import { AppSelect } from './AppSelect';

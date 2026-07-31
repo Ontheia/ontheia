@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { Pool, PoolClient } from 'pg';
+import type { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
@@ -28,20 +28,18 @@ import type { MemoryWriteInput } from '../memory/types.js';
 import {
   RunRequest,
   RunEvent,
-  ChatMessage,
   RunToolDefinition,
   ToolApprovalMode
 } from './types.js';
 import type { ChainTemplateContext } from './chain-runner.js';
 import { TaskToolBinding } from '../routes/types.js';
 import { runProviderCompletion } from './provider-run.js';
-import { withRls, isPlainObject, isUuid, extractTextFromContent, logMemoryAudit, TEMPLATE_PATTERN, countHitsForNamespace } from '../routes/utils.js';
+import { withRls, isUuid, extractTextFromContent, logMemoryAudit, countHitsForNamespace } from '../routes/utils.js';
 import { filterNamespacesForSession, mapHitToEvent } from '../routes/memory.js';
 import {
   buildMemoryQuery,
   extractRunMetadata,
   normalizeMemoryOptions,
-  pickWriteNamespace,
   buildChatTitlePreview
 } from '../routes/run-utils.js';
 import { buildReadableNamespaces, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
@@ -49,12 +47,12 @@ import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
 import { loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
 import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
-import { observeRun, observeChainRun, countMemoryHits, countMemoryWrites, countMemoryWarning } from '../metrics.js';
+import { observeRun } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext, formatMemoryContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
-import { SkillService, type SkillRecord } from './SkillService.js';
+import { SkillService } from './SkillService.js';
 import {
   extractFilesEnvelope,
   envelopeMetadata,

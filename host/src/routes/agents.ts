@@ -28,16 +28,14 @@ import {
   isPlainObject, 
   isUuid, 
   toIsoString, 
-  withRls,
-  withTransaction
+  withRls
 } from './utils.js';
 import { 
   AgentRecord, 
   AgentBindingInput, 
-  RouteContext, 
-  TaskToolBinding 
+  RouteContext 
 } from './types.js';
-import { slugifySegment, validateNamespacePatterns, type NamespacePatternIssue } from '../memory/namespaces.js';
+import { validateNamespacePatterns, type NamespacePatternIssue } from '../memory/namespaces.js';
 import { validateChainGraphSpec, validateSpec } from './chain-utils.js';
 import { 
   parsePolicyPayload, 

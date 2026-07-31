@@ -21,7 +21,6 @@
  * or contact https://ontheia.ai
  */
 import type { FastifyInstance } from 'fastify';
-import type { Pool } from 'pg';
 import { requireSession } from './security.js';
 import { 
   isUuid, 

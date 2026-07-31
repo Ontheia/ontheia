@@ -31,7 +31,6 @@ import type {
   RunEvent,
   RunRequest,
   RunToolDefinition,
-  ToolCallReference,
   ToolApprovalMode
 } from './types.js';
 

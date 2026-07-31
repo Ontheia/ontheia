@@ -24,7 +24,7 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import { CronExpressionParser } from 'cron-parser';
 import { requireSession } from './security.js';
-import { withRls, isUuid } from './utils.js';
+import { withRls } from './utils.js';
 import { RouteContext } from './types.js';
 import { CronService } from '../runtime/CronService.js';
 import { loadGlobalRuntime } from './settings-utils.js';

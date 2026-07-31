@@ -20,7 +20,6 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { Pool } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { RunToolDefinition } from '../runtime/types.js';
 import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';

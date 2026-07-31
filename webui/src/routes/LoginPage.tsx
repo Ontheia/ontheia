@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import { useEffect, useState } from "react"
-import { Link, Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 
 import { LoginForm } from "@/components/login-form"
@@ -32,7 +32,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
 import LogoOntheia from '@/assets/logo_anima_trans_60x60.png'
 import { localizeError } from "@/lib/error-utils"

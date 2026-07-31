@@ -27,11 +27,9 @@ import {
   requireSession, 
   createSession, 
   sanitizeEmail, 
-  mapUserRow, 
-  loadSession 
+  mapUserRow 
 } from './security.js';
 import { 
-  isPlainObject, 
   withRls, 
   toIsoString 
 } from './utils.js';

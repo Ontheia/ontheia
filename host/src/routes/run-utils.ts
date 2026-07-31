@@ -22,7 +22,6 @@
  */
 import type { ChatMessage, RunMemoryOptions, RunRequest } from '../runtime/types.js';
 import { extractTextFromContent, isPlainObject } from './utils.js';
-import type { Pool } from 'pg';
 
 export function parseMessages(rawMessages: unknown): ChatMessage[] | null {
   if (!Array.isArray(rawMessages) || rawMessages.length === 0) {

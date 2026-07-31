@@ -23,7 +23,6 @@
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import i18n from 'i18next';
 import { Info, ChevronDown, ChevronUp, Sparkles, Pencil, RefreshCw, Copy, Check, Trash2, FolderInput, Plus, Play, Square, Loader2, Eye, EyeOff, RotateCcw, BadgeCheck } from 'lucide-react';
 import { NamespaceTree } from '../components/NamespaceTree';
 import { TaskPromptHistory } from '../components/TaskPromptHistory';
@@ -74,9 +73,7 @@ import {
   cleanupMemoryExpired,
   clearNamespace,
   ingestDirectory,
-  listNamespaceRules,
   type MemoryStatsEntry,
-  type NamespaceRule,
   listChains,
   createChain,
   updateChain,
@@ -100,7 +97,6 @@ import {
   saveEmbeddingSettings,
   getSystemStatus,
   type SystemStatus,
-  currentUserApi,
   type AdminUserEntry,
   type EmbeddingSettings,
   type EmbeddingMode,
@@ -129,7 +125,6 @@ import { useChatSidebar, type McpStatusEntry } from '../context/chat-sidebar-con
 import { useProviderContext } from '../context/provider-context';
 import { useAuth } from '../context/auth-context';
 import type { ProviderEntry, ProviderAuthMode } from '../types/providers';
-import type { PrimarySelection, SecondarySelection } from '../App';
 import type { AgentEntry } from '../components/CombinedPicker';
 import type { AgentTaskDefinition, AgentToolBinding, ToolApprovalMode } from '../types/agents';
 import type { ChainEntry, ChainVersionEntry } from '../types/chains';

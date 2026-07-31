@@ -35,7 +35,7 @@ import { loadConfig } from './config.js';
 import { registerRoutes } from './routes.js';
 import { OrchestratorService } from './orchestrator/service.js';
 import { registry } from './metrics.js';
-import { updateServerStatus, type ServerStatusUpdateParams } from './orchestrator/server-config.repository.js';
+import { updateServerStatus } from './orchestrator/server-config.repository.js';
 import { logger } from './logger.js';
 import { MemoryAdapter } from './memory/adapter.js';
 import { loadEmbeddingRuntime } from './memory/runtime.js';

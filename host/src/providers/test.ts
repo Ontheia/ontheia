@@ -25,7 +25,6 @@ import { spawn } from 'node:child_process';
 import { access, constants } from 'node:fs/promises';
 import {
   sanitizeUrl,
-  ensureLeadingSlash,
   resolveProviderApiKey,
   buildAuthHeaders,
   appendQueryAuth,

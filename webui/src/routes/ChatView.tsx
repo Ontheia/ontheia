@@ -29,7 +29,6 @@ import {
   ArrowUp,
   BookmarkPlus,
   Check,
-  ChevronDown,
   Copy,
   Eye,
   EyeOff,
@@ -55,7 +54,6 @@ import {
   deletePromptTemplate,
   listChains,
   stopRun,
-  getUserSettingsApi,
   listChatMessages,
   deleteChatMessage,
   getMotd,
@@ -74,7 +72,6 @@ import type { ProviderEntry } from '../types/providers';
 import type { AgentEntry } from '../components/CombinedPicker';
 import type { PromptTemplate, PromptTemplateScope } from '../types/prompt-templates';
 import type { ChainEntry } from '../types/chains';
-import { Button } from '../components/ui/button';
 import {
   Select,
   SelectContent,

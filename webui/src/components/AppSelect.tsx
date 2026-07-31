@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 

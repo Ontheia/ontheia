@@ -20,8 +20,8 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { isPlainObject, isUuid, toIsoString } from './utils.js';
-import type { AgentSettingsEntry, AgentTaskSettings, TaskToolBinding } from './types.js';
+import { isUuid } from './utils.js';
+import type { AgentSettingsEntry } from './types.js';
 import type { ToolApprovalMode } from '../runtime/types.js';
 import type { Pool, PoolClient } from 'pg';
 

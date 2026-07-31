@@ -24,7 +24,6 @@ import type { Queryable, ProviderRecord, ProviderModelRecord } from './repositor
 import { getProviderWithModel } from './repository.js';
 import {
   sanitizeUrl,
-  ensureLeadingSlash,
   resolveProviderApiKey,
   buildAuthHeaders,
   appendQueryAuth,
@@ -32,7 +31,7 @@ import {
 } from './http.js';
 import type { RunRequest, ChatMessage } from '../runtime/types.js';
 import { getSystemFlag } from '../runtime/system-flags.js';
-import { extractMetadataString, extractMetadataBoolean, detectOpenAiCompatibility } from './compat.js';
+import { extractMetadataString, detectOpenAiCompatibility } from './compat.js';
 
 type HttpMethod = 'GET' | 'POST';
 

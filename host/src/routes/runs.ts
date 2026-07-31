@@ -20,26 +20,21 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { Pool, PoolClient } from 'pg';
+import type { FastifyInstance } from 'fastify';
 import pushable from 'it-pushable';
 import type { EventMessage } from 'fastify-sse-v2';
 import { randomUUID } from 'crypto';
 import { requireSession } from './security.js';
 import { 
   withRls,
-  isPlainObject,
   toIsoString,
-  isUuid,
   logMemoryAudit
 } from './utils.js';
 import { 
   RouteContext 
 } from './types.js';
 import { 
-  ChatMessage, 
-  RunEvent, 
-  RunRequest 
+  RunEvent 
 } from '../runtime/types.js';
 import { RunService } from '../runtime/RunService.js';
 import { activeRunControllers, runStreamStates, pendingToolApprovals, getActiveRunIdForChat, userNotificationStreams, type NotificationPusher } from './runs-state.js';

@@ -38,7 +38,6 @@ import type {
   RunEvent,
   RunRequest,
   RunToolDefinition,
-  MemoryHitEvent,
   ToolApprovalMode
 } from './types.js';
 

@@ -22,10 +22,9 @@
  */
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { NavLink, useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
   ChevronDown,
-  FolderPlus,
   LogOut,
   MessageCircle,
   MoreHorizontal,
@@ -43,7 +42,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuShortcut,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"

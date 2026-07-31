@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import { useEffect, useState } from "react"
-import { Link, Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 
 import { SignupForm } from "@/components/signup-form"

@@ -20,12 +20,11 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { Pool, PoolClient } from 'pg';
+import type { Pool } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type { EventMessage } from 'fastify-sse-v2';
-import type { ChatMessage, RunEvent, RunRequest, ToolApprovalMode } from '../runtime/types.js';
+import type { ToolApprovalMode } from '../runtime/types.js';
 
 export type LoadedSession = {
   id: string;

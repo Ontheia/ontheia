@@ -25,7 +25,6 @@ const { Pool } = pg;
 import { loadConfig } from '../config.js';
 import { loadEmbeddingConfig } from '../memory/config.js';
 import { createEmbeddingProvider } from '../memory/provider.js';
-import { MemoryAdapter } from '../memory/adapter.js';
 
 /**
  * Utility to ingest a document during bootstrap.

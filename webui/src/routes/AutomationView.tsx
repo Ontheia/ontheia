@@ -31,7 +31,6 @@ import {
   listChats,
   type CronJobEntry,
   type CronJobRunEntry,
-  listAgents,
   listPromptTemplates
 } from '../lib/api';
 import { useChatSidebar } from '../context/chat-sidebar-context';
@@ -44,14 +43,12 @@ import type { PromptTemplate } from '../types/prompt-templates';
 import {
   Play,
   Trash2,
-  Plus,
   CalendarClock,
   AlertCircle,
   CheckCircle2,
   Clock,
   Bot,
   Pencil,
-  FileText,
   HelpCircle,
   Loader2,
   History,

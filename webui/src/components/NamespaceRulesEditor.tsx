@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localizeError } from '../lib/error-utils';
-import { Plus, Trash2, RefreshCw, AlertTriangle, Pencil, X, Save, Database } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Pencil, X, Save } from 'lucide-react';
 import {
   listNamespaceRules,
   createNamespaceRule,
@@ -34,7 +34,6 @@ import {
   type NamespaceRule
 } from '../lib/api';
 import { AppSelect, APP_SELECT_EMPTY_VALUE } from './AppSelect';
-import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 

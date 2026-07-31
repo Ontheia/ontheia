@@ -20,13 +20,12 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { Pool, PoolClient } from 'pg';
+import type { Pool } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
 import { randomUUID } from 'crypto';
 import cron from 'node-cron';
-import { CronExpressionParser } from 'cron-parser';
 import { RunService } from './RunService.js';
-import { withRls, isUuid, withTransaction } from '../routes/utils.js';
+import { isUuid, withTransaction } from '../routes/utils.js';
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
 import { pushUserNotification } from '../routes/runs-state.js';
 import { buildAutomationSystemNote } from './automation-utils.js';

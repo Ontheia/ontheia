@@ -38,7 +38,6 @@ import {
 import type { ServerStatusUpdateParams } from './server-config.repository.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import { buildMemoryMcpTools } from '../mcp/plugins/memory-tools.js';
-import { countMemoryHits, countMemoryWarning } from '../metrics.js';
 
 const execFileAsync = promisify(execFile);
 
