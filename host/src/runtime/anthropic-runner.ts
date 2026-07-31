@@ -88,7 +88,7 @@ export async function runAnthropicCompletion(
   const toolLoopTimeoutMs = options?.toolLoopTimeoutMs ?? DEFAULT_TOOL_LOOP_TIMEOUT_MS;
   const timeoutAt = startedAt + toolLoopTimeoutMs;
 
-  let conversation: ChatMessage[] = [...payload.messages];
+  const conversation: ChatMessage[] = [...payload.messages];
   const toolset = Array.isArray(payload.toolset) ? payload.toolset : [];
 
   const metadataApproval = typeof payload.options === 'object' && payload.options !== null

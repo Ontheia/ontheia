@@ -134,7 +134,7 @@ export class RunService {
       | undefined;
 
     let chatId: string | undefined;
-    let enrichedInput: RunRequest = { ...request };
+    const enrichedInput: RunRequest = { ...request };
 
     const emitRunEvent = async (event: RunEvent) => {
       // Ensure timestamp is present
@@ -498,7 +498,7 @@ export class RunService {
       let agentToolSelection: TaskToolBinding[] = [];
 
       if (enrichedInput.agent_id) {
-        let agentEntry = userSettings.agents.find(a => a.id === enrichedInput.agent_id);
+        const agentEntry = userSettings.agents.find(a => a.id === enrichedInput.agent_id);
         
         if (agentEntry) {
           if (!enrichedInput.provider_id) enrichedInput.provider_id = agentEntry.providerId || '';

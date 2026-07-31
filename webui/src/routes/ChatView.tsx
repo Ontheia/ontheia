@@ -1231,7 +1231,7 @@ export function ChatView({
       return;
     }
 
-    let runId = makeId('run');
+    const runId = makeId('run');
     let effectiveChatId = activeChatId;
     let isNewChat = false;
 

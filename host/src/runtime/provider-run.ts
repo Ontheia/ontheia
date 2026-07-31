@@ -1219,7 +1219,7 @@ async function handleOpenAiToolCalls(params: {
     }
 
     // 2. Resolve Permission Mode
-    let permission = toolPermissions[toolKey];
+    const permission = toolPermissions[toolKey];
     const isAlwaysAllowed = toolApprovalMode === 'granted' || permission === 'always';
     const needsApproval = !isAlwaysAllowed && options?.waitForToolApproval;
 

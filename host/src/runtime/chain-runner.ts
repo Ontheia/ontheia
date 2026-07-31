@@ -518,7 +518,7 @@ export class ChainRunner {
 
       const toolApprovalMode = this.templateContext.tool_approval || (this.waitForToolApproval ? 'prompt' : 'granted');
 
-      let resolvedToolset: RunToolDefinition[] = [];
+      const resolvedToolset: RunToolDefinition[] = [];
 
       const userId = this.templateContext.user_id || profile.user_id;
 
@@ -602,7 +602,7 @@ export class ChainRunner {
         if (defaultTools.length > 0) {
           // Explicit filtering logic
           for (const tRef of defaultTools) {
-            let server = tRef.server;
+            const server = tRef.server;
             const toolName = tRef.tool || tRef.name;
 
             if (!server || !toolName) continue;
@@ -736,7 +736,7 @@ export class ChainRunner {
 
       // Combine history with the new user input for sub-agent
       // 1. Start with sanitized history (excluding old system messages to avoid confusion)
-      let messages: ChatMessage[] = this.sanitizeHistory([...this.history]).filter(m => m.role !== 'system');
+      const messages: ChatMessage[] = this.sanitizeHistory([...this.history]).filter(m => m.role !== 'system');
 
       // 2. Prepend system messages (task context, identity note, skills, memory)
       messages.unshift(...agentSystemMsgs);
@@ -1112,7 +1112,7 @@ ${contextSnippet}
 `.trim();
 
     // RESOLVE TOOLS for LLM Step
-    let resolvedToolset: RunToolDefinition[] = [];
+    const resolvedToolset: RunToolDefinition[] = [];
     const mcpServers = Array.isArray(step.params?.mcp_servers) ? step.params.mcp_servers : [];
     
     if (mcpServers.length > 0) {
@@ -1145,7 +1145,7 @@ ${contextSnippet}
     }
 
     // Combine history with the new prompt for LLM step
-    let messages: ChatMessage[] = this.sanitizeHistory([...this.history]);
+    const messages: ChatMessage[] = this.sanitizeHistory([...this.history]);
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     const lastUserContent = lastUserMsg ? extractText(lastUserMsg.content) : '';
 
@@ -1230,7 +1230,7 @@ ${contextSnippet}
     this.debug(`LLM raw reply for ${stepId}: ${this.limitText(fullText, 500)}`);
 
     let data = null;
-    let cleanText = fullText.trim();
+    const cleanText = fullText.trim();
     
     try {
       const start = cleanText.search(/[{\[]/);
