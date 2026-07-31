@@ -82,6 +82,21 @@ export function serializeForSummarizer(messages: ChatMessage[], startIndex?: num
   }).join('\n\n');
 }
 
+/**
+ * Removes a Recent-Messages block the summarizer wrote on its own.
+ *
+ * The prompt asks it not to, but it does anyway often enough to matter — and
+ * the caller appends a verbatim block right after, so a leftover would put two
+ * of them in one summary, the stale one first.
+ *
+ * The end anchor has to be `$` (no m flag, so: end of input). `\z` is a Perl
+ * anchor; JavaScript reads it as a literal "z", which made the lookahead stop
+ * at the next lowercase z — and match nothing at all when the tail held none.
+ */
+export function stripRecentMessagesBlock(summary: string): string {
+  return summary.replace(/### Recent Messages[\s\S]*?(?=###|$)/g, '').trimEnd();
+}
+
 export const SUMMARIZER_SYSTEM_PROMPT = `You are a context compressor for chat histories. Produce a structured summary in at most 700 words.
 
 Messages are numbered ([#12 User]). Cite those numbers wherever the format asks for a source.
@@ -289,7 +304,7 @@ export class RollingSummaryService {
     if (firstUserIdx > 0) recentMessages = recentMessages.slice(firstUserIdx);
     const recentSection = `### Recent Messages\n${serializeForSummarizer(recentMessages)}`;
     // Strip any LLM-generated ### Recent Messages block before inserting ours
-    const strippedSummary = newSummary.replace(/### Recent Messages[\s\S]*?(?=###|\z)/g, '').trimEnd();
+    const strippedSummary = stripRecentMessagesBlock(newSummary);
     const finalSummary = strippedSummary.includes('### Main Topics')
       ? strippedSummary.replace('### Main Topics', recentSection + '\n\n### Main Topics')
       : strippedSummary + '\n\n' + recentSection;

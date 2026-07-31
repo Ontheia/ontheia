@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { serializeForSummarizer, SUMMARIZER_SYSTEM_PROMPT } from './RollingSummaryService.js';
+import { serializeForSummarizer, stripRecentMessagesBlock, SUMMARIZER_SYSTEM_PROMPT } from './RollingSummaryService.js';
 import type { ChatMessage } from './types.js';
 
 const msgs: ChatMessage[] = [
@@ -95,4 +95,28 @@ test('SUMMARIZER_SYSTEM_PROMPT exempts the durable sections from recency weighti
 
 test('SUMMARIZER_SYSTEM_PROMPT tells the model to drop empty sections', () => {
   assert.match(SUMMARIZER_SYSTEM_PROMPT, /Drop a section entirely when it has no content/);
+});
+
+// The block runs to the end of the summary when nothing follows it. This is the
+// case the old `\z` anchor got wrong: JavaScript read it as a literal "z", so
+// with no lowercase z left in the tail the regex matched nothing and the caller
+// ended up appending a second Recent-Messages block below the stale one.
+test('stripRecentMessagesBlock removes a trailing block with no section after it', () => {
+  const summary = '### Main Topics\nDeployment\n\n### Recent Messages\n[User]: How do I do that?';
+  assert.equal(stripRecentMessagesBlock(summary), '### Main Topics\nDeployment');
+});
+
+test('stripRecentMessagesBlock removes a trailing block containing no letter z', () => {
+  const summary = '### Main Topics\nA\n\n### Recent Messages\n[User]: null';
+  assert.equal(stripRecentMessagesBlock(summary), '### Main Topics\nA');
+});
+
+test('stripRecentMessagesBlock keeps the section that follows the block', () => {
+  const summary = '### Recent Messages\n[User]: hi\n\n### Main Topics\nDeployment';
+  assert.equal(stripRecentMessagesBlock(summary), '### Main Topics\nDeployment');
+});
+
+test('stripRecentMessagesBlock leaves a summary without such a block untouched', () => {
+  const summary = '### Main Topics\nDeployment\n\n### Decisions\nUse the tree view';
+  assert.equal(stripRecentMessagesBlock(summary), summary);
 });
