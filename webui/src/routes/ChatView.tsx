@@ -119,12 +119,14 @@ type MessageBubbleProps = {
   timezone?: string;
   onDelete?: (id: string) => void;
   memoryStatuses?: Record<string, MemoryStatusEntry>;
+  /** Active chat search term, marked up inside the rendered message. */
+  highlight?: string;
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, onDelete, memoryStatuses }: MessageBubbleProps) => {
+const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, onDelete, memoryStatuses, highlight }: MessageBubbleProps) => {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -197,6 +199,7 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
         {content && (
           <MarkdownMessage
             content={content}
+            highlight={highlight}
             showCopyButton={false}
             showCodeCopyButton
             userInput={normalizedRole === 'user'}
@@ -325,6 +328,13 @@ export function ChatView({
   const [cronReloadKey, setCronReloadKey] = useState(0);
   const [motd, setMotd] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Opening the box is the whole intent of the click — typing should not cost
+  // a second one somewhere else on the screen.
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -2140,7 +2150,11 @@ export function ChatView({
 
         let nextMessages = historyMessages;
         const hasAgentMessage = historyMessages.some((msg) => msg.role === 'agent');
-        if (lastAgentText && !hasAgentMessage) {
+        // Not while searching: this fills in the answer of a run whose messages
+        // are not persisted yet, and it comes from the run events, which know
+        // nothing of the search term. In a filtered list it would appear as a
+        // hit that does not contain what was searched for.
+        if (lastAgentText && !hasAgentMessage && !messageSearch.trim()) {
           const agentMsg: ChatMessage = {
             id: `agent-${currentChatId}`,
             role: 'agent',
@@ -2307,6 +2321,7 @@ export function ChatView({
             {showSearch && (
               <div className="message-search-inline-input">
                 <Input
+                  ref={searchInputRef}
                   type="text"
                   value={messageSearch}
                   onChange={(e) => setMessageSearch(e.target.value)}
@@ -2405,6 +2420,7 @@ export function ChatView({
                   createdAt={msg.createdAt}
                   timezone={runtimeSettings.timezone}
                   memoryStatuses={memoryStatuses}
+                  highlight={messageSearch}
                   onDelete={async (messageId) => {
                     if (!activeChatId) return;
                     try {
@@ -2852,6 +2868,7 @@ export function ChatView({
         <ArtifactPanel
           key={panelSource.nonce}
           source={panelSource.source}
+          highlight={messageSearch}
           onClose={() => setPanelSource(null)}
         />
       )}

@@ -530,6 +530,14 @@
   gap: 0.4rem;
 }
 
+/* .message-subcopy hides itself until its message bubble is hovered — an
+   affordance that belongs to a message, not to a toolbar. The search row
+   borrows the class for its buttons, which left the magnifier and the clear
+   button sitting at opacity 0: present, clickable, invisible. */
+.message-search-controls .message-subcopy {
+  opacity: 1;
+}
+
 .message-search-inline {
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -1025,6 +1033,15 @@
   color: #e2e8f0;
   padding: 0 0.15rem;
   border-radius: 0.2rem;
+}
+
+/* Search hits, distinct from an author's own ==highlight== above: a hit is
+   something the reader is scanning for, not something the text emphasises. */
+.markdown-message mark.search-hit {
+  background: rgba(56, 189, 248, 0.28);
+  color: inherit;
+  box-shadow: inset 0 -1px 0 rgba(56, 189, 248, 0.85);
+  border-radius: 0.15rem;
 }
 
 .markdown-message sup,

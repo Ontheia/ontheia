@@ -43,6 +43,8 @@ type MdNode = {
 type MarkdownMessageProps = {
   content: string;
   className?: string;
+  /** Chat search term; every occurrence is wrapped in <mark>. */
+  highlight?: string;
 };
 
 type MarkdownMessageComponentProps = MarkdownMessageProps & {
@@ -82,6 +84,69 @@ function remarkHighlight() {
       node.children = node.children.flatMap((child) => {
         if (child.type === 'text' && typeof child.value === 'string') {
           return splitText(child.value);
+        }
+        visit(child);
+        return [child];
+      });
+    };
+
+    visit(tree);
+  };
+}
+
+type HastNode = {
+  type?: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+/**
+ * Wraps every occurrence of the chat search term in <mark>.
+ *
+ * A rehype plugin rather than a pass over the rendered DOM: React owns those
+ * nodes, and rewriting them behind its back survives only until the next
+ * render. Here the marks are part of the tree react-markdown renders from.
+ *
+ * `code` and `pre` are skipped deliberately. Their children are read back as a
+ * string — by the copy button, and by MermaidBlock to get the diagram source —
+ * so an element spliced in among the text would corrupt a diagram rather than
+ * highlight it.
+ */
+function rehypeSearchHighlight(term: string) {
+  const needle = term.trim();
+  return (tree: HastNode) => {
+    if (!needle) return;
+    const pattern = new RegExp(`(${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+    // String.split with a single capturing group puts the matches on the odd
+    // indices. Reading the parity beats re-testing each part: a /g/ regex keeps
+    // a lastIndex between calls, so .test() would answer differently each time.
+    const split = (value: string): HastNode[] => {
+      const out: HastNode[] = [];
+      value.split(pattern).forEach((part, index) => {
+        if (!part) return;
+        out.push(
+          index % 2 === 1
+            ? {
+                type: 'element',
+                tagName: 'mark',
+                properties: { className: ['search-hit'] },
+                children: [{ type: 'text', value: part }]
+              }
+            : { type: 'text', value: part }
+        );
+      });
+      return out;
+    };
+
+    const visit = (node?: HastNode) => {
+      if (!node?.children) return;
+      if (node.tagName === 'code' || node.tagName === 'pre') return;
+      node.children = node.children.flatMap((child) => {
+        if (child.type === 'text' && typeof child.value === 'string') {
+          return split(child.value);
         }
         visit(child);
         return [child];
@@ -285,7 +350,8 @@ export function MarkdownMessage({
   onCopy,
   showCodeCopyButton,
   copyLabel,
-  userInput
+  userInput,
+  highlight
 }: MarkdownMessageComponentProps) {
   const { t } = useTranslation(['chat', 'common']);
   const [copied, setCopied] = useState(false);
@@ -335,7 +401,11 @@ export function MarkdownMessage({
         // single line breaks visible as typed (agent output stays standard
         // markdown, where a single newline is a soft break).
         remarkPlugins={userInput ? [remarkDisablePasteTraps, remarkGfm, remarkBreaks, remarkHighlight] : [remarkGfm, remarkHighlight]}
-        rehypePlugins={[[rehypeSanitize, markdownSchema]]}
+        rehypePlugins={
+          highlight?.trim()
+            ? [[rehypeSearchHighlight, highlight], [rehypeSanitize, markdownSchema]]
+            : [[rehypeSanitize, markdownSchema]]
+        }
         components={markdownComponents}
       >
         {content}

@@ -94,6 +94,13 @@ const suggestSaveAsPath = (): string => {
 type ArtifactPanelProps = {
   source: ArtifactPanelSource;
   onClose: () => void;
+  /**
+   * Active chat search term. A file can be what matched the search, so the
+   * panel marks the term too — otherwise the hit that led here is invisible in
+   * the very document that contains it. Preview only: the editor is a
+   * textarea, which holds no markup, and a PDF renders as pages.
+   */
+  highlight?: string;
 };
 
 /**
@@ -106,7 +113,7 @@ type ArtifactPanelProps = {
  * "Speichern unter…" creates the file (write.py without --force, so an
  * existing file is refused) and switches the panel to file-bound mode.
  */
-export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
+export function ArtifactPanel({ source, onClose, highlight }: ArtifactPanelProps) {
   const { t } = useTranslation(['chat', 'common']);
   const [state, setState] = useState<PanelState>({ phase: 'loading' });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -479,7 +486,12 @@ export function ArtifactPanel({ source, onClose }: ArtifactPanelProps) {
               {state.kind === 'mermaid' ? (
                 <MermaidBlock code={state.draft} />
               ) : (
-                <MarkdownMessage content={state.draft} showCopyButton={false} showCodeCopyButton />
+                <MarkdownMessage
+                  content={state.draft}
+                  highlight={highlight}
+                  showCopyButton={false}
+                  showCodeCopyButton
+                />
               )}
             </div>
           ) : (

@@ -559,15 +559,47 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
     const query = request.query as any;
     const limit = Math.min(parseInt(query.limit, 10) || 200, 1000);
 
+    // The search box above the chat sends its term as `q`. It was accepted and
+    // then never read, so searching returned the whole chat back unchanged and
+    // looked like the filter did nothing.
+    //
+    // The wildcards are escaped rather than passed through: a term containing
+    // % would otherwise match every message, which reads as "search is broken"
+    // just as much as no filter at all.
+    const term = typeof query.q === 'string' ? query.q.trim() : '';
+    const pattern = term ? `%${term.replace(/([\\%_])/g, '\\$1')}%` : null;
+
     return withRls(db, auth.session.userId, auth.session.role, async (client) => {
       const res = await client.query(
-        `SELECT id::text, run_id, role, content, metadata, created_at
-           FROM app.chat_messages
-          WHERE chat_id = $1
-            AND deleted_at IS NULL
-          ORDER BY created_at ASC
+        `SELECT m.id::text, m.run_id, m.role, m.content, m.metadata, m.created_at
+           FROM app.chat_messages m
+          WHERE m.chat_id = $1
+            AND m.deleted_at IS NULL
+            AND ($3::text IS NULL
+                 OR m.content ILIKE $3
+                 -- Tool results carry their payload here: file names, paths,
+                 -- search terms the agent used, server and tool names.
+                 OR m.metadata::text ILIKE $3
+                 -- A file the message produced or read. What was written into a
+                 -- document is the thing people remember, and until now it was
+                 -- the one place the chat could not be searched.
+                 OR EXISTS (
+                      SELECT 1
+                        FROM app.artifact_refs r
+                        JOIN app.artifacts a ON a.id = r.artifact_id
+                        LEFT JOIN app.artifact_versions v ON v.id = a.head_version
+                       WHERE r.message_id = m.id
+                         AND a.deleted_at IS NULL
+                         AND (a.binding_path ILIKE $3
+                              OR a.title ILIKE $3
+                              -- Extracted text of a PDF, so its content is
+                              -- reachable even though it has no snapshot.
+                              OR a.text_cache ILIKE $3
+                              OR v.content ILIKE $3)
+                    ))
+          ORDER BY m.created_at ASC
           LIMIT $2`,
-        [chatId, limit]
+        [chatId, limit, pattern]
       );
       return {
         messages: res.rows.map(m => ({
