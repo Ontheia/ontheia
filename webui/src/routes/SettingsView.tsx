@@ -589,7 +589,7 @@ function UsersSection({
         </div>
         {error && <div className="error-box mb-4">{error}</div>}
 
-        <div className="border border-[#1E293B] rounded-md overflow-hidden mb-8">
+        <div className="border border-[#1E293B] rounded-md overflow-x-auto mb-8">
           <table className="w-full text-sm text-left">
             <thead className="bg-[#0B1424] text-slate-400 font-medium border-b border-[#1E293B]">
               <tr>
@@ -2404,7 +2404,7 @@ function MemorySection({
             </button>
           </div>
         </div>
-        <div className="border border-[#1E293B] rounded-md overflow-hidden">
+        <div className="border border-[#1E293B] rounded-md overflow-x-auto">
           {filteredNamespaceStats.length === 0 ? (
             <div className="empty-state-container">
               <p className="empty-state-text">{t('memory.noNamespaces')}</p>
@@ -2663,7 +2663,7 @@ function MemorySection({
       )}
 
       {searchResults.length > 0 && (
-          <div className="border border-[#1E293B] rounded-md overflow-hidden">
+          <div className="border border-[#1E293B] rounded-md overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-[#0B1424] text-slate-400 font-medium border-b border-[#1E293B]">
                 <tr>
@@ -3443,13 +3443,19 @@ function MemorySection({
             />
           </div>
         </div>
-        <div className="border border-[#1E293B] rounded-md overflow-hidden">
-          <table className="w-full text-sm text-left">
+        <div className="border border-[#1E293B] rounded-md overflow-x-auto">
+          {/*
+            table-fixed with explicit widths: auto layout sizes columns by their
+            widest content, and a detail payload runs to several thousand
+            characters — that one column then decided the width of the whole
+            table and pushed it past the window.
+          */}
+          <table className="w-full table-fixed text-sm text-left">
             <thead className="bg-[#0B1424] text-slate-400 font-medium border-b border-[#1E293B]">
               <tr>
-                <th className="p-3">{t('memory.time')}</th>
-                <th className="p-3">{t('memory.action')}</th>
-                <th className="p-3">Namespace</th>
+                <th className="p-3 w-44">{t('memory.time')}</th>
+                <th className="p-3 w-32">{t('memory.action')}</th>
+                <th className="p-3 w-1/4">Namespace</th>
                 <th className="p-3">Detail</th>
               </tr>
             </thead>
@@ -3475,7 +3481,8 @@ function MemorySection({
                       })}
                     </td>
                     <td className="p-3 align-top font-medium text-sky-300">{entry.action}</td>
-                    <td className="p-3 align-top font-mono text-xs text-sky-400">{entry.namespace ?? '–'}</td>
+                    {/* Namespaces run to ~90 characters and hold no spaces to break at. */}
+                    <td className="p-3 align-top font-mono text-xs text-sky-400 break-all">{entry.namespace ?? '–'}</td>
                     <td className="p-3 align-top">
                       <code className="text-[10px] text-slate-500 break-all line-clamp-2" title={JSON.stringify(entry.detail ?? {})}>
                         {JSON.stringify(entry.detail ?? {})}

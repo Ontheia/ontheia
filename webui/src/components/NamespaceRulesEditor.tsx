@@ -274,14 +274,25 @@ export function NamespaceRulesEditor() {
         </div>
       </form>
 
-      <div className="border border-[#1E293B] rounded-md overflow-hidden">
-        <table className="w-full text-sm text-left">
+      <div className="border border-[#1E293B] rounded-md overflow-x-auto">
+        {/*
+          table-fixed so the widths on the headers below actually apply. In auto
+          layout a cell sizes to its content and ignores max-width, which let a
+          400-character instruction template — held on one line by `truncate` —
+          stretch the table far past the window.
+        */}
+        <table className="w-full table-fixed text-sm text-left">
           <thead className="bg-[#0B1424] text-slate-400 font-medium border-b border-[#1E293B]">
-            <tr>
+            {/*
+              break-words on the row: a fixed column does not stop its content
+              from painting over the next one, and a single long word cannot
+              wrap on its own — "Gedächtnisklasse" did exactly that.
+            */}
+            <tr className="break-words">
               <th className="p-3 w-1/4">{t('memory.rules.pattern')}</th>
               <th className="p-3 w-20 text-right">{t('memory.rules.bonus')}</th>
-              <th className="p-3 w-28">{t('memory.rules.memoryClass')}</th>
-              <th className="p-3 w-1/3">{t('memory.rules.instructionTemplate')}</th>
+              <th className="p-3 w-36">{t('memory.rules.memoryClass')}</th>
+              <th className="p-3 w-1/4">{t('memory.rules.instructionTemplate')}</th>
               <th className="p-3">{t('memory.rules.descriptionLabel')}</th>
               <th className="p-3 w-24"></th>
             </tr>
@@ -296,7 +307,7 @@ export function NamespaceRulesEditor() {
             ) : (
               rules.map(rule => (
                 <tr key={rule.id} className={`bg-[#121B2B] hover:bg-[#1e293b] transition-colors ${editingId === rule.id ? 'ring-1 ring-inset ring-sky-500/50' : ''}`}>
-                  <td className="p-3 font-mono text-xs text-sky-300">{rule.pattern}</td>
+                  <td className="p-3 font-mono text-xs text-sky-300 break-all">{rule.pattern}</td>
                   <td className="p-3 text-right font-mono">{rule.bonus > 0 ? '+' : ''}{rule.bonus.toFixed(2)}</td>
                   <td className="p-3 text-xs">
                     {rule.memoryClass ? (
@@ -305,11 +316,18 @@ export function NamespaceRulesEditor() {
                       <span className="text-slate-600 italic">{t('notSet', { ns: 'common' })}</span>
                     )}
                   </td>
-                  <td className="p-3 text-xs text-slate-300 truncate max-w-[200px]">
+                  <td className="p-3 text-xs text-slate-300">
                     {rule.instructionTemplate ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="cursor-help">{rule.instructionTemplate}</span>
+                          {/*
+                            The clamp belongs on a block inside the cell, not on
+                            the cell. On the `td` it neither wrapped nor bounded
+                            anything, and the span kept the width of the full
+                            text — which is what the tooltip anchored to, so it
+                            appeared far off to the left of the column.
+                          */}
+                          <span className="block cursor-help line-clamp-2">{rule.instructionTemplate}</span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[300px]">{rule.instructionTemplate}</TooltipContent>
                       </Tooltip>
