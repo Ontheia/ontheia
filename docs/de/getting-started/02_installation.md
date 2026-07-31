@@ -53,3 +53,33 @@ docker compose up -d
 ## Ontheia aufrufen
 
 Öffnen Sie [http://localhost:5173](http://localhost:5173) in Ihrem Browser.
+
+## Was auf dem Server läuft
+
+Nach `docker compose up -d` steht folgendes Bild:
+
+```mermaid
+flowchart TB
+    subgraph server["🔒 Eigener Server"]
+        subgraph compose["docker compose"]
+            WEB["ontheia-webui<br/>React · :5173"]
+            HOST["ontheia-host<br/>Node/Fastify · :8080"]
+            DB[("ontheia-db<br/>PostgreSQL + pgvector")]
+            MIG["ontheia-migrator<br/>Flyway · läuft einmal"]
+        end
+        MCP["MCP-Werkzeug-Container<br/>bei Bedarf gestartet · Image-Allowlist"]
+        OLLAMA["Ollama<br/>lokale Modelle"]
+    end
+    WEB --> HOST
+    HOST --> DB
+    MIG -.->|Migrationen beim Start| DB
+    HOST -->|Docker-Socket, schreibgeschützt| MCP
+    HOST --> OLLAMA
+    HOST -.->|nur Inferenz| PROV["KI-Provider in der Cloud<br/>Claude · GPT · Gemini · Grok"]
+```
+
+Drei Punkte, die beim ersten Blick auf `docker compose ps` irritieren können:
+
+- **Der Migrator beendet sich.** Er bringt beim Start das Datenbankschema auf den aktuellen Stand und wird dann fertig — vier Dienste in der Compose-Datei, drei laufende Container. Das ist der Normalzustand, kein Fehler.
+- **MCP-Werkzeuge laufen in eigenen Containern**, die der Host bei Bedarf startet. Der Docker-Socket ist dafür **schreibgeschützt** eingehängt, und jedes Image wird gegen `config/allowlist.images` geprüft. Werkzeuge, die als `stdio`-Prozess laufen (`uvx`, `npx`), starten stattdessen im Host-Container selbst.
+- **Nur ein Pfeil verlässt den Kasten.** Chats, Gedächtnis, Skills, Zeitpläne und Werkzeug-Verbindungen bleiben auf dem eigenen Server; nach außen geht ausschließlich der Aufruf des Sprachmodells — und auch nur zu dem Provider, den man selbst einträgt. Mit Ollama entfällt auch dieser.
