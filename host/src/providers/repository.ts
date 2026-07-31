@@ -176,13 +176,37 @@ function mapRowToProvider(row: any): ProviderRecord {
   };
 }
 
-function mapModelRow(row: any): ProviderModelRecord {
+/**
+ * Row shape for mapModelRow. `capability` is deliberately required, not
+ * optional: two of the three callers used to leave it out of the object they
+ * built, and the `?? 'chat'` below then invented a value the column did not
+ * hold. Every read of a single provider therefore reported its embedding model
+ * as a chat model — and because createOrUpdateProvider answers with
+ * getProvider, the save response taught the client the same thing. The next
+ * save sent `capability: 'chat'` for real, and memory search went dark
+ * instance-wide with no embedding model left to find.
+ *
+ * Requiring the field turns that omission into a compile error.
+ */
+type ModelRowInput = {
+  model_key: string;
+  label: string;
+  metadata?: unknown;
+  active: boolean;
+  capability: string | null | undefined;
+  show_in_composer?: boolean;
+  model_show_in_composer?: boolean;
+};
+
+function mapModelRow(row: ModelRowInput): ProviderModelRecord {
   const val = row.model_show_in_composer !== undefined ? row.model_show_in_composer : row.show_in_composer;
   return {
     id: row.model_key,
     label: row.label,
-    metadata: row.metadata ?? {},
+    metadata: (row.metadata as Record<string, unknown>) ?? {},
     active: row.active,
+    // Only a genuinely empty column falls back — the caller can no longer
+    // reach this line by forgetting the field.
     capability: (row.capability as ModelCapability) ?? 'chat',
     show_in_composer: val === true
   };
@@ -290,6 +314,7 @@ export async function getProvider(db: Queryable, slug: string): Promise<Provider
         label: row.model_label,
         metadata: row.model_metadata,
         active: row.model_active,
+        capability: row.model_capability,
         model_show_in_composer: row.model_show_in_composer
       })
     );
@@ -336,6 +361,7 @@ export async function getProviderWithModel(
     label: row.model_label,
     metadata: row.model_metadata,
     active: row.model_active,
+    capability: row.model_capability,
     model_show_in_composer: row.model_show_in_composer
   });
   provider.models = [model];
