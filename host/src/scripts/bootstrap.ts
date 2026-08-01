@@ -388,6 +388,92 @@ async function main() {
       })]
     );
 
+    // ── 6c. Namespace rules ───────────────────────────────────────────────
+    // Until now a fresh install started with an empty app.vector_namespace_rules
+    // while the seeded agents were told to use a dozen namespaces. Every entry
+    // they wrote landed without a ranking bonus, without an instruction template
+    // and without a memory class — the three things the rules table exists for.
+    //
+    // Three columns per row, and they do different jobs:
+    //   bonus                — a multiplier on the hit's similarity, not a
+    //                          summand: 0.09 means +9 %. It rises with how
+    //                          binding the content is for answering right now.
+    //   instruction_template — prepended to the hits of that namespace, so the
+    //                          model is told what kind of thing it is reading.
+    //                          Hits sharing a template are grouped under one copy.
+    //   memory_class         — the default class for new entries; a write may
+    //                          override it per entry.
+    //
+    // Empty class where none of the five fits. `preferences` mixes facts, rules
+    // and habits; an idea claims nothing and is neither episodic nor semantic.
+    // A guessed class is worse than none — the write path leaves the column NULL
+    // and the agent is told to set it explicitly where it matters.
+    //
+    // ON CONFLICT DO NOTHING: these are a starting point, not a policy. An
+    // installation that has tuned its rules keeps them across updates.
+    console.log('Bootstrap: Seeding namespace rules...');
+    const namespaceRules: Array<[string, number, string | null, string, string]> = [
+      // Operational — written by the agent about this user.
+      ['vector.agent.${user_id}.preferences', 0.09, null,
+        'Preferences, facts and standing instructions about the user.',
+        'ABOUT THE USER (MEMORY): Preferences, facts and standing instructions about this person, kept from earlier conversations. Let them shape your answer; where a current instruction contradicts them, the current one wins: {{content}}'],
+      ['vector.agent.${user_id}.howto', 0.06, 'procedural',
+        'Procedural knowledge: how you carry out a task for this user.',
+        'WORKING INSTRUCTION (MEMORY): A way of doing something recorded for this user. Follow it as long as it fits the task; where the situation differs, say so instead of stretching the instruction: {{content}}'],
+      ['vector.agent.${user_id}.memory', 0.03, 'episodic',
+        'Observations from earlier conversations, each with a point in time.',
+        'CONVERSATION NOTE (MEMORY): Recorded in an earlier conversation — a record, not a verified fact. Mind the date given; the situation may have changed since: {{content}}'],
+
+      // Personal — the user's own space.
+      ['vector.user.${user_id}.ideas', 0.03, null,
+        'Thoughts that assert nothing: ideas, drafts, the undecided. No class fits.',
+        'THOUGHT (MEMORY): An idea, a draft, something not yet decided — neither fact nor rule. Present it as a consideration rather than as settled, and do not derive anything from it the user has not decided: {{content}}'],
+      ['vector.user.${user_id}.archive', 0, 'document',
+        'Strictly personal documents. A place to file things, not a memory.',
+        'PERSONAL RECORD (SOURCE): An extract from a strictly personal document of the user. Take figures, names and dates verbatim; add nothing that is not there. If the extract is not enough, search the same namespace again — with the full question in whole sentences: {{content}}'],
+
+      // Product namespaces every installation has.
+      ['vector.global.ontheia.temp', 0.12, 'working',
+        'Scratch space bound to the running task. Always written with a TTL.',
+        'SCRATCH NOTE (MEMORY): Stored temporarily and tied to the task in progress. Do not treat it as lasting knowledge, and stop drawing on it once the task is done: {{content}}'],
+      ['vector.global.ontheia.docs', 0, 'document',
+        'Ontheia product documentation.',
+        'ONTHEIA DOCUMENTATION (SOURCE): An extract from the product documentation, not from a conversation. Base statements about Ontheia on it, and say when the extract does not cover the question instead of filling the gap: {{content}}'],
+      ['vector.global.ontheia.feedback', 0, 'episodic',
+        'Reported errors and suggestions — a record, not current system state.',
+        'FEEDBACK RECORD (MEMORY): An error or suggestion reported at a point in time — not the current state of the system. It may long since be fixed; check the date before building on it: {{content}}'],
+
+      // Shared knowledge. Bonus 0 throughout: a corpus is found by the question,
+      // not lifted by a weight — the distinction the ranking rules rest on.
+      ['vector.global.knowledge.general.facts', 0, 'document',
+        'Collected subject knowledge, not conversation.',
+        'KNOWLEDGE BASE (SOURCE): Collected subject knowledge, not conversation. Use it as evidence and flag when it answers the question only in part: {{content}}'],
+      ['vector.global.knowledge.llm.api-docs', 0, 'document',
+        'Cached library and API documentation.',
+        'LIBRARY DOCUMENTATION (SOURCE): Cached documentation for a library or API. Take signatures, parameter names and version numbers verbatim; add nothing that is not there. Mind the date — stale documentation is worse than none: {{content}}'],
+      ['vector.global.knowledge.llm.best-practices', 0, 'procedural',
+        'Agreed rules for code, security and architecture.',
+        'CODING STANDARD (MEMORY): An agreed rule for code, security or architecture. Shape your proposal accordingly; depart from it only when the user asks explicitly: {{content}}'],
+      ['vector.global.privat.manuals', 0, 'document',
+        'Ingested operating and user manuals, private sphere.',
+        'MANUAL (SOURCE): An extract from an ingested operating or user manual. Treat it as a handbook — take figures, type designations and limits verbatim, add nothing that is not there. If the extract is not enough, search the same namespace again and ask the full question in whole sentences — single keywords stay below the relevance threshold and return nothing: {{content}}'],
+      ['vector.global.privat.recipes', 0, 'document',
+        'Shared recipe collection.',
+        'RECIPE (SOURCE): From the shared recipe collection. Take quantities, times and ingredients verbatim; do not present a variant as available that is not there: {{content}}'],
+      ['vector.global.business.manuals', 0, 'document',
+        'Ingested operating and user manuals, business sphere.',
+        'MANUAL (SOURCE): An extract from an ingested operating or user manual from the business sphere. Treat it as a handbook — take figures, type designations and limits verbatim, add nothing that is not there. If the extract is not enough, search the same namespace again and ask the full question in whole sentences — single keywords stay below the relevance threshold and return nothing: {{content}}'],
+    ];
+    for (const [pattern, bonus, memoryClass, description, instruction] of namespaceRules) {
+      await pool.query(
+        `INSERT INTO app.vector_namespace_rules (pattern, bonus, memory_class, description, instruction_template)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (pattern) DO NOTHING`,
+        [pattern, bonus, memoryClass, description, instruction]
+      );
+    }
+    console.log(`Bootstrap: ${namespaceRules.length} namespace rules ensured.`);
+
     // ── 7. Example agents ─────────────────────────────────────────────────
     if (installExampleAgents) {
       console.log('Bootstrap: Creating example agents...');
