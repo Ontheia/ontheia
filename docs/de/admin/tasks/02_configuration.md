@@ -58,5 +58,3 @@ Ein Wiederherstellen ist selbst eine Änderung und wird wie jede andere aufgezei
 **Was aufgezeichnet wird:** Nur der Task-Kontext, und nur wenn er sich tatsächlich geändert hat. Ein Speichern, das lediglich den Titel anpasst, erzeugt keinen Eintrag. Eine zuvor leere Fassung wird nicht abgelegt, weil an ihr nichts wiederherzustellen ist. Aufgezeichnet wird auf Datenbank-Ebene per Trigger, also unabhängig davon, ob die Änderung aus der Admin-Konsole, über die API oder direkt per `psql` kommt.
 
 **Erste Fassung:** Bei der Einführung wurde der jeweils aktuelle Wortlaut als Fassung 1 übernommen. Ohne diesen Schritt gäbe es bis zum zweiten Speichern nichts, worauf man zurückgehen könnte.
-
-> Vor dieser Funktion war ein Speichern in der Konsole endgültig — der vorherige Wortlaut war weg. Der übliche Behelf, jeden Prompt zusätzlich als `.md`-Datei unter `sources/prompts` zu pflegen, trägt nur so lange, wie niemand direkt in der Konsole editiert. Ein Abgleich aller Task-Prompts gegen ihre Dateien fand genau dadurch entstandene Abweichungen.

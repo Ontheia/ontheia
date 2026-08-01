@@ -58,5 +58,3 @@ A restore is itself a change and is recorded like any other — so it can be und
 **What gets recorded:** Only the task context, and only when it actually changed. A save that merely adjusts the title produces no entry. A previously empty version is not stored, because there is nothing in it to restore. Recording happens at the database level via a trigger, so it is independent of whether the change came from the admin console, the API, or directly from `psql`.
 
 **First version:** On introduction, each task's current wording was adopted as version 1. Without that step there would be nothing to fall back to until the second save.
-
-> Before this feature, saving in the console was final — the previous wording was gone. The usual workaround, keeping every prompt as an `.md` file under `sources/prompts` as well, holds only as long as nobody edits directly in the console. Comparing all task prompts against their files found drift caused in exactly that way.
