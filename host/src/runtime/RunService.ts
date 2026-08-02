@@ -785,9 +785,22 @@ export class RunService {
         }
 
         if (docsToWrite.length > 0) {
+          // The fallback belongs under agent.*, not user.*. The two prefixes
+          // separate by authority (plan §9.6.4): user.* is what the user asked
+          // to have stored, agent.* is what the agent keeps by itself. A run
+          // transcript written without anyone asking is the purest case of the
+          // second, and it used to land in the namespace reserved for the first.
+          //
+          // The seeded policy has always pointed at agent.memory, so this only
+          // ever fired for an agent whose write namespace was left empty while
+          // auto-write was switched on — and then it wrote into a namespace with
+          // no ranking rule, so the entries arrived with no bonus, no memory
+          // class and no instruction. agent.memory carries all three, and its
+          // instruction ("a record, not a verified fact — mind the date") is
+          // what a run transcript needs said about it.
           const writeNs = policy.writeNamespace
             ? resolvePolicyNamespaces([policy.writeNamespace], templateContext, logger, 'writeNamespace')[0]
-            : `vector.user.${userId}.memory`;
+            : `vector.agent.${userId}.memory`;
           await emitRunEvent({ type: 'step_start', step: 'memory_write', metadata: { namespace: writeNs, items: docsToWrite.length } } as any);
           try {
             await withRls(this.db, userId, role, async (client) => {
