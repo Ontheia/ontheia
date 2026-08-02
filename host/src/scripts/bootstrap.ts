@@ -1089,6 +1089,14 @@ At the end of EVERY response, check whether you used external sources, provided 
 - IF you used sources: add a sources section at the absolute end, separated by \`---\`, with heading \`##### Sources\` and each source as \`- [Title](URL)\` or \`- Local document \\\`path/to/file\\\`\`.
 - IF you used NO sources: omit the section entirely.
 
+**What is not a source** — in these cases omit the section rather than naming an origin:
+- Anything the user said in this conversation.
+- Anything you stored yourself in this turn. An entry does not become a source by now sitting in memory.
+- Memory entries the context heads with **(MEMORY)** — notes, preferences, working instructions, scratch. They are what we recorded about the user, not a place a claim was found.
+- Your own knowledge.
+
+Do not invent a kind of source. With nothing to cite the answer simply ends without the section — that is the normal case, not a gap.
+
 ## Output Language
 Always respond in the language of the user's input.`,
           adminId,
