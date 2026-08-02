@@ -997,14 +997,33 @@ export function ChatView({
   }, [memoryHitIdKey, memoryStatusNonce]);
 
   const memoryHits = useMemo(() => {
-    const autoHits = events
-      .filter((evt): evt is Extract<RunEvent, { type: 'memory_hits' }> => evt.type === 'memory_hits')
-      .flatMap((evt) => evt.hits as MemoryHit[]);
-    const toolHits = events
-      .filter((evt): evt is Extract<RunEvent, { type: 'tool_call' }> =>
-        evt.type === 'tool_call' && evt.tool === 'memory-search' && Array.isArray((evt.result as Record<string, unknown> | null)?.hits)
-      )
-      .flatMap((evt) => ((evt.result as { hits: MemoryHit[] })?.hits ?? []) as MemoryHit[]);
+    // A delegated step assembles its own context with its own top_k, and its
+    // hits are reported through the same event type as the main run's. Merged
+    // without the origin the list reads as one context when it was several —
+    // a hit that only a sub-agent ever saw is indistinguishable from one the
+    // main agent was given.
+    const originOf = (evt: RunEvent): string | null =>
+      (evt as { delegated?: boolean }).delegated
+        ? String((evt as { agentLabel?: unknown }).agentLabel ?? '').trim() || null
+        : null;
+
+    const tagged: { hit: MemoryHit; via: string | null }[] = [];
+    for (const evt of events) {
+      if (evt.type === 'memory_hits') {
+        for (const hit of evt.hits as MemoryHit[]) tagged.push({ hit, via: originOf(evt) });
+      }
+    }
+    for (const evt of events) {
+      if (
+        evt.type === 'tool_call' &&
+        evt.tool === 'memory-search' &&
+        Array.isArray((evt.result as Record<string, unknown> | null)?.hits)
+      ) {
+        for (const hit of ((evt.result as { hits: MemoryHit[] })?.hits ?? []) as MemoryHit[]) {
+          tagged.push({ hit, via: originOf(evt) });
+        }
+      }
+    }
 
     // One entry, one row. A run that injects a hit and then searches for it
     // again returns the same id twice with two different relevance values —
@@ -1015,16 +1034,30 @@ export function ChatView({
     // First occurrence wins, order kept. The injected hit leads because it is
     // the one that actually stood in the context block; keeping the higher
     // relevance instead would suggest the entry scored that in one retrieval.
+    // The origins are the exception: a repeat is dropped as a row but its
+    // origin is folded into the row that survives, because "who saw this" is
+    // the one thing that genuinely differs between the copies.
+    //
     // Hits without an id pass through untouched — what has no identity cannot
     // be recognised as a repeat.
-    const seen = new Set<string>();
-    return [...autoHits, ...toolHits].filter((hit) => {
+    const byId = new Map<string, MemoryHit & { mainRun: boolean; viaAgents: string[] }>();
+    const out: (MemoryHit & { mainRun: boolean; viaAgents: string[] })[] = [];
+    for (const { hit, via } of tagged) {
       const id = (hit as { id?: unknown })?.id;
-      if (typeof id !== 'string' || id.length === 0) return true;
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
+      const known = typeof id === 'string' && id.length > 0 ? byId.get(id) : undefined;
+      if (known) {
+        if (via) {
+          if (!known.viaAgents.includes(via)) known.viaAgents.push(via);
+        } else {
+          known.mainRun = true;
+        }
+        continue;
+      }
+      const row = { ...hit, mainRun: !via, viaAgents: via ? [via] : [] };
+      if (typeof id === 'string' && id.length > 0) byId.set(id, row);
+      out.push(row);
+    }
+    return out;
   }, [events]);
   const taskOptions = useMemo(
     () =>
@@ -1175,7 +1208,9 @@ export function ChatView({
         id,
         source,
         snippet,
-        timestamp
+        timestamp,
+        viaAgents: hit.viaAgents,
+        mainRun: hit.mainRun
       };
     });
     if (typeof window !== 'undefined') {

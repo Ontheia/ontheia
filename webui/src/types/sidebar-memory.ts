@@ -25,4 +25,12 @@ export type SidebarMemoryHit = {
   source?: string | null;
   snippet?: string | null;
   timestamp?: string | null;
+  /**
+   * Delegated agents whose context held this hit. Empty for the ordinary case
+   * — the main run — so the label marks the exception rather than every row.
+   * A hit the main run never saw carries only these names.
+   */
+  viaAgents?: string[];
+  /** Whether the main run's own context held it. */
+  mainRun?: boolean;
 };

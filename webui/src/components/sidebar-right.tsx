@@ -379,6 +379,14 @@ export function SidebarRight({ className }: { className?: string }) {
                   </p>
                   <div className="memory-hit-meta text-[0.75rem] font-medium text-cyan-400/60 break-all leading-tight">
                     <span>{hit.source}</span>
+                    {/* Only delegated origins are named: the main run is the
+                        ordinary case and labelling it everywhere would drown
+                        the exception it exists to mark. */}
+                    {Array.isArray(hit.viaAgents) && hit.viaAgents.length > 0 && (
+                      <span className="memory-hit-origin">
+                        {hit.mainRun ? '+ ' : ''}{hit.viaAgents.join(', ')}
+                      </span>
+                    )}
                   </div>
                 </li>
               ))}

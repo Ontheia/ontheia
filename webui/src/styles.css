@@ -5378,6 +5378,21 @@ textarea.app-input {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* The delegated origin of a memory hit. Set apart from the namespace it
+   follows rather than styled like it: they answer different questions —
+   where the entry lives, and whose context it was in. */
+.trace-item-origin,
+.memory-hit-origin {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgba(196, 181, 253, 0.85);
+  background: rgba(139, 92, 246, 0.16);
+}
+
 .trace-item-body.snippet {
   font-size: 0.8rem;
   color: rgba(203, 213, 225, 0.8);

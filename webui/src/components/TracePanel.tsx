@@ -177,7 +177,18 @@ export function TracePanel({ memoryHits, toolCalls, events, timezone, className 
                       return (
                         <div key={i} className="trace-item-modern">
                           <div className="trace-item-header">
-                            <span className="trace-item-title">{hit.namespace}</span>
+                            <span className="trace-item-title">
+                              {hit.namespace}
+                              {/* A delegated step builds its own context with its
+                                  own top_k. Without this the merged list reads as
+                                  one context when it was several. Silent for the
+                                  ordinary case so the label means something. */}
+                              {Array.isArray(hit.viaAgents) && hit.viaAgents.length > 0 && (
+                                <span className="trace-item-origin" title={t('memoryOriginTitle')}>
+                                  {hit.mainRun ? '+ ' : ''}{hit.viaAgents.join(', ')}
+                                </span>
+                              )}
+                            </span>
                             {/* Both, because they differ once a bonus applies —
                                 and relevance is the one that can exceed 1. */}
                             <span className="trace-item-meta" title={t('relevanceTitle')}>
