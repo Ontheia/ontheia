@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
+import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext, describeConfirmation } from './prompt-utils.js';
 import type { ChatMessage } from './types.js';
 
 const ctx = { current_date: 'Samstag, 13. Juni 2026', current_time: '13:34' } as any;
@@ -167,6 +167,68 @@ test('formatMemoryContext tolerates a missing createdAt', () => {
   // Not "Stored on Unknown" — a storage date we do not have is better stated
   // as unknown than as a date-shaped placeholder.
   assert.match(out, /Date unknown/);
+});
+
+// --- the confirmation marker -------------------------------------------------
+
+const confirmedHit = (status: string, statusChangedAt?: string) =>
+  ({
+    namespace: 'vector.agent.u1.preferences',
+    content: 'Mag Orangensaft',
+    createdAt: '2026-07-21T10:00:00Z',
+    statusChangedAt,
+    status,
+    metadata: {},
+    relevance: 0.5
+  }) as any;
+
+test('describeConfirmation stays silent for every state but confirmed', () => {
+  // unconfirmed is where an entry starts — "maturity not established", not a
+  // denial. Printing it on nearly every hit would spend tokens saying nothing
+  // and wear the caveat out.
+  assert.equal(describeConfirmation(confirmedHit('unconfirmed')), null);
+  assert.equal(describeConfirmation(confirmedHit('superseded')), null);
+  assert.equal(describeConfirmation({ namespace: 'n', content: 'c' } as any), null);
+});
+
+test('describeConfirmation omits a same-day date, keeps a later one', () => {
+  assert.equal(
+    describeConfirmation(confirmedHit('confirmed', '2026-07-21T18:00:00Z')),
+    'confirmed by the user'
+  );
+  assert.equal(
+    describeConfirmation(confirmedHit('confirmed', '2026-08-01T18:00:00Z')),
+    'confirmed by the user on 8/1/2026'
+  );
+});
+
+test('describeConfirmation survives a confirmed entry without a change date', () => {
+  assert.equal(describeConfirmation(confirmedHit('confirmed')), 'confirmed by the user');
+});
+
+test('formatMemoryContext puts the marker in the header, between date and namespace', () => {
+  const out = formatMemoryContext([confirmedHit('confirmed', '2026-08-01T18:00:00Z')]);
+  assert.match(
+    out,
+    /^--- MEMORY ENTRY \(Stored on 7\/21\/2026, confirmed by the user on 8\/1\/2026, Namespace: vector\.agent\.u1\.preferences\) ---\nMag Orangensaft$/
+  );
+});
+
+test('formatMemoryContext leaves the header untouched for an unconfirmed entry', () => {
+  const out = formatMemoryContext([confirmedHit('unconfirmed')]);
+  assert.match(
+    out,
+    /^--- MEMORY ENTRY \(Stored on 7\/21\/2026, Namespace: vector\.agent\.u1\.preferences\) ---\nMag Orangensaft$/
+  );
+});
+
+test('appendMemoryContext explains what an unmarked entry means', () => {
+  // The marker is only readable if absence has a stated meaning. Saying it once
+  // in the note is cheaper than a per-entry "unconfirmed".
+  const messages: ChatMessage[] = [{ role: 'user', content: 'Frage' }];
+  appendMemoryContext(messages, '--- MEMORY ENTRY (Stored on 7/21/2026) ---\nX');
+  assert.match(String(messages[0].content), /confirmed by the user/);
+  assert.match(String(messages[0].content), /nobody has checked/);
 });
 
 test('formatMemoryContext prefers observed_at over the storage date', () => {

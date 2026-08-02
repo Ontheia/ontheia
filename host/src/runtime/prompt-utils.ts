@@ -171,6 +171,34 @@ export function describeDates(hit: MemoryHit): string {
 }
 
 /**
+ * The confirmation marker, or null when there is nothing to say.
+ *
+ * Only `confirmed` is emitted. `unconfirmed` is the state every entry starts
+ * in — "maturity not established", not a denial — so printing it would spend
+ * tokens on nearly every hit to say nothing, and a caveat that appears
+ * everywhere stops being read as one. Absence of the marker is the default,
+ * and the note in appendMemoryContext says so once instead of per entry.
+ *
+ * `superseded` never reaches this code: the search gates on
+ * `superseded_by IS NULL`. It is excluded here as well rather than relied upon,
+ * because a caller that assembles a block from elsewhere would otherwise print
+ * a lifecycle state where a maturity state belongs.
+ *
+ * The date follows the economy of describeDates: it is emitted only when the
+ * confirmation happened on a different day than the entry was stored. A
+ * confirmation on the day of writing carries no information the header does not
+ * already have.
+ */
+export function describeConfirmation(hit: MemoryHit): string | null {
+  if (hit.status !== 'confirmed') return null;
+  const changed = asDay(hit.statusChangedAt);
+  const created = asDay(hit.createdAt);
+  return changed && changed !== created
+    ? `confirmed by the user on ${changed}`
+    : 'confirmed by the user';
+}
+
+/**
  * Renders retrieved memory hits into the block that goes to the model.
  *
  * Hits that share a namespace rule are grouped, and the rule's instruction
@@ -196,7 +224,10 @@ export function formatMemoryContext(
   const groups = new Map<string, string[]>();
   for (const hit of hits) {
     const instruction = resolveInstruction?.(hit.namespace) ?? '';
-    const entry = `--- MEMORY ENTRY (${describeDates(hit)}, Namespace: ${hit.namespace}) ---\n${hit.content}`;
+    const header = [describeDates(hit), describeConfirmation(hit), `Namespace: ${hit.namespace}`]
+      .filter(Boolean)
+      .join(', ');
+    const entry = `--- MEMORY ENTRY (${header}) ---\n${hit.content}`;
     const bucket = groups.get(instruction);
     if (bucket) bucket.push(entry);
     else groups.set(instruction, [entry]);
@@ -226,7 +257,7 @@ export function appendMemoryContext(messages: ChatMessage[], memoryContextText?:
   if (!memoryContextText) return;
   appendToLastUserMessage(
     messages,
-    `RELEVANT CONTEXT FROM LONG-TERM MEMORY:\n${memoryContextText}\n\nNOTE: Only use this information if it is relevant to the current request. Pay attention to the storage date!`
+    `RELEVANT CONTEXT FROM LONG-TERM MEMORY:\n${memoryContextText}\n\nNOTE: Only use this information if it is relevant to the current request. Pay attention to the storage date! An entry marked "confirmed by the user" was verified by them; the others are records nobody has checked since they were written.`
   );
 }
 
