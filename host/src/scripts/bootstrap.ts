@@ -536,9 +536,26 @@ async function main() {
 
       // Memory policy — applied to both agents regardless of embedding state.
       // Placeholders (${user_id}) are resolved at runtime by the memory adapter.
-      // Namespaces are tool-only (searchable via memory-search, never
-      // auto-injected) so runs don't pull in hits from all of vector.global.*.
+      //
+      // The two read lists are deliberately identical. They were not: only the
+      // tool list was set, so auto-injection fell back to the built-in default
+      // (agent.memory, user.memory, plus the session and chat namespaces) and
+      // the corpus was reachable only if the model decided to search for it.
+      // That decision is not reliable — asked how to make a syrup the user has
+      // a recipe for, a model answered from its own knowledge and invented one,
+      // with the recipes skill loaded and its "search first" SOP in context.
+      // Auto-injection takes the decision away instead of restating it.
+      //
+      // What made this affordable is the relative cutoff: hits more than 30 %
+      // below the best one are dropped, so a corpus row only reaches the
+      // context when it competes with the strongest hit rather than merely
+      // clearing the floor.
       const agentMemoryPolicy = JSON.stringify({
+        read_namespaces: [
+          'vector.user.${user_id}.*',
+          'vector.agent.${user_id}.*',
+          'vector.global.*',
+        ],
         tool_read_namespaces: [
           'vector.user.${user_id}.*',
           'vector.agent.${user_id}.*',
