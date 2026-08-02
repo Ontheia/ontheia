@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BadgeCheck } from 'lucide-react';
 import { setMemoryStatus, type MemoryStatusEntry } from '../lib/api';
@@ -74,6 +74,13 @@ export function MemoryConfirmButton({ hits, messageId, timezone, overrides }: Pr
   const [open, setOpen] = useState(false);
   const [states, setStates] = useState<Record<string, EntryState>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // Which way the list opens, and how tall it may get. Fixed upwards it was cut
+  // off for the first message of a chat: the scroll is already at the top, so
+  // there is nothing above to reveal, while below there is the whole chat.
+  const [placement, setPlacement] = useState<{ side: 'up' | 'down'; maxHeight: number }>({
+    side: 'up',
+    maxHeight: 0
+  });
 
   // Deduplicated because the same entry can be injected and then returned by a
   // memory-search in the same run. Entries the lookup reports as superseded or
@@ -106,6 +113,30 @@ export function MemoryConfirmButton({ hits, messageId, timezone, overrides }: Pr
       return next;
     });
   }, [entries, overrides]);
+
+  // Measured when the list opens, and again while it is open, because the chat
+  // scrolls and a streaming answer moves the button under it. The side with
+  // more room wins; the height is capped to what that side actually has, so a
+  // long list scrolls inside itself instead of running off the screen.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const GAP = 12;
+      const above = rect.top - GAP;
+      const below = window.innerHeight - rect.bottom - GAP;
+      const side = below > above ? 'down' : 'up';
+      setPlacement({ side, maxHeight: Math.max(120, Math.floor(side === 'down' ? below : above)) });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -190,7 +221,12 @@ export function MemoryConfirmButton({ hits, messageId, timezone, overrides }: Pr
       </button>
 
       {open && (
-        <div className="memory-confirm-popover" role="dialog" aria-label={t('confirmMemoryTitle')}>
+        <div
+          className={`memory-confirm-popover is-${placement.side}`}
+          role="dialog"
+          aria-label={t('confirmMemoryTitle')}
+          style={placement.maxHeight > 0 ? { maxHeight: `${placement.maxHeight}px` } : undefined}
+        >
           <div className="memory-confirm-popover-head">
             <strong>{t('confirmMemoryTitle')}</strong>
             <span>{t('confirmMemoryHint')}</span>

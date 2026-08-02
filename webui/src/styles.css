@@ -705,8 +705,14 @@
   gap: 0.35rem;
 }
 
+/* Always visible, unlike copy and delete beside it. Those exist for every
+   message, so hover-gating them keeps the bar quiet. This one is rendered only
+   when there is something to confirm — its presence is the information, and
+   hiding it meant the offer was only findable by hovering a message you had no
+   reason to suspect. It was already exempt once confirmed; that exemption now
+   covers the state where the click still matters. */
 .message-subconfirm {
-  opacity: 0;
+  opacity: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -715,17 +721,17 @@
   height: 24px;
   padding: 0 0.35rem;
   border-radius: 0.65rem;
-  border: 1px solid transparent;
+  border: 1px solid rgba(148, 163, 184, 0.22);
   background: transparent;
-  color: rgba(241, 245, 249, 0.95);
+  color: rgba(241, 245, 249, 0.8);
   cursor: pointer;
   transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .message-container:hover .message-subconfirm,
-.message-subconfirm:focus-visible,
-.message-subconfirm.is-confirmed {
-  opacity: 1;
+.message-subconfirm:focus-visible {
+  color: rgba(241, 245, 249, 0.95);
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
 .message-subconfirm:hover {
@@ -754,9 +760,13 @@
   white-space: nowrap;
 }
 
+/* The side is decided when the list opens, by whichever direction has more
+   room — anchored upwards it was cut off for the first message of a chat,
+   where the scroll is already at the top and there is nothing above to
+   reveal. The height comes from the same measurement, so a long list scrolls
+   inside itself rather than off the screen. */
 .memory-confirm-popover {
   position: absolute;
-  bottom: calc(100% + 0.4rem);
   left: 0;
   z-index: 40;
   width: min(30rem, 70vw);
@@ -766,6 +776,25 @@
   background: #0f172a;
   box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.memory-confirm-popover.is-up {
+  bottom: calc(100% + 0.4rem);
+}
+
+.memory-confirm-popover.is-down {
+  top: calc(100% + 0.4rem);
+}
+
+/* Only the entries scroll. The heading stays put, because it names what the
+   click is about and losing it mid-scroll is how the wrong entry gets
+   confirmed. */
+.memory-confirm-popover .memory-confirm-list {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .memory-confirm-popover-head {
