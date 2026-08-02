@@ -1005,7 +1005,26 @@ export function ChatView({
         evt.type === 'tool_call' && evt.tool === 'memory-search' && Array.isArray((evt.result as Record<string, unknown> | null)?.hits)
       )
       .flatMap((evt) => ((evt.result as { hits: MemoryHit[] })?.hits ?? []) as MemoryHit[]);
-    return [...autoHits, ...toolHits];
+
+    // One entry, one row. A run that injects a hit and then searches for it
+    // again returns the same id twice with two different relevance values —
+    // they come from two different queries, so the entry looks like two.
+    // The sidebar keys its list on hit.id, which made those duplicate React
+    // keys, and it shows only the first four, so a repeat cost a slot.
+    //
+    // First occurrence wins, order kept. The injected hit leads because it is
+    // the one that actually stood in the context block; keeping the higher
+    // relevance instead would suggest the entry scored that in one retrieval.
+    // Hits without an id pass through untouched — what has no identity cannot
+    // be recognised as a repeat.
+    const seen = new Set<string>();
+    return [...autoHits, ...toolHits].filter((hit) => {
+      const id = (hit as { id?: unknown })?.id;
+      if (typeof id !== 'string' || id.length === 0) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }, [events]);
   const taskOptions = useMemo(
     () =>
