@@ -214,6 +214,13 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
         aria-hidden="true"
       >
         <div className="message-subactions">
+          {/* First, ahead of copy and delete. Those two are always there and
+              always the same; this one appears only when the answer rests on
+              something that can be confirmed, and it is the only control here
+              that changes what the agent will do next. */}
+          {normalizedRole === 'agent' && memoryHits.length > 0 && (
+            <MemoryConfirmButton hits={memoryHits} messageId={id} timezone={timezone} overrides={memoryStatuses} />
+          )}
           <button
             type="button"
             className="message-subcopy"
@@ -231,9 +238,6 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
             >
               <Trash2 width={14} height={14} aria-hidden="true" />
             </button>
-          )}
-          {normalizedRole === 'agent' && memoryHits.length > 0 && (
-            <MemoryConfirmButton hits={memoryHits} messageId={id} timezone={timezone} overrides={memoryStatuses} />
           )}
           {formattedTime && (
             <div className="message-timestamp">
