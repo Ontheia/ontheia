@@ -739,7 +739,15 @@
   border-color: rgba(52, 211, 153, 0.4);
 }
 
-.message-subconfirm.is-confirmed {
+/* Green survives hover and focus. The colour here is state — an entry has been
+   confirmed — not emphasis, and losing it on hover made the button look
+   unconfirmed exactly while it was being pointed at. Spelled out for all three
+   cases because `.message-container:hover .message-subconfirm` carries one
+   more class than a plain `.is-confirmed` and would otherwise outrank it
+   whatever the order in this file. */
+.message-subconfirm.is-confirmed,
+.message-container:hover .message-subconfirm.is-confirmed,
+.message-subconfirm.is-confirmed:focus-visible {
   color: #34d399;
 }
 
