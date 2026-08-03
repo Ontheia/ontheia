@@ -186,7 +186,13 @@ async function main() {
       { slug: 'openai',    label: 'OpenAI',         url: 'https://api.openai.com/v1',                                    auth: 'bearer', key: 'OPENAI_API_KEY',    header: null,        active: process.env.HAS_OPENAI_KEY    === 'true', testModel: null,                testMethod: 'GET',  testPath: null         },
       { slug: 'anthropic', label: 'Anthropic',      url: 'https://api.anthropic.com/v1',                                 auth: 'header', key: 'ANTHROPIC_API_KEY', header: 'x-api-key', active: process.env.HAS_ANTHROPIC_KEY === 'true', testModel: 'claude-sonnet-5', testMethod: 'POST', testPath: '/v1/messages' },
       { slug: 'xai',       label: 'xAI (Grok)',     url: 'https://api.x.ai/v1',                                         auth: 'bearer', key: 'XAI_API_KEY',       header: null,        active: process.env.HAS_XAI_KEY       === 'true', testModel: null,                testMethod: 'GET',  testPath: null         },
-      { slug: 'google',    label: 'Google',          url: 'https://generativelanguage.googleapis.com/v1beta/openai/',    auth: 'bearer', key: 'GOOGLE_API_KEY',    header: null,        active: process.env.HAS_GOOGLE_KEY    === 'true', testModel: 'gemini-3.5-flash',  testMethod: 'POST', testPath: null         },
+      // Google is the only base URL here that ends in a slash, and that decides
+      // how the default test path resolves against it. `/v1/chat/completions`
+      // against `…/v1` (no slash) replaces the version segment and lands right;
+      // against `…/v1beta/openai/` it appends, giving `…/openai/v1/chat/
+      // completions` — a 404 no key can fix. Spelled out here rather than
+      // changing the shared default, which the three others depend on.
+      { slug: 'google',    label: 'Google',          url: 'https://generativelanguage.googleapis.com/v1beta/openai/',    auth: 'bearer', key: 'GOOGLE_API_KEY',    header: null,        active: process.env.HAS_GOOGLE_KEY    === 'true', testModel: 'gemini-3.1-flash-lite', testMethod: 'POST', testPath: '/chat/completions' },
     ];
 
     for (const p of providers) {
@@ -258,7 +264,9 @@ async function main() {
       models.push({ pid: xaiPid, key: 'grok-build-0.1',                  label: 'Grok Build 0.1', meta: REASONING_RESPONSES });
     }
     if (googlePid) {
-      models.push({ pid: googlePid, key: 'gemini-3.5-flash',             label: 'Gemini 3.5 Flash' });
+      // Only the lite model. gemini-3.5-flash was seeded here too and is not
+      // reachable over the OpenAI-compatible endpoint — verified on a fresh
+      // install: the connection check fails on it even with the right path.
       models.push({ pid: googlePid, key: 'gemini-3.1-flash-lite',        label: 'Gemini 3.1 Flash Lite' });
     }
     // Known Ollama embedding model → vector dimension mapping.
@@ -332,7 +340,7 @@ async function main() {
         firstActiveSlug === 'openai'    ? 'gpt-5.6-terra' :
         firstActiveSlug === 'anthropic' ? 'claude-sonnet-5' :
         firstActiveSlug === 'xai'       ? 'grok-4.5' :
-        firstActiveSlug === 'google'    ? 'gemini-3.5-flash' :
+        firstActiveSlug === 'google'    ? 'gemini-3.1-flash-lite' :
         (ollamaChatModel || null);  // null if no chat model selected for Ollama
       if (builderModel) {
         await pool.query(
