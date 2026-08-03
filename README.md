@@ -1,10 +1,10 @@
-# Ontheia
+# Ontheia — the self-hosted AI agent platform
 
 **Your Data. Your AI. Your Rules.**
 
 Every time AI work runs on someone else's infrastructure, you give up more than privacy. You give up control over data, tools, workflows, and the rules that govern how work gets done.
 
-**Ontheia** is a self-hosted, open-source AI agent platform for work that stays under your control. It keeps AI capable and connected — within boundaries you set.
+**Ontheia** gives them back. It is open source, and it keeps AI capable and connected — within boundaries you set.
 
 Most AI setups stay fragmented: separate chats, tools, scripts, and automations with no shared memory, no continuity, and no operational boundaries. Ontheia brings specialized agents, tools, memory, scheduling, and delegation into one governed work context — on your own infrastructure.
 
