@@ -5,45 +5,49 @@
 -- are read from app.vector_namespace_rules — and that table starts empty. A
 -- fresh install got the rules from bootstrap.ts, but bootstrap does not run on
 -- update: update.sh calls it with --skills-only, deliberately, so that a tuned
--- configuration is never overwritten.
+-- configuration is never overwritten. The rules rode along in the part that is
+-- skipped on purpose.
 --
 -- The consequence went unnoticed until 0.6.0 was tested on an existing
 -- installation: the columns arrived, the configuration did not. Every entry
 -- written after the update carried no class, no bonus and no framing, because
--- resolveClassForNamespace found nothing to match. The headline feature of the
--- release reached only new installations.
+-- resolveClassForNamespace found nothing to match.
 --
 -- A migration is the right home because it runs on both paths. ON CONFLICT DO
 -- NOTHING keeps it additive: an installation that has edited its rules, or
--- deleted one on purpose, is left alone. bootstrap.ts no longer seeds them —
--- one source, not two that can drift.
+-- deleted one on purpose, is left alone.
 --
--- The `${user_id}` in a pattern is literal text. The adapter substitutes it per
--- request; it is not a SQL placeholder.
+-- ⚠️ chr(36) builds the dollar sign of the user-id placeholder that five of
+-- these patterns contain. Flyway substitutes dollar-brace expressions anywhere
+-- in a migration file — comments included — and aborts when it has no value for
+-- one. Writing the placeholder literally here made this migration unparseable,
+-- which is why the sign is assembled instead of typed. V57 relies on that
+-- substitution for the app password, so it cannot simply be switched off.
+-- The adapter resolves the placeholder per request; it is not SQL.
 
 INSERT INTO app.vector_namespace_rules (pattern, bonus, memory_class, description, instruction_template)
 VALUES
-  ($rule$vector.agent.${user_id}.preferences$rule$,
+  ('vector.agent.' || chr(36) || '{user_id}.preferences',
    0.09,
    NULL,
    $rule$Preferences, facts and standing instructions about the user.$rule$,
    $rule$ABOUT THE USER (MEMORY): Preferences, facts and standing instructions about this person, kept from earlier conversations. Let them shape your answer; where a current instruction contradicts them, the current one wins: {{content}}$rule$),
-  ($rule$vector.agent.${user_id}.howto$rule$,
+  ('vector.agent.' || chr(36) || '{user_id}.howto',
    0.06,
    $rule$procedural$rule$,
    $rule$Procedural knowledge: how you carry out a task for this user.$rule$,
    $rule$WORKING INSTRUCTION (MEMORY): A way of doing something recorded for this user. Follow it as long as it fits the task; where the situation differs, say so instead of stretching the instruction: {{content}}$rule$),
-  ($rule$vector.agent.${user_id}.memory$rule$,
+  ('vector.agent.' || chr(36) || '{user_id}.memory',
    0.03,
    $rule$episodic$rule$,
    $rule$Observations from earlier conversations, each with a point in time.$rule$,
    $rule$CONVERSATION NOTE (MEMORY): Recorded in an earlier conversation — a record, not a verified fact. Mind the date given; the situation may have changed since: {{content}}$rule$),
-  ($rule$vector.user.${user_id}.ideas$rule$,
+  ('vector.user.' || chr(36) || '{user_id}.ideas',
    0.03,
    NULL,
    $rule$Thoughts that assert nothing: ideas, drafts, the undecided. No class fits.$rule$,
    $rule$THOUGHT (MEMORY): An idea, a draft, something not yet decided — neither fact nor rule. Present it as a consideration rather than as settled, and do not derive anything from it the user has not decided: {{content}}$rule$),
-  ($rule$vector.user.${user_id}.archive$rule$,
+  ('vector.user.' || chr(36) || '{user_id}.archive',
    0,
    $rule$document$rule$,
    $rule$Strictly personal documents. A place to file things, not a memory.$rule$,
