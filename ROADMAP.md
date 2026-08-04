@@ -20,7 +20,7 @@ Building on the v0.5.x feature base. Shipped with 0.6.0:
 
 Breaking changes in 0.6.0:
 
-- **Tool search reads `tool_read_namespaces` only** — the memory-search tool no longer falls back on `read_namespaces`, which now feeds automatic injection and nothing else. An agent whose namespaces are listed only under "Read" finds nothing by tool until they are added under "Tool-only read"; `update.sh` says so on arrival.
+- **Tool search reads `tool_read_namespaces` only** — the memory-search tool no longer falls back on `read_namespaces`, which now feeds automatic injection and nothing else. An agent whose namespaces are listed only under "Read" finds nothing by tool until they are added under "Tool-only read" — and nothing anywhere reports an error, so this is the one to check after updating.
 - **`hit.score` is gone** — search results, run events and the memory-search tool result carry `similarity` (what the vector search measured) and `relevance` (what it became after weighting) instead. The single field destroyed the raw similarity and could exceed 1 while still being called a score.
 - **`ranking.priorities` removed from the embedding config** — namespace weighting comes from the namespace rules alone. Both sources used to add into the same multiplier, with nothing anywhere indicating that two had contributed.
 - **Namespace segments are no longer rewritten** — a character that would merge two distinct ids, or add a namespace level, is refused rather than replaced. Trimming and lower-casing remain, since neither can merge anything that was distinct.
