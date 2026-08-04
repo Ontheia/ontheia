@@ -569,8 +569,20 @@ async function main() {
           'vector.agent.${user_id}.*',
           'vector.global.*',
         ],
+        // Auto-write stores every run's input and output as memory entries.
+        // Measured on a fresh install after one onboarding session: 16 of 26
+        // entries were the transcript, against one the agent had deliberately
+        // saved — and two of them already occupied slots among the ten hits
+        // injected into the next run. The agent was reading its own answers
+        // from three minutes earlier back as memory, verbatim.
+        //
+        // It is the only setting here that grows without anyone asking it to,
+        // and its benefit is unclear: what deserves keeping, the agent is told
+        // to write through the tool, and that path is untouched by this.
+        // write_namespace stays set so that switching it on later lands in the
+        // namespace with a rule rather than in the fallback.
         write_namespace:  'vector.agent.${user_id}.memory',
-        allow_write:      true,
+        allow_write:      false,
         allowed_write_namespaces: [
           'vector.user.${user_id}.*',
           'vector.agent.${user_id}.*',
