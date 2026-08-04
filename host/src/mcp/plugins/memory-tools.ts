@@ -99,6 +99,16 @@ export function buildMemoryToolSpecs(options?: {
             items: { type: 'string' },
             description:
               'Optional list of namespaces. Omit (or pass an empty list) to search everything your policy allows, including shared and global sources such as ingested manuals and documentation. Narrow it only when you already know where the answer lives.'
+          },
+          // Only tags, not arbitrary metadata: the generic containment filter
+          // would invite guessing at key names, and the reserved ones are
+          // system-assigned. A tag is what a skill writes itself and finds
+          // again — small surface, one purpose.
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Optional. Keeps only entries carrying EVERY tag listed — an exact match, not a semantic one, so a typo returns nothing at all. Use it for markers you wrote yourself (e.g. "project:ontheia"), never to guess. Combine it with query "*" to list a namespace by recency instead of searching it.'
           }
         },
         required: ['query']

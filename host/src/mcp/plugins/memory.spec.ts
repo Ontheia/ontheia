@@ -156,3 +156,83 @@ test('handleMemorySearch: contacts weder in read_namespaces noch tool_read_names
   assert.equal(result.namespaces.length, 0, 'keine autorisierten Namespaces');
   assert.ok(typeof result.message === 'string' && result.message.length > 0, 'Fehlermeldung vorhanden');
 });
+
+// ── Tag-Filter ───────────────────────────────────────────────────────────────
+// Der Adapter nimmt Metadatenfilter, seit er geschrieben wurde; durchgereicht
+// hat sie nie jemand — während memory-write seine Tags von Anfang an als "for
+// filtering" beschreibt. Diese Tests halten den Durchreicher fest.
+
+function makeCapturingAdapter(hits: any[] = [FAKE_HIT]) {
+  const seen: any[] = [];
+  return {
+    seen,
+    search: async (_namespaces: string[], opts: any, _client?: any) => {
+      seen.push(opts);
+      return hits;
+    }
+  };
+}
+
+test('handleMemorySearch: tags werden als Filter an den Adapter gereicht', async () => {
+  const db = makeDb({ tool_read_namespaces: ['contacts'] });
+  const adapter = makeCapturingAdapter();
+
+  await handleMemorySearch(
+    db as any,
+    adapter as any,
+    { query: 'Max', namespaces: ['contacts'], tags: ['projekt:ontheia', 'bereich:webui'] },
+    { run: { agent_id: 'agent-1', task_id: undefined as any, options: {} } }
+  );
+
+  assert.deepEqual(adapter.seen[0].filters, { tags: ['projekt:ontheia', 'bereich:webui'] });
+});
+
+test('handleMemorySearch: leere oder blanke Tags erzeugen keinen Filter', async () => {
+  const db = makeDb({ tool_read_namespaces: ['contacts'] });
+
+  for (const tags of [[], ['', '   '], undefined]) {
+    const adapter = makeCapturingAdapter();
+    await handleMemorySearch(
+      db as any,
+      adapter as any,
+      { query: 'Max', namespaces: ['contacts'], tags } as any,
+      { run: { agent_id: 'agent-1', task_id: undefined as any, options: {} } }
+    );
+    // undefined statt { tags: [] }: ein leeres Containment-Array trifft je nach
+    // Lesart alles oder nichts — die Frage darf gar nicht erst entstehen.
+    assert.equal(adapter.seen[0].filters, undefined, `tags=${JSON.stringify(tags)}`);
+  }
+});
+
+test('handleMemorySearch: null Treffer mit Filter sagt, dass der Namespace nicht leer sein muss', async () => {
+  const db = makeDb({ tool_read_namespaces: ['contacts'] });
+  const adapter = makeCapturingAdapter([]);
+
+  const result: any = await handleMemorySearch(
+    db as any,
+    adapter as any,
+    { query: 'Max', namespaces: ['contacts'], tags: ['projekt:tippfehler'] },
+    { run: { agent_id: 'agent-1', task_id: undefined as any, options: {} } }
+  );
+
+  // Ein Filter, der nichts trifft, sieht aus wie ein leeres Gedächtnis. Ohne
+  // diesen Hinweis schließt ein Modell aus einem vertippten Marker, es sei
+  // nichts gespeichert — genau der Fehler, vor dem die query-Beschreibung warnt.
+  assert.deepEqual(result.filtered_by, { tags: ['projekt:tippfehler'] });
+  assert.match(result.message, /not mean the namespace is empty/);
+});
+
+test('handleMemorySearch: null Treffer ohne Filter bleibt ohne Zusatzmeldung', async () => {
+  const db = makeDb({ tool_read_namespaces: ['contacts'] });
+  const adapter = makeCapturingAdapter([]);
+
+  const result: any = await handleMemorySearch(
+    db as any,
+    adapter as any,
+    { query: 'Max', namespaces: ['contacts'] },
+    { run: { agent_id: 'agent-1', task_id: undefined as any, options: {} } }
+  );
+
+  assert.equal(result.filtered_by, undefined);
+  assert.equal(result.message, undefined);
+});

@@ -45,7 +45,7 @@ import { loadMemoryPolicy } from '../../routes/policy-utils.js';
  * never declared is one no model will ever send.
  */
 export const MEMORY_TOOL_HANDLED_ARGS: Record<string, readonly string[]> = {
-  'memory-search': ['query', 'namespaces', 'top_k'],
+  'memory-search': ['query', 'namespaces', 'top_k', 'tags'],
   'memory-write': ['content', 'namespace', 'tags', 'ttl_seconds', 'observed_at', 'supersedes', 'class'],
   'memory-delete': ['id', 'content', 'namespace']
 };
@@ -73,7 +73,7 @@ function resolveAll(templates: string[], ctx: Record<string, string | undefined>
 export async function handleMemorySearch(
   db: Pool | PoolClient,
   memoryAdapter: MemoryAdapter, 
-  args: { query: string; namespaces?: string[]; top_k?: number },
+  args: { query: string; namespaces?: string[]; top_k?: number; tags?: string[] },
   context?: { run?: Pick<RunRequest, 'agent_id' | 'task_id' | 'options'>; db?: Pool | PoolClient }
 ) {
   if (!args?.query || typeof args.query !== 'string') {
@@ -148,9 +148,19 @@ export async function handleMemorySearch(
   const defaultTopK = typeof policy.topK === 'number' ? policy.topK : 5;
   const requestedTopK = typeof args.top_k === 'number' ? args.top_k : defaultTopK;
 
+  // The adapter has taken metadata filters since it was written and nothing
+  // ever passed one — while memory-write has always advertised its tags as
+  // being "for filtering". Only tags are forwarded, and only when non-empty:
+  // an empty array must not turn into a filter that matches everything or
+  // nothing depending on how jsonb containment reads it.
+  const requestedTags = Array.isArray(args.tags)
+    ? args.tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+    : [];
+
   const hits = await memoryAdapter.search(namespaces, {
     topK: requestedTopK,
-    query: args.query
+    query: args.query,
+    filters: requestedTags.length > 0 ? { tags: requestedTags } : undefined
   }, dbClient as PoolClient);
 
   if (hits.length === 0) {
@@ -172,6 +182,22 @@ export async function handleMemorySearch(
         detail: { tool_call: true, query: args.query, hit_count: hits.filter(h => h.namespace === ns).length }
       }, dbClient as PoolClient);
     }
+  }
+
+  // A filter that matches nothing looks exactly like an empty memory, and the
+  // model cannot tell them apart from the result alone. One mistyped marker
+  // and it concludes nothing is stored — the failure the query description
+  // already warns about, now reachable through a second door. Saying it in the
+  // answer beats hoping the instruction is remembered.
+  if (hits.length === 0 && requestedTags.length > 0) {
+    return {
+      hits,
+      namespaces,
+      filtered_by: { tags: requestedTags },
+      message:
+        'No entries carry all of these tags. That does not mean the namespace is empty — ' +
+        'a tag has to match exactly. Retry without the filter before concluding anything.'
+    };
   }
 
   return { hits, namespaces };
