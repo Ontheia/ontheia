@@ -185,6 +185,27 @@ A second click takes the confirmation back — `unconfirmed` is the initial stat
 
 The same toggle exists in the admin console under **Search & Write** as an icon in the result row — for entries that never surface in a conversation.
 
+### What a confirmation changes
+
+Without an effect the button would be decoration. Two things hang on it, and they work together:
+
+**1. The model sees the confirmation.** A confirmed entry carries `confirmed by the user` in the injected context. Unconfirmed ones carry nothing — the absence is the signal, and the note at the end of the block explains it once rather than per entry. Details under [Ranking algorithm 3.2.1](/en/admin/memory_audit/10_ranking_algorithm/).
+
+**2. The agent asks before an irreversible act — unless the fact is confirmed.** The bundled agents carry the rule in their task context:
+
+> When you are about to do something on the strength of a stored fact that cannot be taken back — send a mail, book an appointment, place an order, write into another system, delegate to another agent — state the fact and its date first and wait for the answer.
+
+Two exemptions matter as much as the trigger:
+
+*   If the entry says `confirmed by the user`, the user has already checked it. It is **not** asked about again.
+*   If the user supplied the fact in this very conversation, likewise not.
+
+Merely looking something up **never** triggers it: the rule hangs on the act, not on the hit. A question before every hit would make the question worthless.
+
+Where nobody can answer — a scheduled run, a chain — the agent acts and records in the result which entry with which date it relied on.
+
+> **This is the only place in the system where a click of yours changes what the agent does next.** If an agent suddenly asks about a customer number it already knows: it knows it, but nobody has ever confirmed it.
+
 ### Expired entry cleanup
 
 Permanently deletes whatever has passed its TTL.

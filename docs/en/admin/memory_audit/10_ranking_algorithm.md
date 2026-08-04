@@ -142,12 +142,22 @@ Group order follows each group's best result, so grouping never changes the rank
 
 ```
 USER PREFERENCE (MEMORY): … take it into account in your answer:
---- MEMORY ENTRY (Stored on 1/19/2026, Namespace: vector.agent.<uuid>.preferences) ---
+--- MEMORY ENTRY (Stored on 1/19/2026, confirmed by the user on 5/2/2026, Namespace: vector.agent.<uuid>.preferences) ---
 Alexandra's email address: …
 
 --- MEMORY ENTRY (Stored on 5/11/2026, Namespace: vector.agent.<uuid>.preferences) ---
 Default chat with Alexandra: …
 ```
+
+### 3.2.1 The maturity marker
+
+A confirmed entry carries `confirmed by the user` in its header, with a date when the confirmation fell on a different day than the write. **Only `confirmed` is emitted.** `unconfirmed` is the state every entry starts in — not a denial but "maturity not established". Printing it would spend tokens on nearly every hit to say nothing, and a caveat that appears everywhere stops being read as one.
+
+The **absence** therefore carries the meaning. So that it can be read, the note at the end of the block states it once rather than per entry:
+
+> An entry marked "confirmed by the user" was verified by them; the others are records nobody has checked since they were written.
+
+`superseded` never appears — superseded entries are already excluded by the search.
 
 > **Where the block goes.** Not into the system prompt, but at the end of the last user message. The reason is prompt caching: results are request-dependent and would invalidate the cached system prefix on every request. Details in [Context and Memory Flow](/en/admin/memory_audit/00_context_and_memory_flow/).
 

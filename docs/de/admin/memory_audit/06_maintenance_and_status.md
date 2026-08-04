@@ -185,6 +185,27 @@ Ein zweiter Klick nimmt die Bestätigung zurück — `unconfirmed` ist der Ausga
 
 Dieselbe Umschaltung gibt es in der Admin-Konsole unter **Suche & Schreiben** als Symbol in der Trefferzeile — für Einträge, die nie in einem Gespräch auftauchen.
 
+### Was eine Bestätigung bewirkt
+
+Ohne Wirkung wäre der Knopf Zierat. Zwei Dinge hängen daran, und sie greifen ineinander:
+
+**1. Das Modell sieht die Bestätigung.** Ein bestätigter Eintrag trägt im injizierten Kontext den Zusatz `confirmed by the user`. Unbestätigte tragen nichts — die Abwesenheit ist das Signal, und der Hinweissatz am Blockende erklärt sie einmal statt einmal pro Eintrag. Details unter [Ranking-Algorithmus 3.2.1](/de/admin/memory_audit/10_ranking_algorithm/).
+
+**2. Der Agent fragt vor unumkehrbaren Handlungen nach — außer bei bestätigten Fakten.** Die mitgelieferten Agenten haben die Regel im Task-Kontext:
+
+> Willst du auf Grundlage eines gespeicherten Fakts etwas tun, das sich nicht zurücknehmen lässt — eine Mail senden, einen Termin anlegen, bestellen, in ein fremdes System schreiben, an einen anderen Agenten delegieren —, dann nenne den Fakt und sein Datum, bevor du handelst, und warte auf die Antwort.
+
+Zwei Ausnahmen wiegen dabei so schwer wie der Auslöser:
+
+*   Trägt der Eintrag `confirmed by the user`, hat der Nutzer ihn bereits geprüft. Dann wird **nicht** erneut gefragt.
+*   Hat der Nutzer den Fakt im laufenden Gespräch selbst genannt, ebenfalls nicht.
+
+Beim reinen Nachschlagen wird **nie** gefragt: Die Regel hängt an der Handlung, nicht am Treffer. Eine Rückfrage vor jedem Treffer machte die Rückfrage wertlos.
+
+Ist kein Gegenüber da, das antworten könnte — ein geplanter Lauf, eine Kette —, handelt der Agent und hält im Ergebnis fest, auf welchen Eintrag mit welchem Datum er sich gestützt hat.
+
+> **Das ist die einzige Stelle im System, an der ein Klick des Nutzers eine Handlung des Agenten verändert.** Wer sich fragt, warum ein Agent plötzlich nach einer Kundennummer fragt, die er kennt: Er kennt sie, aber niemand hat sie je bestätigt.
+
 ### Bereinigung abgelaufener Einträge
 
 Löscht endgültig, was seine TTL überschritten hat.

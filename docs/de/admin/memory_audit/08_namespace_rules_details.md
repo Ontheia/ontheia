@@ -15,6 +15,28 @@ Dies ist ein mächtiges Feature, um die Antwortqualität zu erhöhen. Findet die
 - **Platzhalter:** `{{content}}` markiert die Stelle, an der die Treffer eingesetzt werden. Fehlt er, werden sie an den Text angehängt.
 - **Einmal je Gruppe:** Treffen mehrere Ergebnisse dieselbe Regel, erscheint der Instruktionstext **einmal** über allen — nicht einmal pro Treffer.
 
+### Die Konvention `(QUELLE)` und `(MEMORY)`
+
+Die mitgelieferten Vorlagen beginnen mit einem Etikett in Klammern, und das ist keine Kosmetik: **Es entscheidet, ob ein Treffer zitiert wird.**
+
+| Etikett | Wofür | In der Antwort |
+| :--- | :--- | :--- |
+| `(QUELLE)` | Korpus — Rezepte, Anleitungen, Dokumentation, persönliche Unterlagen | wird als Quelle genannt |
+| `(MEMORY)` | Gedächtnis — Notizen, Vorlieben, Arbeitsanweisungen, Zwischenstände | wird **nicht** genannt |
+
+Das Etikett deckt sich mit der Gedächtnisklasse: Alle Namespaces der Klasse `document` tragen `(QUELLE)`, alle übrigen `(MEMORY)`. Wer eine eigene Vorlage schreibt, sollte sich daran halten.
+
+Ein zitierter Korpus-Treffer erscheint am Ende der Antwort als dritte Form neben URL und Dateipfad:
+
+```
+##### Quellen
+- Gedächtnis `vector.global.privat.recipes`
+```
+
+**Warum das nötig ist.** Der injizierte Block ist für den Nutzer unsichtbar. Ob eine Antwort aus seiner eigenen Sammlung stammt oder aus dem allgemeinen Wissen des Modells, sieht er ihr sonst nicht an — beide lesen sich gleich sicher. Belegt an einem Fall, in dem derselbe Agent auf dieselbe Frage einmal ein erfundenes und einmal das gespeicherte Rezept lieferte, ohne dass die Antworten sich unterschieden hätten.
+
+**Was nie zitiert wird**, und zwar unabhängig vom Etikett: was der Nutzer im laufenden Gespräch gesagt hat, was der Agent in diesem Zug gerade gespeichert hat, und sein eigenes Wissen. Ein Eintrag ohne Etikett wird ebenfalls nicht genannt — im Zweifel schweigen.
+
 > Der Text landet nicht im System-Prompt, sondern am Ende der letzten Nutzernachricht. Grund ist das Prompt-Caching; Details in der [technischen Referenz](/de/admin/memory_audit/10_ranking_algorithm/).
 
 ## 3. Gedächtnisklasse

@@ -15,6 +15,28 @@ This is a powerful feature to increase response quality. When the AI finds a hit
 - **Placeholder:** `{{content}}` marks where the results are inserted. If it is missing, they are appended to the text.
 - **Once per group:** When several results match the same rule, the instruction appears **once** above all of them — not once per result.
 
+### The `(SOURCE)` and `(MEMORY)` convention
+
+The bundled templates open with a label in brackets, and it is not decoration: **it decides whether a hit gets cited.**
+
+| Label | For | In the answer |
+| :--- | :--- | :--- |
+| `(SOURCE)` | Corpus — recipes, manuals, documentation, personal records | named as a source |
+| `(MEMORY)` | Memory — notes, preferences, working instructions, scratch | **not** named |
+
+The label tracks the memory class: every namespace of class `document` carries `(SOURCE)`, all others `(MEMORY)`. A template you write yourself should follow the same convention.
+
+A cited corpus hit appears at the end of the answer as a third form beside a URL and a file path:
+
+```
+##### Sources
+- Memory `vector.global.privat.recipes`
+```
+
+**Why this is needed.** The injected block is invisible to the user. Whether an answer comes from their own collection or from the model's general knowledge is not something they can see — both read as equally certain. Demonstrated by a case where the same agent, asked the same question twice, once invented a recipe and once returned the stored one, with nothing in either answer to tell them apart.
+
+**What is never cited**, whatever the label: anything the user said in this conversation, anything the agent stored in this turn, and its own knowledge. An entry with no label is not cited either — when in doubt, stay silent.
+
 > The text does not go into the system prompt but to the end of the last user message. The reason is prompt caching; details in the [technical reference](/en/admin/memory_audit/10_ranking_algorithm/).
 
 ## 3. Memory class

@@ -143,12 +143,22 @@ Die Reihenfolge der Gruppen folgt dem jeweils besten Treffer, sodass die Gruppie
 
 ```
 NUTZERPRÄFERENZ (MEMORY): … Berücksichtige sie bei deiner Antwort:
---- MEMORY ENTRY (Stored on 1/19/2026, Namespace: vector.agent.<uuid>.preferences) ---
+--- MEMORY ENTRY (Stored on 1/19/2026, confirmed by the user on 5/2/2026, Namespace: vector.agent.<uuid>.preferences) ---
 E-Mail-Adresse von Alexandra: …
 
 --- MEMORY ENTRY (Stored on 5/11/2026, Namespace: vector.agent.<uuid>.preferences) ---
 Standard-Chat mit Alexandra: …
 ```
+
+### 3.2.1 Der Reife-Marker
+
+Ein bestätigter Eintrag trägt in der Kopfzeile `confirmed by the user`, mit Datum, sofern die Bestätigung an einem anderen Tag erfolgte als die Speicherung. **Nur `confirmed` wird ausgegeben.** `unconfirmed` ist der Ausgangszustand jedes Eintrags — keine Verneinung, sondern „Reife nicht festgestellt". Es auszuschreiben kostete Token auf nahezu jedem Treffer für eine Nichtaussage, und ein Vorbehalt, der überall steht, wird nicht mehr gelesen.
+
+Die **Abwesenheit** trägt also die Bedeutung. Damit sie lesbar ist, sagt der Hinweissatz am Ende des Blocks sie einmal statt einmal pro Eintrag:
+
+> An entry marked "confirmed by the user" was verified by them; the others are records nobody has checked since they were written.
+
+`superseded` erscheint nie — abgelöste Einträge sind bereits durch die Suche ausgeschlossen.
 
 > **Wo der Block landet.** Nicht im System-Prompt, sondern am Ende der letzten Nutzernachricht. Der Grund ist Prompt-Caching: Treffer sind anfrageabhängig und würden im System-Prefix den Cache bei jeder Anfrage entwerten. Details in [Kontext- und Gedächtnisfluss](/de/admin/memory_audit/00_context_and_memory_flow/).
 
