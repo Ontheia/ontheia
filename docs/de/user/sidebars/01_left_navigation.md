@@ -21,5 +21,7 @@ Hier findest du alle Chats, die keinem spezifischen Projekt zugeordnet sind.
 Am unteren Ende findest du dein Profil:
 - **Avatar:** Dein persönliches Bild oder deine Initialen.
 - **Administration:** (Nur für Admins) Direkter Link zur Admin-Konsole.
-- **Settings:** Zugriff auf deine Benutzereinstellungen.
-- **Logout:** Beendet die aktuelle Sitzung sicher.
+- **Einstellungen:** Zugriff auf deine Benutzereinstellungen.
+- **Automatisierung:** Cron-Jobs und Zeitpläne.
+- **Dokumentation:** Öffnet die Handbücher auf [docs.ontheia.ai](https://docs.ontheia.ai) in einem neuen Tab, in der Sprache deiner Oberfläche.
+- **Abmelden:** Beendet die aktuelle Sitzung sicher.

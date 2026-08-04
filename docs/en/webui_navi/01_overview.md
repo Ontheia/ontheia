@@ -22,10 +22,11 @@ User menu*           │ [Composer]             │
   → Administration   │                        │
   → Settings         │                        │
   → Automation       │                        │
+  → Documentation ↗  │                        │
   → Sign out         │                        │
 ```
 
-> **Note:** Administration, Settings, and Automation are accessed via the **Avatar dropdown** at the bottom of the left sidebar — they are not directly visible in the sidebar.
+> **Note:** Administration, Settings, Automation and Documentation are accessed via the **Avatar dropdown** at the bottom of the left sidebar — they are not directly visible in the sidebar.
 
 > **Artifact panel:** When the user opens a file card in the chat, an additional window overlays the view on the right (see [File Cards & Artifact Panel](/en/webui_navi/15_artifact_panel/)). It is not a fixed part of the layout and appears only on demand.
 

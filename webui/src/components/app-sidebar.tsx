@@ -32,7 +32,9 @@ import {
   Settings,
   Trash2,
   User,
+  BookOpen,
   CalendarClock,
+  ExternalLink,
   Loader2,
 } from "lucide-react"
 
@@ -95,7 +97,7 @@ const SIDEBAR_WIDTH = "17rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const { t } = useTranslation(['sidebar', 'common', 'auth'])
+  const { t, i18n } = useTranslation(['sidebar', 'common', 'auth'])
   const navigate = useNavigate()
   const location = useLocation()
   const sidebar = useSidebar()
@@ -649,6 +651,26 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem onClick={() => navigate("/automation")}>
                   <CalendarClock className="mr-2 h-4 w-4" aria-hidden="true" />
                   <span>{t('automation', { ns: 'sidebar' })}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* The documentation was reachable from the README and the
+                    website but from nowhere inside the running application.
+                    It follows the interface language: the site serves /de and
+                    /en, and a German user landing on the English pages has to
+                    find their way back by hand. noopener because this leaves
+                    the installation. */}
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(
+                      `https://docs.ontheia.ai/${i18n.language?.startsWith('de') ? 'de' : 'en'}/`,
+                      '_blank',
+                      'noopener,noreferrer'
+                    )
+                  }
+                >
+                  <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
+                  <span>{t('documentation', { ns: 'sidebar' })}</span>
+                  <ExternalLink className="ml-auto h-3 w-3 opacity-50" aria-hidden="true" />
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

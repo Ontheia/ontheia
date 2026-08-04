@@ -21,4 +21,6 @@ At the bottom, you will find your profile:
 - **Avatar:** Your personal picture or initials.
 - **Administration:** (Admins only) Direct link to the Admin Console.
 - **Settings:** Access to your user settings.
-- **Logout:** Safely ends the current session.
+- **Automation:** Cron jobs and schedules.
+- **Documentation:** Opens the manuals at [docs.ontheia.ai](https://docs.ontheia.ai) in a new tab, in your interface language.
+- **Sign out:** Safely ends the current session.

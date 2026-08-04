@@ -22,10 +22,11 @@ Benutzermenü*        │ [Composer]            │
   → Administration   │                       │
   → Einstellungen    │                       │
   → Automatisierung  │                       │
+  → Dokumentation ↗  │                       │
   → Abmelden         │                       │
 ```
 
-> **Hinweis:** Administration, Einstellungen und Automatisierung werden über das **Avatar-Dropdown** am unteren Rand der linken Sidebar aufgerufen — sie sind nicht direkt in der Sidebar sichtbar.
+> **Hinweis:** Administration, Einstellungen, Automatisierung und Dokumentation werden über das **Avatar-Dropdown** am unteren Rand der linken Sidebar aufgerufen — sie sind nicht direkt in der Sidebar sichtbar.
 
 > **Artefakt-Panel:** Öffnet der Nutzer eine Dateikarte im Chat, legt sich rechts ein zusätzliches Fenster über die Ansicht (siehe [Dateikarten & Artefakt-Panel](/de/webui_navi/15_artifact_panel/)). Es ist kein fester Bestandteil des Layouts und erscheint nur bei Bedarf.
 

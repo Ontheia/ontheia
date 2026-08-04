@@ -57,4 +57,7 @@ Am unteren Rand der linken Sidebar. Öffnet ein Dropdown-Menü mit:
 | **Administration** | Admin-Konsole (nur für Admins sichtbar) |
 | **Einstellungen** | Benutzereinstellungen |
 | **Automatisierung** | Cron-Jobs und Zeitpläne |
+| **Dokumentation** | Öffnet [docs.ontheia.ai](https://docs.ontheia.ai) in einem neuen Tab — in der Sprache der Oberfläche |
 | **Abmelden** | Session beenden |
+
+> **Dokumentation** steht durch einen Trenner abgesetzt und trägt ein Pfeil-Symbol: Die Einträge darüber führen innerhalb der Installation, dieser verlässt sie.

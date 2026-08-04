@@ -57,4 +57,7 @@ At the bottom of the left sidebar. Opens a dropdown menu with:
 | **Administration** | Admin console (only visible to admins) |
 | **Settings** | User settings |
 | **Automation** | Cron jobs and schedules |
+| **Documentation** | Opens [docs.ontheia.ai](https://docs.ontheia.ai) in a new tab — in the interface language |
 | **Sign out** | End session |
+
+> **Documentation** is set apart by a separator and carries an arrow icon: the entries above it lead within the installation, this one leaves it.
