@@ -68,14 +68,6 @@ if [ "$LANG_CHOICE" = "2" ]; then
     MSG_BACKUP_HINT="Tipp: Backup vor dem Update unter:"
     MSG_ENV_ADDED="✓ Neue Umgebungsvariable in .env ergänzt:"
     MSG_SKILLS="Registriere mitgelieferte Skills..."
-    MSG_NOTE_TITLE="Bitte beachten (0.6.0):"
-    MSG_NOTE_NS_1="Die Tool-Suche (memory-search) durchsucht jetzt ausschließlich die Namespaces"
-    MSG_NOTE_NS_2="aus 'Nur Tool-Zugriff'. Das Feld 'Lesen' speist nur noch die automatische"
-    MSG_NOTE_NS_3="Injektion. Agenten, deren Namespaces bisher nur unter 'Lesen' eingetragen"
-    MSG_NOTE_NS_4="waren, finden per Tool nichts mehr — Einträge dort ggf. ergänzen unter"
-    MSG_NOTE_NS_5="Administration → Memory → Agent-/Task-Policy."
-    MSG_NOTE_CLASS="Bestehende Memory-Einträge haben noch keine Gedächtnisklasse. Optional:"
-    MSG_NOTE_DRYRUN="(--apply schreibt; ohne den Schalter wird nur berichtet)"
 else
     MSG_CHECK="Checking prerequisites..."
     MSG_ERR_GIT="Error: 'git' is not installed."
@@ -106,14 +98,6 @@ else
     MSG_BACKUP_HINT="Tip: Backup stored at:"
     MSG_ENV_ADDED="✓ New environment variable added to .env:"
     MSG_SKILLS="Registering bundled skills..."
-    MSG_NOTE_TITLE="Please note (0.6.0):"
-    MSG_NOTE_NS_1="The tool search (memory-search) now covers only the namespaces listed"
-    MSG_NOTE_NS_2="under 'Tool-only read'. The 'Read' field feeds automatic injection and"
-    MSG_NOTE_NS_3="nothing else. Agents whose namespaces were listed only under 'Read'"
-    MSG_NOTE_NS_4="will find nothing by tool — add them under"
-    MSG_NOTE_NS_5="Administration → Memory → Agent/Task policy."
-    MSG_NOTE_CLASS="Existing memory entries carry no memory class yet. Optional:"
-    MSG_NOTE_DRYRUN="(--apply writes; without the flag it only reports)"
 fi
 
 # ─── Prerequisites ────────────────────────────────────────────────────────────
@@ -312,23 +296,12 @@ echo -e "  ${BOLD}$(pwd)/backups/${NC}"
 echo -e "${GREEN}${BOLD}====================================================${NC}"
 
 # ─── Breaking changes ─────────────────────────────────────────────────────────
-# Shown only when arriving at 0.6.0: the memory policy split is silent
-# otherwise — a tool search against a namespace listed only under "Read"
-# stops returning anything, with no error anywhere to explain why.
-if [ "$NEW_VERSION" = "0.6.0" ] && [ "$CURRENT_VERSION" != "0.6.0" ]; then
-    echo ""
-    echo -e "${YELLOW}${BOLD}$MSG_NOTE_TITLE${NC}"
-    echo -e "  $MSG_NOTE_NS_1"
-    echo -e "  $MSG_NOTE_NS_2"
-    echo -e "  $MSG_NOTE_NS_3"
-    echo -e "  $MSG_NOTE_NS_4"
-    echo -e "  ${BOLD}$MSG_NOTE_NS_5${NC}"
-    echo ""
-    echo -e "  $MSG_NOTE_CLASS"
-    echo -e "  ${BOLD}docker compose exec host node dist/scripts/backfill_memory_class.js${NC}"
-    echo -e "  $MSG_NOTE_DRYRUN"
-    echo ""
-fi
+# Nothing here, and nothing belongs here. The whole body of this script lives in
+# a function so that bash parses it before `git pull` replaces the file — which
+# means the version that RUNS is always the one already installed. A notice
+# added for release N is therefore executed by release N-1's script, where it
+# does not exist. Release notes and the documentation reach the reader; this
+# spot cannot.
 }
 
 ontheia_update_main "$@"
