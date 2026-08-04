@@ -2,6 +2,10 @@
 
 Namespace rules allow administrators to globally control the behavior of AI search without having to configure each agent individually.
 
+> **Fourteen rules ship by default.** Migration `V81` creates them — not the bootstrap, which an update deliberately runs for bundled skills only. An installation arriving from an older version would otherwise receive the columns of the memory model without its configuration.
+>
+> The migration only **adds**: a rule whose pattern already exists is left untouched. If you edited a bundled rule, or deleted one on purpose, your state survives updates.
+
 ## 1. Ranking Bonuses
 With the ranking bonus, you can control which information sources should be preferred.
 - **Principle:** A bonus between `0.0` and `1.0` acts as a **percentage surcharge** on the similarity, yielding the relevance. `0.2` therefore means +20 % — not `+0.2` as an absolute value.

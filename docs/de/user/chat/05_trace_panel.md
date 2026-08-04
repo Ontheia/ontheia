@@ -17,6 +17,8 @@ Hier werden alle Informationen aufgelistet, die der Agent aus dem Langzeitgedäc
 - **Vorschau:** Einträge werden zunächst kompakt (max. 5 Zeilen) angezeigt.
 - **Details:** Über die Schaltfläche "Alles anzeigen" kann der vollständige Kontext eines Eintrags eingeblendet werden.
 - **Relevanz:** Wie viel der Eintrag für diese Frage wert ist — die Ähnlichkeit nach Namespace-Bonus und Rezenz. Der Wert kann über 1 liegen. Weicht die rohe Ähnlichkeit davon ab, steht sie daneben.
+- **Herkunft:** Ein delegierter Schritt stellt seinen **eigenen** Kontext zusammen, mit eigenem `top_k`. Treffer, die nur dort auftauchten, tragen den Namen des Sub-Agenten; steht ein `+` davor, war der Treffer zusätzlich im Kontext des Hauptlaufs. Ohne Beschriftung stammt er allein aus dem Hauptlauf — dem Normalfall. Ohne diese Angabe liest sich die Liste als **ein** Kontext, obwohl es mehrere waren.
+- **Einmal je Eintrag:** Wird derselbe Eintrag injiziert und danach noch einmal per Suche gefunden, erscheint er trotzdem nur in einer Zeile.
 
 ### 2. Tools (Werkzeuge)
 Verfolge jede Aktion, die der Agent über MCP-Server (Model Context Protocol) ausgeführt hat.

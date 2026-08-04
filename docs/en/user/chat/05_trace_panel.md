@@ -17,6 +17,8 @@ All information that the agent has retrieved from long-term memory is listed her
 - **Preview:** Entries are initially displayed compactly (max. 5 lines).
 - **Details:** The "Show All" button can be used to display the full context of an entry.
 - **Relevance:** What the entry is worth for this question — the similarity after namespace bonus and recency. The value can exceed 1. When the raw similarity differs, it is shown next to it.
+- **Origin:** A delegated step assembles its **own** context, with its own `top_k`. Hits that only appeared there carry the sub-agent's name; a leading `+` means the hit was in the main run's context as well. No label means it came from the main run alone — the ordinary case. Without this the list reads as **one** context when it was several.
+- **Once per entry:** if the same entry is injected and then found again by a search, it still occupies a single row.
 
 ### 2. Tools
 Track every action the agent has performed via MCP servers (Model Context Protocol).

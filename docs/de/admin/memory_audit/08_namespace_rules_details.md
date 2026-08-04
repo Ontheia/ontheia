@@ -2,6 +2,10 @@
 
 Namespace-Regeln ermöglichen es Administratoren, das Verhalten der KI-Suche global zu steuern, ohne jeden Agenten einzeln konfigurieren zu müssen.
 
+> **Vierzehn Regeln kommen ab Werk mit.** Sie legt die Migration `V81` an — nicht der Bootstrap, denn der läuft bei einem Update bewusst nur für die mitgelieferten Skills. Eine Installation, die von einer älteren Version kommt, bekäme sonst die Spalten des Gedächtnismodells ohne dessen Konfiguration.
+>
+> Die Migration fügt **nur hinzu**: Eine Regel, deren Muster bereits existiert, bleibt unangetastet. Wer eine mitgelieferte Regel geändert oder absichtlich gelöscht hat, behält seinen Stand über Updates hinweg.
+
 ## 1. Ranking-Boni
 Mit dem Ranking-Bonus kannst du steuern, welche Informationsquellen bevorzugt werden sollen.
 - **Prinzip:** Ein Bonus zwischen `0.0` und `1.0` wirkt als **prozentualer Aufschlag** auf die Ähnlichkeit und ergibt die Relevanz. `0.2` bedeutet also +20 % — nicht `+0.2` als absoluter Wert.
