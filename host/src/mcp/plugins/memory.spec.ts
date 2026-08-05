@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handleMemorySearch } from './memory.js';
+import { handleMemorySearch, handleMemoryUpdate } from './memory.js';
 
 function makeDb(agentMemory: Record<string, unknown> | null) {
   return {
@@ -235,4 +235,99 @@ test('handleMemorySearch: null Treffer ohne Filter bleibt ohne Zusatzmeldung', a
 
   assert.equal(result.filtered_by, undefined);
   assert.equal(result.message, undefined);
+});
+
+// ── memory-update ────────────────────────────────────────────────────────────
+// Der Schreibweg trifft über byte-genauen Inhalt. Ein Eintrag umzuhängen oder
+// seinen Wortlaut zu korrigieren erzeugte damit stillschweigend einen zweiten.
+
+function makeUpdateAdapter(result = true) {
+  const calls: any[] = [];
+  return {
+    calls,
+    search: async () => [],
+    updateDocument: async (id: string, patch: any, _client?: any) => {
+      calls.push({ id, patch });
+      return result;
+    }
+  };
+}
+
+const WRITE_POLICY = {
+  allow_tool_write: true,
+  allowed_write_namespaces: ['vector.agent.${user_id}.memory']
+};
+const RUN_CTX = { run: { agent_id: 'agent-1', task_id: undefined as any, options: { metadata: { user_id: 'u1' } } } };
+
+test('handleMemoryUpdate: reicht Tags und den Namespace als Wächter durch', async () => {
+  const adapter = makeUpdateAdapter();
+  const result: any = await handleMemoryUpdate(
+    makeDb(WRITE_POLICY) as any,
+    adapter as any,
+    { id: 'e1', namespace: 'vector.agent.${user_id}.memory', tags: ['status:erledigt'] },
+    RUN_CTX
+  );
+
+  assert.equal(result.success, true);
+  // expectNamespace ist die Absicherung: updateDocument sucht die Zeile sonst
+  // allein über die ID quer durch alle Tabellen, und die Berechtigung wäre
+  // gegen einen bloß behaupteten Namespace geprüft worden.
+  assert.equal(adapter.calls[0].patch.expectNamespace, 'vector.agent.u1.memory');
+  assert.deepEqual(adapter.calls[0].patch.tags, ['status:erledigt']);
+  assert.equal('content' in adapter.calls[0].patch, false, 'ohne content-Angabe bleibt der Text unberührt');
+});
+
+test('handleMemoryUpdate: Namespace ausserhalb der Schreibrechte wird abgelehnt', async () => {
+  const adapter = makeUpdateAdapter();
+  await assert.rejects(
+    () => handleMemoryUpdate(
+      makeDb(WRITE_POLICY) as any,
+      adapter as any,
+      { id: 'e1', namespace: 'vector.global.fremd', tags: ['x'] },
+      RUN_CTX
+    ),
+    /not allowed/
+  );
+  assert.equal(adapter.calls.length, 0, 'der Adapter darf gar nicht erst gerufen werden');
+});
+
+test('handleMemoryUpdate: ohne Schreibrecht per Werkzeug abgelehnt', async () => {
+  const adapter = makeUpdateAdapter();
+  await assert.rejects(
+    () => handleMemoryUpdate(
+      makeDb({ ...WRITE_POLICY, allow_tool_write: false }) as any,
+      adapter as any,
+      { id: 'e1', namespace: 'vector.agent.${user_id}.memory', tags: ['x'] },
+      RUN_CTX
+    ),
+    /disabled/
+  );
+  assert.equal(adapter.calls.length, 0);
+});
+
+test('handleMemoryUpdate: ohne Änderung wird gar nicht erst geschrieben', async () => {
+  const adapter = makeUpdateAdapter();
+  await assert.rejects(
+    () => handleMemoryUpdate(
+      makeDb(WRITE_POLICY) as any,
+      adapter as any,
+      { id: 'e1', namespace: 'vector.agent.${user_id}.memory' },
+      RUN_CTX
+    ),
+    /Nothing to change/
+  );
+  assert.equal(adapter.calls.length, 0);
+});
+
+test('handleMemoryUpdate: Fehlschlag nennt den wahrscheinlichen Grund', async () => {
+  const adapter = makeUpdateAdapter(false);
+  const result: any = await handleMemoryUpdate(
+    makeDb(WRITE_POLICY) as any,
+    adapter as any,
+    { id: 'gibt-es-nicht', namespace: 'vector.agent.${user_id}.memory', tags: ['x'] },
+    RUN_CTX
+  );
+
+  assert.equal(result.success, false);
+  assert.match(result.hint, /id and the namespace from the hit/);
 });

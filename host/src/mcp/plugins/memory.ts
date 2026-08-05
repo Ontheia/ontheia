@@ -47,7 +47,8 @@ import { loadMemoryPolicy } from '../../routes/policy-utils.js';
 export const MEMORY_TOOL_HANDLED_ARGS: Record<string, readonly string[]> = {
   'memory-search': ['query', 'namespaces', 'top_k', 'tags'],
   'memory-write': ['content', 'namespace', 'tags', 'ttl_seconds', 'observed_at', 'supersedes', 'class'],
-  'memory-delete': ['id', 'content', 'namespace']
+  'memory-delete': ['id', 'content', 'namespace'],
+  'memory-update': ['id', 'namespace', 'tags', 'content']
 };
 
 /**
@@ -409,4 +410,108 @@ export function memoryTools(server: FastifyInstance, db: Pool, memoryAdapter: Me
       return { error: (err as Error).message };
     }
   });
+
+  server.post('/mcp/tools/memory-update', async (request, reply) => {
+    try {
+      return await handleMemoryUpdate(db, memoryAdapter, request.body as any, { run: (request.body as any).run });
+    } catch (err) {
+      reply.code(400);
+      return { error: (err as Error).message };
+    }
+  });
+}
+
+/**
+ * Changes an existing entry instead of writing a new one.
+ *
+ * The write path upserts on byte-identical content: re-writing an entry with a
+ * word changed does not update it, it stores a second one, and nothing says so.
+ * That makes the most ordinary operation on a tracked item — moving it to
+ * another status, correcting its wording — the one most likely to leave a
+ * duplicate behind.
+ *
+ * Permission is checked exactly as the delete path checks it, against
+ * allowedWriteNamespaces, and the namespace is passed down as a guard rather
+ * than trusted: updateDocument finds a row by id across every table, so a
+ * caller whose permission was checked against a namespace it merely *claimed*
+ * could otherwise patch anything the session can reach.
+ */
+export async function handleMemoryUpdate(
+  db: Pool | PoolClient,
+  memoryAdapter: MemoryAdapter,
+  args: { id: string; namespace: string; tags?: string[]; content?: string },
+  context?: { run?: Pick<RunRequest, 'agent_id' | 'task_id' | 'options'>; db?: Pool | PoolClient }
+) {
+  if (!args?.id || !args?.namespace) {
+    throw new Error('id (from a memory-search hit) and namespace are required.');
+  }
+  const hasTags = Array.isArray(args.tags);
+  const hasContent = typeof args.content === 'string' && args.content.trim().length > 0;
+  if (!hasTags && !hasContent) {
+    throw new Error('Nothing to change: pass tags, content, or both.');
+  }
+
+  const dbClient = context?.db || db;
+  const policy = await loadMemoryPolicy(db as Pool, context?.run?.agent_id, context?.run?.task_id, dbClient as PoolClient);
+  // Updating is writing, so it rides on the write permission — not on
+  // allowToolDelete, which governs removal.
+  if (!policy.allowToolWrite) {
+    throw new Error('Write access (tool) is disabled for this agent/task.');
+  }
+
+  const metadata = (context?.run?.options as any)?.metadata || {};
+  const ctx = {
+    agent_id: context?.run?.agent_id,
+    task_id: context?.run?.task_id,
+    project_id: metadata.project_id,
+    user_id: metadata.user_id,
+    chat_id: metadata.chat_id,
+    session_id: metadata.session_id
+  };
+
+  let targetNamespace: string;
+  try {
+    targetNamespace = resolveNamespaceTemplate(args.namespace, ctx);
+  } catch (err) {
+    const detail = err instanceof NamespaceError ? err.message : String(err);
+    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`);
+  }
+
+  if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {
+    const allowed = (policy.allowedWriteNamespaces || []).join(', ') || '(none configured)';
+    throw new Error(
+      `Write access to namespace '${targetNamespace}' not allowed. Allowed patterns: ${allowed}`
+    );
+  }
+
+  const changed = await memoryAdapter.updateDocument(
+    args.id.trim(),
+    {
+      expectNamespace: targetNamespace,
+      ...(hasTags ? { tags: args.tags!.filter((tag) => typeof tag === 'string' && tag.trim().length > 0) } : {}),
+      ...(hasContent ? { content: args.content } : {})
+    },
+    dbClient as PoolClient
+  );
+
+  if (!changed) {
+    return {
+      success: false,
+      hint: 'No entry with this id in this namespace. Re-run memory-search and take both the id and the namespace from the hit.'
+    };
+  }
+
+  if (context && 'logMemoryAudit' in context && typeof context.logMemoryAudit === 'function') {
+    const runId = (context?.run?.options as any)?.metadata?.run_id;
+    await (context as any).logMemoryAudit(db, {
+      runId,
+      agentId: context?.run?.agent_id,
+      taskId: context?.run?.task_id,
+      namespace: targetNamespace,
+      action: 'write',
+      detail: { operation: 'update', tool_call: true, id: args.id, changed_tags: hasTags, changed_content: hasContent }
+    }, dbClient as PoolClient);
+  }
+
+  return { success: true, id: args.id, namespace: targetNamespace };
 }

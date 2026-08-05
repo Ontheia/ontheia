@@ -164,6 +164,33 @@ export function buildMemoryToolSpecs(options?: {
         },
         required: ['namespace']
       }
+    },
+    {
+      name: 'memory-update',
+      description:
+        'Change the tags or the wording of an entry that already exists, identified by its id from a memory-search hit. Use this instead of writing again: a write matches an existing entry only on byte-identical content, so re-writing with one word changed silently creates a second entry rather than updating the first.',
+      schema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Id of the entry, as returned in memory-search hits.' },
+          namespace: {
+            type: 'string',
+            description: 'Namespace the entry lives in. The update applies only if it really does.'
+          },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Replaces the tag list wholly — pass every tag the entry should keep, not just the changed one. Omit to leave the tags alone.'
+          },
+          content: {
+            type: 'string',
+            description:
+              'New wording. Omit to leave the text alone. Changing it re-embeds the entry, so what it can be found by changes too.'
+          }
+        },
+        required: ['id', 'namespace']
+      }
     }
   ];
 }

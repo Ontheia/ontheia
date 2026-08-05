@@ -782,6 +782,21 @@ export class MemoryAdapter {
        * supersession is otherwise only fixable in the database.
        */
       restore?: boolean;
+      /**
+       * Replaces `metadata.tags` and nothing else. `metadata` above replaces
+       * the whole object, which would drop provenance and run context — fine
+       * for the console, where the caller holds the current metadata, and
+       * wrong for anyone who only wants to move a card to another column.
+       */
+      tags?: string[];
+      /**
+       * Only patch when the entry actually lives in this namespace. The lookup
+       * below is by id across every table, so a caller that checks permission
+       * against a namespace it was *told* about would patch entries anywhere
+       * the session can reach. Callers that own the id outright — the admin
+       * console — leave it unset.
+       */
+      expectNamespace?: string;
     },
     client?: PoolClient
   ): Promise<boolean> {
@@ -795,13 +810,17 @@ export class MemoryAdapter {
     let currentRow: { namespace: string; content: string; metadata: Record<string, unknown>; vector: string } | null =
       null;
 
+    // A mismatched namespace is indistinguishable from a missing entry on
+    // purpose: the caller learns nothing about rows it may not touch.
+    const scope = patch.expectNamespace?.trim();
     for (const table of this.tables) {
       const res = await db.query(
         // No deleted_at filter: an admin edits exactly the entries that have
         // dropped out of search, and refusing to load them would leave a wrong
         // supersession unfixable outside the database.
-        `SELECT namespace, content, metadata, ${table.column} AS vector FROM ${table.name} WHERE id = $1 LIMIT 1`,
-        [trimmedId]
+        `SELECT namespace, content, metadata, ${table.column} AS vector FROM ${table.name}
+          WHERE id = $1${scope ? ' AND namespace = $2' : ''} LIMIT 1`,
+        scope ? [trimmedId, scope] : [trimmedId]
       );
       if (res.rowCount && res.rows[0]) {
         foundTable = table;
@@ -819,7 +838,10 @@ export class MemoryAdapter {
 
     const nextNamespace = patch.namespace?.trim() || currentRow.namespace;
     const nextContent = typeof patch.content === 'string' && patch.content.trim().length > 0 ? patch.content.trim() : currentRow.content;
-    const nextMetadata = sanitizeMetadata(patch.metadata ?? currentRow.metadata ?? {});
+    const baseMetadata = patch.metadata ?? currentRow.metadata ?? {};
+    const nextMetadata = sanitizeMetadata(
+      Array.isArray(patch.tags) ? { ...baseMetadata, tags: patch.tags } : baseMetadata
+    );
 
     let nextVector = currentRow.vector as string;
     // Re-embed if content changed

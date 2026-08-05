@@ -36,7 +36,7 @@ import {
 import { buildReadableNamespaces, slugifySegment, isGlobalNamespace } from '../memory/namespaces.js';
 import type { MemoryClass, MemoryHit, MemoryWriteInput } from '../memory/types.js';
 import { stripReservedMetadata } from '../memory/metadata.js';
-import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, memoryTools } from '../mcp/plugins/memory.js';
+import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, handleMemoryUpdate, memoryTools } from '../mcp/plugins/memory.js';
 import { handleDelegation } from '../mcp/plugins/delegation.js';
 import { enqueueReembedJobs } from '../memory/reembed.js';
 import fs from 'fs/promises';
@@ -229,6 +229,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       if (name === 'memory-search') return handleMemorySearch(client, memoryAdapter, args, augmentedContext);
       if (name === 'memory-write') return handleMemoryWrite(client, memoryAdapter, args, augmentedContext);
       if (name === 'memory-delete') return handleMemoryDelete(client, memoryAdapter, args, augmentedContext);
+      if (name === 'memory-update') return handleMemoryUpdate(client, memoryAdapter, args, augmentedContext);
       throw new Error(`Tool ${name} not found on server memory`);
     };
 
