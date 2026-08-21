@@ -40,7 +40,8 @@ const AGENT_PROFILE_ROW = {
   chain_version_id: null,
   chain_spec: null,
   task_context: 'Test context.',
-  task_id: TASK_ID
+  task_id: TASK_ID,
+  task_matched: true
 };
 
 function makeClient(agentMemory: Record<string, unknown>) {
@@ -133,4 +134,94 @@ test('chain-runner: auto_read_enabled=true (default) löst Memory-Inject aus', a
   await runChain(client, adapter);
 
   assert.equal(searchCalled, true, 'memoryAdapter.search soll bei auto_read_enabled=true aufgerufen werden');
+});
+
+// An agent that has a default chain AND a matching task: the explicit task must
+// win. Before the fix, the chain always won (chain-runner.ts:479 checked only
+// chain_version_id && chain_spec). We observe which branch handleAgentStep
+// took via the chain_debug events it emits.
+const CHAIN_AGENT_PROFILE_ROW = {
+  ...AGENT_PROFILE_ROW,
+  chain_version_id: '00000000-0000-0000-0000-000000000009',
+  chain_spec: { steps: [{ id: 'c1', type: 'delay', delay_ms: '1' }], edges: [] },
+  task_matched: true
+};
+
+test('chain-runner: explicit task beats the agent default chain', async () => {
+  const events: Array<{ type: string; code?: string; message?: string }> = [];
+  const emit = (ev: any) => { events.push(ev); };
+  const adapter = { search: async (..._: any[]) => [] };
+
+  const client = makeClient({});
+  // The agent has a default chain AND the requested task exists.
+  (client as any).query = async (sql: string) => {
+    if (sql.includes('app.agents')) return { rows: [CHAIN_AGENT_PROFILE_ROW] };
+    if (sql.includes('app.agent_config')) return { rowCount: 1, rows: [{ memory: {} }] };
+    if (sql.includes('app.tasks')) return { rowCount: 0, rows: [] };
+    return { rowCount: 0, rows: [] };
+  };
+
+  const runner = new ChainRunner(
+    client as any,
+    mockOrchestrator as any,
+    TEMPLATE_CONTEXT as any,
+    emit as any,
+    adapter as any,
+    MINIMAL_SPEC as any,
+    [],
+    0
+  );
+  try {
+    await runner.run();
+  } catch {
+    // Provider-Aufruf schlägt erwartungsgemäß fehl — irrelevant für den Test
+  }
+
+  const debugs = events.filter((e) => e.code === 'chain_debug').map((e) => e.message ?? '');
+  assert.ok(
+    debugs.some((m) => m.includes('is a TASK agent')),
+    'an explicit, matching task must take the TASK path even when the agent has a default chain'
+  );
+  assert.ok(
+    !debugs.some((m) => m.includes('is a CHAIN agent')),
+    'the default chain must NOT override an explicit task'
+  );
+});
+
+test('chain-runner: no task requested falls back to the default chain', async () => {
+  const events: Array<{ type: string; code?: string; message?: string }> = [];
+  const emit = (ev: any) => { events.push(ev); };
+  const adapter = { search: async (..._: any[]) => [] };
+
+  const client = makeClient({});
+  (client as any).query = async (sql: string) => {
+    if (sql.includes('app.agents')) return { rows: [CHAIN_AGENT_PROFILE_ROW] };
+    if (sql.includes('app.agent_config')) return { rowCount: 1, rows: [{ memory: {} }] };
+    if (sql.includes('app.tasks')) return { rowCount: 0, rows: [] };
+    return { rowCount: 0, rows: [] };
+  };
+
+  // No task_id on the step — the agent's default chain should apply.
+  const spec = { steps: [{ id: 'step1', type: 'agent' as const, agent_id: AGENT_ID, input: 'test input' }], edges: [] };
+  const runner = new ChainRunner(
+    client as any,
+    mockOrchestrator as any,
+    TEMPLATE_CONTEXT as any,
+    emit as any,
+    adapter as any,
+    spec as any,
+    [],
+    0
+  );
+  try {
+    await runner.run();
+  } catch {
+    // sub-chain runs a 1ms delay; swallow anything incidental
+  }
+
+  const debugs = events.filter((e) => e.code === 'chain_debug').map((e) => e.message ?? '');
+  assert.ok(
+    debugs.some((m) => m.includes('is a CHAIN agent')),
+    'with no task requested, the default chain must run'
+  );
 });

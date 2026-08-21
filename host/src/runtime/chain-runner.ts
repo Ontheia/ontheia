@@ -476,7 +476,17 @@ export class ChainRunner {
     let finalOutput = '';
     let finalData = null;
 
-    if (profile.chain_version_id && profile.chain_spec) {
+    // An explicit task the caller named AND that exists wins over the agent's
+    // (default or named) chain. With no task requested, the chain applies as
+    // the fallback — matching how the composer treats an agent with a chain.
+    // A task the caller named but that does not exist does NOT win: it falls
+    // through to the chain rather than silently running a different task.
+    const taskRequested = !!taskRef && profile.task_matched === true;
+    if (taskRequested) {
+      this.debug(`Agent ${profile.id}: explicit task '${taskRef}' requested — running the task instead of the agent's chain.`);
+    }
+
+    if (!taskRequested && profile.chain_version_id && profile.chain_spec) {
       this.debug(`Agent ${profile.id} is a CHAIN agent. Starting sub-chain runner.`);
       const subRunner = new ChainRunner(
         this.client,
@@ -892,20 +902,29 @@ export class ChainRunner {
     }
 
     let taskPriority = 'at.is_default DESC';
+    // Whether the row's task is the one the caller actually asked for. The task
+    // is a LEFT JOIN: when the requested task does not exist, the query still
+    // returns a row — the agent's default task. Without this flag that fallback
+    // would be indistinguishable from a real match, and "explicit task beats
+    // chain" could not be enforced (we would run a task the caller never named).
+    let taskMatchedExpr = 'false';
     if (taskRef) {
       params.push(taskRef);
       const refIdx = params.length;
-      taskPriority = `(CASE WHEN ${isTaskUuid ? `t.id = $${refIdx}::uuid` : `t.name = $${refIdx}`} THEN 0 ELSE 1 END), at.is_default DESC`;
+      const matchCond = isTaskUuid ? `t.id = $${refIdx}::uuid` : `t.name = $${refIdx}`;
+      taskPriority = `(CASE WHEN ${matchCond} THEN 0 ELSE 1 END), at.is_default DESC`;
+      taskMatchedExpr = `(CASE WHEN ${matchCond} THEN true ELSE false END)`;
     }
 
     const query = `
-      SELECT 
+      SELECT
         a.id, a.label,
         a.provider_id, a.model_id, a.tool_approval_mode,
         a.default_mcp_servers, a.default_tools,
         a.default_tool_permissions,
         cv.id as chain_version_id, cv.spec as chain_spec,
-        t.context_prompt as task_context, t.id as task_id
+        t.context_prompt as task_context, t.id as task_id,
+        ${taskMatchedExpr} AS task_matched
       FROM app.agents a
       LEFT JOIN app.agent_chains ach ON a.id = ach.agent_id AND (${chainJoinCond})
       LEFT JOIN app.chains c ON ach.chain_id = c.id
