@@ -27,6 +27,7 @@ Ontheia unterstützt jeden **OpenAI-kompatiblen Inference-Server** — lokal ode
 | **OpenRouter** | OpenAI-kompatibel | [openrouter.ai](https://openrouter.ai) |
 | **Azure OpenAI** | OpenAI-kompatibel | [azure.microsoft.com](https://azure.microsoft.com/de-de/products/ai-services/openai-service) |
 | **Mistral AI** | OpenAI-kompatibel ⚠ | [mistral.ai](https://mistral.ai) |
+| **Ollama Cloud** | OpenAI-kompatibel | [ollama.com](https://ollama.com) |
 
 > **⚠ Mistral AI — eingeschränkte Tool-Kompatibilität:** Chat und Completion funktionieren zuverlässig. Tool Calling ist nicht vollständig OpenAI-kompatibel — parallele Tool Calls und einige Formatdetails können zu Fehlern führen. Empfohlen: `mistral-large` oder `mistral-small`, andere Modelle unterstützen Tool Calling möglicherweise nicht.
 
@@ -42,7 +43,7 @@ Für lokale OpenAI-kompatible Provider:
 
 ## Hinweise zu den Providern
 
-**Ollama** ist der einfachste Einstieg für lokale Modelle — Installation in einem Befehl, automatische GPU-Erkennung, große Modell-Bibliothek.
+**Ollama** ist der einfachste Einstieg für lokale Modelle — Installation in einem Befehl, automatische GPU-Erkennung, große Modell-Bibliothek. Neben der lokalen Instanz (`http://localhost:11434/v1`) betreibt Ollama auch einen gehosteten Cloud-Dienst unter `https://ollama.com/v1` (z. B. für `kimi-k3:cloud`). Beide Endpoints werden von Ontheia automatisch als OpenAI-kompatibel erkannt — der lokale über den Private-Host-Check, der Cloud-Endpoint über den Host `ollama.com`. Tool Calling und Streaming funktionieren auf beiden ohne manuelles Flag.
 
 **llama.cpp** ist das Fundament hinter Ollama und vielen anderen Tools. Wer maximale Kontrolle über Quantisierung und Server-Parameter will, setzt direkt auf llama.cpp.
 

@@ -20,7 +20,15 @@ The agent is linked to a chain (`app.agent_chains`). As soon as this agent is de
 
 ## 2. Delegation vs. Direct Call
 
-The `delegate-to-agent` tool offers three ways to hand over tasks to subsystems:
+The `delegate-to-agent` tool always requires `agent` and `input`; `task` and `chain` are optional. What runs is decided by a fixed precedence:
+
+1. **Explicit, matching task** — when `task` is given **and** the task exists for the agent, the task runs: an LLM call with the task context. It beats every chain — the agent's default chain as well as a named `chain`.
+2. **Chain** — without a matching task, the chain runs:
+   - if `chain` is also named, **that** chain runs (it must be bound to the agent); it replaces the default chain.
+   - otherwise the agent's default chain runs, if one is stored.
+3. **LLM** — without a task and without a chain, a normal LLM call starts (with the agent's default task context, if any).
+
+> **Named task not found:** When `task` is given but no matching task exists for the agent, the run falls back to the chain (default or named) and logs the fallback in the trace — it does **not** run a task the caller never named.
 
 ### 2.1 Delegation to Agent/Task (Recommended)
 ```json
@@ -30,18 +38,19 @@ The `delegate-to-agent` tool offers three ways to hand over tasks to subsystems:
   "input": "What is the fill level?"
 }
 ```
-- **Logic:** Ontheia looks up the agent, checks if a chain is stored, and executes it. If no chain exists, an LLM prompt is started.
+- **Logic:** The matching task wins and runs as an LLM call with its task context. Without `task`, the agent's default chain would apply (if any), otherwise an LLM call.
 - **Use:** Standard delegation between agents.
 
-### 2.2 Direct Chain Call
+### 2.2 Forcing a specific chain
 ```json
 {
+  "agent": "Homeauto",
   "chain": "Homeauto_Chain",
   "input": "..."
 }
 ```
-- **Logic:** Agent lookup is skipped. The chain is started immediately.
-- **Use:** When you want to ensure that *exactly this* technical procedure is executed without detours.
+- **Logic:** `agent` is resolved as always; `chain` selects the chain that runs bound to it — instead of the agent's default chain. A matching task would still take precedence (omit `task` to avoid that). The chain must be bound to the agent, otherwise it is dropped and the run falls back to LLM.
+- **Use:** When *exactly this* technical procedure should run for this agent, without the default chain applying.
 
 ---
 

@@ -54,6 +54,8 @@ Das Tool ist Teil des internen `delegation`-Servers und steht einem Agenten **nu
     - `task` (String, Optional): UUID oder Name eines spezifischen Task-Kontexts.
     - `chain` (String, Optional): UUID oder Name einer spezifischen Chain, die ausgeführt werden soll.
 
+> **Präzedenz:** Ein expliziter, matchender `task` schlägt jede Chain vor — auch die Default-Chain des Agenten und eine benannte `chain`. Ohne matchenden Task läuft die benannte `chain` (falls am Agenten gebunden), sonst die Default-Chain, sonst ein LLM-Aufruf. Ein genannter, aber nicht gefundener Task fällt auf die Chain zurück und wird im Trace protokolliert. Details in [Agent-zu-Chain Bindung & Delegation](../chains/06_agent_chain_binding.md).
+
 ---
 
 ## Sicherheitsmechanismen & Kontrolle

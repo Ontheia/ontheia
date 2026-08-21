@@ -74,7 +74,8 @@ Executes a request to an AI.
 Delegates the task to another Ontheia agent (A2A).
 *   **Parameters:**
     *   `agent_id`: Name or UUID of the target agent.
-    *   `task_id`: (Optional) Specific task context.
+    *   `task_id`: (Optional) Specific task context. A given, matching task beats the agent's default chain.
+    *   `chain_id`: (Optional) Name or UUID of a specific chain that runs bound to the agent — instead of the agent's default chain. Without `task_id` and `chain_id`, the default chain runs if one exists, otherwise an LLM call. (See [Agent-to-Chain Binding](06_agent_chain_binding.md).)
     *   `input`: The message to the sub-agent.
 
 ### `tool` (MCP Tool Call)

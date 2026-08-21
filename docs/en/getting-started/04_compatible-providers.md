@@ -27,6 +27,7 @@ Ontheia supports any **OpenAI-compatible inference server** — local or remote.
 | **OpenRouter** | OpenAI-compatible | [openrouter.ai](https://openrouter.ai) |
 | **Azure OpenAI** | OpenAI-compatible | [azure.microsoft.com](https://azure.microsoft.com/en-us/products/ai-services/openai-service) |
 | **Mistral AI** | OpenAI-compatible ⚠ | [mistral.ai](https://mistral.ai) |
+| **Ollama Cloud** | OpenAI-compatible | [ollama.com](https://ollama.com) |
 
 > **⚠ Mistral AI — limited tool compatibility:** Chat and completions work reliably. Tool Calling is not fully OpenAI-compatible — parallel tool calls and some formatting details may cause errors. Recommended: `mistral-large` or `mistral-small`; other models may not support tool calling at all.
 
@@ -42,7 +43,7 @@ For local OpenAI-compatible providers:
 
 ## Provider Notes
 
-**Ollama** is the easiest starting point for local models — single-command install, automatic GPU detection, large model library.
+**Ollama** is the easiest starting point for local models — single-command install, automatic GPU detection, large model library. Besides the local instance (`http://localhost:11434/v1`), Ollama also runs a hosted cloud service at `https://ollama.com/v1` (e.g. for `kimi-k3:cloud`). Ontheia auto-detects both endpoints as OpenAI-compatible — the local one through the private-host check, the cloud endpoint through the `ollama.com` host. Tool calling and streaming work on both without a manual flag.
 
 **llama.cpp** is the inference engine behind Ollama and many other tools. Choose it directly when you need full control over quantization and server parameters.
 

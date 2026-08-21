@@ -20,7 +20,15 @@ Der Agent ist mit einer Kette verknüpft (`app.agent_chains`). Sobald dieser Age
 
 ## 2. Delegation vs. Direkter Aufruf
 
-Das Tool `delegate-to-agent` bietet drei Wege, Aufgaben an Sub-Systeme zu übergeben:
+Das Tool `delegate-to-agent` verlangt immer `agent` und `input`; `task` und `chain` sind optional. Was ausgeführt wird, entscheidet eine feste Präzedenz:
+
+1. **Expliziter, matchender Task** — wurde `task` angegeben **und** existiert der Task für diesen Agenten, läuft der Task: ein LLM-Aufruf mit dem Task-Kontext. Er schlägt jede Chain vor — die Default-Chain des Agenten ebenso wie eine benannte `chain`.
+2. **Chain** — ohne matchenden Task läuft die Chain:
+   - ist zusätzlich `chain` benannt, wird **diese** Chain ausgeführt (sie muss am Agenten gebunden sein); sie ersetzt die Default-Chain.
+   - sonst läuft die Default-Chain des Agenten, falls eine hinterlegt ist.
+3. **LLM** — ohne Task und ohne Chain startet ein normaler LLM-Aufruf (mit dem Default-Task-Kontext des Agenten, falls vorhanden).
+
+> **Benannter Task nicht gefunden:** Wurde `task` angegeben, aber kein passender Task am Agenten gefunden, fällt der Lauf auf die Chain (Default oder benannt) zurück und protokolliert den Fallback im Trace — es wird **nicht** ein Task ausgeführt, den der Aufrufer nie genannt hat.
 
 ### 2.1 Delegation an Agent/Task (Empfohlen)
 ```json
@@ -30,18 +38,19 @@ Das Tool `delegate-to-agent` bietet drei Wege, Aufgaben an Sub-Systeme zu überg
   "input": "Wie ist der Füllstand?"
 }
 ```
-- **Logik:** Ontheia sucht den Agenten, prüft, ob eine Chain hinterlegt ist, und führt diese aus. Falls keine Chain existiert, wird ein LLM-Prompt gestartet.
+- **Logik:** Der matchende Task gewinnt und läuft als LLM-Aufruf mit dessen Task-Kontext. Ohne `task` griffe die Default-Chain des Agenten (sofern vorhanden), sonst ein LLM-Aufruf.
 - **Einsatz:** Standard-Delegation zwischen Agenten.
 
-### 2.2 Direkter Chain-Aufruf
+### 2.2 Spezifische Chain erzwingen
 ```json
 {
+  "agent": "Homeauto",
   "chain": "Homeauto_Chain",
   "input": "..."
 }
 ```
-- **Logik:** Der Agenten-Lookup wird übersprungen. Die Kette wird sofort gestartet.
-- **Einsatz:** Wenn man sichergehen will, dass *genau diese* technische Prozedur ohne Umwege ausgeführt wird.
+- **Logik:** `agent` wird wie immer aufgelöst; `chain` wählt die Chain, die gebunden ausgeführt wird — anstelle der Default-Chain des Agenten. Ein matchender Task hätte dennoch Vorrang (dafür `task` weglassen). Die Chain muss am Agenten gebunden sein, sonst entfällt sie und der Lauf fällt auf LLM zurück.
+- **Einsatz:** Wenn für diesen Agenten *genau diese* technische Prozedur laufen soll, ohne dass die Default-Chain greift.
 
 ---
 
