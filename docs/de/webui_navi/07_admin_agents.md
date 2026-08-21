@@ -40,7 +40,7 @@ Jeder Agent erscheint als aufklappbarer Eintrag. Im geöffneten Zustand inline e
 | Tools | Multiselect | Wählt einzelne Tools aus den zugewiesenen Servern. Buttons: **Alle auswählen** · **Auswahl leeren** · **Tool-Liste aktualisieren**. |
 | Skills | Multiselect | Weist dem Agent verfügbare Skills zu. Zugewiesene Skills werden als Katalog in den System-Kontext jedes Runs injiziert; der Agent aktiviert sie bei Bedarf via `activate_skill`. Globale Skills (vom Admin installiert) und nutzer-eigene Skills werden aufgelistet. |
 | Tasks | Liste | Zeigt die mit diesem Agent verknüpften Tasks. Jeder Name ist ein **Link**: Ein Klick wechselt in den Tab „Tasks", klappt dort den Agenten und den Task auf und scrollt hin. Daneben je ein Kopier-Button für die Task-ID. |
-| Chains | Liste (nur lesen) | Zeigt die mit diesem Agent verknüpften Chains. |
+| Chains | Liste | Zeigt die mit diesem Agent verknüpften Chains. Jeder Name ist ein **Link**: Ein Klick wechselt in den Tab „Chains", wählt dort den Agent-Filter und die Chain im Chain-Designer an, lädt ihren Spec und scrollt zum Designer. Daneben je ein Kopier-Button für die Chain-ID. |
 
 Aktionen pro Agent: **Bearbeiten** (lädt Agent in das Formular oben) · **Löschen** (mit Bestätigungsdialog).
 

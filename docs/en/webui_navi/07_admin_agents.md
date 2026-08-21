@@ -40,7 +40,7 @@ Each agent appears as a collapsible entry. When expanded, inline-editable:
 | Tools | Multiselect | Selects individual tools from assigned servers. Buttons: **Select All** · **Clear Selection** · **Refresh Tool List**. |
 | Skills | Multiselect | Assigns available skills to the agent. Selected skills are injected as a catalog into every run's system context; the agent activates them on demand via `activate_skill`. Global skills (installed by admin) and user-scope skills are listed. |
 | Tasks | List | Shows tasks linked to this agent. Each name is a **link**: clicking it switches to the "Tasks" tab, unfolds the agent and the task there, and scrolls to it. Next to each is a copy button for the task ID. |
-| Chains | List (read-only) | Shows chains linked to this agent. |
+| Chains | List | Shows chains linked to this agent. Each name is a **link**: clicking it switches to the "Chains" tab, selects the agent filter and the chain in the Chain Designer, loads its spec, and scrolls to the designer. Next to each is a copy button for the chain ID. |
 
 Actions per agent: **Edit** (loads agent into the form above) · **Delete** (with confirmation dialog).
 

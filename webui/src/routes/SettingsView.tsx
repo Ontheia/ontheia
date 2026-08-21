@@ -4862,6 +4862,19 @@ function AgentsSection({
   }, []);
   const clearTaskJump = useCallback(() => setTaskJump(null), []);
 
+  /**
+   * Which chain the Chains tab should open in the designer once it comes up.
+   * Same one-shot handover as `taskJump`: ChainsSection clears it as soon as
+   * it has acted, so re-rendering the tab does not keep forcing the selection
+   * back after the user has picked another chain.
+   */
+  const [chainJump, setChainJump] = useState<{ agentId: string; chainId: string } | null>(null);
+  const jumpToChain = useCallback((agentId: string, chainId: string) => {
+    setChainJump({ agentId, chainId });
+    setAgentsTab('chains');
+  }, []);
+  const clearChainJump = useCallback(() => setChainJump(null), []);
+
   // The way back, from an opened task to the agent that owns it. No handover
   // needed here: the agent accordion lives in this component.
   const agentRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -5652,7 +5665,25 @@ function AgentsSection({
                               .filter((chain) => chain.agent_id === agent.id)
                               .map((chain) => (
                                 <li key={chain.id}>
-                                  <span className="task-title">{chain.name}</span>
+                                  {/*
+                                    Editing a chain means leaving this tab,
+                                    picking the same agent again in the Chains
+                                    tab and hunting the chain down in the
+                                    designer. The link does all three steps at
+                                    once — the same handover the task link uses.
+                                  */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="link-button task-title"
+                                        onClick={() => jumpToChain(agent.id, chain.id)}
+                                      >
+                                        {chain.name}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{t('chains.openInChainsTab')}</TooltipContent>
+                                  </Tooltip>
                                   <CopyButton text={chain.id} />
                                 </li>
                               ))}
@@ -5725,6 +5756,8 @@ function AgentsSection({
         chainSteps={chainSteps}
         onReplaceSteps={onReplaceSteps}
         onHasChanges={onHasChanges}
+        jumpTo={chainJump}
+        onJumpHandled={clearChainJump}
       />}
     </div>
   );
@@ -6170,12 +6203,16 @@ function ChainsSection({
   agents,
   chainSteps,
   onReplaceSteps,
-  onHasChanges
+  onHasChanges,
+  jumpTo,
+  onJumpHandled
 }: {
   agents: AgentDefinition[];
   chainSteps: ChainStep[];
   onReplaceSteps: (steps: ChainStep[]) => void;
   onHasChanges: (hasChanges: boolean) => void;
+  jumpTo?: { agentId: string; chainId: string } | null;
+  onJumpHandled?: () => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'chat', 'errors']);
   const [chains, setChains] = useState<ChainEntry[]>([]);
@@ -6224,6 +6261,8 @@ function ChainsSection({
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const lastLoadedChainRef = useRef<string | null>(null);
+  const designerRef = useRef<HTMLDivElement | null>(null);
+  const [pendingChainScroll, setPendingChainScroll] = useState(false);
   const selectedChainTooltip = useMemo(() => {
     if (!selectedChain) return '';
     const created =
@@ -6348,6 +6387,35 @@ function ChainsSection({
       isMounted = false;
     };
   }, []);
+
+  // A jump from the Agents tab: open a particular chain in the designer. Chains
+  // load asynchronously on mount, so we wait until the list is in — only then
+  // can the chain be selected and its spec loaded.
+  useEffect(() => {
+    if (!jumpTo) return;
+    if (chains.length === 0) return;
+    const target = chains.find((c) => c.id === jumpTo.chainId);
+    if (!target) {
+      // Chain no longer exists — drop the jump, otherwise the effect hangs.
+      onJumpHandled?.();
+      return;
+    }
+    setSelectedChainAgentId(target.agent_id || APP_SELECT_EMPTY_VALUE);
+    setSelectedChainId(target.id);
+    void loadChainSpec(target.id);
+    setPendingChainScroll(true);
+    onJumpHandled?.();
+  }, [jumpTo, chains, onJumpHandled, loadChainSpec]);
+
+  useEffect(() => {
+    if (!pendingChainScroll) return;
+    // One render later the designer is mounted and the ref is set.
+    const id = window.setTimeout(() => {
+      designerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setPendingChainScroll(false);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [pendingChainScroll]);
 
   useEffect(() => {
     if (chainSteps.length === 0) {
@@ -6819,7 +6887,7 @@ function ChainsSection({
         </div>
         </div>
 
-        <div className="admin-card">
+        <div className="admin-card" ref={designerRef}>
           <div className="flex items-center justify-between mb-4">
             <h3>{t('chains.designer')}</h3>
             {selectedChain && (
