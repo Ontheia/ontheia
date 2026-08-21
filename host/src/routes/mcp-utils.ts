@@ -23,6 +23,7 @@
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { RunToolDefinition } from '../runtime/types.js';
 import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
+import { buildDelegationRunTools } from '../mcp/plugins/delegation-tools.js';
 import { isPlainObject } from './utils.js';
 
 export const sanitizeFunctionSegment = (value: string, fallback: string) => {
@@ -109,19 +110,7 @@ export const loadServerTools = async (
     }
 
     if (serverName === 'delegation') {
-      resolved.push({
-        name: 'delegate-to-agent',
-        server: 'delegation',
-        description: 'Delegates a task to a specialized agent.',
-        parameters: {
-          type: 'object',
-          properties: {
-            agent: { type: 'string', description: 'Name or UUID of the target agent.' },
-            task: { type: 'string', description: 'Optional task/context specification.' },
-            input: { type: 'string', description: 'The concrete task or message to the sub-agent.' }
-          },          required: ['agent', 'input']
-        }
-      });
+      resolved.push(...buildDelegationRunTools());
       continue;
     }
     

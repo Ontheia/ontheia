@@ -225,3 +225,96 @@ test('chain-runner: no task requested falls back to the default chain', async ()
     'with no task requested, the default chain must run'
   );
 });
+
+test('chain-runner: a named chain_id on the step is forwarded and runs the chain', async () => {
+  const events: Array<{ type: string; code?: string; message?: string }> = [];
+  const emit = (ev: any) => { events.push(ev); };
+  const adapter = { search: async (..._: any[]) => [] };
+
+  const client = makeClient({});
+  (client as any).query = async (sql: string) => {
+    if (sql.includes('app.agents')) return { rows: [CHAIN_AGENT_PROFILE_ROW] };
+    if (sql.includes('app.agent_config')) return { rowCount: 1, rows: [{ memory: {} }] };
+    if (sql.includes('app.tasks')) return { rowCount: 0, rows: [] };
+    return { rowCount: 0, rows: [] };
+  };
+
+  // chain_id (by name) is set on the step. handleAgentStep must read it into
+  // chainRef and the chain must run — not the task, and not silently dropped.
+  const spec = {
+    steps: [{ id: 'step1', type: 'agent' as const, agent_id: AGENT_ID, chain_id: 'G_Homeauto_Chain', input: 'test input' }],
+    edges: []
+  };
+  const runner = new ChainRunner(
+    client as any,
+    mockOrchestrator as any,
+    TEMPLATE_CONTEXT as any,
+    emit as any,
+    adapter as any,
+    spec as any,
+    [],
+    0
+  );
+  try {
+    await runner.run();
+  } catch {
+    // sub-chain runs a 1ms delay; swallow anything incidental
+  }
+
+  const debugs = events.filter((e) => e.code === 'chain_debug').map((e) => e.message ?? '');
+  assert.ok(
+    debugs.some((m) => /Delegation Request:.*Chain='G_Homeauto_Chain'/.test(m)),
+    "the chain_id from the step must be forwarded as chainRef in the delegation request"
+  );
+  assert.ok(
+    debugs.some((m) => m.includes('is a CHAIN agent')),
+    'a named chain must run the chain path'
+  );
+});
+
+test('chain-runner: a named task that does not exist logs the fallback and runs the chain', async () => {
+  const events: Array<{ type: string; code?: string; message?: string }> = [];
+  const emit = (ev: any) => { events.push(ev); };
+  const adapter = { search: async (..._: any[]) => [] };
+
+  // Agent has a default chain; the requested task name does NOT match (the
+  // LEFT JOIN falls back to the default task, task_matched stays false).
+  const profile = { ...CHAIN_AGENT_PROFILE_ROW, task_matched: false };
+  const client = makeClient({});
+  (client as any).query = async (sql: string) => {
+    if (sql.includes('app.agents')) return { rows: [profile] };
+    if (sql.includes('app.agent_config')) return { rowCount: 1, rows: [{ memory: {} }] };
+    if (sql.includes('app.tasks')) return { rowCount: 0, rows: [] };
+    return { rowCount: 0, rows: [] };
+  };
+
+  const spec = {
+    steps: [{ id: 'step1', type: 'agent' as const, agent_id: AGENT_ID, task_id: 'DoesNotExist', input: 'test input' }],
+    edges: []
+  };
+  const runner = new ChainRunner(
+    client as any,
+    mockOrchestrator as any,
+    TEMPLATE_CONTEXT as any,
+    emit as any,
+    adapter as any,
+    spec as any,
+    [],
+    0
+  );
+  try {
+    await runner.run();
+  } catch {
+    // sub-chain runs a 1ms delay; swallow anything incidental
+  }
+
+  const debugs = events.filter((e) => e.code === 'chain_debug').map((e) => e.message ?? '');
+  assert.ok(
+    debugs.some((m) => m.includes("requested task 'DoesNotExist' not found")),
+    'a named-but-missing task must log the fallback instead of running silently'
+  );
+  assert.ok(
+    debugs.some((m) => m.includes('is a CHAIN agent')),
+    'with a missing task, the default chain runs'
+  );
+});

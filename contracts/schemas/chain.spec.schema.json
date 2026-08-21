@@ -62,6 +62,7 @@
         },
         "agent_id": { "type": "string", "minLength": 1, "maxLength": 128 },
         "task_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "chain_id": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Name or UUID of a specific chain to run for this agent step; if omitted, the agent's default chain applies unless task_id is set." },
         "input": { "type": "string" },
         "when": { "$ref": "#/definitions/when" },
         "params": { "type": "object" },

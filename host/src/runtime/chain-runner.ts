@@ -30,6 +30,7 @@ import { buildMemoryQuery } from '../routes/run-utils.js';
 import { mapHitToEvent } from '../routes/memory.js';
 import { isGlobalNamespace, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
 import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
+import { buildDelegationRunTools } from '../mcp/plugins/delegation-tools.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, formatMemoryContext } from './prompt-utils.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import type {
@@ -438,21 +439,7 @@ export class ChainRunner {
   private getInternalTools(writeNamespaces?: string[]): RunToolDefinition[] {
     return [
       ...buildMemoryRunTools({ userId: this.templateContext.user_id, writeNamespaces }),
-      {
-        name: 'delegate-to-agent',
-        server: 'delegation',
-        description: 'Delegates a task to a specialized agent.',
-        parameters: {
-          type: 'object',
-          properties: {
-            agent: { type: 'string', description: 'Name or UUID of the target agent.' },
-            task: { type: 'string', description: 'Optional specification of the task/context.' },
-            chain: { type: 'string', description: 'Optional specification of a specific chain (name or UUID).' },
-            input: { type: 'string', description: 'The concrete task or message to the sub-agent.' }
-          },
-          required: ['agent', 'input']
-        }
-      }
+      ...buildDelegationRunTools()
     ];
   }
 
@@ -466,7 +453,9 @@ export class ChainRunner {
     if (!agentRef) throw new Error(`No agent_id provided for step ${stepId}.`);
     if (this.depth > 5) throw new Error(`Maximum recursion depth (5) for agent calls reached.`);
 
-    this.debug(`Delegation Request: Agent='${agentRef}', Task='${taskRef}', Chain='${chainRef}'`);
+    // Print '-' for an unset task/chain so the debug line never shows the
+    // literal word "undefined" (template interpolation would print it).
+    this.debug(`Delegation Request: Agent='${agentRef}', Task='${taskRef ?? '-'}', Chain='${chainRef ?? '-'}'`);
 
     const profile = await this.loadAgentAndTaskProfile(agentRef, taskRef, chainRef);
     if (!profile) throw new Error(`Agent '${agentRef}'${taskRef ? ' with task ' + taskRef : ''}${chainRef ? ' with chain ' + chainRef : ''} could not be found.`);
@@ -484,6 +473,12 @@ export class ChainRunner {
     const taskRequested = !!taskRef && profile.task_matched === true;
     if (taskRequested) {
       this.debug(`Agent ${profile.id}: explicit task '${taskRef}' requested — running the task instead of the agent's chain.`);
+    } else if (taskRef) {
+      // A task was named but does not exist for this agent. Surface it: the
+      // caller likely sent a description or a mistyped name and will now get
+      // the default chain instead of the task they expected. Without this log
+      // the fallback is silent and looks like the requested task ran.
+      this.debug(`Agent ${profile.id}: requested task '${taskRef}' not found — falling back to the agent's chain (or default task), not running a task the caller never named.`);
     }
 
     if (!taskRequested && profile.chain_version_id && profile.chain_spec) {

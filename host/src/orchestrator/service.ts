@@ -38,6 +38,7 @@ import {
 import type { ServerStatusUpdateParams } from './server-config.repository.js';
 import type { MemoryAdapter } from '../memory/adapter.js';
 import { buildMemoryMcpTools } from '../mcp/plugins/memory-tools.js';
+import { buildDelegationMcpTools } from '../mcp/plugins/delegation-tools.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -572,22 +573,7 @@ export class OrchestratorService {
     }
 
     if (serverName === 'delegation') {
-      return [
-        {
-          name: 'delegate-to-agent',
-          title: 'Delegate to Agent',
-          description: 'Delegates a task to a specialized agent.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              agent: { type: 'string', description: 'Name or UUID of the target agent.' },
-              task: { type: 'string', description: 'Optional specification of the task/context.' },
-              input: { type: 'string', description: 'The concrete task or message to the sub-agent.' }
-            },
-            required: ['agent', 'input']
-          }
-        }
-      ];
+      return buildDelegationMcpTools();
     }
 
     if (serverName === 'skills') {

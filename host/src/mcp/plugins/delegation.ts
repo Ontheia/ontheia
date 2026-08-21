@@ -69,13 +69,17 @@ export async function handleDelegation(
     });
   }
 
-  // Create a minimal chain spec for delegation
+  // Create a minimal chain spec for delegation. `chain` is forwarded so the
+  // runner can resolve a specific chain by name or UUID (chain-runner.ts,
+  // loadAgentAndTaskProfile). Without it, a chain the model named was silently
+  // dropped and the agent's default chain ran instead.
   const dummySpec = {
     steps: [{
       id: 'delegate',
       type: 'agent',
       agent_id: agent,
       task_id: task,
+      chain_id: chain,
       input: input
     }]
   };
