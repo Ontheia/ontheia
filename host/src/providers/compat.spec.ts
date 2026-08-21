@@ -119,6 +119,36 @@ test('detectOpenAiCompatibility: local/private hosts are assumed compatible (sel
   );
 });
 
+// Ollama's hosted cloud endpoint (https://ollama.com) speaks the OpenAI
+// chat-completions dialect incl. tools + streaming. Before this entry it was
+// NOT detected as compatible (only the local server on localhost:11434 was,
+// via the private-host check), so tool_calls in block responses were dropped.
+test('detectOpenAiCompatibility: ollama cloud host (ollama.com) is compatible', () => {
+  assert.equal(
+    detectOpenAiCompatibility({
+      providerId: 'ollama-api',
+      providerType: 'http',
+      providerMetadata: {},
+      modelMetadata: {},
+      baseUrl: 'https://ollama.com'
+    }),
+    true
+  );
+});
+
+test('detectOpenAiCompatibility: local ollama (localhost:11434) is compatible via private-host check', () => {
+  assert.equal(
+    detectOpenAiCompatibility({
+      providerId: 'my-ollama',
+      providerType: 'http',
+      providerMetadata: {},
+      modelMetadata: {},
+      baseUrl: 'http://localhost:11434'
+    }),
+    true
+  );
+});
+
 // reasoningToolsRestricted: scopes the admin UI's reasoning-effort warning.
 // Verified live 2026-07-13 — see the function's doc comment.
 

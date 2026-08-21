@@ -30,7 +30,11 @@
  */
 
 const OPENAI_COMPATIBLE_PROVIDER_IDS = new Set(['openai', 'ollama', 'xia', 'xai', 'grok']);
-const OPENAI_COMPATIBLE_HOST_SUFFIXES = ['api.openai.com', 'api.x.ai', 'generativelanguage.googleapis.com'];
+// 'ollama.com' is Ollama's hosted cloud endpoint (not the local server, which
+// runs on localhost:11434 and is already matched by the local-host check
+// below). It speaks the OpenAI chat-completions dialect, including tools and
+// streaming, so it must be detected as OpenAI-compatible.
+const OPENAI_COMPATIBLE_HOST_SUFFIXES = ['api.openai.com', 'api.x.ai', 'generativelanguage.googleapis.com', 'ollama.com'];
 
 export function extractMetadataString(
   source: Record<string, unknown> | undefined,
