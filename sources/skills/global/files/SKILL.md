@@ -142,11 +142,11 @@ FILES_SKILL_ROOTS=/mnt/nextcloud/{user}/Ontheia:/tmp
 the Ontheia host per run). The normalization is a frozen contract:
 
 1. local part of the email (before `@`)
-2. lowercased (`WBrangl@…` and `wbrangl@…` map to the same directory)
+2. lowercased (`Alice@…` and `alice@…` map to the same directory)
 3. restricted to `[a-z0-9._-]` — all other characters removed
 4. leading dots stripped (no hidden directories, no `.trash/` collision)
 
-Examples: `wbrangl@brangl.de` → `wbrangl` · `Max.Muster@firma.de` →
+Examples: `alice@example.com` → `alice` · `Max.Muster@firma.de` →
 `max.muster` · `.odd+name@x.y` → `oddname`
 
 **Fail closed:** if the variable is not present, roots containing `{user}`
