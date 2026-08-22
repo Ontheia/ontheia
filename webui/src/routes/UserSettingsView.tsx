@@ -1440,6 +1440,8 @@ const handleSaveSettings = useCallback(async () => {
     handleAllowAdminMemoryChange,
     handleAvatarSelect,
     handleAvatarRemove,
+    handleDisplayNameChange,
+    runtimeSettings.timezone,
     t
   ]);
 

@@ -1068,7 +1068,7 @@ export function ChatView({
       return [...secondaryOptions, ...chainEntries];
     }
     return secondaryOptions;
-  }, [primary.type, secondaryOptions, chainOptions]);
+  }, [primary.type, primary.id, secondaryOptions, chainOptions]);
 
   // Desktop-Benachrichtigungseinstellung laden
   useEffect(() => {

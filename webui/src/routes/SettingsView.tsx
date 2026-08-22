@@ -1584,7 +1584,7 @@ function MemorySection({
       zeroScanIndexes,
       highDeadTables
     };
-  }, [vectorHealth]);
+  }, [vectorHealth, i18n.language, timezone, t]);
   
   useEffect(() => {
     if (!selectedAgent && agents.length > 0) {
