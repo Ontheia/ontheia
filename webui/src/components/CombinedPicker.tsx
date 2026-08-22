@@ -74,7 +74,6 @@ export function CombinedPicker({
 }: Props) {
   const { t } = useTranslation(['chat', 'common']);
   const { user } = useAuth();
-  const selectClass = size === 'compact' ? 'filter-select compact' : 'filter-select';
   const triggerClass = size === 'inline' ? 'composer-inline-trigger' : 'composer-select-trigger';
 
   const currentPrimaryLabel =

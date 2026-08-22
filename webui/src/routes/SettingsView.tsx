@@ -307,7 +307,7 @@ function CopyIconButton({ text, label }: { text: string; label?: string }) {
 }
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async (e: React.MouseEvent) => {
@@ -807,32 +807,24 @@ function UsersSection({
 
 function GeneralSection({
   runtimeSettings,
-  uiFlags,
   providers,
   promptOptimizer,
-  builderDefaults,
   rollingSummary,
   onRuntimeChange,
-  onUiFlagsChange,
   onPromptOptimizerChange,
-  onBuilderDefaultsChange,
   onRollingSummaryChange,
   onHasChanges
 }: {
   runtimeSettings: { toolLoopTimeoutMs: number; requestRateLimitPerMinute: number; timezone?: string };
-  uiFlags: { showRunDetails: boolean };
   providers: ProviderEntry[];
   promptOptimizer: { providerId: string | null; modelId: string | null };
-  builderDefaults: { providerId: string | null; modelId: string | null };
   rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number };
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
-  onUiFlagsChange: (patch: Partial<typeof uiFlags>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
-  onBuilderDefaultsChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number }) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [motdDraft, setMotdDraft] = useState('');
   const [motdSaving, setMotdSaving] = useState(false);
   const [motdSaved, setMotdSaved] = useState(false);
@@ -888,8 +880,6 @@ function GeneralSection({
   const providerOptions = providers.map((provider) => ({ value: provider.id, label: provider.label }));
   const activeProvider = providers.find((provider) => provider.id === promptOptimizer.providerId);
   const modelOptions = activeProvider?.models ?? [];
-  const builderActiveProvider = providers.find((provider) => provider.id === builderDefaults.providerId);
-  const builderModelOptions = builderActiveProvider?.models ?? [];
   const rsActiveProvider = providers.find((provider) => provider.id === rollingSummary.providerId);
   const rsModelOptions = rsActiveProvider?.models ?? [];
 
@@ -1220,7 +1210,7 @@ function TriStateSelect({
   onValueChange: (val: boolean | null) => void;
   inheritLabel?: string;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const displayInheritLabel = inheritLabel || t('memory.topKInherit');
 
   return (
@@ -1319,13 +1309,12 @@ function MemorySection({
   timezone?: string;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
-  type MemoryPanelId = 'agentPolicy' | 'taskPolicy' | 'auditLog' | 'ranking' | 'maintenance' | 'ingest';
   const [selectedAgent, setSelectedAgent] = useState<string | null>(agents[0]?.id ?? null);
   const [selectedTask, setSelectedTask] = useState<string | null>(agents[0]?.tasks?.[0]?.id ?? null);
   const [agentPolicy, setAgentPolicy] = useState<MemoryPolicyDto | null>(null);
   const [taskPolicy, setTaskPolicy] = useState<MemoryPolicyDto | null>(null);
   const [auditEntries, setAuditEntries] = useState<MemoryAuditEntry[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
+  const [, setAuditLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [namespaceFilter, setNamespaceFilter] = useState('');
@@ -1374,16 +1363,15 @@ function MemorySection({
   const [metaMetadata, setMetaMetadata] = useState('');
   const [savingAgentPolicy, setSavingAgentPolicy] = useState(false);
   const [savingTaskPolicy, setSavingTaskPolicy] = useState(false);
-  const [memoryDirty, setMemoryDirty] = useState(false);
+  const [, setMemoryDirty] = useState(false);
   const [writeContent, setWriteContent] = useState('');
-  const [recentAuditFilter, setRecentAuditFilter] = useState(() => ({ agentId: null, taskId: null }));
+  const [recentAuditFilter] = useState(() => ({ agentId: null, taskId: null }));
   const hitKey = useCallback((hit: Pick<MemorySearchHit, 'id' | 'namespace' | 'content'>) => {
     return hit.id ?? `${hit.namespace}||${hit.content}`;
   }, []);
   const [vectorHealth, setVectorHealth] = useState<VectorHealthResponse | null>(null);
   const [vectorLoading, setVectorLoading] = useState(false);
   const [vectorMaintaining, setVectorMaintaining] = useState(false);
-  const [openMemoryPanel, setOpenMemoryPanel] = useState<MemoryPanelId | null>(null);
   const [memoryStats, setMemoryStats] = useState<MemoryStatsEntry[]>([]);
   const [securityStats, setSecurityStats] = useState<{ warnings_24h: number }>({ warnings_24h: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
@@ -1597,13 +1585,6 @@ function MemorySection({
       highDeadTables
     };
   }, [vectorHealth]);
-  const isAgentPolicyOpen = openMemoryPanel === 'agentPolicy';
-  const isTaskPolicyOpen = openMemoryPanel === 'taskPolicy';
-  const isAuditLogOpen = openMemoryPanel === 'auditLog';
-  const isRankingOpen = openMemoryPanel === 'ranking';
-  const toggleMemoryPanel = (panel: MemoryPanelId) => {
-    setOpenMemoryPanel((prev) => (prev === panel ? null : panel));
-  };
   
   useEffect(() => {
     if (!selectedAgent && agents.length > 0) {
@@ -1801,7 +1782,6 @@ function MemorySection({
     });
   };
 
-  const [savingPolicies, setSavingPolicies] = useState(false);
   // Advisory namespace warnings from the last save. Unlike the status message
   // these do NOT time out: a pattern that matches nothing produces no error and
   // no empty-result signal later, so this notice is the only chance to see it.
@@ -2792,7 +2772,11 @@ function MemorySection({
                                 setMetaLang(lng);
                                 setMetaTags(tagsArr.join(', '));
                                 setMetaTtlSeconds(ttl);
-                                const { project_id, lang, tags, ttl_seconds, ...rest } = meta as any;
+                                const rest = { ...(meta as any) };
+                                delete rest.project_id;
+                                delete rest.lang;
+                                delete rest.tags;
+                                delete rest.ttl_seconds;
                                 setMetaMetadata(Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '');
                                 setWriteClass(hit.class ?? '');
                                 setWriteObservedAt(hit.observedAt ? hit.observedAt.slice(0, 10) : '');
@@ -3753,7 +3737,7 @@ function McpServerSection({
   const [draftEnvKey, setDraftEnvKey] = useState('API_KEY');
   const [draftEnvValue, setDraftEnvValue] = useState('secret:FILESYSTEM_API_KEY');
   const [generatedConfig, setGeneratedConfig] = useState('');
-  const [recentServers, setRecentServers] = useState<
+  const [, setRecentServers] = useState<
     Array<{ name: string; command: string; args: string; url?: string; type?: 'stdio' | 'sse'; env: Record<string, string> }>
   >([
     {
@@ -3783,7 +3767,6 @@ function McpServerSection({
   const [activeStoredConfig, setActiveStoredConfig] = useState<string | null>(null);
   const [openServer, setOpenServer] = useState<string | null>(null);
 
-  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [mcpTab, setMcpTab] = useState<'config' | 'generator'>('config');
   const toolCatalogRef = useRef(toolCatalog);
   const loadingToolNamesRef = useRef(loadingToolServers);
@@ -4833,7 +4816,7 @@ function AgentsSection({
   onRefreshAgents: () => Promise<void> | void;
   onReplaceSteps: (steps: ChainStep[]) => void;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'chat', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'chat', 'errors']);
   const [agentLabel, setAgentLabel] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
   const [agentProviderId, setAgentProviderId] = useState<string>(providers[0]?.id ?? '');
@@ -5743,7 +5726,6 @@ function AgentsSection({
         agents={agents}
         onAddTask={onAddTask}
         onUpdateTask={onUpdateTask}
-        onHasChanges={onHasChanges}
         onRemoveTask={onRemoveTask}
         onRefreshAgents={onRefreshAgents}
         jumpTo={taskJump}
@@ -5786,7 +5768,7 @@ function TaskEditForm({
   /** Counterpart to the task links in the Agents tab: back to the owning agent. */
   onOpenAgent?: (agentId: string) => void;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [draft, setDraft] = useState({
     label: task.label,
     contextPrompt: task.contextPrompt ?? '',
@@ -5947,7 +5929,6 @@ function TasksSection({
   agents,
   onAddTask,
   onUpdateTask,
-  onHasChanges,
   onRemoveTask,
   onRefreshAgents,
   jumpTo,
@@ -5961,7 +5942,6 @@ function TasksSection({
     taskId: string,
     patch: { label?: string; contextPrompt?: string | null; description?: string | null; showInComposer?: boolean | null }
   ) => Promise<void> | void;
-  onHasChanges: (hasChanges: boolean) => void;
   onRemoveTask: (agentId: string, taskId: string) => Promise<void> | void;
   onRefreshAgents: () => Promise<void> | void;
   /** Task to unfold on arrival, set when the Agents tab linked here. */
@@ -5970,7 +5950,7 @@ function TasksSection({
   /** Switches to the Agents tab and unfolds the given agent. */
   onOpenAgent?: (agentId: string) => void;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [selectedAgent, setSelectedAgent] = useState<string>(() => agents[0]?.id ?? '');
   const [taskLabel, setTaskLabel] = useState('');
   const [taskContext, setTaskContext] = useState('');
@@ -6263,33 +6243,14 @@ function ChainsSection({
   const lastLoadedChainRef = useRef<string | null>(null);
   const designerRef = useRef<HTMLDivElement | null>(null);
   const [pendingChainScroll, setPendingChainScroll] = useState(false);
-  const selectedChainTooltip = useMemo(() => {
-    if (!selectedChain) return '';
-    const created =
-      selectedChain.created_at && !Number.isNaN(new Date(selectedChain.created_at).getTime())
-        ? new Date(selectedChain.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
-        : '—';
-    const desc =
-      selectedChain.description && selectedChain.description.trim().length > 0
-        ? selectedChain.description
-        : '—';
-    return `ID: ${selectedChain.id}\n${t('agents.description')}: ${desc}\n${t('chains.chainCreated')}: ${created}`;
-  }, [selectedChain, t]);
   useEffect(() => {
     if (!chainDraft.agentId && agents.length > 0) {
       setChainDraft((prev) => ({ ...prev, agentId: agents[0].id }));
       setSelectedChainAgentId((prev) => prev || agents[0].id);
     }
   }, [agents, chainDraft.agentId]);
-  const [newStepType, setNewStepType] = useState<string>('llm');
+  const [newStepType] = useState<string>('llm');
   const [newStepLabel, setNewStepLabel] = useState<string>('');
-  const formatDateTime = (value: string | null | undefined) => {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '—';
-    return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
-  };
-
   const pickDefaultAgentTask = useCallback(() => {
     const withTask = agents.find((entry) => entry.tasks.length > 0);
     const fallbackAgent = withTask ?? agents[0];
@@ -7499,7 +7460,6 @@ function ProvidersSection({
   const [testingProviderId, setTestingProviderId] = useState<string | null>(null);
   const [savingProvider, setSavingProvider] = useState(false);
   const [savingModel, setSavingModel] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [providerNotices, setProviderNotices] = useState<
     Record<string, { status: 'success' | 'error'; message: string }>
   >({});
@@ -8486,17 +8446,15 @@ function ProvidersSection({
   );
 }
 function InfoSection({
-  agentsCount,
   providersCount,
   chainSteps,
   appVersion
 }: {
-  agentsCount: number;
   providersCount: number;
   chainSteps: ChainStep[];
   appVersion: string;
 }) {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
 
@@ -8576,7 +8534,7 @@ function InfoSection({
 }
 
 export function useAdminSections(): AdminSectionMeta[] {
-  const { t, i18n } = useTranslation(['admin']);
+  const { t } = useTranslation(['admin']);
   return useMemo(
     () => [
       {
@@ -8626,7 +8584,7 @@ export function useAdminSections(): AdminSectionMeta[] {
 
 export function SettingsView() {
   const adminSections = useAdminSections();
-  const { t, i18n } = useTranslation(['admin', 'common', 'settings', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'settings', 'errors']);
   const {
     agents: savedAgents,
     setAgents: setGlobalAgents,
@@ -8639,8 +8597,7 @@ export function SettingsView() {
     setBuilderDefaults,
     rollingSummary,
     setRollingSummary,
-    uiFlags,
-    setUiFlags
+    uiFlags
   } = useChatSidebar();
   const providerContext = useProviderContext();
   const { user: currentUser } = useAuth();
@@ -8980,15 +8937,11 @@ export function SettingsView() {
         return (
           <GeneralSection
             runtimeSettings={runtimeSettings}
-            uiFlags={uiFlags}
             providers={providerContext.providers}
             promptOptimizer={promptOptimizer}
-            builderDefaults={builderDefaults}
             rollingSummary={rollingSummary}
             onRuntimeChange={(patch) => configureRuntimeSettings(patch)}
-            onUiFlagsChange={(patch) => setUiFlags(patch)}
             onPromptOptimizerChange={setPromptOptimizer}
-            onBuilderDefaultsChange={setBuilderDefaults}
             onRollingSummaryChange={setRollingSummary}
             onHasChanges={setHasChanges}
           />
@@ -9032,7 +8985,6 @@ export function SettingsView() {
       case 'info':
         return (
           <InfoSection
-            agentsCount={agents.length}
             providersCount={providersCount}
             chainSteps={chainSteps}
             appVersion={appVersion}

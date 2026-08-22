@@ -45,7 +45,7 @@ import {
 } from './ui/tooltip';
 
 export function NamespaceRulesEditor() {
-  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const [rules, setRules] = useState<NamespaceRule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

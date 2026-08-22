@@ -247,184 +247,6 @@ const DEFAULT_ROLLING_SUMMARY: RollingSummarySettings = {
   maxMessages: 40
 };
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-function normalizeAgentsPayload(input: unknown, fallback: AgentDefinition[]): AgentDefinition[] {
-  if (!Array.isArray(input)) {
-    return fallback;
-  }
-  const normalized = input
-    .map((agent) => {
-      if (!agent || typeof agent !== 'object') return null;
-      const id = typeof (agent as any).id === 'string' ? (agent as any).id.trim() : '';
-      const label = typeof (agent as any).label === 'string' ? (agent as any).label.trim() : '';
-      if (!id || !label) return null;
-      const providerId =
-        typeof (agent as any).providerId === 'string'
-          ? (agent as any).providerId.trim()
-          : typeof (agent as any).provider_id === 'string'
-          ? (agent as any).provider_id.trim()
-          : '';
-      const modelId =
-        typeof (agent as any).modelId === 'string'
-          ? (agent as any).modelId.trim()
-          : typeof (agent as any).model_id === 'string'
-          ? (agent as any).model_id.trim()
-          : '';
-      const toolApprovalMode =
-        typeof (agent as any).toolApprovalMode === 'string'
-          ? ((agent as any).toolApprovalMode.trim() as ToolApprovalMode)
-          : typeof (agent as any).tool_approval_mode === 'string'
-          ? ((agent as any).tool_approval_mode.trim() as ToolApprovalMode)
-          : undefined;
-      const toolPermissionsSource =
-        isPlainObject((agent as any).toolPermissions)
-          ? ((agent as any).toolPermissions as Record<string, unknown>)
-          : isPlainObject((agent as any).tool_permissions)
-          ? ((agent as any).tool_permissions as Record<string, unknown>)
-          : undefined;
-      const toolPermissions: Record<string, 'once' | 'always'> | undefined = toolPermissionsSource
-        ? Object.entries(toolPermissionsSource).reduce(
-            (acc, [key, value]) => {
-              if (value === 'once' || value === 'always') {
-                acc[key] = value;
-              }
-              return acc;
-            },
-            {} as Record<string, 'once' | 'always'>
-          )
-        : undefined;
-      const agentServers = Array.isArray((agent as any).mcpServers ?? (agent as any).mcp_servers)
-        ? ((agent as any).mcpServers ?? (agent as any).mcp_servers)
-        : [];
-      const mcpServers = agentServers
-        .map((entry: any) => (typeof entry === 'string' ? entry.trim() : ''))
-        .filter((entry: string) => entry.length > 0);
-      const agentTools = Array.isArray((agent as any).tools ?? (agent as any).agent_tools)
-        ? ((agent as any).tools ?? (agent as any).agent_tools)
-        : [];
-      const tools = agentTools
-        .map((entry: any) => {
-          if (!entry || typeof entry !== 'object') return null;
-          const server =
-            typeof entry.server === 'string'
-              ? entry.server.trim()
-              : typeof entry.server_name === 'string'
-              ? entry.server_name.trim()
-              : '';
-          const tool =
-            typeof entry.tool === 'string'
-              ? entry.tool.trim()
-              : typeof entry.tool_name === 'string'
-              ? entry.tool_name.trim()
-              : '';
-          if (!server || !tool) return null;
-          return { server, tool };
-        })
-        .filter(
-          (value: { server: string; tool: string } | null): value is { server: string; tool: string } =>
-            Boolean(value?.server) && Boolean(value?.tool)
-        );
-      const tasks = Array.isArray((agent as any).tasks)
-        ? (agent as any).tasks
-            .map((task: any) => {
-              if (!task || typeof task !== 'object') return null;
-              const taskId = typeof task.id === 'string' ? task.id.trim() : '';
-              const taskLabel = typeof task.label === 'string' ? task.label.trim() : '';
-              if (!taskId || !taskLabel) return null;
-              const contextPrompt =
-                typeof task.contextPrompt === 'string'
-                  ? task.contextPrompt
-                  : typeof task.context_prompt === 'string'
-                  ? task.context_prompt
-                  : undefined;
-              const description =
-                typeof task.description === 'string'
-                  ? task.description
-                  : typeof task.task_description === 'string'
-                  ? task.task_description
-                  : undefined;
-              const showInComposer =
-                typeof task.show_in_composer === 'boolean'
-                  ? task.show_in_composer
-                  : typeof task.showInComposer === 'boolean'
-                  ? task.showInComposer
-                  : undefined;
-              return {
-                id: taskId,
-                label: taskLabel,
-                contextPrompt: contextPrompt ?? undefined,
-                description: description && description.trim().length > 0 ? description.trim() : undefined,
-                showInComposer
-              };
-            })
-            .filter(Boolean)
-        : [];
-      const chains = Array.isArray((agent as any).chains)
-        ? (agent as any).chains
-            .map((chain: any) => {
-              if (!chain || typeof chain !== 'object') return null;
-              const chainId = typeof chain.id === 'string' ? chain.id.trim() : '';
-              const chainLabel = typeof chain.name === 'string' ? chain.name.trim() : '';
-              if (!chainId || !chainLabel) return null;
-              const description =
-                typeof chain.description === 'string'
-                  ? chain.description
-                  : undefined;
-              const showInComposer =
-                typeof chain.show_in_composer === 'boolean'
-                  ? chain.show_in_composer
-                  : typeof chain.showInComposer === 'boolean'
-                  ? chain.showInComposer
-                  : undefined;
-              return {
-                id: chainId,
-                label: chainLabel,
-                description: description && description.trim().length > 0 ? description.trim() : undefined,
-                showInComposer
-              };
-            })
-            .filter(Boolean)
-        : [];
-      const showInComposer =
-        typeof (agent as any).show_in_composer === 'boolean'
-          ? (agent as any).show_in_composer
-          : typeof (agent as any).showInComposer === 'boolean'
-          ? (agent as any).showInComposer
-          : undefined;
-      const ownerId =
-        typeof (agent as any).owner_id === 'string'
-          ? (agent as any).owner_id
-          : typeof (agent as any).ownerId === 'string'
-          ? (agent as any).ownerId
-          : undefined;
-      const visibility =
-        typeof (agent as any).visibility === 'string'
-          ? (agent as any).visibility
-          : undefined;
-      const grantedToMe = (agent as any).granted_to_me === true;
-      return {
-        id,
-        label,
-        providerId: providerId || null,
-        modelId: modelId || null,
-        toolApprovalMode: toolApprovalMode ?? 'prompt',
-        toolPermissions,
-        mcpServers: mcpServers.length > 0 ? mcpServers : undefined,
-        tools: tools.length > 0 ? tools : undefined,
-        tasks,
-        chains: chains.length > 0 ? chains : undefined,
-        showInComposer,
-        ownerId,
-        visibility,
-        grantedToMe
-      };
-    })
-    .filter(Boolean) as AgentDefinition[];
-  return normalized.length > 0 ? normalized : fallback;
-}
-
 function mapAdminAgentsToDefinitions(input: unknown, fallback: AgentDefinition[]): AgentDefinition[] {
   if (!Array.isArray(input)) {
     return fallback;
@@ -664,7 +486,7 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
     setAvatarState(data);
   }, []);
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const addWarning = useCallback((warning: WarningEntry) => {
     setWarnings((prev) => {
@@ -733,20 +555,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
         next.timezone = patch.timezone;
       }
       return next;
-    });
-  }, []);
-
-  const setPromptOptimizer = useCallback((value: PromptOptimizerSettings) => {
-    setPromptOptimizerState({
-      providerId: value.providerId && value.providerId.trim().length > 0 ? value.providerId.trim() : null,
-      modelId: value.modelId && value.modelId.trim().length > 0 ? value.modelId.trim() : null
-    });
-  }, []);
-
-  const setBuilderDefaults = useCallback((value: BuilderDefaults) => {
-    setBuilderDefaultsState({
-      providerId: value.providerId && value.providerId.trim().length > 0 ? value.providerId.trim() : null,
-      modelId: value.modelId && value.modelId.trim().length > 0 ? value.modelId.trim() : null
     });
   }, []);
 

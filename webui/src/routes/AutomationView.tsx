@@ -518,8 +518,8 @@ function JobDialog({
   agents: AgentDefinition[];
   initialJob?: CronJobEntry | null;
 }) {
-  const { t, i18n } = useTranslation(['automation', 'common', 'chat', 'errors']);
-  const { preferences, runtimeSettings } = useChatSidebar();
+  const { t } = useTranslation(['automation', 'common', 'chat', 'errors']);
+  const { preferences } = useChatSidebar();
   const [name, setName] = useState('');
   const [scheduleMode, setScheduleMode] = useState<'recurring' | 'once'>('recurring');
   const [schedule, setSchedule] = useState('0 9 * * *');

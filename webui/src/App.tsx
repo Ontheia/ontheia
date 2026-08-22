@@ -126,9 +126,6 @@ function AuthenticatedApp() {
   const {
     defaultPrimary,
     defaultSecondary,
-    setDefaultPrimary,
-    setDefaultSecondary,
-    setDefaultToolApproval,
     agents,
     messages,
     refreshChats,
@@ -188,7 +185,7 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (isInitializing) return;
 
-    const chatPathMatch = location.pathname.match(/^\/chat(?:\/([^\/]+))?$/);
+    const chatPathMatch = location.pathname.match(/^\/chat(?:\/([^/]+))?$/);
     if (chatPathMatch || location.pathname === '/') {
       const activeChatIdFromPath = chatPathMatch ? chatPathMatch[1] : null;
 

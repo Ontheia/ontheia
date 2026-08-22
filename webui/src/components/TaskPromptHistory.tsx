@@ -73,7 +73,7 @@ export function TaskPromptHistory({
     try {
       const response = await listTaskPromptVersions(taskId);
       setVersions(response.versions);
-    } catch (err) {
+    } catch {
       setError(t('tasks.historyLoadFailed'));
       setVersions([]);
     } finally {
@@ -107,7 +107,7 @@ export function TaskPromptHistory({
       await onRestored();
       // The restore is itself a change, so the list it came from is now stale.
       await load();
-    } catch (err) {
+    } catch {
       setError(t('tasks.restoreFailed'));
     } finally {
       setBusy(null);

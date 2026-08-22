@@ -123,10 +123,7 @@ type MessageBubbleProps = {
   highlight?: string;
 };
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, onDelete, memoryStatuses, highlight }: MessageBubbleProps) => {
+const MessageBubble = memo(function MessageBubble({ id, role, content, createdAt, metadata, timezone, onDelete, memoryStatuses, highlight }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -176,7 +173,7 @@ const MessageBubble = memo(({ id, role, content, createdAt, metadata, timezone, 
         second: '2-digit',
         timeZone: timezone || 'Europe/Berlin'
       });
-    } catch (e) {
+    } catch {
       return null;
     }
   }, [createdAt, timezone]);
@@ -468,17 +465,14 @@ export function ChatView({
   }, [messages]);
 
   const {
-    resetConversation,
     upsertMessage,
     upsertRunStatus,
     addWarning,
     getToolApproval,
     setToolApproval,
-    clearToolApproval,
     getChatPreferences,
     updateChatPreferences,
     messages: sidebarMessages,
-    uiFlags,
     runtimeSettings,
     builderDefaults,
     defaultToolApproval,
@@ -540,7 +534,7 @@ export function ChatView({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
-  const [builderMode, setBuilderMode] = useState(false);
+  const [builderMode] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -777,32 +771,11 @@ export function ChatView({
     }
   }, [approvalMode, activeChatId]);
 
-  const renderApprovalLabel = (mode: ToolApprovalMode) => {
-    if (mode === 'granted') return t('settings:approveFull');
-    if (mode === 'denied') return t('settings:approveBlocked');
-    return t('settings:approveRequest');
-  };
-
-  const toolLabelFromKey = (key: string | null) => {
-    if (!key) return null;
-    const [server, tool] = key.split('::');
-    if (server && tool) return `${server} – ${tool}`;
-    if (tool) return tool;
-    return server ?? key;
-  };
-
   const buildToolKey = (server?: string | null, tool?: string | null) => {
     if (!server && !tool) return null;
     const safeServer = server ?? '';
     const safeTool = tool ?? '';
     return `${safeServer}::${safeTool}`.replace(/:+$/, '');
-  };
-
-  const normalizeArgs = (value: unknown): Record<string, unknown> | null => {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-    return null;
   };
 
   const resetPendingToolApproval = useCallback(() => {
@@ -1271,11 +1244,6 @@ export function ChatView({
     }
   }, [primary, secondary, combinedSecondaryOptions, onSecondaryChange]);
 
-  const primaryLabel =
-    primary.type === 'provider'
-      ? providers.find((entry) => entry.id === primary.id)?.label ?? primary.id
-      : agents.find((entry) => entry.id === primary.id)?.label ?? primary.id;
-
   useEffect(() => {
     const textarea = composerTextareaRef.current;
     if (!textarea) return;
@@ -1307,7 +1275,7 @@ export function ChatView({
           ? crypto.randomUUID() 
           : makeId('chat');
         isNewChat = true;
-      } catch (e) {
+      } catch {
         effectiveChatId = Date.now().toString();
       }
     }

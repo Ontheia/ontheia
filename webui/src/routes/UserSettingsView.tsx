@@ -52,22 +52,6 @@ type Preferences = {
 
 type PreferenceKey = keyof Preferences;
 
-const DEFAULT_PREFERENCES: Preferences = {
-  theme: 'system',
-  language: 'de',
-  desktopNotifications: false
-};
-
-const DEFAULT_SIDEBAR_LIMITS: UserSidebarLimitsPayload = {
-  messages: 50,
-  statuses: 20,
-  warnings: 20
-};
-
-const DEFAULT_UI_FLAGS: UserUiFlagsPayload = {
-  showRunDetails: false
-};
-
 type UserSectionId = 'general' | 'account' | 'info';
 
 function SessionTokenCard() {
@@ -630,17 +614,6 @@ function InfoSection({
   timezone?: string;
 }) {
   const { t } = useTranslation(['settings', 'common', 'admin']);
-  const labelledTheme = useMemo(() => {
-    switch (preferences.theme) {
-      case 'dark':
-        return t('themeDark');
-      case 'light':
-        return t('themeLight');
-      default:
-        return t('themeSystem');
-    }
-  }, [preferences.theme, t]);
-
   return (
     <div className="admin-section-grid">
       {settingsError && (
@@ -796,48 +769,8 @@ function CopyIconButton({ text, label }: { text: string; label?: string }) {
   );
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
-  const { t } = useTranslation(['common']);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const ok = await copyText(text);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [text]);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-slate-700/50 text-slate-400 hover:text-sky-400 transition-colors text-[10px] font-mono group"
-          onClick={handleCopy}
-        >
-          {copied ? (
-            <>
-              <Check size={10} className="text-emerald-400" />
-              <span className="text-emerald-400">{t('copied')}</span>
-            </>
-          ) : (
-            <>
-              <Copy size={10} className="group-hover:scale-110 transition-transform" />
-              <span>{text}</span>
-            </>
-          )}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>{label || t('copy')}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function UserSettingsView() {
-  const { user, refresh, loading: authLoading } = useAuth();
+  const { user, refresh } = useAuth();
   const { t, i18n } = useTranslation(['settings', 'common', 'chat', 'admin', 'errors']);
   const {
     limits: sidebarLimitsFromCtx,
@@ -865,7 +798,7 @@ export function UserSettingsView() {
   const [uiFlagsState, setUiFlagsState] = useState<UserUiFlagsPayload>(uiFlagsFromCtx);
   const [preferencesStatus, setPreferencesStatus] = useState<string | null>(null);
   const [chainOptions, setChainOptions] = useState<Array<{ id: string; label: string; raw: ChainEntry }>>([]);
-  const [lastPreferenceUpdate, setLastPreferenceUpdate] = useState<string | null>(null);
+  const [lastPreferenceUpdate] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 

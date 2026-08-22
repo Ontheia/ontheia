@@ -52,7 +52,6 @@ type MarkdownMessageComponentProps = MarkdownMessageProps & {
   copyIcon?: React.ReactNode;
   onCopy?: (content: string) => void;
   showCodeCopyButton?: boolean;
-  copyLabel?: string;
   userInput?: boolean;
 };
 
@@ -349,7 +348,6 @@ export function MarkdownMessage({
   copyIcon,
   onCopy,
   showCodeCopyButton,
-  copyLabel,
   userInput,
   highlight
 }: MarkdownMessageComponentProps) {
