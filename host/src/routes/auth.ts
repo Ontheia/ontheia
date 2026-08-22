@@ -55,14 +55,12 @@ import {
 } from './settings-utils.js';
 import type { RouteContext } from './types.js';
 
-const GLOBAL_PROMPT_OPTIMIZER_USER_ID = '00000000-0000-0000-0000-000000000000';
-
 async function getSystemSetting<T>(db: Pool, key: string, defaultValue: T): Promise<T> {
   try {
     const result = await db.query('SELECT value FROM app.system_settings WHERE key = $1', [key]);
     if (result.rowCount === 0) return defaultValue;
     return result.rows[0].value as T;
-  } catch (error) {
+  } catch {
     return defaultValue;
   }
 }

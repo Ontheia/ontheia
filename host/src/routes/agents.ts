@@ -366,7 +366,7 @@ function toStringArray(input: unknown): string[] {
 }
 
 export function registerAgentRoutes(server: FastifyInstance, context: RouteContext) {
-  const { db, memoryAdapter } = context;
+  const { db } = context;
 
   server.get('/agents', async (request, reply) => {
     const auth = await requireSession(db, request, reply);
@@ -375,8 +375,6 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
 
     const expandRaw = toStringArray((request.query as any)?.expand);
     const expand = new Set(expandRaw.map((entry) => entry.toLowerCase()));
-    const isAdminView = (request.query as any)?.admin_view === 'true' && session.role === 'admin';
-    
     return withRls(db, session.userId, session.role, async (client) => {
       // If admin view, we could potentially set a flag to bypass RLS in SQL,
       // but standard RLS policy should allow admin to see all.
@@ -1014,10 +1012,6 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     }
 
     try {
-      const agentBindings = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
-        return client.query(`SELECT DISTINCT agent_id FROM app.agent_tasks WHERE task_id = $1`, [taskId]);
-      });
-      
       await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         const result = await client.query(`DELETE FROM app.tasks WHERE id = $1`, [taskId]);
         if (result.rowCount === 0) throw new Error('not_found');
@@ -1353,7 +1347,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       }, {
         userId: session.userId,
         role: session.role,
-        onEvent: (event) => { /* Background capture */ }
+        onEvent: () => { /* Background capture */ }
       });
 
       const complete = events.find(e => e.type === 'complete' && e.status === 'success') as any;

@@ -26,7 +26,7 @@ import { MemoryAdapter } from './adapter.js';
 
 test('MemoryAdapter uses database ranking rules', async () => {
   const mockProvider = {
-    embed: async (texts: string[]) => texts.map(t => ({ embedding: [0.1], model: 'test', dimension: 1 }))
+    embed: async (texts: string[]) => texts.map(() => ({ embedding: [0.1], model: 'test', dimension: 1 }))
   };
 
   const mockDbRules = [
@@ -68,7 +68,7 @@ test('MemoryAdapter uses database ranking rules', async () => {
 
   const mockDb = {
     connect: async () => mockClient,
-    query: async (sql: string, params: any[]) => mockClient.query(sql) 
+    query: async (sql: string) => mockClient.query(sql) 
   };
 
   const config = {

@@ -31,7 +31,7 @@ import {
 } from './types.js';
 
 export function registerProjectRoutes(server: FastifyInstance, context: RouteContext) {
-  const { db, memoryAdapter } = context;
+  const { db } = context;
 
   server.get('/projects', async (request, reply) => {
     const auth = await requireSession(db, request, reply);
@@ -63,7 +63,7 @@ export function registerProjectRoutes(server: FastifyInstance, context: RouteCon
         return insertRes.rows[0];
       });
       return result;
-    } catch (error) {
+    } catch {
       reply.code(500);
       return { error: 'project_create_failed' };
     }
@@ -88,7 +88,7 @@ export function registerProjectRoutes(server: FastifyInstance, context: RouteCon
         return updateRes.rows[0];
       });
       return result;
-    } catch (error) {
+    } catch {
       reply.code(404);
       return { error: 'not_found' };
     }
@@ -99,7 +99,7 @@ export function registerProjectRoutes(server: FastifyInstance, context: RouteCon
     if (!auth) return;
     const { id } = request.params as { id: string };
     try {
-      const idsToDelete = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
+      await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         const tree = await client.query(`WITH RECURSIVE descendants AS (SELECT id FROM app.projects WHERE id = $1 UNION ALL SELECT p.id FROM app.projects p JOIN descendants d ON p.parent_id = d.id) SELECT id::text FROM descendants`, [id]);
         const ids = tree.rows.map((row) => row.id);
         if (ids.length === 0) throw new Error('not_found');
@@ -112,7 +112,7 @@ export function registerProjectRoutes(server: FastifyInstance, context: RouteCon
       // with metadata.project_id, so deleting the project must not touch it.
       reply.code(204);
       return null;
-    } catch (error) {
+    } catch {
       reply.code(404);
       return { error: 'not_found' };
     }

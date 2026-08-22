@@ -216,7 +216,7 @@ export class ChainRunner {
   }
 
   private applyTemplate(value: string): string {
-    return value.replace(/\$\{([a-zA-Z0-9_\.]+)\}/g, (_, key) => {
+    return value.replace(/\$\{([a-zA-Z0-9_.]+)\}/g, (_, key) => {
       const val = getDeep(this.templateContext, key);
       const resolved = val !== undefined ? val : `\${${key}}`;
       return String(resolved);
@@ -224,7 +224,7 @@ export class ChainRunner {
   }
 
   private resolveStepPlaceholders(value: string): string {
-    return value.replace(/\$\{steps\.([^.}]+)\.([^\}]+)\}/g, (_, stepId: string, path: string) => {
+    return value.replace(/\$\{steps\.([^.}]+)\.([^}]+)\}/g, (_, stepId: string, path: string) => {
       const step = this.chainContext.steps?.[stepId];
       if (!step) return `\${steps.${stepId}.${path}}`;
       const val = getDeep(step, path);
@@ -626,7 +626,7 @@ export class ChainRunner {
                   parameters: match.inputSchema
                 });
               }
-            } catch (err) {
+            } catch {
               this.debug(`Failed to load tool definition for ${activeServer}:${toolName}`);
             }
           }
@@ -651,7 +651,7 @@ export class ChainRunner {
                   parameters: tool.inputSchema
                 });
               }
-            } catch (err) {
+            } catch {
               this.debug(`Failed to list tools for server ${activeServer}`);
             }
           }
@@ -863,7 +863,7 @@ export class ChainRunner {
       this.history.push(...stepMessages);
 
       try {
-        const start = finalOutput.search(/[{\[]/);
+        const start = finalOutput.search(/[{[]/);
         const end = Math.max(finalOutput.lastIndexOf('}'), finalOutput.lastIndexOf(']'));
         if (start !== -1 && end !== -1 && end > start) {
           finalData = JSON.parse(jsonrepair(finalOutput.slice(start, end + 1)));
@@ -1098,7 +1098,7 @@ export class ChainRunner {
           if (!step.params?.provider && row.provider_id) effectiveProviderId = row.provider_id;
           if (!step.model && row.model_id) effectiveModelId = row.model_id;
         }
-      } catch (error) { /* ignore */ }
+      } catch { /* ignore */ }
     }
 
     const contextMap: Record<string, { data: unknown; output: string | null | undefined }> = {};
@@ -1151,7 +1151,7 @@ ${contextSnippet}
               parameters: tool.inputSchema
             });
           }
-        } catch (e) {
+        } catch {
           this.debug(`LLM Step ${stepId}: Could not resolve tools for ${serverName}`);
         }
       }
@@ -1246,7 +1246,7 @@ ${contextSnippet}
     const cleanText = fullText.trim();
     
     try {
-      const start = cleanText.search(/[{\[]/);
+      const start = cleanText.search(/[{[]/);
       const end = Math.max(cleanText.lastIndexOf('}'), cleanText.lastIndexOf(']'));
       
       if (start !== -1 && end !== -1 && end > start) {
@@ -1381,7 +1381,7 @@ ${contextSnippet}
           tool: step.tool!,
           arguments: resolvedArgs
         });
-      } catch (err) {
+      } catch {
         finalMode = 'deny';
       }
     }
@@ -1420,7 +1420,7 @@ ${contextSnippet}
         extractedData = textParts.map((t: string) => tryParseJson(t.trim()) ?? t);
       } else if (textParts.length === 1) {
         const trimmed = textParts[0].trim();
-        if (trimmed.search(/[{\[]/) !== -1) {
+        if (trimmed.search(/[{[]/) !== -1) {
           extractedData = tryParseJson(trimmed) ?? textParts[0];
         } else {
           extractedData = trimmed;
@@ -1517,7 +1517,7 @@ ${contextSnippet}
     let data = null;
     let finalOutput: any = resolved;
     const trimmed = resolved.trim();
-    if (trimmed.search(/[{\[]/) !== -1) {
+    if (trimmed.search(/[{[]/) !== -1) {
       const parsed = tryParseJson(trimmed);
       if (parsed !== null) { data = parsed; finalOutput = data; }
     }

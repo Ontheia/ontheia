@@ -106,7 +106,7 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
       });
       await cronService.rescheduleAll();
       return job;
-    } catch (error) {
+    } catch {
       reply.code(500);
       return { error: 'cron_create_failed' };
     }

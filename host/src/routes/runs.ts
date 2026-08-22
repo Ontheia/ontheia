@@ -640,7 +640,7 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       await deleteVectorNamespacesSafe(memoryAdapter, [nsUserChat(auth.session.userId, chatId)], auth.session.userId, request.log);
       reply.code(204);
       return null;
-    } catch (error) {
+    } catch {
       reply.code(404);
       return { error: 'not_found' };
     }

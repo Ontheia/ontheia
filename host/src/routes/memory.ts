@@ -308,7 +308,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       }
     }
 
-    const { hits, allowedNamespaces, allowedUserIds } = await withRls(db, session.userId, session.role, async (client) => {
+    const { hits, allowedNamespaces } = await withRls(db, session.userId, session.role, async (client) => {
       const { namespaces: allowed, allowedUserIds: uids } = await filterNamespacesForSession(db, namespacesToUse, session, client);
       if (allowed.length === 0) return { hits: [], allowedNamespaces: [], allowedUserIds: uids };
       // A management view must find, not rank. The relevance floors exist to
@@ -842,7 +842,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     (async () => {
       try {
         const allFiles: string[] = [];
-        async function walk(dir: string) {
+        const walk = async (dir: string) => {
           const entries = await fs.readdir(dir, { withFileTypes: true });
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
@@ -855,7 +855,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
               }
             }
           }
-        }
+        };
 
         await walk(absolutePath);
 
@@ -992,7 +992,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       try {
         // Recursively collect all PDF files
         const pdfFiles: string[] = [];
-        async function walkPdf(dir: string) {
+        const walkPdf = async (dir: string) => {
           const entries = await fs.readdir(dir, { withFileTypes: true });
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
@@ -1002,7 +1002,7 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
               pdfFiles.push(fullPath);
             }
           }
-        }
+        };
         await walkPdf(absolutePath);
 
         if (pdfFiles.length === 0) {

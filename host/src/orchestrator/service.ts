@@ -78,7 +78,7 @@ export class OrchestratorService {
 
   private toolCache: Map<string, ToolCacheEntry> = new Map();
 
-  private logger: Console | { info: Function; warn: Function; error: Function };
+  private logger: Console | { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void };
 
   private statusUpdater?: (update: ServerStatusUpdateParams) => Promise<void>;
 
@@ -109,7 +109,7 @@ export class OrchestratorService {
     allowlistUrls: string;
     allowlistPackages: { npm: string; pypi: string; bun: string };
     hardening: string;
-  }, options: { dockerHost?: string; dockerNetworkName?: string; requireRootlessDocker?: boolean; statusUpdater?: (update: ServerStatusUpdateParams) => Promise<void>; logger?: Console | { info: Function; warn: Function; error: Function }; memoryAdapter?: MemoryAdapter }) {
+  }, options: { dockerHost?: string; dockerNetworkName?: string; requireRootlessDocker?: boolean; statusUpdater?: (update: ServerStatusUpdateParams) => Promise<void>; logger?: Console | { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void }; memoryAdapter?: MemoryAdapter }) {
     this.startTime = new Date();
     this.allowlistPaths = {
       images: configPaths.allowlistImages,

@@ -96,7 +96,7 @@ export class CronService {
       throw new Error(`Invalid user_id: "${user_id}"`);
     }
 
-    const { role, messageContent, userLanguage, desktopNotificationsEnabled } = await withTransaction(this.db, async (client) => {
+    const { role, messageContent, userLanguage } = await withTransaction(this.db, async (client) => {
       await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
       await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
 

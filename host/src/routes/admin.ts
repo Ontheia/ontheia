@@ -61,7 +61,6 @@ import { CronService } from '../runtime/CronService.js';
 import { chunkText } from '../runtime/ingest/chunker.js';
 
 const AUTH_MODES = new Set(['bearer', 'header', 'query', 'none']);
-const HTTP_METHODS = new Set(['GET', 'POST']);
 
 // The container starts the server directly (CMD ["node", "dist/index.js"]), so npm
 // never populates npm_package_version and reading it would always yield null. Take
@@ -516,7 +515,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     return result;
   });
 
-  server.post('/servers/stop/:name', async (request, reply) => {
+  server.post('/servers/stop/:name', async (request) => {
     const { name } = request.params as { name: string };
     return orchestrator.stop(name);
   });
@@ -554,7 +553,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
           version: meta?.version,
           fetched_at: meta ? new Date(meta.fetchedAt).toISOString() : undefined
         });
-      } catch (error) {
+      } catch {
         servers.push({ name, running: true, tools: [] });
       }
     }
@@ -610,7 +609,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
       });
       await memoryAdapter.refreshConfig();
       return mapRule(result.rows[0]);
-    } catch (error) {
+    } catch {
       reply.code(500);
       return { error: 'create_failed' };
     }
@@ -633,7 +632,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
       });
       await memoryAdapter.refreshConfig();
       return mapRule(result.rows[0]);
-    } catch (error) {
+    } catch {
       reply.code(500);
       return { error: 'update_failed' };
     }
@@ -750,8 +749,6 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     if (!sessionResult) {
       return { error: 'unauthorized', message: 'Authentication required.' };
     }
-    const { session } = sessionResult;
-
     const body = request.body as any;
     const action = typeof body?.action === 'string' ? body.action.trim().toLowerCase() : '';
     if (!['vacuum', 'reindex'].includes(action)) {

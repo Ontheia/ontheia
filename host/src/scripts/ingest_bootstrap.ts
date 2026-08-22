@@ -56,7 +56,7 @@ export async function ingestDocument(userId: string, namespace: string, content:
     } else {
       throw new Error('No embedding generated');
     }
-  } catch (error) {
+  } catch {
     console.warn('Ingest: Falling back to plain text insert (no embeddings).');
     
     await db.query(

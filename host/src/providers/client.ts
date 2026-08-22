@@ -26,8 +26,7 @@ import {
   sanitizeUrl,
   resolveProviderApiKey,
   buildAuthHeaders,
-  appendQueryAuth,
-  type ProviderAuthMode
+  appendQueryAuth
 } from './http.js';
 import type { RunRequest, ChatMessage } from '../runtime/types.js';
 import { getSystemFlag } from '../runtime/system-flags.js';
@@ -53,7 +52,6 @@ export interface ProviderChatRequest {
   isOpenAICompatible: boolean;
 }
 
-const DEFAULT_CHAT_PATH = '/v1/chat/completions';
 const DEFAULT_CHAT_METHOD: HttpMethod = 'POST';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -149,7 +147,6 @@ export async function loadProviderModel(
     warnings.push(`Model ${modelId} is marked as inactive.`);
   }
 
-  const authMode: ProviderAuthMode = provider.authMode ?? 'bearer';
   const resolvedKey = await resolveProviderApiKey(provider.apiKeyRef ?? null);
   warnings.push(...resolvedKey.warnings);
 

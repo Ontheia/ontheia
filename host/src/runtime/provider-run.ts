@@ -990,7 +990,7 @@ async function consumeEventStream(
             completionTokens = parsed.usage.completion_tokens ?? completionTokens;
             lastUsageRaw = parsed.usage;
           }
-        } catch (e) {
+        } catch {
           // Silently skip non-json lines
         }
       }
@@ -1087,7 +1087,7 @@ async function handleOpenAiToolCalls(params: {
 }): Promise<ToolCallHandlingResult> {
   const {
     db, responseBody, conversation, toolset, orchestrator, emit,
-    totalToolCalls, deadline, timeoutSeconds, options,
+    totalToolCalls, deadline, options,
     toolAccessBlocked, toolApprovalMode, toolPermissions = {},
     agent_id, task_id, provider_id, model_id, context_options
   } = params;
@@ -1368,9 +1368,4 @@ async function handleOpenAiToolCalls(params: {
   }
 
   return 'continue';
-}
-
-function serializeToolResult(result: unknown): string {
-  if (typeof result === 'string') return result;
-  return JSON.stringify(result);
 }

@@ -26,7 +26,7 @@ import { MemoryAdapter } from './adapter.js';
 
 test('MemoryAdapter search deduplicates hits', async () => {
   const mockProvider = {
-    embed: async (texts: string[]) => texts.map(t => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
+    embed: async (texts: string[]) => texts.map(() => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
   };
 
   const mockRows = [
@@ -52,7 +52,7 @@ test('MemoryAdapter search deduplicates hits', async () => {
 
   const mockDb = {
     connect: async () => mockClient,
-    query: async (sql: string, params: any[]) => mockClient.query(sql) 
+    query: async (sql: string) => mockClient.query(sql) 
   };
 
   const config = {

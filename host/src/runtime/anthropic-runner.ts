@@ -298,7 +298,7 @@ export async function runAnthropicCompletion(
               tool: toolDef.name,
               arguments: tc.input
             });
-          } catch (err) {
+          } catch {
             finalMode = 'deny';
           }
 

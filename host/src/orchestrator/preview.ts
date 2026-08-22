@@ -99,7 +99,7 @@ export function buildPreview(
   }
 
   const networkName = hardening?.defaults?.network?.name;
-  const hasNetworkFlag = finalArgs.some((token, index) => {
+  const hasNetworkFlag = finalArgs.some((token) => {
     if (token === '--network') {
       return true;
     }

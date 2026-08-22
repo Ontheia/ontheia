@@ -57,7 +57,7 @@ const ajv = new (Ajv as any)({
   allErrors: true,
   allowUnionTypes: true
 });
-// @ts-ignore
+// @ts-expect-error ajv-formats' addFormats has no matching call signature
 addFormats(ajv);
 const validateSchema = ajv.compile(schema);
 

@@ -35,12 +35,12 @@ const logFilePath = process.env.LOG_FILE || path.join(process.cwd(), 'host_serve
 const logMaxBytes = parsePositiveInt(process.env.LOG_MAX_BYTES, 10 * 1024 * 1024);
 const logMaxFiles = parsePositiveInt(process.env.LOG_MAX_FILES, 5);
 
-let _logRotateFn: ((msg: string) => void) | undefined;
-
 const fileStream = createRotatingLogStream(logFilePath, {
   maxBytes: Math.max(logMaxBytes, 1024 * 1024),
   maxFiles: Math.max(logMaxFiles, 1),
-  log: (msg) => _logRotateFn?.(msg)
+  // Called at write time, not at construction, so the closure may reference
+  // `logger` even though it is declared below.
+  log: (msg) => logger.info({ component: 'log-rotate' }, msg)
 });
 
 const streams = [
@@ -59,5 +59,3 @@ export const logger: Logger = pino(
   { level: process.env.LOG_LEVEL ?? 'debug', base: undefined },
   multistream(streams)
 );
-
-_logRotateFn = (msg) => logger.info({ component: 'log-rotate' }, msg);

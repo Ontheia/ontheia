@@ -26,7 +26,7 @@ import { MemoryAdapter } from './adapter.js';
 
 test('MemoryAdapter search ranks hits by namespace rule and recency', async () => {
   const mockProvider = {
-    embed: async (texts: string[]) => texts.map(t => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
+    embed: async (texts: string[]) => texts.map(() => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
   };
 
   const now = new Date();
@@ -84,7 +84,7 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
 
   const mockDb = {
     connect: async () => mockClient,
-    query: async (sql: string, params: any[]) => mockClient.query(sql) 
+    query: async (sql: string) => mockClient.query(sql) 
   };
 
   const config = {
@@ -138,7 +138,7 @@ test('MemoryAdapter search ranks hits by namespace rule and recency', async () =
 
 test('MemoryAdapter search ranks hits by pattern matching with placeholders', async () => {
   const mockProvider = {
-    embed: async (texts: string[]) => texts.map(t => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
+    embed: async (texts: string[]) => texts.map(() => ({ embedding: [0.1, 0.2, 0.3], model: 'test', dimension: 3 }))
   };
 
   const userId = 'b6a38fa5-ed09-4bde-8634-eb7e80275989';
@@ -180,7 +180,7 @@ test('MemoryAdapter search ranks hits by pattern matching with placeholders', as
 
   const mockDb = {
     connect: async () => mockClient,
-    query: async (sql: string, params: any[]) => mockClient.query(sql) 
+    query: async (sql: string) => mockClient.query(sql) 
   };
 
   const config = {
