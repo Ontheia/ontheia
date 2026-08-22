@@ -128,7 +128,11 @@ export type ChainStep = {
 export type ChainEdge = {
   from: string;
   to: string;
-  map: Record<string, string>;
+  // Optional to match the chain spec schema, which requires only `from`/`to`.
+  // An edge without `map` carries no data mapping; it expresses a dependency
+  // the graph validator uses for cycle/DAG checks, and is a no-op for data
+  // flow at runtime (steps run in array order, not edge-topological order).
+  map?: Record<string, string>;
 };
 
 export type ChainSpec = {
@@ -315,7 +319,7 @@ export class ChainRunner {
       
       const stepState = this.chainContext.steps[stepId] ?? { inputs: {} };
       if (!stepState.inputs) stepState.inputs = {};
-      for (const [srcPath, dstKey] of Object.entries(edge.map)) {
+      for (const [srcPath, dstKey] of Object.entries(edge.map ?? {})) {
         const val = getDeep(sourceStep, srcPath);
         stepState.inputs[dstKey] = val;
       }

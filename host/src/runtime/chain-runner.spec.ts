@@ -318,3 +318,36 @@ test('chain-runner: a named task that does not exist logs the fallback and runs 
     'with a missing task, the default chain runs'
   );
 });
+
+// Regression: chain-runner.ts:318 called Object.entries(edge.map) and threw
+// "Cannot convert undefined or null to object" when an edge — valid per the
+// chain spec schema, which requires only `from`/`to` — carried no `map`.
+// Steps run in array order, so a map-less edge is a no-op for data flow and
+// must not crash the run. The case also exercises the template/step
+// placeholder substitution in handleTransformStep.
+test('chain-runner: edge ohne map wirft nicht und ist ein Datenfluss-No-op', async () => {
+  const spec = {
+    steps: [
+      { id: 's1', type: 'transform' as const, prompt: 'Hallo ${user_name}', params: { silent: true } },
+      { id: 's2', type: 'transform' as const, prompt: 'OUT=[${steps.s1.output}]' }
+    ],
+    edges: [{ from: 's1', to: 's2' }] // absichtlich ohne map
+  };
+
+  const runner = new ChainRunner(
+    {} as any,
+    mockOrchestrator as any,
+    { user_name: 'Wolfgang' } as any,
+    () => {},
+    {} as any,
+    spec as any,
+    [],
+    0
+  );
+
+  const ctx = await runner.run();
+
+  assert.equal(ctx.steps['s1']?.output, 'Hallo Wolfgang');
+  assert.equal(ctx.steps['s2']?.output, 'OUT=[Hallo Wolfgang]');
+  assert.notEqual(ctx.steps['s2']?.status, 'failed', 's2 darf bei einer map-losen Edge nicht fehlschlagen');
+});
