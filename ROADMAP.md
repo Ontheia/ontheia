@@ -59,7 +59,6 @@ Focus now: stability, packaging, and community foundation.
 
 | Feature | Description |
 |---|---|
-| **Provider Fallback Hint** | Clear message in chat when no AI provider is configured yet |
 | **CI Pipeline** | Automated lint and test runs on every pull request |
 | **Embedding Fallback** | Documents are embedded with a primary and a backup provider simultaneously (e.g. OpenAI + Ollama). If the primary provider is unavailable, the backup takes over automatically. |
 
