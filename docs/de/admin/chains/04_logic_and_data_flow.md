@@ -40,6 +40,11 @@ Neben der Variablen-Injection können Daten auch explizit über `edges` gemappt 
 ]
 ```
 
+Das Feld `map` ist optional. Eine Edge ohne `map` injiziert keine Daten — sie
+deklariert lediglich eine Abhängigkeit, die der Graph-Validator für Zyklus- und
+DAG-Prüfungen heranzieht. Die Ausführungsreihenfolge richtet sich immer nach der
+Reihenfolge der Steps im Array, nicht nach den Edges.
+
 ## 4. Komplexe Kontrollflüsse
 Die Engine unterstützt fortgeschrittene Strukturen für Logik-Graphen:
 - **Branch:** Saubere Fallunterscheidung (Switch-Case).

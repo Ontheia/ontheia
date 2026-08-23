@@ -111,12 +111,13 @@ docs(readme): add requirements table
 
 ## Pull Request Process
 
-1. Ensure `npm run lint` passes in both `host/` and `webui/`.
-2. Ensure `npm run test` passes in `host/`.
-3. Keep PRs focused — one concern per PR.
-4. Update documentation in `docs/` if your change affects user-facing behavior.
-5. Add a migration file if your change requires a schema change (`migrations/V{next}__{description}.sql`).
-6. Request a review. PRs are merged by a maintainer once approved.
+1. CI runs lint, build, and test automatically on every pull request and push to `main` — for `host/` (lint, build, test) and `webui/` (lint, build). A PR cannot merge while these fail.
+2. Ensure `npm run lint` passes in both `host/` and `webui/`.
+3. Ensure `npm run test` passes in `host/`.
+4. Keep PRs focused — one concern per PR.
+5. Update documentation in `docs/` if your change affects user-facing behavior.
+6. Add a migration file if your change requires a schema change (`migrations/V{next}__{description}.sql`).
+7. Request a review. PRs are merged by a maintainer once approved.
 
 ---
 

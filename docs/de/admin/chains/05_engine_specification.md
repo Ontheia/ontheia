@@ -172,6 +172,10 @@ Obwohl Steps sequentiell definiert werden, können explizite Daten-Mappings übe
 ]
 ```
 
+`map` ist optional. Eine Edge ohne `map` transportiert keine Daten, deklariert aber
+eine Abhängigkeit, die der Graph-Validator für Zyklus-/DAG-Prüfungen nutzt. Die
+Ausführungsreihenfolge folgt stets der Step-Reihenfolge im Array.
+
 ---
 
 ## 7. Limits & Obergrenzen
