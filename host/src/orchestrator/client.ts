@@ -37,7 +37,16 @@ export interface ConnectedClient {
   client: Client;
   transport: Transport;
   spec: SpawnSpec;
+  /** Returns the tail of the child process stderr captured so far. */
+  stderrTail: () => string;
   stop: () => Promise<void>;
+}
+
+/** A connect failure carries the captured child stderr so callers can show the
+ *  real crash reason (e.g. "Invalid email address") instead of just the
+ *  transport-level "Connection closed". */
+export interface McpConnectError extends Error {
+  stderrTail?: string;
 }
 
 const CONNECT_TIMEOUT_MS = (() => {
@@ -49,8 +58,21 @@ const CONNECT_TIMEOUT_MS = (() => {
   return parsed;
 })();
 
+// Keep the last few KB of child stderr per client so a start crash leaves a
+// readable trace even when the process exits before the MCP handshake.
+const STDERR_TAIL_MAX = 4096;
+
 export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient> {
   let transport: Transport;
+  let stderrTail = '';
+
+  const captureStderr = (chunk: Buffer): void => {
+    const msg = chunk.toString('utf-8');
+    // Log at info so child stderr is visible regardless of LOG_LEVEL (debug is
+    // easily missed). The captured tail is also surfaced to callers on failure.
+    logger.info({ command: spec.command, output: msg.trim() }, 'MCP server stderr');
+    stderrTail = (stderrTail + msg).slice(-STDERR_TAIL_MAX);
+  };
 
   if (spec.url) {
     // Prefer Streamable HTTP transport for remote connections
@@ -71,11 +93,7 @@ export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient
       stderr: 'pipe'
     });
     if (stdioTransport.stderr) {
-      stdioTransport.stderr.on('data', (chunk: Buffer) => {
-        const msg = chunk.toString('utf-8');
-        // Log to console so it ends up in host logs
-        logger.debug({ command: spec.command, output: msg.trim() }, 'MCP server stderr');
-      });
+      stdioTransport.stderr.on('data', captureStderr);
     }
     transport = stdioTransport;
   } else {
@@ -85,8 +103,17 @@ export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient
   const client = new Client({ name: 'mcp-host', version: '0.1.0' }, {
     capabilities: {}
   });
-  
-  await client.connect(transport, { signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS) });
+
+  try {
+    await client.connect(transport, { signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS) });
+  } catch (err) {
+    // Attach the captured child stderr so the orchestrator catch can put the
+    // real crash reason into the status log_excerpt instead of "Connection closed".
+    if (err instanceof Error) {
+      (err as McpConnectError).stderrTail = stderrTail;
+    }
+    throw err;
+  }
 
   async function stop() {
     try {
@@ -101,5 +128,5 @@ export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient
     }
   }
 
-  return { client, transport, spec, stop };
+  return { client, transport, spec, stderrTail: () => stderrTail, stop };
 }

@@ -429,14 +429,22 @@ export class OrchestratorService {
           }
         } catch (error) {
           launch[name] = 'failed';
+          const baseMsg = error instanceof Error ? error.message : String(error);
+          // For stdio servers the connect error carries the captured child stderr
+          // (see McpConnectError) — surface it so the admin UI/DB shows the real
+          // crash reason (e.g. "Invalid email address") instead of "Connection closed".
+          const stderrTail = (error as { stderrTail?: string } | null)?.stderrTail?.trim() ?? '';
+          const logExcerpt = stderrTail
+            ? `${baseMsg}\n--- child stderr (tail) ---\n${stderrTail}`
+            : baseMsg;
           this.logger.error(
-            { server: name, err: error instanceof Error ? error.message : String(error) },
+            { server: name, err: baseMsg, ...(stderrTail ? { stderrTail } : {}) },
             isRemote ? 'MCP server connection failed' : 'MCP server (stdio) start failed'
           );
           if (!options?.dryRun) {
             await this.recordStatus(name, {
               status: 'failed',
-              logExcerpt: error instanceof Error ? error.message : 'Start/connection failed'
+              logExcerpt
             });
           }
         }
