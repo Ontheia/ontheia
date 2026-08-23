@@ -86,21 +86,24 @@ export function resolveEnvMap(
     if (typeof rawValue !== 'string') {
       continue;
     }
-    if (isSecretReference(rawValue)) {
-      try {
-        result.resolved[key] = resolveSecretRef(rawValue, sources);
+    // Route every string value through resolveSecretRef so the `value:` inline
+    // prefix is stripped consistently. Previously only `secret:` references
+    // took this path, leaving `value:<raw>` literals unstripped in the env
+    // handed to child MCP servers (see CODEBASE_mcp_env_value_prefix_not_stripped).
+    // `value:` and plain strings are not secrets and are not masked.
+    try {
+      result.resolved[key] = resolveSecretRef(rawValue, sources);
+      if (isSecretReference(rawValue)) {
         result.masked[key] = '***';
-      } catch (error) {
-        if (error instanceof SecretResolutionError) {
-          result.masked[key] = '***';
-          result.missing.push(key);
-        } else {
-          throw error;
-        }
       }
-      continue;
+    } catch (error) {
+      if (error instanceof SecretResolutionError) {
+        result.masked[key] = '***';
+        result.missing.push(key);
+      } else {
+        throw error;
+      }
     }
-    result.resolved[key] = rawValue;
   }
 
   return result;
