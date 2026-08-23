@@ -411,11 +411,50 @@ CALDAV_PASSWORD=passwort
 
 | Server | Beschreibung | Repository |
 |---|---|---|
+| **email-mcp** | E-Mails senden und empfangen (IMAP + SMTP) | [github.com/codefuturist/email-mcp](https://github.com/codefuturist/email-mcp) |
 | **mcp-email-server** | E-Mails senden und empfangen | [github.com/ai-zerolab/mcp-email-server](https://github.com/ai-zerolab/mcp-email-server) |
 | **ntfy-me-mcp** | Push-Benachrichtigungen via ntfy senden | [github.com/gitmotion/ntfy-me-mcp](https://github.com/gitmotion/ntfy-me-mcp) |
 | **Bluesky Context Server** | Bluesky-Posts lesen und erstellen | [github.com/brianellin/bsky-mcp-server](https://github.com/brianellin/bsky-mcp-server) |
 | **slack-mcp-server** (korotovsky) | Slack-Nachrichten und -Kanäle lesen und schreiben | [github.com/korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) |
 | **slack-mcp-server** (zencoderai) | Slack-Nachrichten und -Kanäle lesen und schreiben | [github.com/zencoderai/slack-mcp-server](https://github.com/zencoderai/slack-mcp-server) |
+
+<details>
+<summary>⚙ email-mcp — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "email-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@codefuturist/email-mcp",
+        "stdio"
+      ],
+      "env": {
+        "MCP_EMAIL_ADDRESS": "secret:MCP_EMAIL_ADDRESS",
+        "MCP_EMAIL_PASSWORD": "secret:MCP_EMAIL_PASSWORD",
+        "MCP_EMAIL_IMAP_HOST": "secret:MCP_EMAIL_IMAP_HOST",
+        "MCP_EMAIL_SMTP_HOST": "secret:MCP_EMAIL_SMTP_HOST"
+      }
+    }
+  }
+}
+```
+
+IMAP- und SMTP-Host gehören zum eigenen E-Mail-Provider; Passwort und Adresse werden als Secrets geführt.
+
+**Allowlist** (`config/allowlist.packages.npm`): `@codefuturist/email-mcp`
+
+**`.env`:**
+```
+MCP_EMAIL_ADDRESS=user@example.com
+MCP_EMAIL_PASSWORD=passwort
+MCP_EMAIL_IMAP_HOST=imap.example.com
+MCP_EMAIL_SMTP_HOST=smtp.example.com
+```
+
+</details>
 
 <details>
 <summary>⚙ mcp-email-server — Konfiguration</summary>
