@@ -632,6 +632,7 @@ SLACK_BOT_TOKEN=xoxb-...
 | **fetch** | Fetch and process web content | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) |
 | **brave-search-mcp-server** | Web search via Brave Search API | [github.com/brave/brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server) |
 | **exa-mcp-server** | AI-powered web search via Exa | [github.com/exa-labs/exa-mcp-server](https://github.com/exa-labs/exa-mcp-server) |
+| **duckduckgo-mcp-server** | Web search via DuckDuckGo (no API key) | [github.com/nickclyde/duckduckgo-mcp-server](https://github.com/nickclyde/duckduckgo-mcp-server) |
 | **mcp_weather_server** | Retrieve weather data | [github.com/isdaniel/mcp_weather_server](https://github.com/isdaniel/mcp_weather_server) |
 | **playwright-mcp** | Browser automation and web scraping | [github.com/microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) |
 | **Context7** | Up-to-date library documentation for coding agents | [github.com/upstash/context7](https://github.com/upstash/context7) |
@@ -705,6 +706,28 @@ BRAVE_API_KEY=your-key
 **Allowlist** (`config/allowlist.packages.npm`): `mcp-remote`
 
 > Create your API key at [dashboard.exa.ai](https://dashboard.exa.ai) and insert it directly into the URL.
+
+</details>
+
+<details>
+<summary>⚙ duckduckgo-mcp-server — Configuration</summary>
+
+```json
+{
+  "mcpServers": {
+    "ddg-search": {
+      "command": "uvx",
+      "args": [
+        "duckduckgo-mcp-server"
+      ]
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.pypi`): `duckduckgo-mcp-server`
+
+> DuckDuckGo requires no API key — runs without further configuration.
 
 </details>
 
