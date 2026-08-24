@@ -991,6 +991,7 @@ DATABASE_URL=postgresql://user:passwort@localhost:5432/datenbankname
 |---|---|---|
 | **nextcloud-mcp-server** | Nextcloud-Dateien und -Ordner verwalten | [github.com/cbcoutinho/nextcloud-mcp-server](https://github.com/cbcoutinho/nextcloud-mcp-server) |
 | **paperless-mcp** | Paperless-NGX Dokumentenmanagement | [github.com/baruchiro/paperless-mcp](https://github.com/baruchiro/paperless-mcp) |
+| **jellyfin-mcp** | Jellyfin-Mediaserver steuern — Bibliothek, Wiedergabe, Playlisten | [github.com/jaredtrent/jellyfin-mcp](https://github.com/jaredtrent/jellyfin-mcp) |
 
 <details>
 <summary>⚙ nextcloud-mcp-server — Konfiguration</summary>
@@ -1051,6 +1052,36 @@ PAPERLESS_API_KEY=dein-api-token
 ```
 
 > Token unter Paperless-NGX → Profil → API-Token generieren.
+
+</details>
+
+<details>
+<summary>⚙ jellyfin-mcp — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "jellyfin": {
+      "command": "npx",
+      "args": ["-y", "@jaredtrent/jellyfin-mcp"],
+      "env": {
+        "JELLYFIN_URL": "secret:JELLYFIN_URL",
+        "JELLYFIN_API_KEY": "secret:JELLYFIN_API_KEY"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@jaredtrent/jellyfin-mcp`
+
+**`.env`:**
+```
+JELLYFIN_URL=http://jellyfin.example.com:8096
+JELLYFIN_API_KEY=dein-api-key
+```
+
+> API-Key im Jellyfin-Dashboard unter *Verwaltung → API-Keys* anlegen. `--read-only` beschränkt auf Lesezugriff, `--disable-destructive` blockiert Löschen/Neustart/Herunterfahren.
 
 </details>
 
