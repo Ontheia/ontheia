@@ -46,6 +46,9 @@ Rechtsklick oder ⋯-Menü auf einem Chat-Eintrag:
 | In Projekt verschieben | Chat einem Projekt zuordnen oder daraus entfernen. |
 | Löschen | Chat dauerhaft löschen (mit Bestätigung). |
 
+### Chat-Eintrag (laufender Run)
+Läuft in einem Chat gerade ein Run, ersetzt ein **Stop-Button** (Quadrat-Symbol, Hover rot) das Drei-Punkte-Menü an der Position der Aktionsfläche. Ein Klick sendet `POST /runs/:id/stop` und beendet den Run; das Menü ist erst wieder erreichbar, wenn der Server den Endzustand gemeldet hat und der Button verschwunden ist. In der Mobil-Ansicht ist der Button dadurch der einzige Weg, einen laufenden Run zu stoppen, ohne den Chat zu öffnen (siehe auch [Rechte Sidebar — Run-Status](14_sidebar_right.md)).
+
 ---
 
 ## Benutzermenü (Avatar-Dropdown)

@@ -15,7 +15,7 @@ Ontheia ermöglicht es dir, Chats in Projekten zu organisieren:
 ## 3. Verlauf (Chronologie)
 Hier findest du alle Chats, die keinem spezifischen Projekt zugeordnet sind. 
 - **Kontextmenü:** Über das "Drei-Punkte-Menü" kannst du Chats umbenennen, löschen oder Projekten zuweisen.
-- **Run-Indikator:** Läuft in einem Chat gerade ein aktiver Run, erscheint rechts neben dem Chat-Eintrag ein blauer Spinner. Er verschwindet automatisch, sobald der Run abgeschlossen ist – unabhängig davon, in welchem Chat du dich gerade befindest. Du kannst also zwischen Chats wechseln, während mehrere Runs parallel laufen.
+- **Stop-Button für laufende Runs:** Läuft in einem Chat gerade ein aktiver Run, erscheint rechts neben dem Chat-Eintrag ein **Stop-Button** (Quadrat-Symbol), der beim Hover rot hervorgehoben wird. Ein Klick beendet den Run — unabhängig davon, in welchem Chat du dich gerade befindest. Der Button überlagert dabei das Drei-Punkte-Menü, das erst nach Run-ende wieder erreichbar ist; er verschwindet automatisch, sobald der Server den Endzustand meldet. So lassen sich Runs auch in der Mobil-Ansicht stoppen, ohne den Chat erst öffnen zu müssen.
 
 ## 4. Benutzer-Menü (Footer)
 Am unteren Ende findest du dein Profil:

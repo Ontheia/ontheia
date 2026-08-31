@@ -61,4 +61,4 @@ Buttons: **[Save]** · **[Cancel]**
 
 Below the job table: list of recent executions with timestamp, job name, and status.
 
-Running executions can be stopped via the **stop button in the Run Status section of the right sidebar** (activity panel) — see [Right Sidebar](14_sidebar_right.md).
+Running executions can be stopped via the **stop button in the Run Status section of the right sidebar** (activity panel) — see [Right Sidebar](14_sidebar_right.md) — or via the **stop button on the chat entry in the left sidebar** — see [Left Sidebar](13_sidebar_left.md).
