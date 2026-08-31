@@ -7,6 +7,8 @@ The right sidebar provides real-time information about what's happening "under t
 ### Run Status
 Track the progress of your requests. Each Run is listed with its ID and current status (Running, Success, Error).
 
+While a run is active, a **stop button** (square icon, highlighted in red on hover) appears in place of the status icon. Clicking it stops the run — including cron-triggered runs, delegated sub-agent runs and chain runs that could not be stopped anywhere else. The entry stays marked as running until the server reports the final state.
+
 ### Chain Console
 If you are executing a **Chain**, you will see the technical log outputs of the individual steps here. This is ideal for debugging complex workflows.
 

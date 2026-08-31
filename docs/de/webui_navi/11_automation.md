@@ -60,3 +60,5 @@ Buttons: **[Speichern]** · **[Abbrechen]**
 ## Ausführungsverlauf
 
 Unterhalb der Job-Tabelle: Liste der letzten Ausführungen mit Zeitstempel, Job-Name und Status.
+
+Laufende Ausführungen lassen sich über den **Stop-Button im Run-Status der rechten Sidebar** (Aktivitäts-Panel) beenden — siehe [Rechte Sidebar](14_sidebar_right.md).

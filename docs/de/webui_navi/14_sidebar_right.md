@@ -11,6 +11,8 @@ Die rechte Sidebar zeigt den Live-Status laufender Runs und ergänzende Informat
 ### Run-Status
 Zeigt den aktuellen Zustand des laufenden Runs. Jeder Eintrag enthält Titel, Zeitstempel und eine kurze Beschreibung des Ereignisses (z. B. Tool-Aufruf, Delegierung, Fehler).
 
+Solange ein Run läuft, steht an der ersten Stelle des Eintrags ein **Stop-Button** (Quadrat-Symbol) anstelle des Status-Icons. Ein Klick beendet den Run serverseitig — auch bei cron-gestarteten Runs, delegierten Sub-Agent-Runs und Chain-Runs. Der Eintrag bleibt als „läuft" markiert, bis der Server den Endzustand meldet; ein abgebrochener Run wird als Fehler mit dem Code `aborted` geführt. Beim Hover hebt sich das Quadrat rot hervor.
+
 Kein aktiver Run → „Kein aktiver Run".
 
 ### Chain Console

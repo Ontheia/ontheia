@@ -11,6 +11,8 @@ The right sidebar shows the live status of active runs and supplementary informa
 ### Run Status
 Shows the current state of the active run. Each entry contains title, timestamp and a short description of the event (e.g. tool call, delegation, error).
 
+While a run is active, a **stop button** (square icon) takes the place of the status icon on the entry's first row. Clicking it stops the run on the server — including cron-triggered runs, delegated sub-agent runs and chain runs. The entry stays marked as running until the server reports the terminal state; an aborted run is recorded as an error with code `aborted`. On hover the square highlights in red.
+
 No active run → "No active run".
 
 ### Chain Console

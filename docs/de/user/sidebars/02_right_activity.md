@@ -7,6 +7,8 @@ Die rechte Sidebar liefert dir Echtzeit-Informationen über das, was "unter der 
 ### Run-Status
 Verfolge den Fortschritt deiner Anfragen. Jeder Run wird mit seiner ID und dem aktuellen Status (Läuft, Erfolgreich, Fehler) aufgelistet.
 
+Bei laufenden Runs erscheint an erster Stelle des Eintrags ein **Stop-Button** (Quadrat-Symbol), der beim Hover rot hervorgehoben wird. Ein Klick beendet den Run — auch cron-gestartete Runs, delegierte Sub-Agent-Runs und Chain-Runs, die sonst nirgends stoppbar wären. Der Eintrag bleibt als „läuft" markiert, bis der Server den Endzustand meldet.
+
 ### Chain-Konsole
 Falls du eine **Chain** ausführst, siehst du hier die technischen Log-Ausgaben der einzelnen Schritte. Dies ist ideal, um komplexe Workflows zu debuggen.
 
