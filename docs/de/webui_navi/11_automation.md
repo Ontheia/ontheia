@@ -46,8 +46,8 @@ Button: **[Neuer Job]** — öffnet das Erstell-Modal.
 | --- | --- | --- | --- |
 | Job-Name | Text | ✓ | Anzeigename des Jobs (z. B. `Täglicher Wetter-Check`). |
 | Agent | Dropdown | ✓ | Agent, der für den Lauf verwendet wird. |
-| Task (Optional) | Dropdown | | Task des gewählten Agents. Leer = Standard-Task des Agents. |
-| Chain (Optional) | Dropdown | | Chain, die ausgeführt wird. Schließt Task aus. |
+| Task (Optional) | Dropdown | | Task des gewählten Agents. „Kein Task" = der Agent läuft direkt mit seiner Basiskonfiguration (ohne Task-System-Prompt); ein Default-Task wird nicht automatisch herangezogen. |
+| Chain (Optional) | Dropdown | | Chain, die ausgeführt wird. Schließt Task aus. Angeboten werden alle Chains des Agenten — sowohl die Zuweisungen aus dem Chain-Designer (`app.chains.agent_id`) als auch Delegations-Bindungen (`app.agent_chains`) —, jeweils nur mit aktiver Version. |
 | Chat-Titel Vorlage | Text | | Titelvorlage für den automatisch erstellten Chat. Platzhalter: `{{name}}`, `{{timestamp}}`. |
 | Chat-Ziel | Dropdown | | Bestehenden Chat auswählen, in dem der Job fortgesetzt wird. Leer = neuer Chat bei jeder Ausführung. |
 | Überlappung verhindern | Checkbox | | Falls aktiviert: geplanter Lauf wird übersprungen, wenn die vorherige Ausführung noch läuft. |

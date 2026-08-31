@@ -46,8 +46,8 @@ Button: **[New Job]** — opens the create modal.
 | --- | --- | --- | --- |
 | Job Name | Text | ✓ | Display name of the job (e.g. `Daily Weather Check`). |
 | Agent | Dropdown | ✓ | Agent used for the run. |
-| Task (Optional) | Dropdown | | Task of the selected agent. Empty = agent's default task. |
-| Chain (Optional) | Dropdown | | Chain to execute. Excludes Task. |
+| Task (Optional) | Dropdown | | Task of the selected agent. "No Task" = the agent runs with its base configuration (no task system prompt); a default task is not picked automatically. |
+| Chain (Optional) | Dropdown | | Chain to execute. Excludes Task. Offers all chains of the agent — both chain-designer assignments (`app.chains.agent_id`) and delegation bindings (`app.agent_chains`) — each only with an active version. |
 | Chat Title Template | Text | | Title template for the automatically created chat. Placeholders: `{{name}}`, `{{timestamp}}`. |
 | Chat Target | Dropdown | | Select an existing chat to continue the job in. Empty = new chat per execution. |
 | Prevent Overlap | Checkbox | | If enabled: a scheduled run is skipped if the previous execution has not yet finished. |
