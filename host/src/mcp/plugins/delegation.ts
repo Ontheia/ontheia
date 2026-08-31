@@ -115,7 +115,7 @@ export async function handleDelegation(
       dummySpec as any,
       context?.history || [],
       depth + 1,
-      undefined, // abortSignal
+      context?.abortSignal, // propagate a run stop into delegated sub-runs
       waiter
     );
     return runner.run();

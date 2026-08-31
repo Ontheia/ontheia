@@ -727,7 +727,10 @@ export async function runOpenAiCompletion(
       
       const fetchInit: RequestInit = {
         method: request.method,
-        headers: request.headers
+        headers: request.headers,
+        // Let a stop request interrupt the in-flight HTTP call, not just the
+        // gap between retries. fetchWithRetry never retries an AbortError.
+        signal: options?.signal
       };
       if (request.method === 'POST' && request.body) {
         fetchInit.body = JSON.stringify(request.body);
@@ -1051,6 +1054,22 @@ async function consumeEventStream(
       // Re-run the provider completion loop for the next step (recursive call through while loop)
       return 'continue';
     }
+
+    if (handled === 'abort') {
+      // The tool call already emitted its terminal error event (user stop,
+      // tool_not_found, timeout, …). Falling through to the plain success
+      // complete below would seal a stopped or failed run as 'success' —
+      // the run status shows success, the pill drops, and the stale stream
+      // text gets re-rendered as a final answer. Mirror the non-streaming
+      // path and close as failed instead.
+      emit({
+        type: 'complete',
+        status: 'error',
+        output: assembledText,
+        metadata: { provider_url: response.url, model: payload.model_id }
+      });
+      return 'finished';
+    }
   }
 
   emit({
@@ -1059,7 +1078,7 @@ async function consumeEventStream(
     output: assembledText,
     metadata: { provider_url: response.url, model: payload.model_id }
   });
-  
+
   return 'finished';
 }
 
@@ -1283,11 +1302,12 @@ async function handleOpenAiToolCalls(params: {
       const result = await orchestrator.callTool(toolDefinition.server, {
         name: toolDefinition.name,
         arguments: args
-      }, { 
-        run: { agent_id, task_id, options: context_options }, 
+      }, {
+        run: { agent_id, task_id, options: context_options },
         db,
         onEvent: emit,
         waitForToolApproval: options?.waitForToolApproval,
+        abortSignal: options?.signal,
         depth: ((context_options?.metadata as any)?.depth || 0),
         history: sanitizedHistory,
         provider_id,
@@ -1345,6 +1365,14 @@ async function handleOpenAiToolCalls(params: {
       }
 
     } catch (e) {
+      // A run stop must end the loop here, not become a tool result the model
+      // could still answer to: the aborted delegation/race error fed back into
+      // the conversation lets the model compose another reply while the run is
+      // supposed to be gone.
+      if (options?.signal?.aborted) {
+        emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
+        return 'abort';
+      }
       const depth = (context_options?.metadata as any)?.depth || 0;
       log.error({ err: e, depth, tool: `${toolDefinition.server}:${toolDefinition.name}` }, 'Tool call failed');
       const errorMessage = e instanceof Error ? e.message : String(e);

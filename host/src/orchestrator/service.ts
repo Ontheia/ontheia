@@ -778,11 +778,30 @@ export class OrchestratorService {
         : (typeof runMeta?.user_email === 'string' && runMeta.user_email ? runMeta.user_email : undefined);
       if (userEmail) identity['ontheia/user_email'] = userEmail;
       if (typeof runMeta?.user_name === 'string' && runMeta.user_name) identity['ontheia/user_name'] = runMeta.user_name;
-      const result = await client.client.callTool({
+      const rawCall = client.client.callTool({
         name: params.name,
         arguments: args,
         ...(Object.keys(identity).length > 0 ? { _meta: identity } : {})
       });
+      // An MCP call must not block a run stop: the SDK call itself has no
+      // signal here, so race it against the run's abort signal. The losing
+      // raw call keeps running in the background, but the run is freed
+      // immediately and the provider loop's abort check ends the run.
+      let result: Awaited<typeof rawCall>;
+      const signal = context?.abortSignal as AbortSignal | undefined;
+      if (signal) {
+        if (signal.aborted) throw new Error('aborted');
+        result = await new Promise((resolve, reject) => {
+          const onAbort = () => reject(new Error('aborted'));
+          signal.addEventListener('abort', onAbort, { once: true });
+          rawCall.then(
+            (value) => { signal.removeEventListener('abort', onAbort); resolve(value); },
+            (err) => { signal.removeEventListener('abort', onAbort); reject(err); }
+          );
+        });
+      } else {
+        result = await rawCall;
+      }
       const cached = this.toolCache.get(serverName);
       if (cached) {
         this.toolCache.set(serverName, this.buildToolCacheEntry(cached.tools));

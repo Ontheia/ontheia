@@ -925,14 +925,31 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
             warningEntries.push({ id: `${runId}-warning-${warningEntries.length}`, message: warning, timestamp: createdAt });
           }
           
-          // Determine status: server might report 'unknown' while events are still processing
+          // Determine status: server might report 'unknown' while events are
+          // still processing. Mirror the server's derivation: 'complete' is
+          // always terminal — but it can carry status 'error' (user stops
+          // and tool-call failures close runs with a complete event), so
+          // honor its status instead of assuming success. An 'error' event
+          // without a complete is only terminal as the LAST event —
+          // intermediate errors (chain steps, tools) must not flip a
+          // still-running run to 'error', or the stop button disappears and
+          // the pill drops while the run continues.
           let status: RunStatusType = 'running';
           if (run.status === 'success' || run.status === 'error') {
             status = run.status;
-          } else if (Array.isArray(run.events) && run.events.some((e: any) => e.type === 'complete')) {
-            status = 'success';
-          } else if (Array.isArray(run.events) && run.events.some((e: any) => e.type === 'error')) {
-            status = 'error';
+          } else if (Array.isArray(run.events) && run.events.length > 0) {
+            let lastComplete: any = null;
+            for (let i = run.events.length - 1; i >= 0; i--) {
+              if ((run.events[i] as any)?.type === 'complete') {
+                lastComplete = run.events[i];
+                break;
+              }
+            }
+            if (lastComplete) {
+              status = lastComplete.status === 'error' ? 'error' : 'success';
+            } else if ((run.events[run.events.length - 1] as any)?.type === 'error') {
+              status = 'error';
+            }
           }
 
           statuses.push({

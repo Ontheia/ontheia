@@ -36,6 +36,7 @@ type SecondarySidebarMetrics = {
 
 type SecondarySidebarContextValue = {
   runStatuses: RunStatusEntry[];
+  upsertRunStatus: (status: RunStatusEntry) => void;
   warnings: WarningEntry[];
   mcpStatuses: McpStatusEntry[];
   memoryHits: SidebarMemoryHit[];
@@ -51,7 +52,7 @@ type SecondarySidebarContextValue = {
 const SecondarySidebarContext = createContext<SecondarySidebarContextValue | null>(null);
 
 export const SecondarySidebarProvider = ({ children }: { children: ReactNode }) => {
-  const { runStatuses, warnings, mcpStatuses, activeChatId, runtimeSettings } = useChatSidebar();
+  const { runStatuses, upsertRunStatus, warnings, mcpStatuses, activeChatId, runtimeSettings } = useChatSidebar();
   const timezone = runtimeSettings.timezone || 'Europe/Berlin';
   const [cronJobs, setCronJobs] = useState<CronJobEntry[]>([]);
   const [pendingToolApprovals, setPendingToolApprovals] = useState<ToolApprovalQueueEntry[]>(() => {
@@ -131,6 +132,7 @@ export const SecondarySidebarProvider = ({ children }: { children: ReactNode }) 
 
     return {
       runStatuses,
+      upsertRunStatus,
       warnings,
       mcpStatuses,
       memoryHits,
@@ -147,7 +149,7 @@ export const SecondarySidebarProvider = ({ children }: { children: ReactNode }) 
       activeChatId,
       pendingToolApprovals
     };
-  }, [runStatuses, warnings, mcpStatuses, activeChatId, pendingToolApprovals, memoryHits, chainConsole, cronJobs, refreshCronJobs, timezone]);
+  }, [runStatuses, upsertRunStatus, warnings, mcpStatuses, activeChatId, pendingToolApprovals, memoryHits, chainConsole, cronJobs, refreshCronJobs, timezone]);
 
   return (
     <SecondarySidebarContext.Provider value={value}>

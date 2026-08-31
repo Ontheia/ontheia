@@ -22,10 +22,11 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ChevronDown, Copy, Loader2, Server, Clock, Activity } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Copy, Loader2, Server, Clock, Activity, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSecondarySidebar } from '@/context/secondary-sidebar-context';
+import { stopRun } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import {
   Tooltip,
@@ -119,6 +120,7 @@ export function SidebarRight({ className }: { className?: string }) {
   const { t } = useTranslation(['sidebar', 'common']);
   const {
     runStatuses,
+    upsertRunStatus,
     warnings,
     mcpStatuses,
     memoryHits,
@@ -148,6 +150,34 @@ export function SidebarRight({ className }: { className?: string }) {
   }, [runStatuses, warnings, mcpStatuses, memoryHits, chainConsole]);
 
   const chatHref = activeChatId ? `/chat/${activeChatId}` : '#';
+
+  // Stop a run directly from the status list (chat runs, cron runs, chain
+  // runs). The entry deliberately stays 'running': an abort frees the run
+  // within seconds, but until the server reports the terminal state the pill
+  // must keep telling the truth — and the stop button stays available for a
+  // second attempt. The 5-second polling replaces both transient titles with
+  // the server's view.
+  const handleStopRun = useCallback(async (runId: string) => {
+    let title: string;
+    try {
+      await stopRun(runId);
+      title = t('runStopped');
+    } catch (err) {
+      // 404 = not (or no longer) stoppable, 403 = not our run — surface it on
+      // the entry instead of failing silently, the polling settles it anyway.
+      console.warn('Failed to stop run', runId, err);
+      title = t('runStopFailed');
+    }
+    upsertRunStatus({
+      id: runId,
+      status: 'running',
+      title,
+      // Keep the entry's message preview and start clock stable while the
+      // transient title is shown.
+      description: runStatuses.find((entry) => entry.id === runId)?.description,
+      timestamp: runStatuses.find((entry) => entry.id === runId)?.timestamp ?? new Date().toISOString()
+    });
+  }, [t, upsertRunStatus, runStatuses]);
 
   return (
     <aside 
@@ -193,7 +223,23 @@ export function SidebarRight({ className }: { className?: string }) {
                     key={entry.id}
                     className="flex gap-3 rounded-xl bg-background/40 p-2"
                   >
-                    <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <div className="flex shrink-0 flex-col items-center gap-1">
+                      <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
+                      {entry.status === 'running' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => void handleStopRun(entry.id)}
+                              aria-label={t('stopRun')}
+                              className="rounded-lg p-0.5 text-destructive transition-colors hover:bg-destructive/20"
+                            >
+                              <Square className="h-3 w-3" aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">{t('stopRun')}</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <div className="flex flex-1 flex-col text-sm">
                       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
                         <span>{entry.title}</span>

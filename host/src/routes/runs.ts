@@ -37,7 +37,8 @@ import {
   RunEvent 
 } from '../runtime/types.js';
 import { RunService } from '../runtime/RunService.js';
-import { activeRunControllers, runStreamStates, pendingToolApprovals, getActiveRunIdForChat, userNotificationStreams, type NotificationPusher } from './runs-state.js';
+import { runStreamStates, pendingToolApprovals, getActiveRunIdForChat, userNotificationStreams, type NotificationPusher } from './runs-state.js';
+import { registerActiveRun, unregisterActiveRun, abortActiveRun } from '../runtime/run-registry.js';
 import { deleteVectorNamespacesSafe } from './agents.js';
 import { slugifySegment } from '../memory/namespaces.js';
 import { parseRunRequest, extractRunMetadata } from './run-utils.js';
@@ -93,7 +94,7 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
     const runId = randomUUID();
     const stream = pushable<EventMessage>() as any;
     const abortController = new AbortController();
-    activeRunControllers.set(runId, abortController);
+    registerActiveRun(runId, abortController, session.userId);
 
     // Robust extraction of metadata
     const metadata = extractRunMetadata(parsed.options);
@@ -128,8 +129,11 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       }
     };
 
+    // Bookkeeping for the SSE streams only — deliberately NOT the run
+    // registry: a client reconnect (EventSource retry, proxy timeout, tab
+    // reload) closes this request while executeRun keeps running server-side.
+    // Unregistering here would make a still-running run unstoppable (404).
     const cleanup = () => {
-      activeRunControllers.delete(runId);
       const state = runStreamStates.get(runId);
       if (state) {
         state.streams.delete(stream);
@@ -154,6 +158,13 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
           resolve,
           reject
         });
+        // A stopped run must not keep waiting for an approval nobody will
+        // ever give — reject and drop the pending entry when the abort fires.
+        abortController.signal.addEventListener('abort', () => {
+          runMap.delete(callId);
+          if (runMap.size === 0) pendingToolApprovals.delete(runId);
+          reject(new Error('aborted'));
+        }, { once: true });
       });
     };
 
@@ -174,6 +185,8 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
         try { s.push(finishedMsg); s.end(); } catch {}
       }
       cleanup();
+      // The run is over — release the registry entry now (not on SSE close).
+      unregisterActiveRun(runId);
     }).catch((err) => {
       const state = runStreamStates.get(runId);
       if (state) state.finished = true;
@@ -184,6 +197,8 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
         try { s.push(errorMsg); s.push(finishedMsg); s.end(); } catch {}
       }
       cleanup();
+      // The run is over — release the registry entry now (not on SSE close).
+      unregisterActiveRun(runId);
     });
   });
 
@@ -227,7 +242,27 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       const createdAtDate = new Date(row.created_at);
       const isOld = (Date.now() - createdAtDate.getTime()) > (60 * 60 * 1000); // 1 hour
       
-      let status = events.some((e: any) => e.type === 'error') ? 'error' : (events.some((e: any) => e.type === 'complete') ? 'success' : 'unknown');
+      // Terminal states: 'complete' always ends a run — but it can carry
+      // status 'error' (tool-call failures and user stops close the run
+      // with a complete event), so honor its status instead of assuming
+      // success. An 'error' event without a complete is only terminal when
+      // it is the LAST event — chain steps and tool calls fail mid-run all
+      // the time and the run continues. Flagging a still-running run as
+      // 'error' hides the sidebar stop button and drops the active-runs
+      // pill while the run runs on.
+      let status = 'unknown';
+      let lastComplete: any = null;
+      for (let i = events.length - 1; i >= 0; i--) {
+        if ((events[i] as any).type === 'complete') {
+          lastComplete = events[i];
+          break;
+        }
+      }
+      if (lastComplete) {
+        status = lastComplete.status === 'error' ? 'error' : 'success';
+      } else if (events.length > 0 && events[events.length - 1].type === 'error') {
+        status = 'error';
+      }
       
       // Auto-fail old hanging runs
       if (status === 'unknown' && isOld) {
@@ -355,10 +390,18 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     const { id } = request.params as { id: string };
-    const controller = activeRunControllers.get(id);
-    if (controller) {
-      controller.abort();
+    // Works for chat runs (registered in this file) and every other run
+    // (registered by RunService.executeRun). Only the owner may stop a run.
+    const outcome = abortActiveRun(id, auth.session.userId);
+    // The timestamp of this line vs. the run's abort events separates a slow
+    // propagation from an unregistered (404) or foreign (403) run.
+    request.log.info({ runId: id, userId: auth.session.userId, outcome }, 'Run stop requested');
+    if (outcome === 'stopping') {
       return { status: 'stopping' };
+    }
+    if (outcome === 'forbidden') {
+      reply.code(403);
+      return { error: 'forbidden' };
     }
     reply.code(404);
     return { error: 'not_found' };

@@ -60,6 +60,7 @@ import {
   buildChatArtifactContext,
   type FileEnvelopeEntry
 } from './ArtifactService.js';
+import { registerActiveRun, unregisterActiveRun } from './run-registry.js';
 
 export type RunContext = {
   userId: string;
@@ -116,9 +117,20 @@ export class RunService {
   ) {}
 
   async executeRun(request: RunRequest, context: RunContext): Promise<RunEvent[]> {
-    const { userId, onEvent, abortSignal, waitForToolApproval, logger } = context;
+    const { userId, onEvent, waitForToolApproval, logger } = context;
     const role = context.role || 'user';
     const runId = context.runId || randomUUID();
+    // Runs that arrive without an abort signal (cron runs, chain test runs, …)
+    // get their own controller registered in the run registry so the existing
+    // POST /runs/:id/stop endpoint can abort them too. Chat runs bring their
+    // own signal (routes/runs.ts registers that one) and are not double-registered.
+    let abortSignal = context.abortSignal;
+    let ownRunController: AbortController | null = null;
+    if (!abortSignal) {
+      ownRunController = new AbortController();
+      abortSignal = ownRunController.signal;
+      registerActiveRun(runId, ownRunController, userId);
+    }
     const runStart = process.hrtime.bigint();
     const capturedEvents: RunEvent[] = [];
     let lastPersistenceTime = 0;
@@ -831,6 +843,8 @@ export class RunService {
       await emitRunEvent({ type: 'error', code: 'run_failed', message: error.message });
       observeRun(enrichedInput.agent_id, enrichedInput.task_id, 'error', Number(process.hrtime.bigint() - runStart) / 1e9);
       await persistenceQueue;
+    } finally {
+      if (ownRunController) unregisterActiveRun(runId);
     }
 
     return capturedEvents;

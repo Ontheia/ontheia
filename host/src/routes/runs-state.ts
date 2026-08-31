@@ -25,7 +25,6 @@ import type { ToolApprovalWaiter, RunStreamState } from './types.js';
 
 export const pendingToolApprovals = new Map<string, Map<string, ToolApprovalWaiter>>();
 export const userRateBuckets = new Map<string, number[]>();
-export const activeRunControllers = new Map<string, AbortController>();
 export const runStreamStates = new Map<string, RunStreamState>();
 export const runAgentSnapshots = new Map<
   string,
