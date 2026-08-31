@@ -35,7 +35,7 @@ import {
   BookOpen,
   CalendarClock,
   ExternalLink,
-  Loader2,
+  Square,
 } from "lucide-react"
 
 import { useChatSidebar } from "@/context/chat-sidebar-context"
@@ -89,7 +89,8 @@ import {
   deleteProject,
   moveChatProject,
   updateProject,
-  renameChat
+  renameChat,
+  stopRun
 } from "../lib/api"
 import { useAuth } from "@/context/auth-context"
 
@@ -138,6 +139,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     const targetChatId = chatId || 'demo'
     if (location.pathname !== `/chat/${targetChatId}`) {
       navigate(`/chat/${targetChatId}`)
+    }
+  }
+
+  const handleStopChatRun = async (chatId: string) => {
+    const runId = activeRunByChatId[chatId]
+    if (!runId) return
+    try {
+      await stopRun(runId)
+    } catch (error) {
+      // 404 = nicht (mehr) stoppbar, 403 = nicht der eigene Run — das
+      // 5-s-Polling klärt den Endzustand, hier still bleiben.
+      console.warn('Failed to stop run from chat list', runId, error)
     }
   }
 
@@ -525,7 +538,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   filteredHistory.map((entry) => {
                     const isActive = location.pathname === `/chat/${entry.id}`
                     return (
-                      <SidebarMenuItem key={entry.id} className="sidebar-history-item">
+                      <SidebarMenuItem
+                        key={entry.id}
+                        className={cn("sidebar-history-item", activeRunByChatId[entry.id] && "sidebar-has-active-run")}
+                      >
                         <SidebarMenuButton
                           asChild
                           tooltip={isMobile ? undefined : entry.preview}
@@ -548,9 +564,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                           </div>
                         </SidebarMenuButton>
                         {activeRunByChatId[entry.id] ? (
-                          <SidebarMenuAction aria-label={t('runActive', { ns: 'sidebar' })} className="sidebar-menu-action-ghost sidebar-run-spinner">
-                            <Loader2 className="h-3 w-3 animate-spin text-sky-400" aria-hidden="true" />
-                          </SidebarMenuAction>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <SidebarMenuAction
+                                aria-label={t('stopRun', { ns: 'sidebar' })}
+                                onClick={() => void handleStopChatRun(entry.id)}
+                                className="sidebar-menu-action-ghost sidebar-run-stop h-5 w-5 rounded-lg border border-white/10 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive"
+                              >
+                                <Square className="mx-auto h-3 w-3" aria-hidden="true" />
+                              </SidebarMenuAction>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{t('stopRun', { ns: 'sidebar' })}</TooltipContent>
+                          </Tooltip>
                         ) : null}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

@@ -4739,6 +4739,28 @@ textarea.app-input {
   pointer-events: none;
 }
 
+/* Stop button for active runs in the chat list: always visible (also on
+   hover-only devices) and layered above the 3-dot action button. */
+.sidebar-run-stop {
+  opacity: 1 !important;
+  z-index: 20 !important;
+}
+
+/* While a run is active the stop button occupies the action slot: hide the
+   3-dot button underneath instead of letting it shine through the
+   transparent stop button. */
+.sidebar-has-active-run > .sidebar-menu-action-ghost:not(.sidebar-run-stop) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Keep the gray-to-red hover of the stop button: .sidebar-menu-action-ghost
+   paints its own hover background with !important and would win otherwise. */
+.sidebar-run-stop:hover {
+  background-color: hsl(var(--destructive) / 0.2) !important;
+  color: hsl(var(--destructive)) !important;
+}
+
 .sidebar-history-empty {
   font-size: 0.85rem;
   color: hsla(var(--sidebar-foreground), 0.6);
