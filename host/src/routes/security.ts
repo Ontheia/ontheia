@@ -24,8 +24,13 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Pool } from 'pg';
 import { randomUUID } from 'crypto';
 import type { LoadedSession } from './types.js';
+import { withRls } from './utils.js';
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+// A session used inside this remaining window is pushed out to a full new
+// TTL again. Effectively a session only ends after seven days of real
+// inactivity instead of seven days after the login that created it.
+const SESSION_RENEW_THRESHOLD_MS = SESSION_TTL_MS / 2;
 
 export const extractBearerToken = (request: FastifyRequest): string | null => {
   const header = request.headers.authorization;
@@ -62,10 +67,43 @@ export const loadSession = async (db: Pool, sessionId: string): Promise<LoadedSe
   }
   const row = result.rows[0];
   const expiresAt = new Date(row.expires_at);
+  // The sessions table is RLS-protected and the modify policy demands the
+  // owning user's RLS context, so DELETEs and UPDATEs from here run through
+  // withRls — a bare pool query would silently match zero rows.
   if (row.revoked || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
-    await db.query(`DELETE FROM app.sessions WHERE id = $1`, [sessionId]);
+    await withRls(db, String(row.user_id), String(row.role ?? 'user'), async (client) => {
+      await client.query(`DELETE FROM app.sessions WHERE id = $1`, [sessionId]);
+    });
     return null;
   }
+
+  // Sliding renewal: renewing on every request would hammer the table with
+  // the sidebar's 5-second polling, so the session is only pushed out once
+  // less than half of its TTL remains. An active user crosses that line every
+  // few days and never notices; a full week without a request still ends the
+  // session, which is the expiry semantics users expect.
+  let effectiveExpiresAt = expiresAt;
+  if (expiresAt.getTime() - Date.now() < SESSION_RENEW_THRESHOLD_MS) {
+    const renewed = await withRls(
+      db,
+      String(row.user_id),
+      String(row.role ?? 'user'),
+      async (client) => {
+        const updated = await client.query(
+          `UPDATE app.sessions SET expires_at = $1 WHERE id = $2 RETURNING expires_at`,
+          [new Date(Date.now() + SESSION_TTL_MS).toISOString(), sessionId]
+        );
+        return updated.rowCount && updated.rows[0]
+          ? new Date(updated.rows[0].expires_at)
+          : null;
+      }
+    );
+    // A concurrent request may have renewed this session between our SELECT
+    // and UPDATE; in that case keep the old timestamp rather than report a
+    // renewal that did not happen.
+    if (renewed) effectiveExpiresAt = renewed;
+  }
+
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -74,7 +112,7 @@ export const loadSession = async (db: Pool, sessionId: string): Promise<LoadedSe
     role: row.role ?? 'user',
     status: row.status ?? 'active',
     allowAdminMemory: Boolean(row.allow_admin_memory),
-    expiresAt
+    expiresAt: effectiveExpiresAt
   };
 };
 
