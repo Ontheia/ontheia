@@ -4,7 +4,7 @@ Ontheia is a multi-tenant system. To secure your personal agents, projects, and 
 
 ## 1. Login
 Enter your registered email address and password to access your account.
-- **Session Duration:** After a successful login, you remain logged in for 12 hours by default.
+- **Session Duration:** After a login, the session stays valid for 7 days. If you use Ontheia within that window, the session is automatically renewed for another 7 days — it only ends after 7 days without use. Inactive sessions are deleted on the server.
 - **Security:** Your login data is transmitted encrypted to the host service.
 
 ## 2. Signup

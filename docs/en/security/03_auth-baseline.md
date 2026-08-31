@@ -4,7 +4,7 @@ Current state of authentication. For the wider picture see the [security concept
 
 - **Password hashing:** bcrypt (`bcryptjs`), cost factor 12. Minimum length 8 characters.
 - **Sessions:** Opaque UUID tokens in `app.sessions`, sent as `Authorization: Bearer <token>`. No cookies, no JWT.
-- **Session lifetime:** 7 days. Server-side revocation via the `revoked` flag; `POST /auth/logout` revokes the current session.
+- **Session lifetime:** 7 days, sliding: once less than 3.5 days remain, the next authenticated request pushes the session out to a full 7 days again — a session only ends after 7 days without use. Server-side revocation via the `revoked` flag; `POST /auth/logout` revokes the current session.
 - **CSRF:** Structurally not applicable, since no credential is sent automatically by the browser.
 - **Password change:** `POST /auth/change-password` — requires the current password.
 - **Password reset:** There is **no** self-service flow for forgotten passwords. An administrator has to recreate the account or replace the password directly in the database.

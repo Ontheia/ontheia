@@ -16,7 +16,7 @@ This document describes the security concept for the "Ontheia" system, consistin
 - **Sessions:**
     - Opaque session tokens (UUID) stored in `app.sessions` — no JWT, no cookies.
     - The token is sent by the WebUI as `Authorization: Bearer <token>` and held in `localStorage`.
-    - Session lifetime: 7 days; sessions can be revoked server-side (`revoked` flag).
+    - Session lifetime: 7 days, sliding renewal on use (a session only ends after 7 days of inactivity); sessions can be revoked server-side (`revoked` flag).
 - **CSRF:** Structurally not applicable — no credential is sent automatically by the browser, so a foreign origin cannot ride along on an existing session.
 - **Trade-off:** A token in `localStorage` is readable by JavaScript, so it is exposed by a successful XSS. This is why the strict CSP in section 6 is a load-bearing control, not a nicety.
 - **Multi-factor authentication (MFA):** (planned for phase 2).

@@ -16,7 +16,7 @@ Dieses Dokument beschreibt das Sicherheitskonzept für das System "Ontheia", bes
 - **Sitzungen:**
     - Opake Session-Tokens (UUID) in `app.sessions` — kein JWT, keine Cookies.
     - Die WebUI sendet das Token als `Authorization: Bearer <token>` und hält es im `localStorage`.
-    - Session-Lebensdauer: 7 Tage; Sitzungen sind serverseitig widerrufbar (`revoked`-Flag).
+    - Session-Lebensdauer: 7 Tage, gleitend verlängert bei Nutzung (endet erst nach 7 Tagen Inaktivität); Sitzungen sind serverseitig widerrufbar (`revoked`-Flag).
 - **CSRF:** Strukturell nicht anwendbar — der Browser sendet kein Credential automatisch mit, eine fremde Origin kann also nicht auf einer bestehenden Sitzung mitreiten.
 - **Abwägung:** Ein Token im `localStorage` ist für JavaScript lesbar und wird durch ein erfolgreiches XSS mit offengelegt. Deshalb ist die strikte CSP aus Abschnitt 6 eine tragende Schutzmaßnahme, kein Beiwerk.
 - **Multi-Faktor-Authentifizierung (MFA):** (Geplant für Phase 2).

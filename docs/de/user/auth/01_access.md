@@ -4,7 +4,7 @@ Ontheia ist ein mandantenfähiges System. Um deine persönlichen Agenten, Projek
 
 ## 1. Anmeldung (Login)
 Gib deine registrierte E-Mail-Adresse und dein Passwort ein, um auf dein Konto zuzugreifen.
-- **Sitzungsdauer:** Nach erfolgreichem Login bleibst du standardmäßig für 12 Stunden angemeldet.
+- **Sitzungsdauer:** Nach dem Login bleibt die Sitzung 7 Tage gültig. Nutzt du Ontheia innerhalb dieser Zeit, wird die Sitzung automatisch um weitere 7 Tage verlängert — sie endet erst nach 7 Tagen ohne Nutzung. Inaktive Sitzungen werden serverseitig gelöscht.
 - **Sicherheit:** Deine Anmeldedaten werden verschlüsselt an den Host-Service übertragen.
 
 ## 2. Registrierung (Signup)
