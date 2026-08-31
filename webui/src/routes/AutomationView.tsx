@@ -29,12 +29,14 @@ import {
   runCronJobManually,
   listCronJobRuns,
   listChats,
+  listChains,
   type CronJobEntry,
   type CronJobRunEntry,
   listPromptTemplates
 } from '../lib/api';
 import { useChatSidebar } from '../context/chat-sidebar-context';
 import type { AgentDefinition } from '../types/agents';
+import type { ChainEntry } from '../types/chains';
 import { useSecondarySidebar } from '../context/secondary-sidebar-context';
 import { AppSelect } from '../components/AppSelect';
 import { Button } from '../components/ui/button';
@@ -86,9 +88,22 @@ export function AutomationView() {
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [runningJobs, setRunningJobs] = useState<Set<string>>(new Set());
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  const [allChains, setAllChains] = useState<ChainEntry[]>([]);
   
   const { agents, upsertRunStatus, runtimeSettings } = useChatSidebar();
   const { refreshCronJobs } = useSecondarySidebar();
+
+  // All chains (chain-designer assignments via app.chains.agent_id), loaded
+  // once so jobs referencing them resolve to a name instead of a bare UUID.
+  useEffect(() => {
+    let cancelled = false;
+    void listChains().then(items => {
+      if (!cancelled) setAllChains(items);
+    }).catch(() => {
+      if (!cancelled) setAllChains([]);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const taskOrChainMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -103,8 +118,11 @@ export function AutomationView() {
         }
       }
     }
+    for (const chain of allChains) {
+      if (!map.has(chain.id)) map.set(chain.id, chain.name);
+    }
     return map;
-  }, [agents]);
+  }, [agents, allChains]);
 
   const toggleHistory = (id: string) => {
     setExpandedHistory(prev => {
@@ -409,11 +427,12 @@ export function AutomationView() {
         </div>
       </div>
 
-      <JobDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-        onSuccess={() => { loadJobs(); void refreshCronJobs(); }} 
+      <JobDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={() => { loadJobs(); void refreshCronJobs(); }}
         agents={agents}
+        allChains={allChains}
         initialJob={editingJob}
       />
 
@@ -510,12 +529,14 @@ function JobDialog({
   onOpenChange,
   onSuccess,
   agents,
+  allChains,
   initialJob
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   agents: AgentDefinition[];
+  allChains: ChainEntry[];
   initialJob?: CronJobEntry | null;
 }) {
   const { t } = useTranslation(['automation', 'common', 'chat', 'errors']);
@@ -632,10 +653,22 @@ function JobDialog({
     value: t.id,
     label: t.label
   }));
-  const chainOptions = (activeAgent?.chains || []).map((c) => ({
-    value: c.id,
-    label: c.label
-  }));
+  // Merge both binding models: delegation bindings (expand=chains via
+  // app.agent_chains) and chain-designer assignments (app.chains.agent_id),
+  // deduplicated by chain UUID. Chains without an active version are excluded —
+  // the run would fail with "Chain not found or no active version".
+  const chainOptions = useMemo(() => {
+    const byId = new Map<string, { value: string; label: string }>();
+    for (const c of activeAgent?.chains || []) {
+      byId.set(c.id, { value: c.id, label: c.label });
+    }
+    for (const chain of allChains) {
+      if (chain.agent_id === agentId && chain.active && !byId.has(chain.id)) {
+        byId.set(chain.id, { value: chain.id, label: chain.name });
+      }
+    }
+    return Array.from(byId.values());
+  }, [activeAgent, allChains, agentId]);
 
   const handleSave = async () => {
     if (!name || !agentId) return;
