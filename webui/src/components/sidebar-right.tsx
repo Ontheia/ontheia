@@ -223,23 +223,25 @@ export function SidebarRight({ className }: { className?: string }) {
                     key={entry.id}
                     className="flex gap-3 rounded-xl bg-background/40 p-2"
                   >
-                    <div className="flex shrink-0 flex-col items-center gap-1">
-                      <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
-                      {entry.status === 'running' && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => void handleStopRun(entry.id)}
-                              aria-label={t('stopRun')}
-                              className="rounded-lg p-0.5 text-destructive transition-colors hover:bg-destructive/20"
-                            >
-                              <Square className="h-3 w-3" aria-hidden="true" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">{t('stopRun')}</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
+                    {entry.status === 'running' ? (
+                      // A running run replaces the status icon with the stop
+                      // control itself: the button on the first row marks the
+                      // run as active better than a spinner next to it.
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => void handleStopRun(entry.id)}
+                            aria-label={t('stopRun')}
+                            className="h-5 w-5 shrink-0 rounded-lg border border-white/10 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive"
+                          >
+                            <Square className="mx-auto h-3 w-3" aria-hidden="true" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{t('stopRun')}</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    )}
                     <div className="flex flex-1 flex-col text-sm">
                       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
                         <span>{entry.title}</span>
