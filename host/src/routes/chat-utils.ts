@@ -107,40 +107,41 @@ export async function insertChatMessage(db: Pool, client: PoolClient | null, par
   }
 }
 
-export async function upsertAgentMessage(db: Pool, client: PoolClient | null, chatId: string, runId: string, content: string, metadata?: Record<string, unknown>) {
-  if (!content && !metadata) return;
+/**
+ * Updates one turn row of an agent answer by its id.
+ *
+ * The agent's output persists as one row per completion turn (inserted via
+ * insertChatMessage on the turn's first write, updated here afterwards) —
+ * there is no run-wide row keyed by (chat_id, run_id) to upsert anymore.
+ * `content` always carries the turn's full accumulated text.
+ */
+export async function updateChatMessage(db: Pool, client: PoolClient | null, params: { chatId: string; messageId: string; content: string; metadata?: Record<string, unknown> }) {
   const runner = client ?? db;
   try {
-    // UPDATE first (most common path during streaming and on completion).
-    // Does not depend on a specific partial unique index.
     const updateResult = await runner.query(
       `UPDATE app.chat_messages
-          SET content    = CASE WHEN $3 <> '' THEN $3::text ELSE content END,
-              metadata   = metadata || $4::jsonb,
+          SET content    = $2,
+              metadata   = metadata || $3::jsonb,
               updated_at = now()
-        WHERE chat_id = $1 AND run_id = $2 AND role = 'agent'`,
-      [chatId, runId, content, JSON.stringify(metadata ?? {})]
+        WHERE chat_id = $1 AND id = $4::uuid`,
+      [params.chatId, params.content, JSON.stringify(params.metadata ?? {}), params.messageId]
     );
 
-    // INSERT only when no row existed yet for this run.
-    if ((updateResult.rowCount ?? 0) === 0) {
+    // The row can be gone between the streaming write and the final update —
+    // a manual user softdelete of the turn is allowed at any time.
+    if ((updateResult.rowCount ?? 0) > 0) {
       await runner.query(
-        `INSERT INTO app.chat_messages (chat_id, run_id, role, content, metadata, created_at, updated_at)
-         VALUES ($1, $2, 'agent', COALESCE($3, ''), $4::jsonb, now(), now())
-         ON CONFLICT DO NOTHING`,
-        [chatId, runId, content, JSON.stringify(metadata ?? {})]
+        `UPDATE app.chats
+            SET last_message_at = now(),
+                updated_at = now()
+          WHERE id = $1`,
+        [params.chatId]
       );
+    } else {
+      logger.warn({ messageId: params.messageId, chatId: params.chatId }, 'Chat message to update not found');
     }
-
-    await runner.query(
-      `UPDATE app.chats
-          SET last_message_at = now(),
-              updated_at = now()
-        WHERE id = $1`,
-      [chatId]
-    );
   } catch (error) {
-    logger.error({ err: error }, 'Failed to upsert agent message');
+    logger.error({ err: error }, 'Failed to update chat message');
     throw error;
   }
 }

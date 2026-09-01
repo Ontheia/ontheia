@@ -26,10 +26,16 @@ import type { ToolApprovalWaiter, RunStreamState } from './types.js';
 export const pendingToolApprovals = new Map<string, Map<string, ToolApprovalWaiter>>();
 export const userRateBuckets = new Map<string, number[]>();
 export const runStreamStates = new Map<string, RunStreamState>();
-export const runAgentSnapshots = new Map<
-  string,
-  { chatId: string; text: string; metadata: Record<string, unknown> | undefined }
->();
+
+// Run-level metadata of a run's agent answer (memory hits/writes plus the
+// run request metadata) — merged onto every per-turn chat_messages row the
+// persistence writes. Turn bookkeeping lives in the run's AgentTurnTracker
+// state (agent-turn-tracker.ts), local to executeRun.
+export type RunAgentSnapshot = {
+  chatId: string;
+  metadata: Record<string, unknown> | undefined;
+};
+export const runAgentSnapshots = new Map<string, RunAgentSnapshot>();
 
 export type NotificationPusher = { push: (msg: EventMessage) => void };
 export const userNotificationStreams = new Map<string, Set<NotificationPusher>>();

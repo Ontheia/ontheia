@@ -46,12 +46,13 @@ import { buildReadableNamespaces, resolveNamespaceTemplate, NamespaceError } fro
 import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
 import { loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
-import { upsertChat, insertChatMessage, upsertAgentMessage, normalizeChatSettings } from '../routes/chat-utils.js';
+import { upsertChat, insertChatMessage, updateChatMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext, formatMemoryContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
 import { RollingSummaryService } from './RollingSummaryService.js';
+import { createAgentTurnState, feedAgentTurnEvent } from './agent-turn-tracker.js';
 import { SkillService } from './SkillService.js';
 import {
   extractFilesEnvelope,
@@ -135,6 +136,9 @@ export class RunService {
     const capturedEvents: RunEvent[] = [];
     let lastPersistenceTime = 0;
     let persistenceQueue = Promise.resolve();
+    // Per-turn bookkeeping for the agent answer's persistence (one
+    // chat_messages row per completion turn — see agent-turn-tracker.ts).
+    const turnState = createAgentTurnState();
     // input/output/cache* accumulate across all tool-loop iterations, chain
     // steps and delegated sub-agents of this run (billing semantics);
     // lastPrompt holds the latest non-delegated prompt size incl. cache tokens
@@ -174,7 +178,7 @@ export class RunService {
       if (event.type === 'memory_hits') {
         let snapshot = runAgentSnapshots.get(runId);
         if (!snapshot) {
-          snapshot = { chatId: chatId || '', text: '', metadata: { memoryHits: event.hits } };
+          snapshot = { chatId: chatId || '', metadata: { memoryHits: event.hits } };
           runAgentSnapshots.set(runId, snapshot);
         } else {
           if (!snapshot.metadata) snapshot.metadata = {};
@@ -204,7 +208,7 @@ export class RunService {
         if (written.length > 0) {
           let snapshot = runAgentSnapshots.get(runId);
           if (!snapshot) {
-            snapshot = { chatId: chatId || '', text: '', metadata: { memoryWrites: written } };
+            snapshot = { chatId: chatId || '', metadata: { memoryWrites: written } };
             runAgentSnapshots.set(runId, snapshot);
           } else {
             if (!snapshot.metadata) snapshot.metadata = {};
@@ -239,49 +243,64 @@ export class RunService {
       // 2. BACKGROUND PERSISTENCE
       if (chatId) {
         const activeChatId = chatId;
-        let snapshot = runAgentSnapshots.get(runId);
-        
+        const snapshot = runAgentSnapshots.get(runId);
+
         const now = Date.now();
         const shouldPersistToken = (event.type === 'run_token' || event.type === 'tokens') && (now - lastPersistenceTime > 1000);
         const shouldPersistComplete = event.type === 'complete';
         const shouldPersistTool = event.type === 'tool_call' && (event.status === 'success' || event.status === 'error');
 
-        if (shouldPersistToken || shouldPersistComplete) {
-          if (event.type === 'run_token') {
-            if (!snapshot) {
-              snapshot = { chatId: activeChatId, text: '', metadata: { ...(enrichedInput.options?.metadata || {}) } };
-              runAgentSnapshots.set(runId, snapshot);
+        // PER-TURN PERSISTENCE — the agent's answer is one chat_messages row
+        // per completion turn, not one row per run. The turn state machine
+        // (agent-turn-tracker.ts) mirrors the UI's bubble boundaries, and
+        // each returned write resolves here to an INSERT while its rowRef
+        // has no id yet, and to an UPDATE by id afterwards. Content and
+        // metadata are captured synchronously by the tracker, so queue lag
+        // cannot bleed one turn's text into another's row.
+        const buildTurnMetadata = (turnIndex: number, status: string, isStreaming: boolean): Record<string, any> => ({
+          ...(enrichedInput.options?.metadata || {}),
+          ...(snapshot?.metadata || {}),
+          usage: currentUsage,
+          turn_index: turnIndex,
+          streaming: isStreaming,
+          status
+        });
+
+        const turnWrites = feedAgentTurnEvent(turnState, event as any, { throttledPersist: shouldPersistToken }, buildTurnMetadata);
+        for (const write of turnWrites) {
+          persistenceQueue = persistenceQueue.then(async () => {
+            try {
+              await withRls(this.db, userId, role, async (client) => {
+                if (write.rowRef.messageId) {
+                  await updateChatMessage(this.db, client, {
+                    chatId: activeChatId,
+                    messageId: write.rowRef.messageId,
+                    content: write.content,
+                    metadata: write.metadata
+                  });
+                } else {
+                  const messageId = await insertChatMessage(this.db, client, {
+                    chatId: activeChatId,
+                    runId,
+                    role: 'agent',
+                    content: write.content,
+                    metadata: write.metadata
+                  });
+                  if (messageId) write.rowRef.messageId = messageId;
+                }
+              });
+            } catch (err) {
+              if (logger) logger.error({ err, runId }, 'Failed to persist agent turn message');
             }
-            snapshot.text += event.text!;
-          }
-          
-          const contentToPersist = event.type === 'complete' ? (event as any).output : (snapshot?.text);
-          const isStreaming = event.type !== 'complete';
+          });
+        }
 
-          if (contentToPersist && activeChatId) {
-            lastPersistenceTime = now;
-            persistenceQueue = persistenceQueue.then(async () => {
-              try {
-                await withRls(this.db, userId, role, async (client) => {
-                  const currentSnapshot = runAgentSnapshots.get(runId);
-                  const metadata: Record<string, any> = { 
-                    ...(currentSnapshot?.metadata || {}),
-                    streaming: isStreaming,
-                    status: (event as any).status || (event.type === 'complete' ? 'success' : 'running'),
-                    usage: currentUsage
-                  };
-                  
-                  if (event.type === 'complete' && (event as any).tool_calls) {
-                    metadata.tool_calls = (event as any).tool_calls;
-                  }
+        if (shouldPersistToken) {
+          lastPersistenceTime = now;
+        }
 
-                  await upsertAgentMessage(this.db, client, activeChatId, runId, contentToPersist, metadata);
-                });
-              } catch (err) {
-                if (logger) logger.error({ err, runId }, 'Failed to persist agent message');
-              }
-            });
-          }
+        if (shouldPersistComplete) {
+          runAgentSnapshots.delete(runId);
         }
 
         if (shouldPersistTool) {
@@ -328,9 +347,6 @@ export class RunService {
           });
         }
 
-        if (event.type === 'complete') {
-          runAgentSnapshots.delete(runId);
-        }
       }
 
       // Persist to run_logs
