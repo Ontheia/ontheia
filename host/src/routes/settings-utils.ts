@@ -85,6 +85,22 @@ export const DEFAULT_USER_SETTINGS = {
     modelId: null as string | null,
     thresholdTokens: 8000,
     maxMessages: 40
+  },
+  /**
+   * Admin console → Memory → Import: the form values of the last ingest/convert.
+   * All-null means "never used" — the UI then falls back to its own defaults.
+   */
+  memoryIngest: {
+    ingestPath: null as string | null,
+    ingestNamespace: null as string | null,
+    ingestChunkSize: null as number | null,
+    ingestOverlapPct: null as number | null,
+    ingestChunkMode: null as 'sliding-window' | 'semantic' | null,
+    ingestFilterToC: null as boolean | null,
+    ingestOnConflict: null as 'replace' | 'skip' | null,
+    pdfConvertPath: null as string | null,
+    pdfOcrEndpoint: null as string | null,
+    pdfConvertOnConflict: null as 'replace' | 'skip' | null
   }
 };
 
@@ -170,7 +186,8 @@ export const normalizeUserSettings = (raw: any): UserSettings => ({
   uiFlags: normalizeUiFlags(raw?.uiFlags),
   promptOptimizer: normalizePromptOptimizer(raw?.promptOptimizer),
   builder: normalizeBuilderDefaults(raw?.builder),
-  rollingSummary: normalizeRollingSummary(raw?.rollingSummary)
+  rollingSummary: normalizeRollingSummary(raw?.rollingSummary),
+  memoryIngest: normalizeMemoryIngest(raw?.memoryIngest)
 });
 
 export const normalizeRuntimeSettings = (input: any, base = DEFAULT_USER_SETTINGS.runtime) => {
@@ -219,6 +236,43 @@ export const normalizeRollingSummary = (input: any, base = DEFAULT_USER_SETTINGS
   return next;
 };
 
+/** Path/URL/namespace cap — generous for an OCR endpoint, tight enough for jsonb. */
+const MEMORY_INGEST_MAX_STRING = 512;
+
+/**
+ * Import defaults are "last used", not "configured": every field starts as
+ * null and only takes a value once an ingest/convert submitted it. Strings are
+ * trimmed and capped, numbers clamped to the ranges the endpoint accepts,
+ * enums whitelisted — anything else keeps the previous value.
+ */
+export const normalizeMemoryIngest = (input: any, base = DEFAULT_USER_SETTINGS.memoryIngest): UserSettings['memoryIngest'] => {
+  const next = { ...base };
+  if (!input || typeof input !== 'object') return next;
+  const cleanString = (v: any): string | null =>
+    typeof v === 'string' && v.trim() ? v.trim().slice(0, MEMORY_INGEST_MAX_STRING) : null;
+  if ('ingestPath' in input) next.ingestPath = cleanString(input.ingestPath);
+  if ('ingestNamespace' in input) next.ingestNamespace = cleanString(input.ingestNamespace);
+  if ('pdfConvertPath' in input) next.pdfConvertPath = cleanString(input.pdfConvertPath);
+  if ('pdfOcrEndpoint' in input) next.pdfOcrEndpoint = cleanString(input.pdfOcrEndpoint);
+  if ('ingestChunkSize' in input && Number.isFinite(input.ingestChunkSize)) {
+    next.ingestChunkSize = Math.max(100, Math.min(8000, Math.round(input.ingestChunkSize)));
+  }
+  if ('ingestOverlapPct' in input && Number.isFinite(input.ingestOverlapPct)) {
+    next.ingestOverlapPct = Math.max(0, Math.min(50, Math.round(input.ingestOverlapPct)));
+  }
+  if (input.ingestChunkMode === 'sliding-window' || input.ingestChunkMode === 'semantic') {
+    next.ingestChunkMode = input.ingestChunkMode;
+  }
+  if (input.ingestOnConflict === 'replace' || input.ingestOnConflict === 'skip') {
+    next.ingestOnConflict = input.ingestOnConflict;
+  }
+  if (input.pdfConvertOnConflict === 'replace' || input.pdfConvertOnConflict === 'skip') {
+    next.pdfConvertOnConflict = input.pdfConvertOnConflict;
+  }
+  if (typeof input.ingestFilterToC === 'boolean') next.ingestFilterToC = input.ingestFilterToC;
+  return next;
+};
+
 export const applyUserSettingsPatch = (current: UserSettings, patch: any): UserSettings => ({
   ...current,
   preferences: normalizePreferences(patch.preferences, current.preferences),
@@ -230,7 +284,8 @@ export const applyUserSettingsPatch = (current: UserSettings, patch: any): UserS
   uiFlags: normalizeUiFlags(patch.uiFlags, current.uiFlags),
   promptOptimizer: normalizePromptOptimizer(patch.promptOptimizer, current.promptOptimizer),
   builder: normalizeBuilderDefaults(patch.builder, current.builder),
-  rollingSummary: normalizeRollingSummary(patch.rollingSummary, current.rollingSummary)
+  rollingSummary: normalizeRollingSummary(patch.rollingSummary, current.rollingSummary),
+  memoryIngest: normalizeMemoryIngest(patch.memoryIngest, current.memoryIngest)
 });
 
 export const loadGlobalPromptOptimizer = async (db: Pool, client: PoolClient | null = null) => {

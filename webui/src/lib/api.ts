@@ -1474,6 +1474,19 @@ export type McpToolsResponse = {
   }>;
 };
 
+export type UserMemoryIngestPayload = {
+  ingestPath?: string | null;
+  ingestNamespace?: string | null;
+  ingestChunkSize?: number | null;
+  ingestOverlapPct?: number | null;
+  ingestChunkMode?: 'sliding-window' | 'semantic' | null;
+  ingestFilterToC?: boolean | null;
+  ingestOnConflict?: 'replace' | 'skip' | null;
+  pdfConvertPath?: string | null;
+  pdfOcrEndpoint?: string | null;
+  pdfConvertOnConflict?: 'replace' | 'skip' | null;
+};
+
 export type UserSettingsPayload = {
   preferences?: UserPreferencesPayload;
   pickerDefaults?: UserPickerDefaultsPayload;
@@ -1487,6 +1500,7 @@ export type UserSettingsPayload = {
   promptOptimizer?: PromptOptimizerDefaultsPayload;
   builder?: BuilderDefaultsPayload;
   rollingSummary?: RollingSummaryPayload;
+  memoryIngest?: UserMemoryIngestPayload;
 };
 
 export function fetchMcpTools(serverNames?: string[], options?: { refresh?: boolean }) {
@@ -1517,6 +1531,7 @@ export function getUserSettingsApi() {
     promptOptimizer?: PromptOptimizerDefaultsPayload;
     builder?: BuilderDefaultsPayload;
     rollingSummary?: RollingSummaryPayload;
+    memoryIngest?: UserMemoryIngestPayload;
     updatedAt?: string;
   }>;
 }
@@ -1538,6 +1553,7 @@ export function updateUserSettingsApi(payload: UserSettingsPayload) {
     promptOptimizer?: PromptOptimizerDefaultsPayload;
     builder?: BuilderDefaultsPayload;
     rollingSummary?: RollingSummaryPayload;
+    memoryIngest?: UserMemoryIngestPayload;
     updatedAt: string;
   }>;
 }

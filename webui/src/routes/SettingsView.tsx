@@ -59,6 +59,7 @@ import {
   stopAllServers,
   testProviderConnection,
   updateUserSettingsApi,
+  getUserSettingsApi,
   fetchMcpTools,
   fetchMemoryAudit,
   getAgentMemoryPolicy,
@@ -1424,6 +1425,37 @@ function MemorySection({
   const [isCleanupExpiredDialogOpen, setIsCleanupExpiredDialogOpen] = useState(false);
   const [isClearNamespaceDialogOpen, setIsClearNamespaceDialogOpen] = useState(false);
 
+  // Memory → Import form values are per-account defaults ("last used"), so
+  // they survive a refresh and follow the user to other devices. Prefill once
+  // on mount; once an ingest/convert was started, the fields belong to the
+  // user and a late-arriving fetch must not clobber them.
+  const ingestFormTouchedRef = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const settings = await getUserSettingsApi();
+        const m = settings.memoryIngest;
+        if (cancelled || !m || ingestFormTouchedRef.current) return;
+        if (m.ingestPath) setIngestPath(m.ingestPath);
+        if (m.ingestNamespace) setIngestNamespace(m.ingestNamespace);
+        if (typeof m.ingestChunkSize === 'number') setIngestChunkSize(m.ingestChunkSize);
+        if (typeof m.ingestOverlapPct === 'number') setIngestOverlapPct(m.ingestOverlapPct);
+        if (m.ingestChunkMode) setIngestChunkMode(m.ingestChunkMode);
+        if (typeof m.ingestFilterToC === 'boolean') setIngestFilterToC(m.ingestFilterToC);
+        if (m.ingestOnConflict) setIngestOnConflict(m.ingestOnConflict);
+        if (m.pdfConvertPath) setPdfConvertPath(m.pdfConvertPath);
+        if (typeof m.pdfOcrEndpoint === 'string') setPdfOcrEndpoint(m.pdfOcrEndpoint);
+        if (m.pdfConvertOnConflict) setPdfConvertOnConflict(m.pdfConvertOnConflict);
+      } catch {
+        /* best effort — the hardcoded defaults above work without prefill */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleCleanupExpired = async () => {
     setIsCleaningExpired(true);
     setErrorMessage(null);
@@ -1454,11 +1486,25 @@ function MemorySection({
 
   const handleIngestDirectory = async () => {
     if (!ingestPath.trim() || !ingestNamespace.trim()) return;
+    ingestFormTouchedRef.current = true;
     setIsIngesting(true);
     setIngestProgress([]);
     setIngestResult(null);
     setErrorMessage(null);
     const token = window.localStorage.getItem('mcp.session.token') ?? '';
+    // Fire and forget: the last used configuration becomes the account-wide
+    // default — a failed save must not block (or fail) the ingest itself.
+    void updateUserSettingsApi({
+      memoryIngest: {
+        ingestPath: ingestPath.trim() || null,
+        ingestNamespace: ingestNamespace.trim() || null,
+        ingestChunkSize,
+        ingestOverlapPct,
+        ingestChunkMode,
+        ingestFilterToC,
+        ingestOnConflict
+      }
+    }).catch(() => {});
     try {
       await ingestDirectory(
         {
@@ -1499,11 +1545,22 @@ function MemorySection({
 
   const handleConvertPdf = async () => {
     if (!pdfConvertPath.trim()) return;
+    ingestFormTouchedRef.current = true;
     setIsPdfConverting(true);
     setPdfProgress([]);
     setPdfResult(null);
     setErrorMessage(null);
     const token = window.localStorage.getItem('mcp.session.token') ?? '';
+    // Fire and forget, same contract as the ingest: last used = default.
+    // The patch carries only the convert fields — the ingest values keep
+    // their stored state server-side.
+    void updateUserSettingsApi({
+      memoryIngest: {
+        pdfConvertPath: pdfConvertPath.trim() || null,
+        pdfOcrEndpoint: pdfOcrEndpoint.trim() || null,
+        pdfConvertOnConflict
+      }
+    }).catch(() => {});
     try {
       const { convertPdf } = await import('../lib/api.js');
       await convertPdf(
