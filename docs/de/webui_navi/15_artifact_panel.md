@@ -17,8 +17,8 @@ Erscheint automatisch, sobald ein Agent eine Datei liest oder anlegt. Bleibt nac
 
 | Element | Bedeutung |
 | --- | --- |
-| **Icon links** | Dokument-Symbol bei Textdateien · anderes Symbol bei PDF |
-| **Aktion rechts** | Stift = zum Bearbeiten öffnen · Auge = zum Ansehen öffnen (PDF) |
+| **Icon links** | Dokument-Symbol bei Textdateien · anderes Symbol bei PDF und Bildern |
+| **Aktion rechts** | Stift = zum Bearbeiten öffnen · Auge = zum Ansehen öffnen (PDF, Bild) |
 | **Zusatz „Teilansicht"** | Nur ein Ausschnitt geladen (sehr große Datei) — Bearbeiten gesperrt |
 
 ---
@@ -31,7 +31,7 @@ Erscheint automatisch, sobald ein Agent eine Datei liest oder anlegt. Bleibt nac
 │ /pfad/zur/dateiname.md                      │
 │ ┌─────────────────────────────────────────┐ │
 │ │                                         │ │
-│ │   Editor  oder  Vorschau  oder  PDF     │ │
+│ │   Editor  oder  Vorschau  oder  PDF/Bild │ │
 │ │                                         │ │
 │ └─────────────────────────────────────────┘ │
 │ sha256 a1b2c3d4e5f6…          [Speichern]   │
@@ -55,7 +55,10 @@ Der Composer bleibt über dem Panel bedienbar; das Panel hält den unteren Berei
 | `.md`, `.markdown` | Vorschau (gerendertes Markdown) ↔ Editor |
 | `.mmd`, `.mermaid` | Vorschau (gerendertes Diagramm mit Zoom) ↔ Editor |
 | `.pdf` | Leseansicht: Seiten scrollen, Zoom-Buttons, Text markierbar und kopierbar. Kein Bearbeiten. Inhalt auf Nachfrage auswertbar (siehe unten). |
+| `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif` | Leseansicht: Das Bild wird beim Öffnen aus der Datei geladen und der Panelbreite angepasst. Kein Bearbeiten, keine Vorschau-Umschaltung. |
 | alle anderen Textdateien | Nur Editor, kein Umschalter |
+
+Bilddateien sind wie PDFs reine Anzeige-Artefakte: Es gibt keine gespeicherte Fassung, nur Pfad und Prüfsumme — die Bytes bleiben in der Datei und werden erst beim Öffnen im Panel geladen. **SVG ist bewusst keine Bilddatei** und öffnet wie eine Textdatei im Editor.
 
 ### Speichern und Konflikte
 
@@ -106,3 +109,13 @@ Die Bytes einer PDF sieht der Agent nie — nur Name, Pfad und Größe. Wird nac
 Die Umwandlung läuft **erst bei der ersten Inhaltsfrage** und wird danach zwischengespeichert; Folgefragen im selben Chat sind ohne Wartezeit. Wird die Datei ausgetauscht, wird automatisch neu ausgewertet.
 
 > **Grenze:** Ausgewertet wird die Textebene. **Eingescannte oder reine Bild-PDFs** haben keine — der Agent meldet dann, dass er den Inhalt nicht lesen kann (dafür wäre OCR nötig). Bei mehrspaltigen Seiten, Diagrammen und Tabellen geht das Layout verloren: Die Angaben sind vollständig, aber anders angeordnet als im Original.
+
+### Bild-Dateien
+
+Bilddateien (etwa Titelbilder aus ingestierten Dokumenten) sieht der Agent ebenso wenig im Original wie eine PDF — nie die Bytes, nur Name, Pfad und Größe. Er kann ein Bild **als Karte im Chat zeigen**, ohne dass die Bilddaten den Chat-Verlauf, das Modell oder die Datenbank belasten:
+
+- Die Karte entsteht, sobald der Agent die Datei-Infos des Bilds abruft; im Panel wird es erst beim Öffnen aus der Datei geladen.
+- Im Chat-Verlauf steht nur die Karte mit Pfad und Größe — die Bytes werden bei jedem Öffnen frisch gestreamt.
+- Nachfolgende Anfragen im selben Chat sehen lediglich eine Verweiszeile mit Pfad und Prüfsumme, kein Bild.
+
+Wird die Bilddatei auf der Platte ausgetauscht, zeigt das Panel den neuen Stand (die Prüfsumme der Karte wird erst beim nächsten Lesen durch den Agenten aktualisiert).

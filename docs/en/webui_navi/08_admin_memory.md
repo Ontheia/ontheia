@@ -173,6 +173,10 @@ Button: **[Start Import]**
 
 Button: **[Convert]**
 
+**Persistent form values** — Both forms remember their last used values: directory, namespace, chunk settings, OCR endpoint, and conflict behaviour are prefilled the next time the view opens. The values are **per account** and follow the account to other devices — the OCR endpoint only needs to be entered once.
+
+> Saving happens **when an import or conversion starts**: the configuration that actually ran becomes the new default. Merely typing a value without starting does not persist it.
+
 ---
 
 ## Tab: Audit Log

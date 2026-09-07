@@ -17,8 +17,8 @@ Appears automatically as soon as an agent reads or creates a file. Survives a pa
 
 | Element | Meaning |
 | --- | --- |
-| **Icon (left)** | Document symbol for text files · different symbol for PDF |
-| **Action (right)** | Pencil = open for editing · Eye = open for viewing (PDF) |
+| **Icon (left)** | Document symbol for text files · different symbol for PDFs and images |
+| **Action (right)** | Pencil = open for editing · Eye = open for viewing (PDF, image) |
 | **"partial" marker** | Only an excerpt was loaded (very large file) — editing disabled |
 
 ---
@@ -31,7 +31,7 @@ Appears automatically as soon as an agent reads or creates a file. Survives a pa
 │ /path/to/filename.md                        │
 │ ┌─────────────────────────────────────────┐ │
 │ │                                         │ │
-│ │    Editor  or  Preview  or  PDF         │ │
+│ │    Editor  or  Preview  or  PDF/Image   │ │
 │ │                                         │ │
 │ └─────────────────────────────────────────┘ │
 │ sha256 a1b2c3d4e5f6…               [Save]   │
@@ -55,7 +55,10 @@ The composer stays usable above the panel; the panel keeps its lower area clear 
 | `.md`, `.markdown` | Preview (rendered Markdown) ↔ editor |
 | `.mmd`, `.mermaid` | Preview (rendered diagram with zoom) ↔ editor |
 | `.pdf` | Viewer: scrollable pages, zoom buttons, selectable and copyable text. No editing. Content readable on request (see below). |
+| `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif` | Viewer: the image is loaded from the file on opening and fits the panel width. No editing, no preview toggle. |
 | all other text files | Editor only, no toggle |
+
+Images are display-only artifacts just like PDFs: there is no stored version, only path and checksum — the bytes stay in the file and are loaded only when the panel opens. **SVG is deliberately not an image** and opens in the editor like any text file.
 
 ### Saving and conflicts
 
@@ -106,3 +109,13 @@ The agent never sees a PDF's bytes — only its name, path, and size. When asked
 Conversion runs **only on the first content question** and is cached afterwards, so follow-ups in the same chat are instant. Replacing the file triggers a fresh extraction.
 
 > **Limitation:** Extraction uses the text layer. **Scanned or image-only PDFs** have none — the agent will report it cannot read the content (OCR would be required). For multi-column pages, diagrams, and tables the layout is lost: the information is complete but arranged differently from the original.
+
+### Image files
+
+Images (e.g. title pictures of ingested documents) are as invisible to the agent as a PDF — never the bytes, only name, path, and size. The agent can **show an image as a card in the chat** without the image data burdening the chat history, the model, or the database:
+
+- The card appears as soon as the agent retrieves the image's file info; the panel loads it from the file only when opened.
+- The chat history holds nothing but the card with path and size — the bytes are streamed fresh on every open.
+- Follow-up requests in the same chat see only a pointer line with path and checksum, no image.
+
+If the image file is replaced on disk, the panel shows the new state (the checksum on the card only updates when the agent reads the file again).

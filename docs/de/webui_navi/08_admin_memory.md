@@ -173,6 +173,10 @@ Button: **[Import starten]**
 
 Button: **[Konvertieren]**
 
+**Persistente Formularwerte** — Beide Formulare behalten ihre zuletzt genutzten Werte: Verzeichnis, Namespace, Chunk-Einstellungen, OCR-Endpunkt und Konfliktverhalten sind beim nächsten Öffnen der Ansicht bereits vorbelegt. Die Werte werden **je Konto** gespeichert und folgen damit geräteübergreifend auf andere Endgeräte — der OCR-Endpunkt muss also nur einmal eingetragen werden.
+
+> Gespeichert wird **beim Start** eines Imports bzw. einer Konvertierung: Die Konfiguration, mit der tatsächlich gelaufen wurde, wird der neue Standard. Eine bloße Eingabe ohne Start wird nicht übernommen.
+
 ---
 
 ## Tab: Audit-Log
