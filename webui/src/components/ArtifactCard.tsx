@@ -53,8 +53,9 @@ const formatBytes = (bytes: number): string => {
 export function ArtifactCard({ file, onOpen }: ArtifactCardProps) {
   const { t } = useTranslation(['chat']);
   const name = file.path.split('/').pop() || file.path;
-  // PDFs open in a viewer, everything else in the editor — signal which
-  const isBinary = /\.pdf$/i.test(file.path);
+  // Binary kinds (PDF, image) open in a viewer, everything else in the
+  // editor — signal which. Mirrors kindForPath's image extensions.
+  const isBinary = /\.(pdf|jpe?g|png|gif|webp|avif)$/i.test(file.path);
 
   return (
     <div className="artifact-card-row">

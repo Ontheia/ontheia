@@ -244,3 +244,15 @@ test('kindForPath: pdf', () => {
   assert.equal(kindForPath('/data/x.pdf'), 'pdf');
   assert.equal(kindForPath('/data/X.PDF'), 'pdf');
 });
+
+test('kindForPath: image extensions map to the image kind', () => {
+  assert.equal(kindForPath('/data/titelbild.jpeg'), 'image');
+  assert.equal(kindForPath('/data/titelbild.JPG'), 'image');
+  assert.equal(kindForPath('/data/photo.jpg'), 'image');
+  assert.equal(kindForPath('/data/icon.png'), 'image');
+  assert.equal(kindForPath('/data/anim.gif'), 'image');
+  assert.equal(kindForPath('/data/shot.webp'), 'image');
+  assert.equal(kindForPath('/data/shot.avif'), 'image');
+  // SVG deliberately stays text — script-bearing when a browser opens it
+  assert.equal(kindForPath('/data/logo.svg'), 'text');
+});

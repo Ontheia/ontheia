@@ -6161,6 +6161,28 @@ textarea.app-input {
   gap: 0.4rem;
 }
 
+/* Binary artifacts (image): the bytes stream once into an <img> object URL —
+   never into the chat or the model context, and never persisted. */
+.artifact-panel-image {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.4rem;
+  border: 1px solid hsl(var(--sidebar-border));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
+}
+
+.artifact-panel-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
 .pdf-viewer-toolbar {
   display: flex;
   align-items: center;

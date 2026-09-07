@@ -194,12 +194,18 @@ export function envelopeMetadata(entries: FileEnvelopeEntry[]) {
  * Artifact kind derived from the file extension. Everything read.py delivers
  * is text (binary files never produce an envelope); the kind decides which
  * preview the panel offers (markdown rendering, mermaid diagram, none).
+ * Images are deliberately limited to raster formats: SVG carries script when
+ * opened directly in a browser, and nothing in the title-image use case
+ * needs it — it stays 'text'.
  */
-export function kindForPath(filePath: string): 'markdown' | 'text' | 'mermaid' | 'pdf' {
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif']);
+
+export function kindForPath(filePath: string): 'markdown' | 'text' | 'mermaid' | 'pdf' | 'image' {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.md' || ext === '.markdown') return 'markdown';
   if (ext === '.mmd' || ext === '.mermaid') return 'mermaid';
   if (ext === '.pdf') return 'pdf';
+  if (IMAGE_EXTENSIONS.has(ext)) return 'image';
   return 'text';
 }
 
@@ -219,8 +225,9 @@ export async function promoteFilesEnvelope(
   for (const entry of entries) {
     const kind = kindForPath(entry.path);
     // Binary files only become artifacts when the panel can actually present
-    // them (PDF today). A card for a .zip would open into nothing.
-    if (entry.binary && kind !== 'pdf') continue;
+    // them (PDF and image today — both stream their bytes via /raw). A card
+    // for a .zip would open into nothing.
+    if (entry.binary && kind !== 'pdf' && kind !== 'image') continue;
 
     const title = path.basename(entry.path);
     const upsert = await client.query(

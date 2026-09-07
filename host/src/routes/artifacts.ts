@@ -47,6 +47,26 @@ const REFRESH_READ_LIMIT = 2_000_000;
 /** Upper bound for streaming a binary artifact to the browser viewer. */
 const RAW_MAX_BYTES = 100 * 1024 * 1024;
 
+/**
+ * Content types for the kinds streamed by /raw. The extension decides because
+ * the artifact row carries no MIME of its own — kindForPath already whitelisted
+ * the path, so this map only covers the same raster formats (SVG stays out:
+ * it is script-bearing when opened directly in a browser).
+ */
+const RAW_CONTENT_TYPES: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif'
+};
+
+function rawContentType(realPath: string): string {
+  return RAW_CONTENT_TYPES[path.extname(realPath).toLowerCase()] ?? 'application/octet-stream';
+}
+
 type CliScriptResult = { stdout: string; stderr: string; exit_code: number };
 
 function parseCliResult(result: unknown): CliScriptResult | null {
@@ -178,7 +198,7 @@ export function registerArtifactRoutes(
     });
   });
 
-  // GET /api/artifacts/:id/raw — stream a binary artifact (PDF) to the
+  // GET /api/artifacts/:id/raw — stream a binary artifact (PDF/image) to the
   // browser's viewer. The files skill stays the authority on which paths are
   // reachable: info.py validates the path (exit 2 outside the roots) and
   // returns the canonical realpath, which is what gets streamed — the host
@@ -196,7 +216,9 @@ export function registerArtifactRoutes(
     if (artifact.binding_type !== 'file' || !artifact.binding_path) {
       return reply.code(400).send({ error: 'not_file_bound' });
     }
-    if (artifact.kind !== 'pdf') return reply.code(400).send({ error: 'not_binary' });
+    if (artifact.kind !== 'pdf' && artifact.kind !== 'image') {
+      return reply.code(400).send({ error: 'not_binary' });
+    }
 
     const { cli, skillDirMissing } = await runFilesScript(
       auth.session.userId, auth.session.email, 'scripts/info.py', [artifact.binding_path]
@@ -219,7 +241,7 @@ export function registerArtifactRoutes(
 
     const filename = path.basename(realPath).replace(/["\\]/g, '');
     return reply
-      .type('application/pdf')
+      .type(rawContentType(realPath))
       .header('Content-Length', String(size))
       .header('Content-Disposition', `inline; filename="${filename}"`)
       .header('Cache-Control', 'private, no-store')

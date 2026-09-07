@@ -31,7 +31,7 @@ import { PdfViewer } from './PdfViewer';
 /** Kinds the panel can render as a preview (everything else is editor-only). */
 const PREVIEWABLE_KINDS = ['markdown', 'mermaid'];
 /** Kinds with no text body: shown in a viewer, never edited. */
-const BINARY_KINDS = ['pdf'];
+const BINARY_KINDS = ['pdf', 'image'];
 
 /**
  * What the panel is opened on: a file-bound artifact (chat card) or a
@@ -234,24 +234,36 @@ export function ArtifactPanel({ source, onClose, highlight }: ArtifactPanelProps
     void load();
   }, [load]);
 
-  // Binary artifacts: pull the bytes once and render them ourselves (pdf.js).
-  // Fetched rather than linked because the route needs the session token.
+  // Binary artifacts: pull the bytes once and render them ourselves (pdf.js
+  // for PDFs, an <img> object URL for images). Fetched rather than linked
+  // because the route needs the session token.
   const [rawData, setRawData] = useState<ArrayBuffer | null>(null);
+  const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [rawError, setRawError] = useState<string | null>(null);
   const binaryArtifactId =
     state.phase === 'ready' && BINARY_KINDS.includes(state.kind) ? state.artifactId : null;
+  const binaryArtifactKind =
+    state.phase === 'ready' && BINARY_KINDS.includes(state.kind) ? state.kind : null;
   const handleRawError = useCallback(() => setRawError(t('artifactLoadError')), [t]);
   useEffect(() => {
     if (!binaryArtifactId) return;
     let cancelled = false;
+    let objectUrl: string | null = null;
     setRawError(null);
     setRawData(null);
+    setRawImageUrl(null);
     void (async () => {
       try {
         const blob = await fetchArtifactRaw(binaryArtifactId);
-        const buffer = await blob.arrayBuffer();
         if (cancelled) return;
-        setRawData(buffer);
+        if (binaryArtifactKind === 'image') {
+          objectUrl = URL.createObjectURL(blob);
+          setRawImageUrl(objectUrl);
+        } else {
+          const buffer = await blob.arrayBuffer();
+          if (cancelled) return;
+          setRawData(buffer);
+        }
       } catch (err) {
         if (cancelled) return;
         const status = (err as { status?: number })?.status;
@@ -260,8 +272,9 @@ export function ArtifactPanel({ source, onClose, highlight }: ArtifactPanelProps
     })();
     return () => {
       cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [binaryArtifactId, t]);
+  }, [binaryArtifactId, binaryArtifactKind, t]);
 
   const handleSave = async () => {
     if (state.phase !== 'ready' || state.saving || !state.artifactId || !state.sha256) return;
@@ -473,6 +486,17 @@ export function ArtifactPanel({ source, onClose, highlight }: ArtifactPanelProps
                 <AlertTriangle width={16} height={16} aria-hidden="true" />
                 <span>{rawError}</span>
               </div>
+            ) : binaryArtifactKind === 'image' ? (
+              rawImageUrl ? (
+                <div className="artifact-panel-image">
+                  <img src={rawImageUrl} alt={title} loading="lazy" />
+                </div>
+              ) : (
+                <div className="artifact-panel-status">
+                  <Loader2 className="artifact-panel-spinner" width={18} height={18} aria-hidden="true" />
+                  {t('artifactLoading')}
+                </div>
+              )
             ) : rawData ? (
               <PdfViewer data={rawData} onError={handleRawError} />
             ) : (
