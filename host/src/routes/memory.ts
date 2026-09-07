@@ -919,7 +919,17 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
 
             const chunks = chunkText(
               content,
-              { source: 'directory_ingest', file_name: fileName, relative_path: relativePath, ingested_at: new Date().toISOString() },
+              {
+                source: 'directory_ingest',
+                file_name: fileName,
+                relative_path: relativePath,
+                // Directory the file was ingested from — the anchor for
+                // resolving the relative links inside the document (e.g. image
+                // references) at agent runtime. Container form, so it stays
+                // valid wherever the ingest endpoint itself runs.
+                source_dir: absolutePath,
+                ingested_at: new Date().toISOString()
+              },
               chunk_size,
               overlap_pct,
               chunk_mode,

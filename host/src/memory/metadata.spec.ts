@@ -122,16 +122,18 @@ test('sanitizeMetadata reduces tags to the usable strings', () => {
 });
 
 test('sanitizeMetadata leaves unknown keys alone', () => {
-  // The ingest paths set file_name, relative_path and ingested_at.
+  // The ingest paths set file_name, relative_path, source_dir and ingested_at.
   const out = sanitizeMetadata({
     source: 'directory_ingest',
     file_name: 'notes.md',
     relative_path: 'docs/notes.md',
+    source_dir: '/app/host/sources/vector/global/notes',
     ingested_at: '2026-07-27T10:00:00.000Z',
     chunk_index: 3
   });
   assert.equal(out.file_name, 'notes.md');
   assert.equal(out.relative_path, 'docs/notes.md');
+  assert.equal(out.source_dir, '/app/host/sources/vector/global/notes');
   assert.equal(out.chunk_index, 3);
 });
 

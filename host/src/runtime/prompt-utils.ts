@@ -224,7 +224,19 @@ export function formatMemoryContext(
   const groups = new Map<string, string[]>();
   for (const hit of hits) {
     const instruction = resolveInstruction?.(hit.namespace) ?? '';
-    const header = [describeDates(hit), describeConfirmation(hit), `Namespace: ${hit.namespace}`]
+    // Ingested documents carry their file and source directory in the chunk
+    // metadata — without them a relative link inside the content (e.g. an
+    // image reference) has no anchor to resolve against.
+    const meta = hit.metadata ?? {};
+    const fileName = typeof meta.file_name === 'string' ? meta.file_name : null;
+    const sourceDir = typeof meta.source_dir === 'string' ? meta.source_dir : null;
+    const header = [
+      describeDates(hit),
+      describeConfirmation(hit),
+      `Namespace: ${hit.namespace}`,
+      fileName ? `File: ${fileName}` : null,
+      sourceDir ? `Dir: ${sourceDir}` : null
+    ]
       .filter(Boolean)
       .join(', ');
     const entry = `--- MEMORY ENTRY (${header}) ---\n${hit.content}`;

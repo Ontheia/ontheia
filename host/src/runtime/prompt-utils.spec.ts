@@ -222,6 +222,34 @@ test('formatMemoryContext leaves the header untouched for an unconfirmed entry',
   );
 });
 
+test('formatMemoryContext surfaces file and source_dir of an ingested document', () => {
+  // Relative links inside an ingested document (e.g. image references) are
+  // only resolvable when the model learns the directory they came from.
+  const out = formatMemoryContext([
+    {
+      namespace: 'vector.global.privat.recipes',
+      content: '![](IMG_3327_titelbild.jpeg)',
+      metadata: { source: 'directory_ingest', file_name: 'IMG_3327.md', source_dir: '/app/host/sources/vector/global/privat/recipes' },
+      relevance: 0.8,
+      createdAt: '2026-07-21T10:00:00Z'
+    } as any
+  ]);
+  assert.match(
+    out,
+    /^--- MEMORY ENTRY \(Stored on 7\/21\/2026, Namespace: vector\.global\.privat\.recipes, File: IMG_3327\.md, Dir: \/app\/host\/sources\/vector\/global\/privat\/recipes\) ---\n!\[\]\(IMG_3327_titelbild\.jpeg\)$/
+  );
+});
+
+test('formatMemoryContext ignores non-string metadata values and unknown keys', () => {
+  const out = formatMemoryContext([
+    { ...hit('vector.global.docs', 'Doc A'), metadata: { file_name: 42, source_dir: null } }
+  ]);
+  assert.match(
+    out,
+    /^--- MEMORY ENTRY \(Stored on 7\/21\/2026, Namespace: vector\.global\.docs\) ---\nDoc A$/
+  );
+});
+
 test('appendMemoryContext explains what an unmarked entry means', () => {
   // The marker is only readable if absence has a stated meaning. Saying it once
   // in the note is cheaper than a per-entry "unconfirmed".
