@@ -29,6 +29,8 @@ The agent sees the skill catalog at the start of every session. When a task matc
 
 For code-library skills, the agent reads the code pattern from the skill, adapts it to the specific task, and executes it via the `cli-tools` MCP server using `uv run --with <package>` for automatic dependency management.
 
+Long-running scripts (batch jobs, minutes to hours) are started detached with `run_skill_script` and `background: true`: the call returns immediately with a log file path, progress and exit code are polled via `background_status` (details: [MCP Server Basics](../mcp-server/01_basics.md)).
+
 ---
 
 ## Skill Directory Structure

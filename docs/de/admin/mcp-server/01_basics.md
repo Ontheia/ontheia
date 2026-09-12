@@ -28,10 +28,25 @@ Der `cli-tools`-Server (`host/mcp-servers/cli-server/cli_server.py`) ist ein Pyt
 | Tool | Beschreibung |
 | --- | --- |
 | `execute` | Führt einen erlaubten Shell-Befehl aus. |
-| `run_skill_script` | Führt ein im Skill-Verzeichnis enthaltenes Script aus (pfadbegrenzt). Interpreter wird automatisch erkannt: `.py` → `uv run`, `.sh` → `bash`, `.js` → `node`. |
+| `run_skill_script` | Führt ein im Skill-Verzeichnis enthaltenes Script aus (pfadbegrenzt). Interpreter wird automatisch erkannt: `.py` → `uv run`, `.sh` → `bash`, `.js` → `node`. Läuft standardmäßig synchron mit 30 s-Timeout; mit `background: true` stattdessen entkoppelt (siehe unten). |
+| `background_status` | Fragt einen Hintergrundlauf ab: läuft/beendet, Exit-Code (sobald bekannt) und die letzten Zeilen des Logfiles. |
+| `background_stop` | Bricht einen laufenden Hintergrundlauf per SIGTERM ab (verifiziert vorher die PID gegen die aufgezeichnete Befehlszeile). |
 | `list_commands` | Gibt die Liste der aktuell erlaubten Befehle mit Beschreibungen zurück. |
 | `list_logs` | Listet verfügbare Ontheia-Logdateien auf. |
 | `read_log` | Liest eine Logdatei mit optionalem Text-/Level-Filter. |
+
+### Hintergrund-Modus für langlaufende Scripts
+
+Synchron bedeutet: Der Tool-Aufruf blockiert den Agent-Run, bis das Script endet (Standard-Timeout 30 s über `COMMAND_TIMEOUT`). Für Batch-Verarbeitungen, die Minuten bis Stunden laufen (z. B. eine OCR-Pipeline über einen Bildordner), ist `run_skill_script` mit `background: true` zu starten:
+
+- Der Aufruf kehrt **sofort** zurück — mit `log_file`, `pid`, `started_at` und dem aufgerufenen `argv`. Der Lauf blockiert den Run nicht.
+- stdout und stderr des Scripts landen im Logfile unter `<skill_dir>/logs/`; pro Lauf entsteht ein Satz aus Logfile, `.pid`- und `.exit`-Marker. Behalten werden die 20 neuesten Sätze, ältere werden beim nächsten Start gelöscht.
+- Der Fortschritt wird über `background_status(log_file)` abgefragt: `status: running` oder `done`, dazu der Exit-Code und die letzten Log-Zeilen. Pollen, bis `done` kommt.
+- Der verlässliche Statusindikator ist die **Exit-Code-Datei**, nicht die PID: Nach einem Container-Neustart kann eine PID wiederverwendet werden. Endet ein Lauf während der Server nicht beobachtet, ist der Exit-Code unbekannt (`exit_code: null` mit Hinweis).
+- `background_stop(log_file)` sendet SIGTERM. Vorher wird `/proc/<pid>/cmdline` gegen das aufgezeichnete `argv` abgeglichen — eine wiederverwendete PID, die zu einem fremden Prozess gehört, wird nie getroffen.
+- Der synchrone Standardpfad bleibt unverändert (30 s); Hintergrundläufe sind rein opt-in.
+
+Welche Agenten die neuen Tools nutzen dürfen, wird wie bei jedem Tool über die Agenten-Konfiguration gesteuert (Administration → Agents → Tool-Auswahl).
 
 ### Befehl-Allowlist
 

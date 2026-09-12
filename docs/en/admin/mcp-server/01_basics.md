@@ -28,10 +28,25 @@ The `cli-tools` server (`host/mcp-servers/cli-server/cli_server.py`) is a Python
 | Tool | Description |
 | --- | --- |
 | `execute` | Runs an allowed shell command. |
-| `run_skill_script` | Executes a script bundled in a skill directory (path-bounded). Interpreter auto-detected: `.py` → `uv run`, `.sh` → `bash`, `.js` → `node`. |
+| `run_skill_script` | Executes a script bundled in a skill directory (path-bounded). Interpreter auto-detected: `.py` → `uv run`, `.sh` → `bash`, `.js` → `node`. Runs synchronously with a 30 s timeout by default; with `background: true` it runs detached instead (see below). |
+| `background_status` | Checks on a background run: running/done, the exit code (once known), and the last lines of the log file. |
+| `background_stop` | Stops a running background run with SIGTERM (verifies the PID against the recorded command line first). |
 | `list_commands` | Returns the list of currently allowed commands with descriptions. |
 | `list_logs` | Lists available Ontheia log files. |
 | `read_log` | Reads a log file with optional text/level filter. |
+
+### Background mode for long-running scripts
+
+Synchronous means: the tool call blocks the agent run until the script finishes (default timeout 30 s via `COMMAND_TIMEOUT`). For batch jobs that run for minutes to hours (e.g. an OCR pipeline over a folder of images), start `run_skill_script` with `background: true` instead:
+
+- The call returns **immediately** — with `log_file`, `pid`, `started_at`, and the `argv` invoked. The run does not block the agent run.
+- The script's stdout and stderr go to a log file under `<skill_dir>/logs/`; each run produces a set of log file plus `.pid` and `.exit` markers. The 20 newest sets are kept; older ones are deleted on the next start.
+- Progress is polled via `background_status(log_file)`: `status: running` or `done`, plus the exit code and the last log lines. Poll until it reports `done`.
+- The reliable status indicator is the **exit code file**, not the PID: after a container restart a PID can be reused. If a run ends while nobody is watching, the exit code is unknown (`exit_code: null` with a note).
+- `background_stop(log_file)` sends SIGTERM. Before that, `/proc/<pid>/cmdline` is matched against the recorded `argv` — a reused PID belonging to a foreign process is never killed.
+- The synchronous default path is unchanged (30 s); background runs are strictly opt-in.
+
+Which agents may use the new tools is governed like any tool via the agent configuration (Administration → Agents → tool selection).
 
 ### Command Allowlist
 
