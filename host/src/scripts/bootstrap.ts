@@ -420,6 +420,8 @@ async function main() {
         { server: 'skills', tool: 'write_skill_resource' },
         { server: 'skills', tool: 'create_skill' },
         { server: 'cli-tools', tool: 'run_skill_script' },
+        { server: 'cli-tools', tool: 'background_status' },
+        { server: 'cli-tools', tool: 'background_stop' },
         { server: 'artifacts', tool: 'artifact_read' },
       ];
 

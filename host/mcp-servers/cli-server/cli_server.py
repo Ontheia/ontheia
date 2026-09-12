@@ -3,8 +3,12 @@ import json
 import sys
 import os
 import shutil
+import signal
 import subprocess
+import threading
+import time
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 # Force unbuffered output for JSON-RPC
@@ -23,10 +27,19 @@ logger = logging.getLogger("cli-server")
 LOG_DIR = os.environ.get("LOG_DIR", "/app/logs")
 
 class CliServer:
+    # Background runs: how many log sets (.log/.pid/.exit) to keep per skill.
+    BG_LOG_KEEP = 20
+
     def __init__(self):
         self.allowed_commands, self.command_help = self._load_allowlist()
         self.base_workdir = os.environ.get("BASE_WORKDIR", os.getcwd())
         self.timeout = int(os.environ.get("COMMAND_TIMEOUT", "30"))
+        # Detached runs started by this server instance (log_path → Popen) and
+        # runs adopted after a server restart (log_path set). State that must
+        # survive a restart lives on disk next to the log (<log>.pid/.exit).
+        self._bg_lock = threading.Lock()
+        self._bg_procs: Dict[str, subprocess.Popen] = {}
+        self._bg_adopted = set()
 
         self.tools = [
             {
@@ -43,9 +56,37 @@ class CliServer:
                         "script_path": {"type": "string",  "description": "Relative path to the script, e.g. 'scripts/extract.py'."},
                         "args":        {"type": "array",   "items": {"type": "string"}, "description": "Arguments passed to the script."},
                         "input_data":  {"type": "string",  "description": "Optional stdin data."},
-                        "raw_stdin":   {"type": "boolean", "description": "Pass input_data through byte-faithfully (skip the literal-\\n repair heuristic). For host-side callers with verbatim content."}
+                        "raw_stdin":   {"type": "boolean", "description": "Pass input_data through byte-faithfully (skip the literal-\\n repair heuristic). For host-side callers with verbatim content."},
+                        "background":  {"type": "boolean", "description": "Start detached instead of waiting (default: false). Use for long-running jobs (minutes to hours) — e.g. batch processing. Returns immediately with log_file and pid. stdout/stderr are written to the log file. Poll progress via background_status, stop via background_stop."}
                     },
                     "required": ["skill_dir", "script_path"]
+                }
+            },
+            {
+                "name": "background_status",
+                "description": (
+                    "Check on a script started with run_skill_script (background: true). "
+                    "Reports running/done, the exit code once known, and the last lines of the log file. "
+                    "Poll repeatedly until status is 'done'."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "log_file": {"type": "string", "description": "Absolute log file path returned by run_skill_script."},
+                        "lines":   {"type": "integer", "description": "Number of log lines to return from the end (default: 20)."}
+                    },
+                    "required": ["log_file"]
+                }
+            },
+            {
+                "name": "background_stop",
+                "description": "Stop a running background script (SIGTERM). Verifies the PID still belongs to the recorded command before killing.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "log_file": {"type": "string", "description": "Absolute log file path returned by run_skill_script."}
+                    },
+                    "required": ["log_file"]
                 }
             },
             {
@@ -206,6 +247,200 @@ class CliServer:
             return None  # path traversal attempt
         return resolved
 
+    # ── background runs ────────────────────────────────────────────────────────
+
+    def _start_background(self, skill_dir: str, script_abs: str, full_cmd: List[str], env: Dict[str, str]) -> Dict[str, Any]:
+        """Start a script detached (Popen, own session, stdout/stderr → log file).
+
+        State is kept on disk next to the log so it survives a server restart:
+          <log>.pid  — {pid, argv, started_at}  (ownership proof, written here)
+          <log>.exit — {exit_code, finished_at} (written when the process ends)
+        Returns the response payload for the tool call.
+        """
+        base = os.path.realpath(skill_dir)
+        logs_dir = os.path.join(base, "logs")
+        try:
+            os.makedirs(logs_dir, exist_ok=True)
+        except OSError as e:
+            return {"error": f"Cannot create log directory {logs_dir}: {e}"}
+
+        stem = os.path.splitext(os.path.basename(script_abs))[0]
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+        log_path = os.path.join(logs_dir, f"{stem}-{ts}.log")
+        n = 1
+        while os.path.exists(log_path):
+            log_path = os.path.join(logs_dir, f"{stem}-{ts}-{n}.log")
+            n += 1
+
+        started_at = datetime.now(timezone.utc).isoformat()
+        try:
+            log_fh = open(log_path, "ab")
+            try:
+                proc = subprocess.Popen(
+                    full_cmd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=log_fh,
+                    stderr=subprocess.STDOUT,
+                    cwd=base,
+                    env=env,
+                    start_new_session=True
+                )
+            finally:
+                log_fh.close()
+        except Exception as e:
+            try:
+                os.unlink(log_path)
+            except OSError:
+                pass
+            return {"error": str(e)}
+
+        marker = {"pid": proc.pid, "argv": full_cmd, "started_at": started_at, "log_file": log_path}
+        try:
+            with open(log_path + ".pid", "w", encoding="utf-8") as f:
+                json.dump(marker, f)
+        except OSError as e:
+            # Marker is the ownership proof for status/stop — without it the
+            # run would be unmanageable, so take it down again.
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            return {"error": f"Cannot write pid marker: {e}"}
+
+        with self._bg_lock:
+            self._bg_procs[log_path] = proc
+        threading.Thread(target=self._watch_bg, args=(log_path, proc), daemon=True).start()
+
+        self._cleanup_bg_logs(logs_dir)
+        logger.info(f"background: pid={proc.pid} log={log_path} cmd={' '.join(full_cmd)}")
+        return {
+            "background": True,
+            "log_file": log_path,
+            "pid": proc.pid,
+            "started_at": started_at,
+            "argv": full_cmd,
+            "note": "Started detached. Poll with background_status until status is 'done'; stop early with background_stop."
+        }
+
+    def _watch_bg(self, log_path: str, proc: subprocess.Popen) -> None:
+        """Daemon thread: wait for a background process and persist its exit code."""
+        try:
+            rc = proc.wait()
+        except Exception as e:
+            logger.error(f"watcher failed for {log_path}: {e}")
+            rc = None
+        self._write_exit_marker(log_path, rc)
+        with self._bg_lock:
+            self._bg_procs.pop(log_path, None)
+
+    def _adopt_bg(self, log_path: str, pid: int) -> None:
+        """Re-arm observation for a run whose watcher is gone (server restart).
+
+        Polls PID liveness; once the process is gone the exit marker is
+        written with an unknown exit code (the real one died with the watcher).
+        """
+        with self._bg_lock:
+            if log_path in self._bg_procs or log_path in self._bg_adopted:
+                return
+            self._bg_adopted.add(log_path)
+
+        def poll():
+            try:
+                while True:
+                    if self._read_exit_marker(log_path) is not None:
+                        return
+                    if not self._pid_alive(pid):
+                        self._write_exit_marker(
+                            log_path, None,
+                            "Exit code unknown: process ended while unobserved (server restart)."
+                        )
+                        return
+                    time.sleep(2)
+            finally:
+                with self._bg_lock:
+                    self._bg_adopted.discard(log_path)
+
+        threading.Thread(target=poll, daemon=True).start()
+
+    def _write_exit_marker(self, log_path: str, exit_code: Optional[int], note: Optional[str] = None) -> None:
+        data: Dict[str, Any] = {
+            "exit_code": exit_code,
+            "finished_at": datetime.now(timezone.utc).isoformat()
+        }
+        if note:
+            data["note"] = note
+        tmp = log_path + ".exit.tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(tmp, log_path + ".exit")
+        except OSError as e:
+            logger.error(f"cannot write exit marker for {log_path}: {e}")
+
+    def _read_exit_marker(self, log_path: str) -> Optional[Dict[str, Any]]:
+        try:
+            with open(log_path + ".exit", "r", encoding="utf-8") as f:
+                marker = json.load(f)
+            if isinstance(marker, dict) and "exit_code" in marker:
+                return marker
+        except (OSError, ValueError):
+            pass
+        return None
+
+    def _load_pid_marker(self, log_path: str) -> Optional[Dict[str, Any]]:
+        try:
+            with open(log_path + ".pid", "r", encoding="utf-8") as f:
+                marker = json.load(f)
+            if isinstance(marker, dict) and isinstance(marker.get("pid"), int) and isinstance(marker.get("argv"), list):
+                return marker
+        except (OSError, ValueError):
+            pass
+        return None
+
+    def _pid_alive(self, pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True  # exists, owned by someone else
+
+    def _pid_matches(self, pid: int, argv: List[str]) -> bool:
+        """Verify /proc/<pid>/cmdline against the recorded argv (guards PID reuse).
+
+        Only script path + args are compared — argv[0] is the interpreter, and
+        an interpreter may re-exec itself (e.g. 'uv run' becoming 'python …')
+        without the check breaking.
+        """
+        if not argv:
+            return False
+        tail = argv[1:]
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                parts = [p.decode("utf-8", "replace") for p in f.read().split(b"\0") if p]
+        except OSError:
+            return False
+        return len(parts) >= len(tail) and parts[-len(tail):] == tail
+
+    def _cleanup_bg_logs(self, logs_dir: str) -> None:
+        """Keep only the newest BG_LOG_KEEP log sets (.log/.pid/.exit) per skill."""
+        try:
+            logs = sorted(
+                (f for f in os.listdir(logs_dir) if f.endswith(".log")),
+                key=lambda f: os.path.getmtime(os.path.join(logs_dir, f)),
+                reverse=True
+            )
+        except OSError:
+            return
+        for old in logs[self.BG_LOG_KEEP:]:
+            old_base = os.path.join(logs_dir, old)
+            for suffix in ("", ".pid", ".exit", ".exit.tmp"):
+                try:
+                    os.unlink(old_base + suffix)
+                except OSError:
+                    pass
+
     # ── request handling ─────────────────────────────────────────────────────
 
     def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -222,7 +457,7 @@ class CliServer:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {"listChanged": True}},
-                    "serverInfo": {"name": "cli-server", "version": "2.0.0"}
+                    "serverInfo": {"name": "cli-server", "version": "2.1.0"}
                 }
             }
 
@@ -276,24 +511,135 @@ class CliServer:
                         if not interpreter:
                             res_data = {"error": f"Cannot detect interpreter for '{script_path}'. Add a shebang or use a known extension."}
                         else:
+                            full_cmd = interpreter + [full_path] + args
+                            env = {**os.environ, **identity_env}
+                            if tool_args.get("background") is True:
+                                # Detached: no stdin (input_data is meaningless
+                                # for a long-running batch job), logs to file.
+                                res_data = self._start_background(skill_dir, full_path, full_cmd, env)
+                            else:
+                                try:
+                                    logger.info(f"run_skill_script: {' '.join(full_cmd)} (cwd={skill_dir})")
+                                    p = subprocess.run(
+                                        full_cmd,
+                                        input=input_data,
+                                        capture_output=True,
+                                        text=True,
+                                        timeout=self.timeout,
+                                        cwd=skill_dir,
+                                        env=env
+                                    )
+                                    guard_stdout = f"<command_output>\n{p.stdout}\n</command_output>" if p.stdout else ""
+                                    guard_stderr = f"<command_error>\n{p.stderr}\n</command_error>" if p.stderr else ""
+                                    res_data = {"stdout": guard_stdout, "stderr": guard_stderr, "exit_code": p.returncode}
+                                except subprocess.TimeoutExpired:
+                                    res_data = {"error": f"Script timed out after {self.timeout}s. Consider background: true for long-running jobs."}
+                                except Exception as e:
+                                    res_data = {"error": str(e)}
+
+                return {
+                    "jsonrpc": "2.0", "id": request_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
+                }
+
+            # ── background_status ────────────────────────────────────────────
+            if tool_name == "background_status":
+                log_file = tool_args.get("log_file", "")
+                try:
+                    lines = int(tool_args.get("lines", 20) or 20)
+                except (TypeError, ValueError):
+                    lines = 20
+                lines = max(1, min(lines, 500))
+
+                if not log_file:
+                    res_data = {"error": "log_file is required."}
+                else:
+                    log_path = os.path.realpath(log_file)
+                    marker = self._load_pid_marker(log_path)
+                    if marker is None:
+                        # The .pid marker is the ownership proof — without it
+                        # this must not turn into an arbitrary file reader.
+                        res_data = {"error": f"'{log_file}' is not a background log (no .pid marker)."}
+                    elif not os.path.isfile(log_path):
+                        res_data = {"error": f"Log file not found: {log_path}"}
+                    else:
+                        pid = marker["pid"]
+                        exit_marker = self._read_exit_marker(log_path)
+                        note = None
+                        if exit_marker is not None:
+                            status = "done"
+                            exit_code = exit_marker.get("exit_code")
+                            note = exit_marker.get("note")
+                        elif self._pid_alive(pid):
+                            status = "running"
+                            exit_code = None
+                            # Watcher lost to a server restart — re-arm so the
+                            # exit marker appears even if nobody polls at the
+                            # right moment.
+                            self._adopt_bg(log_path, pid)
+                        else:
+                            status = "done"
+                            exit_code = None
+                            note = "Exit code unknown: process ended while unobserved (server restart)."
+                            self._write_exit_marker(log_path, None, note)
+
+                        try:
+                            p = subprocess.run(
+                                ["tail", "-n", str(lines), log_path],
+                                capture_output=True, text=True, timeout=30
+                            )
+                            log_tail = p.stdout
+                        except Exception:
+                            log_tail = ""
+
+                        res_data = {
+                            "background": True,
+                            "log_file": log_path,
+                            "pid": pid,
+                            "started_at": marker.get("started_at"),
+                            "status": status,
+                            "exit_code": exit_code,
+                            "log_tail": log_tail
+                        }
+                        if note:
+                            res_data["note"] = note
+
+                return {
+                    "jsonrpc": "2.0", "id": request_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
+                }
+
+            # ── background_stop ─────────────────────────────────────────────
+            if tool_name == "background_stop":
+                log_file = tool_args.get("log_file", "")
+
+                if not log_file:
+                    res_data = {"error": "log_file is required."}
+                else:
+                    log_path = os.path.realpath(log_file)
+                    marker = self._load_pid_marker(log_path)
+                    if marker is None:
+                        res_data = {"error": f"'{log_file}' is not a background log (no .pid marker)."}
+                    else:
+                        pid = marker["pid"]
+                        argv = marker["argv"]
+                        if self._read_exit_marker(log_path) is not None:
+                            res_data = {"status": "already_finished", "pid": pid,
+                                        "note": "Process already ended; nothing to stop."}
+                        elif not self._pid_alive(pid):
+                            res_data = {"status": "already_finished", "pid": pid,
+                                        "note": "Process is gone; exit code unknown (server restart)."}
+                        elif not self._pid_matches(pid, argv):
+                            # PID reuse: never kill a process that only happens
+                            # to carry the recorded PID.
+                            res_data = {"error": f"PID {pid} does not match the recorded command line — refusing to stop (possible PID reuse)."}
+                        else:
                             try:
-                                full_cmd = interpreter + [full_path] + args
-                                logger.info(f"run_skill_script: {' '.join(full_cmd)} (cwd={skill_dir})")
-                                p = subprocess.run(
-                                    full_cmd,
-                                    input=input_data,
-                                    capture_output=True,
-                                    text=True,
-                                    timeout=self.timeout,
-                                    cwd=skill_dir,
-                                    env={**os.environ, **identity_env}
-                                )
-                                guard_stdout = f"<command_output>\n{p.stdout}\n</command_output>" if p.stdout else ""
-                                guard_stderr = f"<command_error>\n{p.stderr}\n</command_error>" if p.stderr else ""
-                                res_data = {"stdout": guard_stdout, "stderr": guard_stderr, "exit_code": p.returncode}
-                            except subprocess.TimeoutExpired:
-                                res_data = {"error": f"Script timed out after {self.timeout}s."}
-                            except Exception as e:
+                                os.kill(pid, signal.SIGTERM)
+                                logger.info(f"background_stop: SIGTERM → pid={pid} log={log_path}")
+                                res_data = {"status": "stop_requested", "pid": pid,
+                                            "note": "SIGTERM sent; check background_status for the exit code."}
+                            except OSError as e:
                                 res_data = {"error": str(e)}
 
                 return {
@@ -412,7 +758,7 @@ class CliServer:
 
 def main():
     server = CliServer()
-    logger.info("CLI Server started (v2.0.0)")
+    logger.info("CLI Server started (v2.1.0)")
     try:
         for line in sys.stdin:
             if not line.strip():
