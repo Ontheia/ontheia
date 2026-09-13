@@ -29,7 +29,7 @@ Der Agent sieht den Skill-Katalog am Anfang jeder Session. Wenn eine Aufgabe zur
 
 Bei Code-Library-Skills liest der Agent das Code-Muster aus dem Skill, passt es auf die konkrete Aufgabe an und führt es über den `cli-tools`-MCP-Server aus — mit `uv run --with <paket>` für automatisches Dependency-Management.
 
-Langlaufende Scripts (Batch-Verarbeitungen, Minuten bis Stunden) werden mit `run_skill_script` und `background: true` entkoppelt gestartet: Der Aufruf kehrt sofort mit einem Logfile-Pfad zurück, Fortschritt und Exit-Code werden über `background_status` abgefragt (Details: [MCP-Server Grundlagen](../mcp-server/01_basics.md)).
+Langlaufende Scripts (Batch-Verarbeitungen, Minuten bis Stunden) werden mit `run_skill_script` und `background: true` entkoppelt gestartet: Der Aufruf kehrt sofort mit einem Logfile-Pfad zurück, Fortschritt und Exit-Code werden über `background_status` abgefragt — mit `wait_seconds` blockierend, damit ein Aufruf Dutzende Schnellpolls ersetzt (Details: [MCP-Server Grundlagen](../mcp-server/01_basics.md)).
 
 ---
 

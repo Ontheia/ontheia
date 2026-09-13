@@ -29,8 +29,8 @@ The `cli-tools` server (`host/mcp-servers/cli-server/cli_server.py`) is a Python
 | --- | --- |
 | `execute` | Runs an allowed shell command. |
 | `run_skill_script` | Executes a script bundled in a skill directory (path-bounded). Interpreter auto-detected: `.py` → `uv run`, `.sh` → `bash`, `.js` → `node`. Runs synchronously with a 30 s timeout by default; with `background: true` it runs detached instead (see below). |
-| `background_status` | Checks on a background run: running/done, the exit code (once known), and the last lines of the log file. |
-| `background_stop` | Stops a running background run with SIGTERM (verifies the PID against the recorded command line first). |
+| `background_status` | Checks on a background run: running/done, the exit code (once known), and the last lines of the log file. With `wait_seconds` the call blocks until the run finishes or the wait expires. |
+| `background_stop` | Stops a running background run with SIGTERM — the whole process tree (verifies the PID against the recorded command line first). |
 | `list_commands` | Returns the list of currently allowed commands with descriptions. |
 | `list_logs` | Lists available Ontheia log files. |
 | `read_log` | Reads a log file with optional text/level filter. |
@@ -41,10 +41,10 @@ Synchronous means: the tool call blocks the agent run until the script finishes 
 
 - The call returns **immediately** — with `log_file`, `pid`, `started_at`, and the `argv` invoked. The run does not block the agent run.
 - The script's stdout and stderr go to a log file under `<skill_dir>/logs/`; each run produces a set of log file plus `.pid` and `.exit` markers. The 20 newest sets are kept; older ones are deleted on the next start.
-- Progress is polled via `background_status(log_file)`: `status: running` or `done`, plus the exit code and the last log lines. Poll until it reports `done`.
+- Progress is polled via `background_status(log_file)`: `status: running` or `done`, plus the exit code and the last log lines. With `wait_seconds` (up to 50) the call blocks server-side until the run finishes or the wait expires — **one waiting call replaces dozens of quick polls**. A run of a few minutes is monitored in one to three calls; without `wait_seconds` the call returns immediately (as before). The 50 s cap is deliberately below the MCP clients' 60 s deadline — the answer has to arrive before the client timeout.
 - The reliable status indicator is the **exit code file**, not the PID: after a container restart a PID can be reused. If a run ends while nobody is watching, the exit code is unknown (`exit_code: null` with a note).
-- `background_stop(log_file)` sends SIGTERM. Before that, `/proc/<pid>/cmdline` is matched against the recorded `argv` — a reused PID belonging to a foreign process is never killed.
-- The synchronous default path is unchanged (30 s); background runs are strictly opt-in.
+- `background_stop(log_file)` sends SIGTERM to the **whole process tree** — not just the group leader, because `uv run` puts its python child in a separate process group (a plain group kill would miss the actual script and its children, leaving orphaned runs with real API cost behind). Before that, `/proc/<pid>/cmdline` is matched against the recorded `argv` — a reused PID belonging to a foreign process is never killed.
+- The synchronous default path is unchanged (30 s); background runs are strictly opt-in. When a synchronous call hits the timeout, the whole process tree is taken down as well — nothing keeps running as an orphan.
 
 Which agents may use the new tools is governed like any tool via the agent configuration (Administration → Agents → tool selection).
 
