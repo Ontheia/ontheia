@@ -95,10 +95,23 @@ export async function handleCancelSchedule(
   if (!userId) throw new Error('User context required.');
   if (!schedule_id || typeof schedule_id !== 'string') throw new Error('schedule_id is required.');
 
+  // "self" resolves to the cron job that triggered the current run — lets a
+  // scheduled run (e.g. a batch watchdog) end its own schedule without the
+  // user having to stop it. Ownership checks below apply unchanged.
+  let targetId = schedule_id;
+  if (schedule_id === 'self') {
+    const meta = context?.run?.options?.metadata;
+    if (meta?.trigger_type === 'cron' && typeof meta?.trigger_id === 'string' && meta.trigger_id) {
+      targetId = meta.trigger_id;
+    } else {
+      throw new Error('schedule_id "self" is only valid inside a scheduled (cron-triggered) run.');
+    }
+  }
+
   const res = await client.query(
     `UPDATE app.cron_jobs SET active = false
      WHERE id = $1 AND user_id = $2 AND created_by_agent_id = $3`,
-    [schedule_id, userId, agentId]
+    [targetId, userId, agentId]
   );
 
   return { cancelled: (res.rowCount ?? 0) > 0 };

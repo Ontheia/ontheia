@@ -392,6 +392,12 @@ export class RunService {
       if (projectId) meta.project_id = projectId;
       const scheduleDepth = context.scheduleDepth ?? (typeof meta.schedule_depth === 'number' ? meta.schedule_depth : 0);
       meta.schedule_depth = scheduleDepth;
+      // Expose the triggering automation to tool handlers (scheduler self-cancel):
+      // the tool context carries run.options.metadata, not the executeRun context.
+      if (context.trigger?.id && isUuid(context.trigger.id)) {
+        meta.trigger_id = context.trigger.id;
+        meta.trigger_type = context.trigger.type ?? null;
+      }
 
       // Explicitly propagate tool_approval to metadata so sub-agents (delegation) can see it
       meta.tool_approval = toolApprovalMode;
@@ -572,11 +578,9 @@ export class RunService {
       // Internal servers (memory, delegation, scheduler) are NOT auto-enabled:
       // their tool descriptions cost prompt tokens on every run, so an agent only
       // gets them when they are explicitly assigned via default_mcp_servers.
-      // Scheduler tools are stripped inside scheduled runs to prevent agents from
-      // scheduling follow-up jobs recursively.
-      if (scheduleDepth > 0) {
-        activeMcpServers = activeMcpServers.filter((s) => s !== 'scheduler');
-      }
+      // Scheduled runs may end their own schedule (cancel_schedule "self"), so the
+      // scheduler server stays active there — only create_schedule is stripped
+      // below (tool level) to prevent recursive follow-up schedules.
 
       // Skills: load only when agent has active skills assigned
       let agentSkills: import('./SkillService.js').SkillRecord[] = [];
@@ -617,9 +621,10 @@ export class RunService {
         // Internal servers are subject to the agent's tool selection like any
         // other server. Only 'skills' bypasses it: its availability is already
         // an explicit assignment (app.agent_skills) managed via Admin → Skills.
-        const filteredTools = agentToolSelection.length > 0
+        const filteredTools = (agentToolSelection.length > 0
           ? tools.filter(t => t.server === 'skills' || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
-          : tools;
+          : tools
+        ).filter(t => !(scheduleDepth > 0 && t.server === 'scheduler' && t.name === 'create_schedule'));
 
         if (filteredTools.length > 0) {
           (enrichedInput as any).toolset = filteredTools;

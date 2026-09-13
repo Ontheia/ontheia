@@ -679,11 +679,11 @@ export class OrchestratorService {
         },
         {
           name: 'cancel_schedule',
-          description: 'Cancels a schedule previously created by this agent. Only jobs created by the calling agent can be cancelled.',
+          description: 'Cancels a schedule previously created by this agent. Only jobs created by the calling agent can be cancelled. Inside a scheduled run, schedule_id "self" cancels the schedule that triggered this run — use this when the goal the schedule was monitoring is reached.',
           inputSchema: {
             type: 'object',
             properties: {
-              schedule_id: { type: 'string', description: 'The schedule_id returned by create_schedule.' }
+              schedule_id: { type: 'string', description: 'The schedule_id returned by create_schedule, or "self" to cancel the schedule that triggered the current run.' }
             },
             required: ['schedule_id']
           }
