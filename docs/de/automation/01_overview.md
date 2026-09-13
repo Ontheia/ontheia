@@ -48,7 +48,7 @@ Agenten können über den internen **Scheduler-MCP-Server** eigenständig Zeitpl
 | Tool | Beschreibung |
 | --- | --- |
 | `create_schedule` | Erstellt einen neuen Zeitplan (wiederkehrend oder einmalig). Der Job wird standardmäßig im selben Chat fortgesetzt und mit Überlappungsschutz angelegt. |
-| `cancel_schedule` | Deaktiviert einen vom Agenten selbst erstellten Zeitplan. |
+| `cancel_schedule` | Deaktiviert einen vom Agenten selbst erstellten Zeitplan. Innerhalb eines geplanten Runs bezieht sich `schedule_id="self"` auf den Zeitplan, der diesen Run ausgelöst hat. |
 | `list_schedules` | Listet alle aktiven, vom Agenten erstellten Zeitpläne des aktuellen Benutzers auf. |
 
 Agentenerstelle Jobs sind in der Automatisierungs-Ansicht mit einem **Agent**-Badge gekennzeichnet.
@@ -60,7 +60,7 @@ Wenn ein Agent einen Zeitplan anlegt, speichert das System automatisch die **Age
 Beim Ausführen eines Cron-Jobs wird dem Modell automatisch ein **System-Hinweis** vorangestellt, der klarstellt, dass es sich um eine automatisierte Ausführung handelt und keine neuen Zeitpläne angelegt werden sollen. Dies verhindert Endlosschleifen — z. B. wenn der ursprüngliche Prompt eine Erinnerung enthielt, die das Modell sonst bei jeder Ausführung erneut einplanen würde.
 
 ### Tiefenschutz (Depth Guard)
-Zusätzlich stehen die Scheduler-Tools nur in direkt vom Benutzer gestarteten Runs zur Verfügung (`schedule_depth = 0`). Jobs, die selbst durch einen Zeitplan ausgelöst wurden, erhalten keinen Zugriff auf die Scheduling-Tools. Beide Schutzebenen wirken unabhängig voneinander.
+Zusätzlich steht `create_schedule` nur in direkt vom Benutzer gestarteten Runs zur Verfügung (`schedule_depth = 0`). Jobs, die selbst durch einen Zeitplan ausgelöst wurden, können keine Folge-Zeitpläne anlegen — Rekursion ist damit ausgeschlossen. Die übrigen Scheduler-Tools bleiben in geplanten Runs verfügbar, damit ein Job seinen eigenen Zeitplan beenden kann: `cancel_schedule(schedule_id="self")` deaktiviert den auslösenden Zeitplan, sobald das überwachte Ziel erreicht ist (z. B. ein fertiger Batch-Lauf). Die Ownership-Checks (gleicher Nutzer + gleicher Agent) gelten für `"self"` unverändert. Beide Schutzebenen wirken unabhängig voneinander.
 
 ## Konfiguration
 

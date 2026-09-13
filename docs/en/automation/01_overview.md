@@ -48,7 +48,7 @@ Agents can independently create and manage schedules via the internal **Schedule
 | Tool | Description |
 | --- | --- |
 | `create_schedule` | Creates a new schedule (recurring or one-time). The job defaults to continuing in the same chat and is created with overlap prevention enabled. |
-| `cancel_schedule` | Deactivates a schedule created by the agent itself. |
+| `cancel_schedule` | Deactivates a schedule created by the agent itself. Inside a scheduled run, `schedule_id="self"` refers to the schedule that triggered the run. |
 | `list_schedules` | Lists all active schedules created by the agent for the current user. |
 
 Agent-created jobs are marked with an **Agent** badge in the automation view.
@@ -60,7 +60,7 @@ When an agent creates a schedule, the system automatically stores the **agent/ta
 When a cron job executes, the model automatically receives a **system notice** clarifying that this is an automated execution and that no new schedules should be created. This prevents infinite loops — for example, if the original prompt contained a reminder that the model would otherwise reschedule on every execution.
 
 ### Depth Guard
-In addition, the scheduler tools are only available in runs directly started by the user (`schedule_depth = 0`). Jobs that are themselves triggered by a schedule do not have access to the scheduling tools. Both protection layers operate independently.
+In addition, `create_schedule` is only available in runs directly started by the user (`schedule_depth = 0`). Jobs that are themselves triggered by a schedule cannot create follow-up schedules — recursion is ruled out that way. The remaining scheduler tools stay available in scheduled runs so a job can end its own schedule: `cancel_schedule(schedule_id="self")` deactivates the triggering schedule once the monitored goal is reached (e.g. a finished batch run). The ownership checks (same user + same agent) apply to `"self"` unchanged. Both protection layers operate independently.
 
 ## Configuration
 
