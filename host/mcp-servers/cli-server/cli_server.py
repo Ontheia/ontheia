@@ -29,6 +29,15 @@ LOG_DIR = os.environ.get("LOG_DIR", "/app/logs")
 class CliServer:
     # Background runs: how many log sets (.log/.pid/.exit) to keep per skill.
     BG_LOG_KEEP = 20
+    # Upper bound for background_status wait_seconds. Blocks the (single
+    # threaded) server for other callers meanwhile, so it stays well below
+    # toolLoopTimeoutMs while still letting a 2-minute job be watched in
+    # ~2-3 calls instead of dozens. Hard ceiling: MCP clients abort requests
+    # after 60 s (SDK default DEFAULT_REQUEST_TIMEOUT_MSEC, the host passes no
+    # per-call override) — a wait of exactly 60 answers only AFTER that
+    # deadline, making the documented maximum the guaranteed failure case.
+    # 50 s leaves room for the 0.5 s loop tick and transport overhead.
+    BG_WAIT_MAX = 50
 
     def __init__(self):
         self.allowed_commands, self.command_help = self._load_allowlist()
@@ -67,13 +76,15 @@ class CliServer:
                 "description": (
                     "Check on a script started with run_skill_script (background: true). "
                     "Reports running/done, the exit code once known, and the last lines of the log file. "
-                    "Poll repeatedly until status is 'done'."
+                    "Pass wait_seconds to block until the run finishes or the wait expires — "
+                    "one waiting call replaces dozens of quick polls."
                 ),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "log_file": {"type": "string", "description": "Absolute log file path returned by run_skill_script."},
-                        "lines":   {"type": "integer", "description": "Number of log lines to return from the end (default: 20)."}
+                        "log_file":    {"type": "string",  "description": "Absolute log file path returned by run_skill_script."},
+                        "lines":      {"type": "integer", "description": "Number of log lines to return from the end (default: 20)."},
+                        "wait_seconds": {"type": "integer", "description": "Block up to N seconds until the run finishes (max 50), then report. Default 0: return immediately. Return early as soon as the status is final."}
                     },
                     "required": ["log_file"]
                 }
@@ -300,9 +311,10 @@ class CliServer:
                 json.dump(marker, f)
         except OSError as e:
             # Marker is the ownership proof for status/stop — without it the
-            # run would be unmanageable, so take it down again.
+            # run would be unmanageable, so take it down again, tree and all.
             try:
-                proc.kill()
+                self._kill_tree(proc.pid, signal.SIGKILL)
+                proc.wait()
             except OSError:
                 pass
             return {"error": f"Cannot write pid marker: {e}"}
@@ -400,11 +412,19 @@ class CliServer:
     def _pid_alive(self, pid: int) -> bool:
         try:
             os.kill(pid, 0)
-            return True
         except ProcessLookupError:
             return False
         except PermissionError:
             return True  # exists, owned by someone else
+        # The process exists — but the container's PID 1 (node) never reaps
+        # adopted orphans, so a killed background run lingers as a zombie
+        # forever. A zombie has finished; it must read as dead, or status
+        # reports "running" for a job that is long over.
+        try:
+            stat = open(f"/proc/{pid}/stat").read()
+            return stat.rsplit(")", 1)[1].split()[0] != "Z"
+        except (OSError, IndexError):
+            return True
 
     def _pid_matches(self, pid: int, argv: List[str]) -> bool:
         """Verify /proc/<pid>/cmdline against the recorded argv (guards PID reuse).
@@ -422,6 +442,39 @@ class CliServer:
         except OSError:
             return False
         return len(parts) >= len(tail) and parts[-len(tail):] == tail
+
+    def _collect_descendants(self, pid: int) -> List[int]:
+        """Collect pid plus all its descendants via kernel-provided child lists."""
+        tree, stack = [], [pid]
+        while stack:
+            cur = stack.pop()
+            tree.append(cur)
+            try:
+                with open(f"/proc/{cur}/task/{cur}/children") as f:
+                    stack.extend(int(x) for x in f.read().split())
+            except OSError:
+                pass
+        return tree
+
+    def _kill_tree(self, pid: int, sig: int) -> None:
+        """Signal a process and all its descendants.
+
+        killpg alone is not enough: 'uv run' puts its python child in a
+        separate process group, so a group kill of the wrapper misses the
+        actual script and everything it spawned (live-tested on .13). The
+        descendants are collected first — live /proc data straight from the
+        kernel, so no PID-reuse risk — and signalled individually; the group
+        signal afterwards catches anything that still sits in it.
+        """
+        for target in self._collect_descendants(pid):
+            try:
+                os.kill(target, sig)
+            except OSError:
+                pass
+        try:
+            os.killpg(pid, sig)
+        except OSError:
+            pass
 
     def _cleanup_bg_logs(self, logs_dir: str) -> None:
         """Keep only the newest BG_LOG_KEEP log sets (.log/.pid/.exit) per skill."""
@@ -457,7 +510,7 @@ class CliServer:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {"listChanged": True}},
-                    "serverInfo": {"name": "cli-server", "version": "2.1.0"}
+                    "serverInfo": {"name": "cli-server", "version": "2.2.0"}
                 }
             }
 
@@ -520,20 +573,35 @@ class CliServer:
                             else:
                                 try:
                                     logger.info(f"run_skill_script: {' '.join(full_cmd)} (cwd={skill_dir})")
-                                    p = subprocess.run(
+                                    # Own session so the timeout can take the process
+                                    # tree down via _kill_tree (group plus
+                                    # descendants): killing only the direct child
+                                    # would orphan interpreter grandchildren
+                                    # (e.g. uv's python) and the real script
+                                    # would keep running past the timeout.
+                                    p = subprocess.Popen(
                                         full_cmd,
-                                        input=input_data,
-                                        capture_output=True,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
                                         text=True,
-                                        timeout=self.timeout,
                                         cwd=skill_dir,
-                                        env=env
+                                        env=env,
+                                        start_new_session=True
                                     )
-                                    guard_stdout = f"<command_output>\n{p.stdout}\n</command_output>" if p.stdout else ""
-                                    guard_stderr = f"<command_error>\n{p.stderr}\n</command_error>" if p.stderr else ""
-                                    res_data = {"stdout": guard_stdout, "stderr": guard_stderr, "exit_code": p.returncode}
-                                except subprocess.TimeoutExpired:
-                                    res_data = {"error": f"Script timed out after {self.timeout}s. Consider background: true for long-running jobs."}
+                                    try:
+                                        stdout, stderr = p.communicate(input=input_data, timeout=self.timeout)
+                                    except subprocess.TimeoutExpired:
+                                        self._kill_tree(p.pid, signal.SIGKILL)
+                                        try:
+                                            p.communicate(timeout=10)
+                                        except subprocess.TimeoutExpired:
+                                            pass
+                                        res_data = {"error": f"Script timed out after {self.timeout}s. Consider background: true for long-running jobs."}
+                                    else:
+                                        guard_stdout = f"<command_output>\n{stdout}\n</command_output>" if stdout else ""
+                                        guard_stderr = f"<command_error>\n{stderr}\n</command_error>" if stderr else ""
+                                        res_data = {"stdout": guard_stdout, "stderr": guard_stderr, "exit_code": p.returncode}
                                 except Exception as e:
                                     res_data = {"error": str(e)}
 
@@ -564,6 +632,26 @@ class CliServer:
                         res_data = {"error": f"Log file not found: {log_path}"}
                     else:
                         pid = marker["pid"]
+
+                        # Optional server-side wait: the model has no sleep
+                        # primitive, so without it a running job tempts it into
+                        # a poll storm (dozens of immediate calls that burn the
+                        # run's tool-call budget). One blocking call replaces
+                        # them — returns early as soon as the status is final.
+                        try:
+                            wait_seconds = int(tool_args.get("wait_seconds", 0) or 0)
+                        except (TypeError, ValueError):
+                            wait_seconds = 0
+                        wait_seconds = max(0, min(wait_seconds, self.BG_WAIT_MAX))
+                        if wait_seconds > 0:
+                            deadline = time.monotonic() + wait_seconds
+                            while time.monotonic() < deadline:
+                                if self._read_exit_marker(log_path) is not None:
+                                    break
+                                if not self._pid_alive(pid):
+                                    break
+                                time.sleep(0.5)
+
                         exit_marker = self._read_exit_marker(log_path)
                         note = None
                         if exit_marker is not None:
@@ -635,10 +723,14 @@ class CliServer:
                             res_data = {"error": f"PID {pid} does not match the recorded command line — refusing to stop (possible PID reuse)."}
                         else:
                             try:
-                                os.kill(pid, signal.SIGTERM)
-                                logger.info(f"background_stop: SIGTERM → pid={pid} log={log_path}")
+                                # Whole process tree, not just the group: uv puts
+                                # its python child in a separate group, so the
+                                # script and its own children would survive a
+                                # plain killpg on the wrapper.
+                                self._kill_tree(pid, signal.SIGTERM)
+                                logger.info(f"background_stop: SIGTERM → tree at pid={pid} log={log_path}")
                                 res_data = {"status": "stop_requested", "pid": pid,
-                                            "note": "SIGTERM sent; check background_status for the exit code."}
+                                            "note": "SIGTERM sent to the process tree; check background_status for the exit code."}
                             except OSError as e:
                                 res_data = {"error": str(e)}
 
@@ -758,7 +850,7 @@ class CliServer:
 
 def main():
     server = CliServer()
-    logger.info("CLI Server started (v2.1.0)")
+    logger.info("CLI Server started (v2.2.0)")
     try:
         for line in sys.stdin:
             if not line.strip():

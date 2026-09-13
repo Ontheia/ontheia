@@ -43,6 +43,10 @@ services:
     container_name: ontheia-host
     image: ontheia-host
     restart: unless-stopped
+    # PID 1 (node) never reaps adopted orphans — killed background runs and
+    # any detached script child would linger as zombies forever. docker-init
+    # reaps them and forwards signals to node.
+    init: true
     build:
       context: .
       dockerfile: Dockerfile.host
