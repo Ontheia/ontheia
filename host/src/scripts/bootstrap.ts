@@ -433,10 +433,13 @@ async function main() {
       ];
 
       // Guide: memory search + write + delete (to update/merge preference
-      // entries), delegation (eval loop → test agent), skill + scheduler tools.
+      // entries) + update (in-place tag/wording fixes — content changes go
+      // through memory-write with supersedes), delegation (eval loop → test
+      // agent), skill + scheduler tools.
       const guideTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
+        { server: 'memory', tool: 'memory-update' },
         { server: 'memory', tool: 'memory-delete' },
         { server: 'delegation', tool: 'delegate-to-agent' },
         ...skillTools,
@@ -531,6 +534,7 @@ async function main() {
       const assistantTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
+        { server: 'memory', tool: 'memory-update' },
         { server: 'memory', tool: 'memory-delete' },
         ...skillTools,
         ...schedulerTools,

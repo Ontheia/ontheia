@@ -422,13 +422,15 @@ export function memoryTools(server: FastifyInstance, db: Pool, memoryAdapter: Me
 }
 
 /**
- * Changes an existing entry instead of writing a new one.
+ * Changes an existing entry in place instead of writing a new one.
  *
- * The write path upserts on byte-identical content: re-writing an entry with a
- * word changed does not update it, it stores a second one, and nothing says so.
- * That makes the most ordinary operation on a tracked item — moving it to
- * another status, correcting its wording — the one most likely to leave a
- * duplicate behind.
+ * For content changes the taught pattern is memory-write with supersedes: it
+ * marks the old entry superseded, keeps it readable and drops it from
+ * search, preserving the trail of what changed. This handler patches by id
+ * with no trail — its place is the targeted fix where a single clean record
+ * matters more than the change history (repairing a tag list, fixing a
+ * wording). The write path upserts on byte-identical content, so without it
+ * such a fix silently stores a second entry rather than updating the first.
  *
  * Permission is checked exactly as the delete path checks it, against
  * allowedWriteNamespaces, and the namespace is passed down as a guard rather

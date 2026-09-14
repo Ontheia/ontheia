@@ -168,7 +168,7 @@ export function buildMemoryToolSpecs(options?: {
     {
       name: 'memory-update',
       description:
-        'Change the tags or the wording of an entry that already exists, identified by its id from a memory-search hit. Use this instead of writing again: a write matches an existing entry only on byte-identical content, so re-writing with one word changed silently creates a second entry rather than updating the first.',
+        'Patch the tags or the wording of an existing entry in place, identified by its id from a memory-search hit. For changes that should record what changed, prefer memory-write with supersedes: it marks the old entry as superseded, keeps it readable and drops it from search, preserving the trail. Use memory-update when a single clean record matters more than the change history — repairing a tag list, fixing a wording without creating a second entry.',
       schema: {
         type: 'object',
         properties: {
