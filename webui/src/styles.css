@@ -4262,6 +4262,21 @@ textarea.app-input {
   color: rgba(226, 232, 240, 0.85);
 }
 
+.admin-mcp-tool-chip.help {
+  cursor: help;
+}
+
+/* Tooltip body for MCP tool descriptions (accordion chips, agent editor). */
+.admin-mcp-tool-desc {
+  max-width: 22rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  white-space: normal;
+  font-size: 0.75rem;
+  line-height: 1.15rem;
+  text-align: left;
+}
+
 .admin-mcp-tool-chip.muted {
   color: rgba(148, 163, 184, 0.75);
   border-style: dashed;

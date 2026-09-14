@@ -4640,11 +4640,24 @@ function McpServerSection({
                         </div>
                         {toolInfo && toolInfo.tools.length > 0 ? (
                           <div className="admin-mcp-tools">
-                            {toolInfo.tools.map((tool) => (
-                              <span key={tool.name} className="admin-mcp-tool-chip">
-                                {tool.title ?? tool.name}
-                              </span>
-                            ))}
+                            {toolInfo.tools.map((tool) =>
+                              tool.description ? (
+                                <Tooltip key={tool.name} delayDuration={150}>
+                                  <TooltipTrigger asChild>
+                                    <span className="admin-mcp-tool-chip help">
+                                      {tool.title ?? tool.name}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="admin-mcp-tool-desc">
+                                    {tool.description}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span key={tool.name} className="admin-mcp-tool-chip">
+                                  {tool.title ?? tool.name}
+                                </span>
+                              )
+                            )}
                             <div className="w-full text-xs text-slate-500 mt-1">
                               {t('mcp.totalTools', { count: toolInfo.tools.length })}
                             </div>
@@ -5225,7 +5238,8 @@ function AgentsSection({
         catalog.tools.forEach((tool) => {
           items.push({
             value: `${server}::${tool.name}`,
-            label: `${server} – ${tool.title ?? tool.name}`
+            label: `${server} – ${tool.title ?? tool.name}`,
+            description: tool.description
           });
         });
       });

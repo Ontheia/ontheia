@@ -32,10 +32,14 @@ import {
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 export const APP_SELECT_EMPTY_VALUE = '__empty__';
 
-export type MultiSelectOption = { value: string; label: string };
+// `description` powers a hover tooltip on the option row — used by the agent
+// editor's tool assignment, so an admin can see what a tool does before
+// granting it. Options without a description render unchanged.
+export type MultiSelectOption = { value: string; label: string; description?: string };
 
 interface AppSelectProps {
   value: string;
@@ -152,7 +156,18 @@ export function AppMultiSelect({
                   )}>
                     <Check className="h-3.5 w-3.5" />
                   </div>
-                  <span className="truncate">{opt.label}</span>
+                  {opt.description ? (
+                    <Tooltip delayDuration={150}>
+                      <TooltipTrigger asChild>
+                        <span className="truncate">{opt.label}</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="admin-mcp-tool-desc" side="left">
+                        {opt.description}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="truncate">{opt.label}</span>
+                  )}
                 </div>
               );
             })
