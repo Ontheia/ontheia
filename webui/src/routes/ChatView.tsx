@@ -40,6 +40,7 @@ import {
   Square,
   Sparkles,
   Trash2,
+  WifiOff,
   X,
   XCircle
 } from 'lucide-react';
@@ -340,6 +341,10 @@ export function ChatView({
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  // Set when the app was suspended in the background and the run's stream may
+  // have died silently — iOS freezes the webview without firing the reader's
+  // error path, so nothing else would tell the user their first tap is lost.
+  const [connectionLost, setConnectionLost] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [messageSearch, setMessageSearch] = useState('');
   const streamCancelRef = useRef<(() => void) | null>(null);
@@ -436,7 +441,33 @@ export function ChatView({
     setShowDetails(false);
     setShowSearch(false);
     setMessageSearch('');
+    setConnectionLost(false);
   }, [activeChatId]);
+
+  // Mirror loading/isProcessing into refs so the visibilitychange listener —
+  // registered once — always reads the current run state, not a stale closure.
+  const loadingRef = useRef(false);
+  const processingRef = useRef(false);
+  useEffect(() => {
+    loadingRef.current = loading;
+    processingRef.current = isProcessing;
+  }, [loading, isProcessing]);
+
+  // On returning to a suspended app (iOS background), a run that still looks
+  // active in the UI is very likely orphaned: the webview was frozen mid-stream
+  // and the reader often never reports the disconnect. Show the banner then; as
+  // soon as events flow again the banner clears itself, so a live stream
+  // produces at most a short false alarm.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (loadingRef.current || processingRef.current || serverRunIdRef.current || activeRunIdRef.current) {
+        setConnectionLost(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
@@ -1257,6 +1288,12 @@ export function ChatView({
     return () => cancelAnimationFrame(raf);
   }, [message]);
 
+  // A dropped connection fails without an HTTP status (the request never got a
+  // response); "Streaming failed (Status 4xx/5xx)" means the server answered,
+  // and the plain error box is the right surface for that.
+  const looksLikeConnectionDrop = (error: unknown): boolean =>
+    error instanceof Error && !/\(Status \d+\)/.test(error.message);
+
   const handleSend = async () => {
     const localMessage = message.trim();
 
@@ -1516,6 +1553,7 @@ export function ChatView({
           setActiveRunForChat(effectiveChatId, hostRunId);
         },
         onEvent: (event: any) => {
+          setConnectionLost(false);
           applyComposerStatus(event);
           captureMemoryHits(event);
           if (event.type === 'run_token') {
@@ -1654,6 +1692,7 @@ export function ChatView({
         },
         onError: (err) => {
           const msg = localizeError(err, t, 'streamingError');
+          if (looksLikeConnectionDrop(err)) setConnectionLost(true);
           setError(msg);
           setTimeout(() => {
             finishRun('error', msg);
@@ -1765,6 +1804,7 @@ export function ChatView({
           runMemoryWritesRef.current = null;
         },
         onEvent: (event: any) => {
+          setConnectionLost(false);
           applyComposerStatus(event);
           captureMemoryHits(event);
           if (event.type === 'warning') {
@@ -1921,6 +1961,7 @@ export function ChatView({
         },
         onError: (error) => {
           const detail = localizeError(error, t, 'streamingError');
+          if (looksLikeConnectionDrop(error)) setConnectionLost(true);
           setError(detail);
           setTimeout(() => {
             finishRun('error', detail);
@@ -2472,8 +2513,26 @@ export function ChatView({
         </div>
       </div>
       <footer className="chat-composer">
-        {(toastWarnings.length > 0 || error || optimizeError) && (
+        {(connectionLost || toastWarnings.length > 0 || error || optimizeError) && (
           <div className="chat-notice-stack">
+            {connectionLost && (
+              <div className="composer-warning-toast connection-lost-banner">
+                <div className="composer-warning-icon">
+                  <WifiOff aria-hidden="true" />
+                </div>
+                <div className="composer-warning-text">
+                  <strong>{t('connectionLostTitle')}</strong>
+                  <span>{t('connectionLostHint')}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-default connection-lost-reload"
+                  onClick={() => window.location.reload()}
+                >
+                  {t('reloadPage')}
+                </button>
+              </div>
+            )}
             {toastWarnings.map((warning) => (
               <div key={warning.toastId} className="composer-warning-toast">
                 <div className="composer-warning-icon">

@@ -2395,6 +2395,15 @@
   color: rgba(248, 250, 252, 0.7);
 }
 
+/* Reload button inside the connection-lost banner above the composer. */
+.connection-lost-reload {
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.75rem;
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+}
+
 .composer-warning-dismiss {
   background: transparent;
   border: none;
