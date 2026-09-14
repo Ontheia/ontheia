@@ -27,6 +27,13 @@ import { safeSkillPath, SkillService, type SkillRecord } from '../../runtime/Ski
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
+// Skills-server tools whose availability is assignment-driven: what they list /
+// activate / read is governed by app.agent_skills (Admin → Skills), so they
+// bypass the per-agent tool selection. The write tools (create_skill,
+// write_skill_resource) are capability tools with no assignment semantics —
+// they must be granted via default_tools like any other tool.
+export const SKILLS_ASSIGNMENT_TOOLS = new Set(['list_skills', 'activate_skill', 'read_skill_resource']);
+
 export function buildSkillsToolList(skills: SkillRecord[]) {
   const catalogSkills = skills.filter(s => !s.disable_model_invocation);
   const skillNames = catalogSkills.map(s => s.name);

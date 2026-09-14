@@ -22,8 +22,10 @@
  */
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { RunToolDefinition } from '../runtime/types.js';
+import type { TaskToolBinding } from './types.js';
 import { buildMemoryRunTools } from '../mcp/plugins/memory-tools.js';
 import { buildDelegationRunTools } from '../mcp/plugins/delegation-tools.js';
+import { SKILLS_ASSIGNMENT_TOOLS } from '../mcp/plugins/skills.js';
 import { isPlainObject } from './utils.js';
 
 export const sanitizeFunctionSegment = (value: string, fallback: string) => {
@@ -51,6 +53,32 @@ export const buildFunctionAlias = (
   used.add(alias);
   return alias;
 };
+
+/**
+ * Applies the agent's tool selection to the loaded run toolset.
+ *
+ * - With a non-empty selection, every tool must be explicitly bound — except
+ *   the assignment-driven skills tools (SKILLS_ASSIGNMENT_TOOLS), whose
+ *   availability is governed by app.agent_skills (Admin → Skills). The skills
+ *   write tools (create_skill, write_skill_resource) are capability tools and
+ *   do NOT bypass: without an explicit default_tools entry they stay out of
+ *   the run toolset entirely.
+ * - With an empty selection the agent keeps the all-tools semantics
+ *   (unchanged historical behavior).
+ * - Scheduled runs (scheduleDepth > 0) never get create_schedule — the
+ *   recursion guard.
+ */
+export const filterRunTools = (
+  tools: RunToolDefinition[],
+  agentToolSelection: TaskToolBinding[],
+  scheduleDepth: number
+): RunToolDefinition[] =>
+  (agentToolSelection.length > 0
+    ? tools.filter(t =>
+        (t.server === 'skills' && SKILLS_ASSIGNMENT_TOOLS.has(t.name)) ||
+        agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
+    : tools
+  ).filter(t => !(scheduleDepth > 0 && t.server === 'scheduler' && t.name === 'create_schedule'));
 
 export const loadServerTools = async (
   orchestrator: OrchestratorService,

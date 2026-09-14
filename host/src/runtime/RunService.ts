@@ -44,7 +44,7 @@ import {
 } from '../routes/run-utils.js';
 import { buildReadableNamespaces, resolveNamespaceTemplate, NamespaceError } from '../memory/namespaces.js';
 import { loadMemoryPolicy, type MemoryPolicy } from '../routes/policy-utils.js';
-import { loadServerTools } from '../routes/mcp-utils.js';
+import { filterRunTools, loadServerTools } from '../routes/mcp-utils.js';
 import { loadUserSettings } from '../routes/auth.js';
 import { upsertChat, insertChatMessage, updateChatMessage, normalizeChatSettings } from '../routes/chat-utils.js';
 import { observeRun } from '../metrics.js';
@@ -619,12 +619,10 @@ export class RunService {
           this.orchestrator, activeMcpServers, false, logger, userId, agentSkills, toolWriteNamespaces
         );
         // Internal servers are subject to the agent's tool selection like any
-        // other server. Only 'skills' bypasses it: its availability is already
-        // an explicit assignment (app.agent_skills) managed via Admin → Skills.
-        const filteredTools = (agentToolSelection.length > 0
-          ? tools.filter(t => t.server === 'skills' || agentToolSelection.some(s => s.server === t.server && s.tool === t.name))
-          : tools
-        ).filter(t => !(scheduleDepth > 0 && t.server === 'scheduler' && t.name === 'create_schedule'));
+        // other server. Only the assignment-driven skills tools bypass it
+        // (Admin → Skills); the skills write tools need an explicit
+        // default_tools entry like every other tool.
+        const filteredTools = filterRunTools(tools, agentToolSelection, scheduleDepth);
 
         if (filteredTools.length > 0) {
           (enrichedInput as any).toolset = filteredTools;
