@@ -2,7 +2,7 @@
 # Pre-warm the uvx/npx package caches inside the running host container so
 # optional MCP servers start fast and offline afterwards.
 #
-# Optional MCP servers (nextcloud-mcp-server, markdown2pdf-mcp, postgres-mcp, …)
+# Optional MCP servers (nextcloud-mcp-server, postgres-mcp, …)
 # are deliberately NOT baked into the Docker image: that couples every image
 # build to PyPI/npm availability. Instead their first uvx/npx start downloads
 # into the volume-mounted caches (/root/.cache/uv, /root/.cache/npx), which
@@ -17,9 +17,6 @@
 # Notes:
 #   - Pin versions in the MCP server config (e.g. nextcloud-mcp-server@0.85.1)
 #     so uvx resolves from cache instead of checking PyPI on every start.
-#   - markdown2pdf-mcp is installed to a fixed path via npm --prefix instead of
-#     npx, so the launcher can find it without relying on the hash-based _npx
-#     cache. To update: change the @version pin below.
 #
 # Failures are non-fatal: a failed warm-up only means the first real server
 # start will download instead.
@@ -58,15 +55,5 @@ fi
 # Known optional servers (extend as needed)
 warm uvx "nextcloud-mcp-server@0.85.1"
 warm uvx "postgres-mcp"
-
-# markdown2pdf-mcp: install to a fixed path so the launcher finds it reliably.
-# The npx _npx/<hash>/ cache path changes on every SDK version bump; --prefix
-# gives a stable location the launcher checks first.
-echo "[warmup] installing markdown2pdf-mcp@2.1.3 to fixed path ..."
-if $COMPOSE_EXEC npm install --prefix /home/node/.local/share/markdown2pdf-mcp markdown2pdf-mcp@2.1.3 > /dev/null 2>&1; then
-    echo "[warmup] OK: markdown2pdf-mcp@2.1.3"
-else
-    echo "[warmup] WARN: markdown2pdf-mcp could not be installed — launcher will fall back to npx cache."
-fi
 
 echo "[warmup] Done."
