@@ -93,6 +93,14 @@ export function safeSkillPath(skillDir: string, relativePath: string): string | 
 export class SkillService {
   private log: ReturnType<FastifyBaseLogger['child']>;
   private watcher: ReturnType<typeof watch> | null = null;
+  private watcherRestartTimer: ReturnType<typeof setTimeout> | null = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  // Scan coordination: a burst of SKILL.md writes must not spawn concurrent
+  // scans — they race each other in the DB and the last writer can persist an
+  // intermediate file state it read mid-edit. Events while a scan runs only
+  // mark one follow-up scan, which then reads the final state.
+  private scanRunning = false;
+  private rescanNeeded = false;
 
   constructor(private db: Pool, logger: FastifyBaseLogger) {
     this.log = logger.child({ component: 'SkillService' });
@@ -100,19 +108,34 @@ export class SkillService {
 
   async start() {
     this.log.info({ baseDir: SKILLS_BASE_DIR }, 'SkillService starting — initial scan');
-    await this.scanAll();
+    const result = await this.scanAll();
+    if (result.failed > 0) {
+      this.log.warn(result, 'Initial skill scan finished with errors');
+    }
     this.startWatcher();
   }
 
   stop() {
-    this.watcher?.close();
-    this.watcher = null;
+    if (this.watcher) {
+      this.watcher.removeAllListeners();
+      this.watcher.close();
+      this.watcher = null;
+    }
+    if (this.watcherRestartTimer) {
+      clearTimeout(this.watcherRestartTimer);
+      this.watcherRestartTimer = null;
+    }
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
   }
 
   // ── Scan ───────────────────────────────────────────────────────────────────
 
-  async scanAll() {
+  async scanAll(): Promise<{ scanned: number; failed: number }> {
     let scanned = 0;
+    let failed = 0;
     for (const scope of ['global', 'user'] as const) {
       const scopeDir = path.join(SKILLS_BASE_DIR, scope);
       try {
@@ -120,8 +143,9 @@ export class SkillService {
           const entries = await fs.readdir(scopeDir, { withFileTypes: true });
           for (const e of entries) {
             if (!e.isDirectory()) continue;
-            await this.scanSkillDir(path.join(scopeDir, e.name), 'global', null);
-            scanned++;
+            const outcome = await this.scanSkillDir(path.join(scopeDir, e.name), 'global', null);
+            if (outcome === 'ok') scanned++;
+            else if (outcome === 'failed') failed++;
           }
         } else {
           const userDirs = await fs.readdir(scopeDir, { withFileTypes: true }).catch(() => []);
@@ -132,8 +156,9 @@ export class SkillService {
             const skillDirs = await fs.readdir(userPath, { withFileTypes: true }).catch(() => []);
             for (const s of skillDirs) {
               if (!s.isDirectory()) continue;
-              await this.scanSkillDir(path.join(userPath, s.name), 'user', userId);
-              scanned++;
+              const outcome = await this.scanSkillDir(path.join(userPath, s.name), 'user', userId);
+              if (outcome === 'ok') scanned++;
+              else if (outcome === 'failed') failed++;
             }
           }
         }
@@ -141,11 +166,50 @@ export class SkillService {
         // scope directory may not exist yet
       }
     }
-    this.log.info({ scanned }, 'Scan complete');
+    this.log.info({ scanned, failed }, 'Scan complete');
     await this.deactivateMissing();
+    return { scanned, failed };
   }
 
-  private async scanSkillDir(skillDir: string, scope: 'global' | 'user', userId: string | null) {
+  // Entry point for callers that want a scan now (API route) and for the
+  // watcher path: serialises with any scan already in flight. Returns null
+  // when a scan was running and this call was folded into its follow-up.
+  async scanNow(): Promise<{ scanned: number; failed: number } | null> {
+    if (this.scanRunning) {
+      this.rescanNeeded = true;
+      return null;
+    }
+    this.scanRunning = true;
+    try {
+      let result: { scanned: number; failed: number };
+      do {
+        this.rescanNeeded = false;
+        result = await this.scanAll();
+      } while (this.rescanNeeded);
+      return result;
+    } finally {
+      this.scanRunning = false;
+    }
+  }
+
+  // Debounce a watcher-triggered scan: a burst of edits collapses into one
+  // trigger instead of racing a scan per event.
+  private requestScan(delayMs = 300) {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      void this.runScan();
+    }, delayMs);
+  }
+
+  private async runScan() {
+    const result = await this.scanNow();
+    if (result && result.failed > 0) {
+      this.log.warn(result, 'Skill scan finished with errors');
+    }
+  }
+
+  private async scanSkillDir(skillDir: string, scope: 'global' | 'user', userId: string | null): Promise<'ok' | 'missing' | 'failed'> {
     const skillMdPath = path.join(skillDir, 'SKILL.md');
     try {
       const raw = await fs.readFile(skillMdPath, 'utf8');
@@ -154,9 +218,9 @@ export class SkillService {
       const description = String(meta['description'] ?? '').trim();
       if (!name || !description) {
         this.log.warn({ skillDir }, 'Skipping skill — missing name or description');
-        return;
+        return 'failed';
       }
-      await this.upsert({
+      const ok = await this.upsert({
         name,
         description,
         when_to_use: meta['when_to_use'] ? String(meta['when_to_use']) : null,
@@ -168,14 +232,15 @@ export class SkillService {
         user_invocable: meta['user-invocable'] !== 'false',
         model_override: meta['model'] ? String(meta['model']) : null,
       });
+      return ok ? 'ok' : 'failed';
     } catch (err: any) {
-      if (err?.code !== 'ENOENT') {
-        this.log.warn({ err, skillDir }, 'Failed to scan skill');
-      }
+      if (err?.code === 'ENOENT') return 'missing';
+      this.log.warn({ err, skillDir }, 'Failed to scan skill');
+      return 'failed';
     }
   }
 
-  private async upsert(data: Omit<SkillRecord, 'id' | 'active' | 'enabled'>) {
+  private async upsert(data: Omit<SkillRecord, 'id' | 'active' | 'enabled'>): Promise<boolean> {
     const client = await this.db.connect();
     try {
       await client.query('BEGIN');
@@ -204,9 +269,11 @@ export class SkillService {
         data.disable_model_invocation, data.user_invocable, data.model_override,
       ]);
       await client.query('COMMIT');
+      return true;
     } catch (err) {
       await client.query('ROLLBACK');
       this.log.warn({ err, name: data.name }, 'Upsert failed');
+      return false;
     } finally {
       client.release();
     }
@@ -241,12 +308,45 @@ export class SkillService {
       this.watcher = watch(SKILLS_BASE_DIR, { recursive: true }, (_event, filename) => {
         if (filename?.endsWith('SKILL.md')) {
           this.log.debug({ filename }, 'SKILL.md changed — rescanning');
-          void this.scanAll().catch(() => {});
+          this.requestScan();
         }
+      });
+      // 'error' without a listener would surface as an uncaught exception and
+      // could take the host down; 'close' (e.g. after EMFILE or a replaced
+      // watched directory) leaves us silently blind. Both paths restart the
+      // watcher and rescan, so no event is lost permanently.
+      this.watcher.on('error', (err) => {
+        this.log.warn({ err }, 'Skill filewatcher error — restarting watcher');
+        this.scheduleWatcherRestart();
+      });
+      this.watcher.on('close', () => {
+        this.log.warn('Skill filewatcher closed unexpectedly — restarting watcher');
+        this.scheduleWatcherRestart();
       });
     } catch {
       this.log.warn('Filewatcher not available — changes require manual rescan');
     }
+  }
+
+  // Restart after 1 s so a persistent failure (e.g. the directory itself is
+  // gone) cannot hot-loop. The rescan afterwards picks up anything changed
+  // while the watcher was down.
+  private scheduleWatcherRestart() {
+    if (this.watcherRestartTimer) return;
+    this.watcherRestartTimer = setTimeout(() => {
+      this.watcherRestartTimer = null;
+      // removeAllListeners() first: our own close() must not be seen as an
+      // unexpected death (which would trigger a restart loop).
+      try {
+        this.watcher?.removeAllListeners();
+        this.watcher?.close();
+      } catch {
+        // watcher already dead — nothing to clean up
+      }
+      this.watcher = null;
+      this.startWatcher();
+      this.requestScan(0);
+    }, 1000);
   }
 
   // ── Public helpers ────────────────────────────────────────────────────────

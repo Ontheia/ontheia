@@ -114,8 +114,18 @@ export function registerSkillRoutes(
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     if (auth.session.role !== 'admin') return reply.code(403).send({ error: 'admin_required' });
-    void skillService.scanAll().catch(() => {});
-    return { status: 'scan_triggered' };
+    try {
+      const result = await skillService.scanNow();
+      if (!result) return { status: 'scan_already_running' };
+      if (result.failed > 0) {
+        request.log.warn(result, 'Manual skill scan finished with errors');
+        return { status: 'scan_completed_with_errors', ...result };
+      }
+      return { status: 'scan_completed', ...result };
+    } catch (err) {
+      request.log.error({ err }, 'Manual skill scan failed');
+      return reply.code(500).send({ error: 'scan_failed' });
+    }
   });
 
   // GET /api/skills/:id/agents — which agents have this skill assigned
