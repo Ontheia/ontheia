@@ -26,4 +26,4 @@ Skills are reusable capability modules that extend the agent with specialized kn
 - **Scope:** Global skills (installed by admin) and user-specific skills are available.
 - **Effect:** The agent sees skill names and descriptions in every run and can load their full instructions on demand.
 
-See [Skills — Concept](../skills/01_concept.md) for details.
+See [Skills — Concept](/en/admin/skills/01_concept/) for details.

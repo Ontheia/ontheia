@@ -5,7 +5,7 @@ Ontheia stellt Informationen im Chatverlauf auf unterschiedliche Weise dar.
 ## 1. Text & Markdown
 Antworten der KI werden als formatiertes Markdown gerendert. Dies beinhaltet:
 - Fettschrift, Listen und Tabellen.
-- **Code-Blöcke:** Mit Syntax-Highlighting, einer Schaltfläche zum Kopieren und einem Stift-Symbol, das den Inhalt als Entwurf ins Artefakt-Panel übernimmt (siehe [Artefakte](./06_artifacts.md)).
+- **Code-Blöcke:** Mit Syntax-Highlighting, einer Schaltfläche zum Kopieren und einem Stift-Symbol, das den Inhalt als Entwurf ins Artefakt-Panel übernimmt (siehe [Artefakte](/de/user/chat/06_artifacts/)).
 - Mathematische Formeln (LaTeX).
 
 ## 2. Diagramme (Mermaid)
@@ -13,7 +13,7 @@ Antworten der KI werden als formatiertes Markdown gerendert. Dies beinhaltet:
 Ein ```` ```mermaid ````-Codeblock wird im Chat als Diagramm gerendert — in Agenten-Antworten ebenso wie in eigenen Nachrichten. Bitte einen Agenten einfach: *„Zeichne den Ablauf als Mermaid-Flowchart."*
 
 - **Während des Streamings** bleibt der Quellcode sichtbar; sobald das Diagramm vollständig ist, klappt der Block automatisch in die Grafik um.
-- **Werkzeugleiste** am Block: Vergrößern/Verkleinern/Zurücksetzen, **Vollbild** (Overlay mit eigenem Zoom, schließen per Escape oder Klick auf den Hintergrund), Umschalten Diagramm ↔ Quellcode, Kopieren des Quellcodes sowie **Im Panel bearbeiten** (siehe [Artefakte](./06_artifacts.md)).
+- **Werkzeugleiste** am Block: Vergrößern/Verkleinern/Zurücksetzen, **Vollbild** (Overlay mit eigenem Zoom, schließen per Escape oder Klick auf den Hintergrund), Umschalten Diagramm ↔ Quellcode, Kopieren des Quellcodes sowie **Im Panel bearbeiten** (siehe [Artefakte](/de/user/chat/06_artifacts/)).
 - **Ungültiger Mermaid-Code** wird unverändert als Codeblock angezeigt.
 
 Unterstützt werden alle Mermaid-Diagrammtypen (Flowchart, Sequenz, Klassen, ER, Gantt u. v. m.). Das Rendering erfolgt vollständig lokal im Browser.
@@ -30,7 +30,7 @@ Bilder können direkt im Composer an eine Nachricht angehängt werden. Unterstü
 
 ## 4. Dateikarten
 
-Liest oder schreibt ein Agent eine Datei, erscheint statt des Inhalts eine **Dateikarte**. Ein Klick öffnet die Datei im Artefakt-Panel zum Ansehen und Bearbeiten; PDFs öffnen sich in einer Leseansicht mit markierbarem Text. Details in [Artefakte](./06_artifacts.md).
+Liest oder schreibt ein Agent eine Datei, erscheint statt des Inhalts eine **Dateikarte**. Ein Klick öffnet die Datei im Artefakt-Panel zum Ansehen und Bearbeiten; PDFs öffnen sich in einer Leseansicht mit markierbarem Text. Details in [Artefakte](/de/user/chat/06_artifacts/).
 
 ## 5. Tool-Karten (Berechtigungen)
 Wenn ein Agent ein Werkzeug (z. B. Zugriff auf eine Datei) nutzen möchte, erscheint eine Tool-Karte:

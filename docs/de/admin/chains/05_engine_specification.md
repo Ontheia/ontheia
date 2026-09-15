@@ -75,7 +75,7 @@ Delegiert die Aufgabe an einen anderen Ontheia-Agenten (A2A).
 *   **Parameter:**
     *   `agent_id`: Name oder UUID des Ziel-Agenten.
     *   `task_id`: (Optional) Spezifischer Task-Kontext. Ein angegebener, matchender Task schlägt die Default-Chain des Agenten vor.
-    *   `chain_id`: (Optional) Name oder UUID einer spezifischen Chain, die gebunden ausgeführt wird — anstelle der Default-Chain des Agenten. Ohne `task_id` und `chain_id` läuft die Default-Chain, falls vorhanden, sonst ein LLM-Aufruf. (Siehe [Agent-zu-Chain Bindung](06_agent_chain_binding.md).)
+    *   `chain_id`: (Optional) Name oder UUID einer spezifischen Chain, die gebunden ausgeführt wird — anstelle der Default-Chain des Agenten. Ohne `task_id` und `chain_id` läuft die Default-Chain, falls vorhanden, sonst ein LLM-Aufruf. (Siehe [Agent-zu-Chain Bindung](/de/admin/chains/06_agent_chain_binding/).)
     *   `input`: Die Nachricht an den Sub-Agenten.
 
 ### `tool` (MCP Tool Call)

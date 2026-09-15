@@ -26,4 +26,4 @@ Skills sind wiederverwendbare Fähigkeitsmodule, die den Agenten mit spezialisie
 - **Scope:** Globale Skills (vom Admin installiert) und nutzerspezifische Skills stehen zur Verfügung.
 - **Wirkung:** Der Agent sieht Skill-Namen und -Beschreibungen bei jedem Run und kann ihre vollständigen Instruktionen bei Bedarf laden.
 
-Siehe [Skills — Konzept](../skills/01_concept.md) für Details.
+Siehe [Skills — Konzept](/de/admin/skills/01_concept/) für Details.

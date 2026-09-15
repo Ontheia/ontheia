@@ -54,7 +54,7 @@ The tool is part of the internal `delegation` server and is available to an Agen
     - `task` (String, Optional): UUID or name of a specific Task context.
     - `chain` (String, Optional): UUID or name of a specific Chain to be executed.
 
-> **Precedence:** An explicit, matching `task` beats every chain — the agent's default chain as well as a named `chain`. Without a matching task, the named `chain` runs (if bound to the agent), otherwise the default chain, otherwise an LLM call. A named-but-not-found task falls back to the chain and is logged in the trace. Details in [Agent-to-Chain Binding & Delegation](../chains/06_agent_chain_binding.md).
+> **Precedence:** An explicit, matching `task` beats every chain — the agent's default chain as well as a named `chain`. Without a matching task, the named `chain` runs (if bound to the agent), otherwise the default chain, otherwise an LLM call. A named-but-not-found task falls back to the chain and is logged in the trace. Details in [Agent-to-Chain Binding & Delegation](/en/admin/chains/06_agent_chain_binding/).
 
 ---
 
@@ -83,7 +83,7 @@ A sub-agent builds its system prompt **itself** — it does **not** inherit one 
 - **User context:** Information about the requesting user (ID, name, role) is resolved into the template variables.
 - **Time/Date:** Current timestamps are injected automatically — into the volatile suffix, not the system prompt.
 
-What the sub-agent does take from the master is the conversation history (point 6), not its instructions. The full delineation is in [How Memory and Context Work](../memory_audit/00_context_and_memory_flow.md).
+What the sub-agent does take from the master is the conversation history (point 6), not its instructions. The full delineation is in [How Memory and Context Work](/en/admin/memory_audit/00_context_and_memory_flow/).
 
 ### 6. History Continuity (History Flow)
 With every delegation, the relevant conversation history is passed to the Sub-Agent. This ensures that the Sub-Agent understands the context of the entire conversation.

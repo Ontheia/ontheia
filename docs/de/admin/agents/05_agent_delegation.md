@@ -54,7 +54,7 @@ Das Tool ist Teil des internen `delegation`-Servers und steht einem Agenten **nu
     - `task` (String, Optional): UUID oder Name eines spezifischen Task-Kontexts.
     - `chain` (String, Optional): UUID oder Name einer spezifischen Chain, die ausgeführt werden soll.
 
-> **Präzedenz:** Ein expliziter, matchender `task` schlägt jede Chain vor — auch die Default-Chain des Agenten und eine benannte `chain`. Ohne matchenden Task läuft die benannte `chain` (falls am Agenten gebunden), sonst die Default-Chain, sonst ein LLM-Aufruf. Ein genannter, aber nicht gefundener Task fällt auf die Chain zurück und wird im Trace protokolliert. Details in [Agent-zu-Chain Bindung & Delegation](../chains/06_agent_chain_binding.md).
+> **Präzedenz:** Ein expliziter, matchender `task` schlägt jede Chain vor — auch die Default-Chain des Agenten und eine benannte `chain`. Ohne matchenden Task läuft die benannte `chain` (falls am Agenten gebunden), sonst die Default-Chain, sonst ein LLM-Aufruf. Ein genannter, aber nicht gefundener Task fällt auf die Chain zurück und wird im Trace protokolliert. Details in [Agent-zu-Chain Bindung & Delegation](/de/admin/chains/06_agent_chain_binding/).
 
 ---
 
@@ -83,7 +83,7 @@ Der Sub-Agent baut seinen System-Prompt **selbst** auf — er erbt ihn **nicht**
 - **User-Kontext:** Informationen über den anfragenden Benutzer (ID, Name, Rolle) werden in die Template-Variablen aufgelöst.
 - **Zeit/Datum:** Aktuelle Zeitangaben werden automatisch injiziert — im volatilen Suffix, nicht im System-Prompt.
 
-Was der Sub-Agent vom Master übernimmt, ist die Gesprächshistorie (Punkt 6), nicht dessen Instruktionen. Die vollständige Abgrenzung steht in [Wie Memory und Kontext funktionieren](../memory_audit/00_context_and_memory_flow.md).
+Was der Sub-Agent vom Master übernimmt, ist die Gesprächshistorie (Punkt 6), nicht dessen Instruktionen. Die vollständige Abgrenzung steht in [Wie Memory und Kontext funktionieren](/de/admin/memory_audit/00_context_and_memory_flow/).
 
 ### 6. Historien-Kontinuität (History Flow)
 Bei jeder Delegation wird die relevante Gesprächshistorie an den Sub-Agenten weitergegeben. Dies stellt sicher, dass der Sub-Agent den Kontext des gesamten Gesprächs versteht.

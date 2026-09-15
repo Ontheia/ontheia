@@ -5,7 +5,7 @@ Ontheia represents information in the chat history in different ways.
 ## 1. Text & Markdown
 AI responses are rendered as formatted Markdown. This includes:
 - Bold text, lists, and tables.
-- **Code Blocks:** With syntax highlighting, a copy button, and a pencil icon that loads the content into the artifact panel as a draft (see [Artifacts](./06_artifacts.md)).
+- **Code Blocks:** With syntax highlighting, a copy button, and a pencil icon that loads the content into the artifact panel as a draft (see [Artifacts](/en/user/chat/06_artifacts/)).
 - Mathematical formulas (LaTeX).
 
 ## 2. Diagrams (Mermaid)
@@ -13,7 +13,7 @@ AI responses are rendered as formatted Markdown. This includes:
 A ```` ```mermaid ````-code block is rendered as a diagram in the chat — in agent responses as well as in your own messages. Simply ask an agent: *"Draw the workflow as a mermaid flowchart."*
 
 - **While streaming**, the source stays visible; once the diagram is complete, the block automatically flips to the graphic.
-- **Toolbar** on the block: zoom in/out/reset, **fullscreen** (overlay with its own zoom, close via Escape or clicking the backdrop), toggle diagram ↔ source, copy the source, and **edit in panel** (see [Artifacts](./06_artifacts.md)).
+- **Toolbar** on the block: zoom in/out/reset, **fullscreen** (overlay with its own zoom, close via Escape or clicking the backdrop), toggle diagram ↔ source, copy the source, and **edit in panel** (see [Artifacts](/en/user/chat/06_artifacts/)).
 - **Invalid mermaid code** is shown unchanged as a code block.
 
 All mermaid diagram types are supported (flowchart, sequence, class, ER, Gantt, and more). Rendering happens entirely locally in the browser.
@@ -30,7 +30,7 @@ Images can be attached directly to a message in the Composer. Supported formats:
 
 ## 4. File Cards
 
-When an agent reads or writes a file, a **file card** appears instead of the content. Clicking it opens the file in the artifact panel for viewing and editing; PDFs open in a viewer with selectable text. Details in [Artifacts](./06_artifacts.md).
+When an agent reads or writes a file, a **file card** appears instead of the content. Clicking it opens the file in the artifact panel for viewing and editing; PDFs open in a viewer with selectable text. Details in [Artifacts](/en/user/chat/06_artifacts/).
 
 ## 5. Tool Cards (Permissions)
 When an agent wants to use a tool (e.g., access a file), a Tool Card appears:

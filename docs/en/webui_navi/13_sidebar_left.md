@@ -47,7 +47,7 @@ Right-click or ⋯-menu on a chat entry:
 | Delete | Permanently delete chat (with confirmation). |
 
 ### Chat Entry (active run)
-While a run is active in a chat, a **stop button** (square icon, red on hover) replaces the three-dot menu at the action position. One click sends `POST /runs/:id/stop` and ends the run; the menu only becomes reachable again once the server has reported the final state and the button has disappeared. In the mobile view this makes the button the only way to stop a running run without opening the chat (see also [Right Sidebar — Run Status](14_sidebar_right.md)).
+While a run is active in a chat, a **stop button** (square icon, red on hover) replaces the three-dot menu at the action position. One click sends `POST /runs/:id/stop` and ends the run; the menu only becomes reachable again once the server has reported the final state and the button has disappeared. In the mobile view this makes the button the only way to stop a running run without opening the chat (see also [Right Sidebar — Run Status](/en/webui_navi/14_sidebar_right/)).
 
 ---
 

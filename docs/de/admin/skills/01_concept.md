@@ -29,7 +29,7 @@ Der Agent sieht den Skill-Katalog am Anfang jeder Session. Wenn eine Aufgabe zur
 
 Bei Code-Library-Skills liest der Agent das Code-Muster aus dem Skill, passt es auf die konkrete Aufgabe an und führt es über den `cli-tools`-MCP-Server aus — mit `uv run --with <paket>` für automatisches Dependency-Management.
 
-Langlaufende Scripts (Batch-Verarbeitungen, Minuten bis Stunden) werden mit `run_skill_script` und `background: true` entkoppelt gestartet: Der Aufruf kehrt sofort mit einem Logfile-Pfad zurück, Fortschritt und Exit-Code werden über `background_status` abgefragt — mit `wait_seconds` blockierend, damit ein Aufruf Dutzende Schnellpolls ersetzt (Details: [MCP-Server Grundlagen](../mcp-server/01_basics.md)).
+Langlaufende Scripts (Batch-Verarbeitungen, Minuten bis Stunden) werden mit `run_skill_script` und `background: true` entkoppelt gestartet: Der Aufruf kehrt sofort mit einem Logfile-Pfad zurück, Fortschritt und Exit-Code werden über `background_status` abgefragt — mit `wait_seconds` blockierend, damit ein Aufruf Dutzende Schnellpolls ersetzt (Details: [MCP-Server Grundlagen](/de/admin/mcp-server/01_basics/)).
 
 ---
 
@@ -122,6 +122,6 @@ Das Designprinzip: Jeder bekannte Fehlermodus generischer Datei-Tools wird per C
 
 ## Mitgelieferter Skill: mermaid
 
-Ontheia liefert den Skill **mermaid** mit (`sources/skills/global/mermaid/`), vom Installer dem **Personal Assistant** zugewiesen. Er ist ein reiner Prompt-Skill (ohne Scripts): Er bringt dem Agenten bei, zuverlässig Mermaid-Diagrammcode zu erzeugen — Flowcharts, Sequenz-, Klassen-, ER-, Zustands- und Gantt-Diagramme, Mindmaps, Timelines, Kanban-Boards und mehr — den der Chat direkt als Diagramm rendert (siehe [Nachrichtentypen](../../user/chat/03_message_types.md)).
+Ontheia liefert den Skill **mermaid** mit (`sources/skills/global/mermaid/`), vom Installer dem **Personal Assistant** zugewiesen. Er ist ein reiner Prompt-Skill (ohne Scripts): Er bringt dem Agenten bei, zuverlässig Mermaid-Diagrammcode zu erzeugen — Flowcharts, Sequenz-, Klassen-, ER-, Zustands- und Gantt-Diagramme, Mindmaps, Timelines, Kanban-Boards und mehr — den der Chat direkt als Diagramm rendert (siehe [Nachrichtentypen](/de/user/chat/03_message_types/)).
 
 Der Skill kodiert die Syntax-Fallen, an denen LLM-generierte Diagramme typischerweise scheitern (Label-Quoting, reservierte Schlüsselwörter, Mindmap-Gruppierungsregeln), und weist darauf hin, dass Click-Interaktionen im strikten Chat-Renderer deaktiviert sind. Detaillierte Syntax-Referenzen pro Typ liegen unter `references/` und werden bei Bedarf über `read_skill_resource` geladen.
