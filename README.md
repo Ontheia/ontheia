@@ -134,6 +134,15 @@ Visit [http://localhost:5173](http://localhost:5173) in your browser.
 
 Full installation guide: [docs.ontheia.ai/en/getting-started/02_installation](https://docs.ontheia.ai/en/getting-started/02_installation)
 
+**Uninstall**
+
+Remove the entire stack — containers, volumes (including the database), images, and the install directory. Your `~/.claude`, `~/.gemini`, and NVM directories are never touched. `--keep-data` stops the stack but keeps volumes and configuration:
+
+```bash
+bash scripts/uninstall.sh              # interactive, asks for confirmation
+bash scripts/uninstall.sh --keep-data   # stop everything, keep the data
+```
+
 ---
 
 ## Documentation
