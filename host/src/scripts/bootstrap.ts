@@ -410,15 +410,21 @@ async function main() {
 
       const hasEmbedding = process.env.HAS_OPENAI_KEY === 'true' || process.env.OLLAMA_FOUND === 'true' || process.env.HAS_XAI_KEY === 'true';
 
-      // Skill tools shared by both agents: the Guide orchestrates skill
-      // creation (skill-creator skill), the Personal Assistant runs skills
-      // under test and executes finished skills.
+      // Skills write tools — Guide only: it orchestrates skill creation
+      // (skill-creator skill) and coordinates the eval loop, so the write
+      // tools are its capability. The Personal Assistant is the default test
+      // agent and skill runner, never a skill author.
+      const skillWriteTools = [
+        { server: 'skills', tool: 'write_skill_resource' },
+        { server: 'skills', tool: 'create_skill' },
+      ];
+
+      // Skills execution tools shared by both agents: reading/activating plus
+      // script and artifact access for running finished skills.
       const skillTools = [
         { server: 'skills', tool: 'list_skills' },
         { server: 'skills', tool: 'activate_skill' },
         { server: 'skills', tool: 'read_skill_resource' },
-        { server: 'skills', tool: 'write_skill_resource' },
-        { server: 'skills', tool: 'create_skill' },
         { server: 'cli-tools', tool: 'run_skill_script' },
         { server: 'cli-tools', tool: 'background_status' },
         { server: 'cli-tools', tool: 'background_stop' },
@@ -435,7 +441,7 @@ async function main() {
       // Guide: memory search + write + delete (to update/merge preference
       // entries) + update (in-place tag/wording fixes — content changes go
       // through memory-write with supersedes), delegation (eval loop → test
-      // agent), skill + scheduler tools.
+      // agent), skill + write + scheduler tools.
       const guideTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
@@ -443,6 +449,7 @@ async function main() {
         { server: 'memory', tool: 'memory-delete' },
         { server: 'delegation', tool: 'delegate-to-agent' },
         ...skillTools,
+        ...skillWriteTools,
         ...schedulerTools,
       ]);
 
@@ -529,8 +536,10 @@ async function main() {
 
       // Assistant: memory read/write + skill execution (acts as the default
       // test agent for the skill-creator eval loop and can run finished skills
-      // afterwards). No delegation tools: the assistant receives tasks from an
-      // orchestrator and returns its result implicitly — it does not delegate.
+      // afterwards) — but not skill authorship: create_skill and
+      // write_skill_resource stay with the Guide. No delegation tools: the
+      // assistant receives tasks from an orchestrator and returns its result
+      // implicitly — it does not delegate.
       const assistantTools = JSON.stringify([
         { server: 'memory', tool: 'memory-search' },
         { server: 'memory', tool: 'memory-write' },
