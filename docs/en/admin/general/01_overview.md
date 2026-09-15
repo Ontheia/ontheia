@@ -14,3 +14,5 @@ Although these are global settings, they are technically stored in the `app.user
 - **Table:** `app.user_settings`
 - **Column:** `settings` (JSONB)
 - **Fields:** `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`.
+
+**Exception:** individual settings live in the `app.system_settings` table instead — currently the "Max Tool Calls per Run" cap (`max_tool_calls`). Both paths are saved together via the same **[Apply]** button.

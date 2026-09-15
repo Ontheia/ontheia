@@ -9,6 +9,7 @@
 | Feld | Typ | Bereich / Werte | Beschreibung |
 | --- | --- | --- | --- |
 | Tool-Loop Timeout (Sekunden) | Zahl | 60 – 3600 | Maximale Dauer, die der Agent für Tool-Aufrufe verwenden darf. Standard: 600 s. |
+| Max. Tool-Aufrufe pro Run | Zahl | 1 – 1000 | Globale Obergrenze für die Anzahl der Tool-Aufrufe in einem Run, gilt für alle Provider-Pfade. Leer = Default (50). |
 | Request Rate-Limit | Zahl | 1 – 500 | Begrenzt Provider-Aufrufe pro Minute, um HTTP-429-Fehler zu vermeiden. Standard: 10. |
 | System-Zeitzone | Text | IANA-Format, z. B. `Europe/Berlin` | Standard-Zeitzone für Cron-Jobs und Audit-Logs. |
 

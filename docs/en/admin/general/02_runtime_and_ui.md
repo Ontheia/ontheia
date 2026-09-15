@@ -8,24 +8,32 @@ Determines the maximum time an agent may spend in a single "loop" calling tools.
 - **Default:** 600 seconds (10 minutes).
 - **Purpose:** Prevents agents from getting into infinite tool call loops or consuming excessive resources when they cannot find a solution.
 
-## 2. Memory Context Size (Top K)
+## 2. Max Tool Calls per Run
+Caps the number of tool calls in a single agent run — the second guardrail alongside the Tool Loop Timeout: the timeout bounds the *time* the loop may take, this setting bounds the *count* of calls.
+- **Range:** 1 to 1000.
+- **Default:** 50 (empty field clears the setting and restores the default).
+- **Scope:** Global for every provider path — the Anthropic API, the OpenAI Responses API and OpenAI-compatible chat completions.
+- **Purpose:** Cost protection. A runaway agent loop stops after the configured number of calls even when every single call is fast, so the time-based timeout alone would never trigger.
+- **Stored as:** `max_tool_calls` in `app.system_settings` (unlike the neighboring fields, which live in the system user's `app.user_settings` entry); read per run with a 30-second cache.
+
+## 3. Memory Context Size (Top K)
 Defines how many relevant fragments from the vector memory are passed to the LLM per request.
 - **Range:** 1 to 50 entries.
 - **Default:** 5 entries.
 - **Note:** Higher values provide more context but consume more tokens and can confuse the model ("Lost in the Middle").
 
-## 3. Automatic Memory Storage
+## 4. Automatic Memory Storage
 Controls the agents' default write access to the memory.
 - **Allow write access:** If active, agents can automatically store important information from the conversation in the long-term memory.
 - **Effect:** Applies as the default for all new agents/tasks, but can be overridden by specific policies (see Memory documentation).
 
-## 4. Provider Requests per Minute
+## 5. Provider Requests per Minute
 A global rate limiting for outgoing API calls to AI providers (OpenAI, Anthropic etc.).
 - **Range:** 1 to 500 requests.
 - **Default:** 10 requests per minute.
 - **Purpose:** Protection against unexpected costs and avoidance of "429 Too Many Requests" errors at the providers.
 
-## 5. System Timezone
+## 6. System Timezone
 Determines the local time for the entire Ontheia host.
 - **Format:** IANA timezone string (e.g., `Europe/Berlin`, `UTC`).
 - **Default:** `Europe/Berlin` (or value from `APP_TIMEZONE`).
@@ -35,7 +43,7 @@ Determines the local time for the entire Ontheia host.
     - **Cron Jobs**: Schedules are executed based on this timezone.
     - **Agent Context**: The "Current Time" injected into the agent follows this setting.
 
-## 6. Response Streaming
+## 7. Response Streaming
 A global switch that enables or disables token-by-token streaming of LLM responses into the chat.
 - **Default:** enabled.
 - **Effect:** When enabled, agent responses appear in the chat while the model generates them. When disabled, the full response appears as one block after generation completes.
@@ -44,7 +52,7 @@ A global switch that enables or disables token-by-token streaming of LLM respons
 
 **When to disable?** Only when something misbehaves — for example if a provider rejects streaming requests, or a reverse proxy in front of Ontheia buffers SSE responses so streaming never reaches the browser anyway.
 
-## 7. Prompt Caching (Anthropic API)
+## 8. Prompt Caching (Anthropic API)
 A global switch that enables or disables prompt caching on the **Anthropic API path**.
 - **Default:** enabled.
 - **Effect:** When enabled, Ontheia places `cache_control` markers on the stable prefix (tools + system prompt) and the growing chat history. Recurring requests then read that prefix at the heavily reduced cache price (~0.1× input).

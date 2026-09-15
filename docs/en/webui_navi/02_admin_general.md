@@ -9,6 +9,7 @@
 | Field | Type | Range / Values | Description |
 | --- | --- | --- | --- |
 | Tool Loop Timeout (Seconds) | Number | 60 – 3600 | Maximum duration the agent may spend on tool calls. Default: 600 s. |
+| Max. Tool Calls per Run | Number | 1 – 1000 | Global cap on the number of tool calls in a single run, for every provider path. Empty = default (50). |
 | Request Rate Limit | Number | 1 – 500 | Limits provider calls per minute to avoid HTTP 429 errors. Default: 10. |
 | System Timezone | Text | IANA format, e.g. `Europe/Berlin` | Default timezone for cron jobs and audit logs. |
 

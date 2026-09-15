@@ -8,24 +8,32 @@ Bestimmt die maximale Zeit, die ein Agent in einer einzigen "Schleife" verbringe
 - **Standard:** 600 Sekunden (10 Minuten).
 - **Zweck:** Verhindert, dass Agenten in unendliche Tool-Aufrufe geraten oder übermäßig viele Ressourcen verbrauchen, wenn sie keine Lösung finden.
 
-## 2. Memory Kontext-Größe (Top K)
+## 2. Max. Tool-Aufrufe pro Run
+Begrenzt die Anzahl der Tool-Aufrufe in einem einzelnen Agenten-Run — das zweite Schutzband neben dem Tool-Loop Timeout: Das Timeout begrenzt die *Zeit*, die die Schleife dauern darf, diese Einstellung die *Anzahl* der Aufrufe.
+- **Bereich:** 1 bis 1000.
+- **Standard:** 50 (leeres Feld löscht die Einstellung und stellt den Standard wieder her).
+- **Geltungsbereich:** global für alle Provider-Pfade — die Anthropic-API, die OpenAI-Responses-API und OpenAI-kompatible Chat-Completions.
+- **Zweck:** Kosten-Schutz. Eine entgleiste Agenten-Schleife stoppt nach der eingestellten Anzahl an Aufrufen, selbst wenn jeder einzelne Aufruf schnell ist und das zeitbasierte Timeout allein nie greifen würde.
+- **Gespeichert als:** `max_tool_calls` in `app.system_settings` (anders als die Nachbarfelder, die im `app.user_settings`-Eintrag des System-Users liegen); pro Run gelesen, mit 30 Sekunden Cache.
+
+## 3. Memory Kontext-Größe (Top K)
 Legt fest, wie viele relevante Fragmente aus dem Vektorspeicher pro Anfrage an das LLM übergeben werden.
 - **Bereich:** 1 bis 50 Einträge.
 - **Standard:** 5 Einträge.
 - **Hinweis:** Höhere Werte liefern mehr Kontext, verbrauchen aber mehr Token und können das Modell verwirren ("Lost in the Middle").
 
-## 3. Automatische Memory-Speicherung
+## 4. Automatische Memory-Speicherung
 Steuert den standardmäßigen Schreibzugriff der Agenten auf das Gedächtnis.
 - **Schreibzugriff erlauben:** Wenn aktiv, können Agenten wichtige Informationen aus dem Gespräch automatisch im Langzeitgedächtnis hinterlegen.
 - **Wirkung:** Gilt als Standard für alle neuen Agenten/Tasks, kann aber durch spezifische Policies (siehe Memory-Dokumentation) übersteuert werden.
 
-## 4. Provider-Requests pro Minute
+## 5. Provider-Requests pro Minute
 Ein globales Rate-Limiting für ausgehende API-Aufrufe zu AI-Providern (OpenAI, Anthropic etc.).
 - **Bereich:** 1 bis 500 Requests.
 - **Standard:** 10 Requests pro Minute.
 - **Zweck:** Schutz vor unerwarteten Kosten und Vermeidung von "429 Too Many Requests" Fehlern bei den Providern.
 
-## 5. System Zeitzone
+## 6. System Zeitzone
 Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
 - **Format:** IANA Zeitzonen-String (z. B. `Europe/Berlin`, `UTC`).
 - **Standard:** `Europe/Berlin` (bzw. Wert aus `APP_TIMEZONE`).
@@ -35,7 +43,7 @@ Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
     - **Cron-Jobs**: Zeitpläne werden basierend auf dieser Zeitzone ausgeführt.
     - **Agenten-Kontext**: Die dem Agenten injizierte "Aktuelle Uhrzeit" folgt dieser Einstellung.
 
-## 6. Response-Streaming
+## 7. Response-Streaming
 Ein globaler Schalter, der das tokenweise Streaming der LLM-Antworten in den Chat aktiviert oder deaktiviert.
 - **Standard:** aktiviert.
 - **Wirkung:** Ist der Schalter aktiv, erscheinen Agenten-Antworten im Chat, während das Modell sie generiert. Deaktiviert erscheint die vollständige Antwort erst nach Abschluss der Generierung als Block.
@@ -44,7 +52,7 @@ Ein globaler Schalter, der das tokenweise Streaming der LLM-Antworten in den Cha
 
 **Wann deaktivieren?** Nur bei Problemen — etwa wenn ein Provider Streaming-Anfragen ablehnt oder ein Reverse-Proxy vor Ontheia SSE-Antworten puffert und das Streaming dadurch ohnehin nicht ankommt.
 
-## 7. Prompt-Caching (Anthropic API)
+## 8. Prompt-Caching (Anthropic API)
 Ein globaler Schalter, der das Prompt-Caching auf dem **Anthropic-API-Pfad** aktiviert oder deaktiviert.
 - **Standard:** aktiviert.
 - **Wirkung:** Ist der Schalter aktiv, setzt Ontheia `cache_control`-Markierungen auf den stabilen Prefix (Tools + System-Prompt) und die wachsende Chat-History. Wiederkehrende Anfragen lesen diesen Prefix dann zum stark reduzierten Cache-Preis (~0,1× Input).
