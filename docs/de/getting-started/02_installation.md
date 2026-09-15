@@ -83,3 +83,25 @@ Drei Punkte, die beim ersten Blick auf `docker compose ps` irritieren können:
 - **Der Migrator beendet sich.** Er bringt beim Start das Datenbankschema auf den aktuellen Stand und wird dann fertig — vier Dienste in der Compose-Datei, drei laufende Container. Das ist der Normalzustand, kein Fehler.
 - **MCP-Werkzeuge laufen in eigenen Containern**, die der Host bei Bedarf startet. Der Docker-Socket ist dafür **schreibgeschützt** eingehängt, und jedes Image wird gegen `config/allowlist.images` geprüft. Werkzeuge, die als `stdio`-Prozess laufen (`uvx`, `npx`), starten stattdessen im Host-Container selbst.
 - **Nur ein Pfeil verlässt den Kasten.** Chats, Gedächtnis, Skills, Zeitpläne und Werkzeug-Verbindungen bleiben auf dem eigenen Server; nach außen geht ausschließlich der Aufruf des Sprachmodells — und auch nur zu dem Provider, den man selbst einträgt. Mit Ollama entfällt auch dieser.
+
+## Deinstallation
+
+`scripts/uninstall.sh` ist das Gegenstück zum Installer — es entfernt den gesamten Stack: Container, Volumes (inklusive Datenbank), Images, das Installationsverzeichnis und die `/tmp`-Platzhalter, die der Installer angelegt hat. Es greift ausschließlich auf projektabgesteckte Docker-Objekte zu — kein globaler `docker system prune`. Verzeichnisse, die der Stack nur einhängt, werden nie angefasst: `~/.claude`, `~/.gemini` und das NVM-Verzeichnis.
+
+```bash
+cd ~/ontheia
+bash scripts/uninstall.sh              # interaktiv — fragt nach Bestätigung
+```
+
+Die Bestätigung listet genau auf, was gelöscht wird — die Datenbank mit allen Benutzern, Chats und Memory-Vektoren, alle Daten unter `sources/` (Rezepte, Dokumente, eigene Skills) sowie `.env` inklusive der API-Keys. Für ein Backup vorher:
+
+```bash
+tar czf ~/ontheia-backup.tgz -C ~ ontheia
+```
+
+Zwei Modi für Sonderfälle:
+
+| Flag | Wirkung |
+|---|---|
+| `--keep-data` | Stack anhalten, alles behalten: Volumes (Datenbank), `.env`, `sources/`. Eine spätere Ausführung von `install.sh` knüpft am alten Stand an — oder direkt neu starten mit `docker compose up -d`. |
+| `--yes` | Keine Bestätigungsabfrage — für skriptgesteuerte Läufe. Die Sprache wird dann aus `$LANG` übernommen. |

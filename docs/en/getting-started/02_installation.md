@@ -83,3 +83,25 @@ Three things that can look wrong at a first `docker compose ps`:
 - **The migrator exits.** It brings the database schema up to date at startup and is then finished — four services in the compose file, three running containers. That is the normal state, not a failure.
 - **MCP tools run in containers of their own**, started by the host when needed. The Docker socket is mounted **read-only** for this, and every image is checked against `config/allowlist.images`. Tools that run as a `stdio` process (`uvx`, `npx`) start inside the host container instead.
 - **Only one arrow leaves the box.** Chats, memory, skills, schedules and tool connections stay on your server; the only outbound call is the one to the language model — and only to the provider you entered yourself. With Ollama, even that one disappears.
+
+## Uninstall
+
+`scripts/uninstall.sh` is the counterpart to the installer — it removes the entire stack: containers, volumes (including the database), images, the install directory, and the `/tmp` placeholder mounts the installer created. It only touches project-scoped Docker objects — no global `docker system prune`. Directories the stack merely mounts are never touched: `~/.claude`, `~/.gemini`, and the NVM directory.
+
+```bash
+cd ~/ontheia
+bash scripts/uninstall.sh              # interactive — asks for confirmation
+```
+
+The confirmation lists exactly what is deleted — the database with all users, chats and memory vectors, all data under `sources/` (recipes, documents, your own skills), and `.env` including your API keys. For a backup first:
+
+```bash
+tar czf ~/ontheia-backup.tgz -C ~ ontheia
+```
+
+Two modes for special cases:
+
+| Flag | Effect |
+|---|---|
+| `--keep-data` | Stop the stack, keep everything: volumes (database), `.env`, `sources/`. A later run of `install.sh` picks up where it left off — or restart directly with `docker compose up -d`. |
+| `--yes` | No confirmation prompt — for scripted runs. The language is then taken from `$LANG`. |
