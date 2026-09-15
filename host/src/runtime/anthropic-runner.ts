@@ -25,7 +25,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import { loadProviderModel } from '../providers/client.js';
 import { extractMetadataString } from '../providers/compat.js';
-import { getSystemFlag } from './system-flags.js';
+import { getSystemFlag, getSystemNumber, DEFAULT_MAX_TOOL_CALLS } from './system-flags.js';
 import type {
   ChatMessage,
   RunEvent,
@@ -34,7 +34,6 @@ import type {
   ToolApprovalMode
 } from './types.js';
 
-const MAX_TOOL_CALLS = 25;
 const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
 
 export async function runAnthropicCompletion(
@@ -111,6 +110,8 @@ export async function runAnthropicCompletion(
   // Response streaming (global 'response_streaming' toggle): emit run_token
   // deltas while the model generates instead of one block at the end.
   const streamingEnabled = await getSystemFlag(db, 'response_streaming');
+  // Global cap on tool calls per run ('max_tool_calls' system setting).
+  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
 
   while (true) {
     if (options?.signal?.aborted) {
@@ -255,7 +256,7 @@ export async function runAnthropicCompletion(
         }
 
         toolCallCounter++;
-        if (toolCallCounter > MAX_TOOL_CALLS) {
+        if (toolCallCounter > maxToolCalls) {
           emit({ type: 'error', code: 'tool_call_limit_exceeded', message: 'Too many tool calls.' });
           return events;
         }

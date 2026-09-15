@@ -30,6 +30,7 @@ import { runAnthropicCompletion } from './anthropic-runner.js';
 import { runResponsesCompletion } from './responses-runner.js';
 import { runCliCompletion } from '../providers/cli-runner.js';
 import { fetchWithRetry, describeFetchError } from './fetch-retry.js';
+import { getSystemNumber, DEFAULT_MAX_TOOL_CALLS } from './system-flags.js';
 import { logger as rootLogger } from '../logger.js';
 
 const toolArgValidator = new (Ajv as any)({ allErrors: true, strict: false });
@@ -43,8 +44,9 @@ import type {
   ToolApprovalMode
 } from './types.js';
 
-const MAX_TOOL_CALLS = 50;
-export const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
+// Fallback when no 'max_tool_calls' system setting is stored — the admin can
+// raise or lower it globally via Admin → Settings.
+const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
 // Abort a run if the prompt exceeds this many tokens — prevents context explosion
 // (e.g. binary file accidentally loaded into conversation history).
 // Configurable via MAX_PROMPT_TOKENS env var; default 200k.
@@ -1111,6 +1113,9 @@ async function handleOpenAiToolCalls(params: {
     agent_id, task_id, provider_id, model_id, context_options
   } = params;
   const log = options?.logger ?? rootLogger;
+
+  // Global cap on tool calls per run ('max_tool_calls' system setting).
+  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
   
   const firstChoice = Array.isArray(responseBody?.choices) ? responseBody.choices[0] : undefined;
   const assistantMessage = firstChoice?.message;
@@ -1148,7 +1153,7 @@ async function handleOpenAiToolCalls(params: {
     }
 
     totalToolCalls.value += 1;
-    if (totalToolCalls.value > MAX_TOOL_CALLS) {
+    if (totalToolCalls.value > maxToolCalls) {
       emit({ type: 'error', code: 'limit', message: 'Too many tool calls' });
       return 'abort';
     }

@@ -50,7 +50,7 @@ import type { ProviderRecord, ProviderModelRecord } from '../providers/repositor
 import { buildAuthHeaders, appendQueryAuth, sanitizeUrl } from '../providers/http.js';
 import { normalizeUsage, MAX_PROMPT_TOKENS, type RunOptions } from './provider-run.js';
 import { fetchWithRetry, describeFetchError } from './fetch-retry.js';
-import { getSystemFlag } from './system-flags.js';
+import { getSystemFlag, getSystemNumber, DEFAULT_MAX_TOOL_CALLS } from './system-flags.js';
 import type {
   ChatMessage,
   RunEvent,
@@ -59,7 +59,6 @@ import type {
   ToolApprovalMode
 } from './types.js';
 
-const MAX_TOOL_CALLS = 25;
 const DEFAULT_TOOL_LOOP_TIMEOUT_MS = 600000;
 const DEFAULT_RESPONSES_PATH = 'v1/responses';
 
@@ -290,6 +289,8 @@ export async function runResponsesCompletion(
 
   const startedAt = Date.now();
   const timeoutAt = startedAt + (options?.toolLoopTimeoutMs ?? DEFAULT_TOOL_LOOP_TIMEOUT_MS);
+  // Global cap on tool calls per run ('max_tool_calls' system setting).
+  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
 
   const toolset = Array.isArray(payload.toolset) ? payload.toolset : [];
   const responseTools = mapToolsForResponses(toolset);
@@ -433,7 +434,7 @@ export async function runResponsesCompletion(
         };
 
         toolCallCounter++;
-        if (toolCallCounter > MAX_TOOL_CALLS) {
+        if (toolCallCounter > maxToolCalls) {
           emit({ type: 'error', code: 'tool_call_limit_exceeded', message: 'Too many tool calls.' });
           return events;
         }

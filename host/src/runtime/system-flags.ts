@@ -27,7 +27,16 @@ type QueryableLike = {
 
 const CACHE_TTL_MS = 30_000;
 
+// The single per-run tool call cap used by every provider path when no
+// 'max_tool_calls' system setting is stored. The runner-local constants this
+// replaced (25/25/50) differed by historical accident, not by design.
+export const DEFAULT_MAX_TOOL_CALLS = 50;
+
 const flagCache = new Map<string, { value: boolean; expires: number }>();
+// null = setting absent/unset in the DB; the fallback default is resolved by
+// the caller at read time, so two readers with different defaults each get
+// their own fallback within the same TTL window.
+const numberCache = new Map<string, { value: number | null; expires: number }>();
 
 /**
  * Read a boolean flag from app.system_settings with a short in-process cache,
@@ -53,4 +62,31 @@ export async function getSystemFlag(
   }
   flagCache.set(key, { value, expires: now + CACHE_TTL_MS });
   return value;
+}
+
+/**
+ * Read a positive numeric setting from app.system_settings with the same
+ * short-lived in-process cache as getSystemFlag. A missing row, null, or any
+ * non-positive/non-finite value falls back to the caller's default — so a
+ * seeded-but-unset row behaves exactly like no row at all.
+ */
+export async function getSystemNumber(
+  db: QueryableLike,
+  key: string,
+  defaultValue: number
+): Promise<number> {
+  const now = Date.now();
+  const cached = numberCache.get(key);
+  if (cached && cached.expires > now) return cached.value ?? defaultValue;
+
+  let value: number | null = null;
+  try {
+    const res = await db.query(`SELECT value FROM app.system_settings WHERE key = $1`, [key]);
+    const raw = res.rows[0]?.value;
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) value = raw;
+  } catch {
+    // On any error, fall back to the default.
+  }
+  numberCache.set(key, { value, expires: now + CACHE_TTL_MS });
+  return value ?? defaultValue;
 }
