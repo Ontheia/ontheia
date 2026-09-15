@@ -811,18 +811,22 @@ function GeneralSection({
   providers,
   promptOptimizer,
   rollingSummary,
+  maxToolCalls,
   onRuntimeChange,
   onPromptOptimizerChange,
   onRollingSummaryChange,
+  onMaxToolCallsChange,
   onHasChanges
 }: {
   runtimeSettings: { toolLoopTimeoutMs: number; requestRateLimitPerMinute: number; timezone?: string };
   providers: ProviderEntry[];
   promptOptimizer: { providerId: string | null; modelId: string | null };
   rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number };
+  maxToolCalls: string;
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number }) => void;
+  onMaxToolCallsChange: (value: string) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
   const { t } = useTranslation(['admin', 'common', 'errors']);
@@ -929,6 +933,26 @@ function GeneralSection({
             />
             <p className="settings-hint">
               {t('general.rateLimitHint')}
+            </p>
+          </label>
+          <label className="settings-field">
+            <span>{t('general.maxToolCalls')}</span>
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              value={maxToolCalls}
+              onChange={(event) => {
+                // Same edit semantics as the neighboring number fields: only
+                // digits (or empty = clear the setting back to the default).
+                if (event.target.value !== '' && !/^\d+$/.test(event.target.value)) return;
+                onMaxToolCallsChange(event.target.value);
+                onHasChanges(true);
+              }}
+              placeholder={t('general.maxToolCallsPlaceholder')}
+            />
+            <p className="settings-hint">
+              {t('general.maxToolCallsHint')}
             </p>
           </label>
           <label className="settings-field">
@@ -8760,6 +8784,23 @@ export function SettingsView() {
     })();
   }, [rollingSummary]);
 
+  // Global tool-call cap: a system setting, but it lives in the runtimeUi
+  // grid next to the user-scoped fields, so it rides along on the same Apply
+  // button (persistSettings). The ref keeps the loaded value for the
+  // dirty check — only a changed value is PATCHed.
+  const [maxToolCalls, setMaxToolCalls] = useState('');
+  const maxToolCallsInitialRef = useRef('');
+  useEffect(() => {
+    getSystemSettingsAdmin()
+      .then((rows) => {
+        const entry = rows.find((item) => item.key === 'max_tool_calls');
+        const draft = typeof entry?.value === 'number' ? String(entry.value) : '';
+        setMaxToolCalls(draft);
+        maxToolCallsInitialRef.current = draft;
+      })
+      .catch(() => {});
+  }, []);
+
   const builderInitialRef = useRef(true);
   useEffect(() => {
     if (builderInitialRef.current) {
@@ -8848,6 +8889,20 @@ export function SettingsView() {
         builder: builderDefaults,
         rollingSummary
       });
+
+      // Global tool-call cap (system setting) — only PATCHed when it changed;
+      // an empty input clears it back to the runner default.
+      if (maxToolCalls !== maxToolCallsInitialRef.current) {
+        const trimmed = maxToolCalls.trim();
+        const value = trimmed === '' ? null : Math.max(1, Math.min(1000, Number.parseInt(trimmed, 10)));
+        if (trimmed === '' || Number.isFinite(value)) {
+          await updateSystemSettingsAdmin({ max_tool_calls: value });
+          const normalized = value === null ? '' : String(value);
+          maxToolCallsInitialRef.current = normalized;
+          setMaxToolCalls(normalized);
+        }
+      }
+
       setHasChanges(false);
     } catch (error) {
       console.error(t('general.settingsSaveError'), error);
@@ -8857,6 +8912,7 @@ export function SettingsView() {
   }, [
     builderDefaults,
     chainSteps,
+    maxToolCalls,
     mcpConfigDraft,
     promptOptimizer,
     rollingSummary,
@@ -9011,9 +9067,11 @@ export function SettingsView() {
             providers={providerContext.providers}
             promptOptimizer={promptOptimizer}
             rollingSummary={rollingSummary}
+            maxToolCalls={maxToolCalls}
             onRuntimeChange={(patch) => configureRuntimeSettings(patch)}
             onPromptOptimizerChange={setPromptOptimizer}
             onRollingSummaryChange={setRollingSummary}
+            onMaxToolCallsChange={setMaxToolCalls}
             onHasChanges={setHasChanges}
           />
         );
