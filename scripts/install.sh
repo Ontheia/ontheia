@@ -80,7 +80,7 @@ echo "| |_| | |\  | | | |  _  | |___ | / ___ \  "
 echo " \___/|_| \_| |_| |_| |_|_____|_/_/   \_\ "
 echo -e "${NC}"
 echo "===================================================="
-echo "       Open Network Agentic Runtime System"
+echo "       Self-hosted AI Agent Platform"
 echo "===================================================="
 echo ""
 
