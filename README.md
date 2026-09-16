@@ -58,7 +58,7 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 - **Vendor-agnostic** — Claude, GPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
 - **Reasoning models, made visible** — Ontheia speaks both reasoning paths: OpenAI's Responses API, so reasoning and function tools work together where chat completions no longer allows it, and Anthropic's extended thinking. Effort is configurable per model, thinking survives across tool iterations, and a dedicated **Reasoning tab** in the trace panel shows what the model actually thought — not just what it answered.
 - **Safe file handling** — a built-in `files` skill lets agents search, read, write, edit and move files with guarantees that make mistakes impossible, not just discouraged: writes never clobber (recoverable trash), edits need an exact match, and concurrent changes are caught by content hash. No config needed.
-- **Governance & control** — self-hosted and **GDPR-compliant by architecture** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data. In multi-user setups, per-user file access is enforced server-side — one user's agents can't reach another's files.
+- **Governance & control** — self-hosted and **GDPR-compliant by design** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data. In multi-user setups, per-user file access is enforced server-side — one user's agents can't reach another's files.
 
 ---
 
