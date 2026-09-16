@@ -24,14 +24,14 @@ Most AI setups stay fragmented: separate chats, tools, scripts, and automations 
 
 - 🖥️ **Self-hosted** — Runs on your own infrastructure. Docker-based, easy to deploy.
 - 🔌 **Multi-provider** — Claude, GPT, Grok, Gemini, Ollama — you choose the model. No lock-in.
-- 👥 **Multi-user** — Role-based access control, teams, and projects — built for organizations from the ground up.
-- 🔗 **MCP-native** — Built on the Model Context Protocol as an open standard; connect agents to any external tool — no proprietary integrations required.
-- 🧩 **Skills** — Package knowledge and workflows into reusable modules — instructions, scripts, and references. Define once, use from any agent.
-- ⏰ **Cron automation** — One-time or recurring jobs — set up via form or directly in chat, e.g. "Every morning at 9:00, summarize the news and send it to my inbox."
+- 👥 **Multi-user** — Role-based access control, teams, and projects — built for organizations.
+- 🔗 **MCP-native** — Built on the open Model Context Protocol — connect agents to any external tool.
+- 🧩 **Skills** — Knowledge and workflows as reusable modules — define once, use from any agent.
+- ⏰ **Cron automation** — One-time or recurring jobs — set up via form or directly in chat.
 - ⚙️ **Workflow engine** — Visual automation pipelines. Complex agent logic without code.
-- 🧠 **Long-term memory** — Built-in RAG with pgvector. Your agents remember and access your knowledge base.
-- 🤝 **Agent-to-agent** — Agents communicate directly with each other. Complex tasks can be split and coordinated between agents.
-- 🛡️ **GDPR by design** — Data never leaves your servers — compliant by design, enforced down to PostgreSQL Row Level Security.
+- 🧠 **Long-term memory** — Built-in RAG with pgvector. Agents remember and access your knowledge base.
+- 🤝 **Agent-to-agent** — Agents communicate directly — complex tasks get split and coordinated.
+- 🛡️ **GDPR by design** — Data never leaves your servers, enforced by PostgreSQL Row Level Security.
 
 ---
 
