@@ -12,10 +12,26 @@ Most AI setups stay fragmented: separate chats, tools, scripts, and automations 
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 [![License: Commercial](https://img.shields.io/badge/License-Commercial-green.svg)](./LICENSE-COMMERCIAL.md)
+![Release](https://img.shields.io/github/v/release/Ontheia/ontheia)
 ![Self-hosted](https://img.shields.io/badge/self--hosted-yes-brightgreen)
 ![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791?logo=postgresql)
+
+---
+
+## At a glance
+
+- 🖥️ **Self-hosted** — Runs on your own infrastructure. Docker-based, easy to deploy.
+- 🔌 **Multi-provider** — Claude, GPT, Grok, Gemini, Ollama — you choose the model. No lock-in.
+- 👥 **Multi-user** — Role-based access control, teams, and projects — built for organizations from the ground up.
+- 🔗 **MCP-native** — Built on the Model Context Protocol as an open standard; connect agents to any external tool — no proprietary integrations required.
+- 🧩 **Skills** — Package knowledge and workflows into reusable modules — instructions, scripts, and references. Define once, use from any agent.
+- ⏰ **Cron automation** — One-time or recurring jobs — set up via form or directly in chat, e.g. "Every morning at 9:00, summarize the news and send it to my inbox."
+- ⚙️ **Workflow engine** — Visual automation pipelines. Complex agent logic without code.
+- 🧠 **Long-term memory** — Built-in RAG with pgvector. Your agents remember and access your knowledge base.
+- 🤝 **Agent-to-agent** — Agents communicate directly with each other. Complex tasks can be split and coordinated between agents.
+- 🛡️ **GDPR by design** — Data never leaves your servers — compliant by design, enforced down to PostgreSQL Row Level Security.
 
 ---
 
@@ -39,7 +55,7 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 - **Diagrams in chat** — the agent writes Mermaid, the chat renders it live: flowcharts, sequence, class, ER, Gantt, state, mind maps, and more (12+ types). No render server, no export detour — a built-in skill keeps the syntax and layout clean.
 - **Files as artifacts, not walls of text** — when an agent reads or writes a file, a card appears; one click opens it in a side panel with edit/preview, conflict-safe saving, and a built-in PDF and image viewer. Every code block in an answer carries a pencil: revise it in the panel and save it as a file. The agent stops repeating file contents in its answers and quotes only what it discusses — which also saves a substantial number of tokens.
 - **Scheduling** — run recurring or one-time jobs automatically, including jobs that resume an existing chat where it left off.
-- **Vendor-agnostic** — Claude, ChatGPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
+- **Vendor-agnostic** — Claude, GPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
 - **Reasoning models, made visible** — Ontheia speaks both reasoning paths: OpenAI's Responses API, so reasoning and function tools work together where chat completions no longer allows it, and Anthropic's extended thinking. Effort is configurable per model, thinking survives across tool iterations, and a dedicated **Reasoning tab** in the trace panel shows what the model actually thought — not just what it answered.
 - **Safe file handling** — a built-in `files` skill lets agents search, read, write, edit and move files with guarantees that make mistakes impossible, not just discouraged: writes never clobber (recoverable trash), edits need an exact match, and concurrent changes are caught by content hash. No config needed.
 - **Governance & control** — self-hosted and **GDPR-compliant by architecture** — data never leaves your servers. Role-based access enforced with PostgreSQL Row Level Security; you decide *per agent* which model can access which data. In multi-user setups, per-user file access is enforced server-side — one user's agents can't reach another's files.
@@ -123,8 +139,7 @@ bash scripts/install.sh
 ```bash
 git clone https://github.com/Ontheia/ontheia.git
 cd ontheia
-cp .env.example .env
-# Edit .env — set FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, ADMIN_EMAIL
+cp .env.example .env    # Edit .env — set FLYWAY_PASSWORD, ONTHEIA_APP_PASSWORD, ADMIN_EMAIL
 docker compose up -d
 ```
 
@@ -134,12 +149,20 @@ Visit [http://localhost:5173](http://localhost:5173) in your browser.
 
 Full installation guide: [docs.ontheia.ai/en/getting-started/02_installation](https://docs.ontheia.ai/en/getting-started/02_installation)
 
+**Update:**
+
+`scripts/update.sh` pulls the latest version, rebuilds the containers, applies database migrations, and brings the stack back up — in one step. Your data, configuration, and `.env` stay untouched:
+
+```bash
+bash scripts/update.sh
+```
+
 **Uninstall:**
 
 Remove the entire stack — containers, volumes (including the database), images, and the install directory. Your `~/.claude`, `~/.gemini`, and NVM directories are never touched. `--keep-data` stops the stack but keeps volumes and configuration:
 
 ```bash
-bash scripts/uninstall.sh              # interactive, asks for confirmation
+bash scripts/uninstall.sh               # interactive, asks for confirmation
 bash scripts/uninstall.sh --keep-data   # stop everything, keep the data
 ```
 
@@ -171,6 +194,7 @@ Full documentation at **[docs.ontheia.ai](https://docs.ontheia.ai)**
 - **Database:** PostgreSQL with pgvector extension
 - **Containerization:** Docker, Docker Compose (rootless)
 - **AI Protocols:** Anthropic Messages API, OpenAI-compatible API, MCP (Model Context Protocol)
+- **REST API:** the entire feature set — chats, runs, agents, skills, memory, chains, automation, artifacts, admin — is exposed as a documented REST API with Bearer-token auth, so scripts and custom clients get everything the WebUI gets
 
 ---
 

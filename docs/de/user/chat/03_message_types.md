@@ -23,7 +23,7 @@ Unterstützt werden alle Mermaid-Diagrammtypen (Flowchart, Sequenz, Klassen, ER,
 Bilder können direkt im Composer an eine Nachricht angehängt werden. Unterstützte Formate: **JPEG, PNG, GIF, WebP**.
 
 - Das Bild wird zusammen mit dem Nachrichtentext an das KI-Modell übertragen (Vision-Input).
-- Unterstützt von multimodalen Providern (z. B. Claude, ChatGPT).
+- Unterstützt von multimodalen Modellen (z. B. Claude, GPT).
 - Anwendungsfälle: Screenshots, Diagramme, Dokumente, Fotos — der Agent kann sie beschreiben, analysieren oder Daten daraus extrahieren.
 
 > **Hinweis:** Bildunterstützung erfordert einen Provider mit Vision-Fähigkeit. Unterstützt das gewählte Modell keine Bilder, wird der Anhang ignoriert.

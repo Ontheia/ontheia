@@ -29,7 +29,7 @@ Klassische Chat-Lösungen wie ChatGPT sind leistungsstark — aber isoliert.
 | Prinzip | Bedeutung |
 |---|---|
 | **Datensouveränität** | Ihre Daten verlassen Ihre Server nicht. Alle Modelle, Agenten und Speicher laufen On-Premise oder in Ihrer Private Cloud. |
-| **Herstellerunabhängigkeit** | Claude, ChatGPT, Gemini, Ollama, Mistral — Ontheia unterstützt beliebige LLM-Provider über eine einheitliche Schnittstelle. |
+| **Herstellerunabhängigkeit** | Claude, GPT, Gemini, Ollama, Mistral — Ontheia unterstützt beliebige LLM-Provider über eine einheitliche Schnittstelle. |
 | **Offene Standards** | Vollständige Integration des **Model Context Protocol (MCP)**. Externe Tools und Systeme werden über isolierte MCP-Server angebunden. |
 | **Open Source** | Lizenziert unter AGPL-3.0, transparent und erweiterbar. |
 
