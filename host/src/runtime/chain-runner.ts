@@ -731,7 +731,7 @@ export class ChainRunner {
           return `- **${s.name}**: ${s.description}${when}`;
         });
         subAgentSkillCatalogText =
-          `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${entries.join('\n')}\n\nRules:\n- If the user asks what skills are available, call list_skills.\n- Do not answer from memory alone when a skill is relevant — activate it first.`;
+          `SKILLS AVAILABLE — You MUST call activate_skill(name) BEFORE answering when the user's request matches a skill's description. Skills contain authoritative, up-to-date instructions that take precedence over memory.\n\n${entries.join('\n')}\n\nRules:\n- If the user asks what skills are available, answer from the list above.\n- Do not answer from memory alone when a skill is relevant — activate it first.`;
         this.debug(`Skill catalog built for agent ${profile.id}: ${catalogRows.map((s: any) => s.name).join(', ')}`);
       }
 

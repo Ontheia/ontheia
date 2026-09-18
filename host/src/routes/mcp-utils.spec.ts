@@ -31,7 +31,6 @@ function tool(server: string, name: string): RunToolDefinition {
 }
 
 const SKILLS_TOOLS = [
-  tool('skills', 'list_skills'),
   tool('skills', 'activate_skill'),
   tool('skills', 'read_skill_resource'),
   tool('skills', 'write_skill_resource'),
@@ -43,9 +42,8 @@ function names(tools: RunToolDefinition[]): string[] {
 }
 
 test('filterRunTools: skills write tools stay out unless explicitly bound', () => {
-  // A_Ontheia's shape: the three reading tools bound, create_skill NOT granted.
+  // A_Ontheia's shape: the reading tools bound, create_skill NOT granted.
   const selection: TaskToolBinding[] = [
-    { server: 'skills', tool: 'list_skills' },
     { server: 'skills', tool: 'activate_skill' },
     { server: 'skills', tool: 'read_skill_resource' },
   ];
@@ -53,15 +51,13 @@ test('filterRunTools: skills write tools stay out unless explicitly bound', () =
 
   assert.deepEqual(names(filtered), [
     'skills:activate_skill',
-    'skills:list_skills',
     'skills:read_skill_resource',
   ], 'write_skill_resource and create_skill must not reach the run toolset');
 });
 
 test('filterRunTools: skill-creator agents keep all skills tools when bound', () => {
-  // G_Briefe / W_Skill_Creator shape: all five tools explicitly granted.
+  // G_Briefe / W_Skill_Creator shape: all four tools explicitly granted.
   const selection: TaskToolBinding[] = [
-    { server: 'skills', tool: 'list_skills' },
     { server: 'skills', tool: 'activate_skill' },
     { server: 'skills', tool: 'read_skill_resource' },
     { server: 'skills', tool: 'write_skill_resource' },
@@ -69,7 +65,7 @@ test('filterRunTools: skill-creator agents keep all skills tools when bound', ()
   ];
   const filtered = filterRunTools(SKILLS_TOOLS, selection, 0);
 
-  assert.equal(filtered.length, 5, 'no regress for the skill-creator flow');
+  assert.equal(filtered.length, 4, 'no regress for the skill-creator flow');
 });
 
 test('filterRunTools: skills reading tools stay available even without a binding', () => {
@@ -81,7 +77,6 @@ test('filterRunTools: skills reading tools stay available even without a binding
   assert.deepEqual(names(filtered), [
     'memory:memory-search',
     'skills:activate_skill',
-    'skills:list_skills',
     'skills:read_skill_resource',
   ]);
 });
@@ -89,7 +84,7 @@ test('filterRunTools: skills reading tools stay available even without a binding
 test('filterRunTools: empty selection keeps the all-tools semantics', () => {
   const filtered = filterRunTools(SKILLS_TOOLS, [], 0);
 
-  assert.equal(filtered.length, 5, 'agents without a tool selection are unchanged');
+  assert.equal(filtered.length, 4, 'agents without a tool selection are unchanged');
 });
 
 test('filterRunTools: scheduled runs never see create_schedule', () => {

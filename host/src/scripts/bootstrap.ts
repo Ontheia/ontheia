@@ -422,7 +422,6 @@ async function main() {
       // Skills execution tools shared by both agents: reading/activating plus
       // script and artifact access for running finished skills.
       const skillTools = [
-        { server: 'skills', tool: 'list_skills' },
         { server: 'skills', tool: 'activate_skill' },
         { server: 'skills', tool: 'read_skill_resource' },
         { server: 'cli-tools', tool: 'run_skill_script' },

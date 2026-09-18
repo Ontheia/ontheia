@@ -62,11 +62,10 @@ license: Apache-2.0
 
 ## Available Tools
 
-The `skills` internal MCP server provides four tools:
+The `skills` internal MCP server provides three tools:
 
 | Tool | Description |
 | --- | --- |
-| `list_skills` | Returns all skills available to this agent. |
 | `activate_skill(name)` | Loads the full skill body into context. |
 | `read_skill_resource(skill_name, path)` | Reads a file from the skill directory. |
 | `write_skill_resource(skill_name, path, content)` | Writes a file to the skill directory. |

@@ -153,7 +153,6 @@ Reusable capability modules that extend agents with specialized knowledge and wo
 
 | Tool | Description |
 | --- | --- |
-| `list_skills` | Returns all skills assigned to this agent. |
 | `activate_skill(name)` | Loads full skill body from DB into context. Returns body + resource file listing. |
 | `read_skill_resource(skill_name, path)` | Reads a file from the skill directory (path-bounded). |
 | `write_skill_resource(skill_name, path, content)` | Writes a file to the skill directory (scope-permission enforced). |

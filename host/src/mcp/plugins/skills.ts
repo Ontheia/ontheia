@@ -27,12 +27,14 @@ import { safeSkillPath, SkillService, type SkillRecord } from '../../runtime/Ski
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
-// Skills-server tools whose availability is assignment-driven: what they list /
+// Skills-server tools whose availability is assignment-driven: what they
 // activate / read is governed by app.agent_skills (Admin → Skills), so they
 // bypass the per-agent tool selection. The write tools (create_skill,
 // write_skill_resource) are capability tools with no assignment semantics —
 // they must be granted via default_tools like any other tool.
-export const SKILLS_ASSIGNMENT_TOOLS = new Set(['list_skills', 'activate_skill', 'read_skill_resource']);
+// (list_skills used to live here too; it was removed as redundant — the same
+// catalog is injected into the system message at run start.)
+export const SKILLS_ASSIGNMENT_TOOLS = new Set(['activate_skill', 'read_skill_resource']);
 
 export function buildSkillsToolList(skills: SkillRecord[]) {
   const catalogSkills = skills.filter(s => !s.disable_model_invocation);
@@ -40,13 +42,6 @@ export function buildSkillsToolList(skills: SkillRecord[]) {
   if (skillNames.length === 0) return [];
 
   return [
-    {
-      name: 'list_skills',
-      description:
-        'Returns the list of skills available to this agent. ' +
-        'Call this when the user asks what skills are available or what you can do.',
-      inputSchema: { type: 'object', properties: {} },
-    },
     {
       name: 'activate_skill',
       description:
@@ -127,19 +122,6 @@ export async function handleSkillsTool(
   const role: string = context?.role || 'user';
 
   if (!userId) throw new Error('User context required for skill tools.');
-
-  // ── list_skills ───────────────────────────────────────────────────────────
-  if (toolName === 'list_skills') {
-    const catalog = skills
-      .filter(s => !s.disable_model_invocation)
-      .map(s => ({
-        name: s.name,
-        scope: s.scope,
-        description: s.description,
-        when_to_use: s.when_to_use ?? null,
-      }));
-    return { skills: catalog, count: catalog.length };
-  }
 
   // ── activate_skill ────────────────────────────────────────────────────────
   if (toolName === 'activate_skill') {

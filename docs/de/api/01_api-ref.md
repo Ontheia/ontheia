@@ -153,7 +153,6 @@ Wiederverwendbare Fähigkeitsmodule, die Agenten mit spezialisierten Kenntnissen
 
 | Tool | Beschreibung |
 | --- | --- |
-| `list_skills` | Listet alle dem Agenten zugewiesenen Skills. |
 | `activate_skill(name)` | Lädt vollständigen Skill-Body aus DB in den Kontext. Gibt Body + Ressourcen-Listing zurück. |
 | `read_skill_resource(skill_name, path)` | Liest eine Datei aus dem Skill-Verzeichnis (pfadbegrenzt). |
 | `write_skill_resource(skill_name, path, content)` | Schreibt eine Datei in das Skill-Verzeichnis (scope-Berechtigung wird geprüft). |
