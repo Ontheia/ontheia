@@ -80,6 +80,21 @@ export const filterRunTools = (
     : tools
   ).filter(t => !(scheduleDepth > 0 && t.server === 'scheduler' && t.name === 'create_schedule'));
 
+/**
+ * Assigned MCP servers whose tools the model never sees: once any tool is bound
+ * (non-empty `default_tools`), only bound tools reach the model, so a server
+ * without a single binding is connected but invisible. An empty list means
+ * "all tools", and `skills` is exempt (its read tools follow the skill
+ * assignment, see SKILLS_ASSIGNMENT_TOOLS).
+ */
+export const findServersWithoutTools = (
+  servers: readonly string[],
+  tools: readonly TaskToolBinding[]
+): string[] =>
+  tools.length === 0
+    ? []
+    : servers.filter((server) => server !== 'skills' && !tools.some((binding) => binding.server === server));
+
 export const loadServerTools = async (
   orchestrator: OrchestratorService,
   serverNames: string[],

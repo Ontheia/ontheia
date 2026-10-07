@@ -44,6 +44,7 @@ import {
 } from './policy-utils.js';
 import { loadGlobalPromptOptimizer, loadGlobalBuilder } from './settings-utils.js';
 import type { ToolApprovalMode } from '../runtime/types.js';
+import { findServersWithoutTools } from './mcp-utils.js';
 
 // Map of tool key to a standing approval. The runtime lookup builds keys as
 // `${server}::${tool}` (provider-run/anthropic-runner), so any other format
@@ -758,12 +759,23 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
         const agent = mapAgentRow(refreshed.rows[0]);
         const relations = await loadAgentRelations(db, [agent.id], expand, client);
         const perms = relations.permissions[agent.id] ?? [];
+        // Assigning a server does not bind its tools; with a non-empty tool list the
+        // model would silently never see it. Only checked when this request touched
+        // either list, so unrelated PATCHes stay free of the field.
+        const touchedToolConfig = Boolean(body && ('default_mcp_servers' in body || 'default_tools' in body));
+        const warnings = touchedToolConfig
+          ? findServersWithoutTools(agent.default_mcp_servers, agent.default_tools).map((server) => ({
+              code: 'mcp_server_without_tools',
+              server
+            }))
+          : [];
         return {
           ...agent,
           allowed_user_ids: perms.filter((p) => p.principal_type === 'user').map((p) => (p as any).principal_email ?? p.principal_id),
           ...(expand.has('tasks') ? { tasks: relations.tasks[agent.id] ?? [] } : {}),
           ...(expand.has('chains') ? { chains: relations.chains[agent.id] ?? [] } : {}),
-          ...(expand.has('permissions') ? { permissions: perms } : {})
+          ...(expand.has('permissions') ? { permissions: perms } : {}),
+          ...(warnings.length > 0 ? { warnings } : {})
         };
       });
       return agent;

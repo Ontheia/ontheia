@@ -36,7 +36,7 @@ Agents are configurations for LLMs; tasks are specific task profiles within an a
 | `GET` | `/agents` | Lists all available agents. |
 | `POST` | `/agents` | Creates a new agent. |
 | `GET` | `/agents/:id` | Returns details for a specific agent. |
-| `PATCH` | `/agents/:id` | Updates an agent. |
+| `PATCH` | `/agents/:id` | Updates an agent. If a changed `default_mcp_servers` or `default_tools` leaves an assigned MCP server without any bound tool (while other tools are bound), the response carries `warnings: [{ "code": "mcp_server_without_tools", "server": "<name>" }]` — the agent cannot see that server's tools. |
 | `DELETE` | `/agents/:id` | Deletes an agent. |
 | `POST` | `/tasks` | Creates a new task. |
 | `PATCH` | `/tasks/:id` | Updates a task. |

@@ -24,7 +24,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RunToolDefinition } from '../runtime/types.js';
 import type { TaskToolBinding } from './types.js';
-import { filterRunTools } from './mcp-utils.js';
+import { filterRunTools, findServersWithoutTools } from './mcp-utils.js';
 
 function tool(server: string, name: string): RunToolDefinition {
   return { name, server, description: name, parameters: {} };
@@ -100,4 +100,17 @@ test('filterRunTools: scheduled runs never see create_schedule', () => {
   assert.deepEqual(names(filterRunTools(tools, selection, 1)), [
     'scheduler:cancel_schedule',
   ], 'the recursion guard still holds');
+});
+test('findServersWithoutTools: an empty tool list means "all tools" — nothing to warn about', () => {
+  assert.deepEqual(findServersWithoutTools(['websps', 'memory'], []), []);
+});
+
+test('findServersWithoutTools: flags assigned servers that have no bound tool', () => {
+  const bound: TaskToolBinding[] = [{ server: 'memory', tool: 'memory-search' }];
+  assert.deepEqual(findServersWithoutTools(['memory', 'websps'], bound), ['websps']);
+});
+
+test('findServersWithoutTools: one bound tool is enough, and skills is exempt', () => {
+  const bound: TaskToolBinding[] = [{ server: 'websps', tool: 'devices_list' }];
+  assert.deepEqual(findServersWithoutTools(['websps', 'skills'], bound), []);
 });
