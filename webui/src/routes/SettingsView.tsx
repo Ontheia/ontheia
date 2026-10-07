@@ -5585,6 +5585,20 @@ function AgentsSection({
                             <span>{t('agents.tools')}</span>
                             {(() => {
                               const toolOptions = getToolOptions(agent.mcpServers ?? []);
+                              // Once any tool is bound, only bound tools reach the model (an empty
+                              // list means "all tools"). A server without a single bound tool is
+                              // therefore connected but invisible to the agent. `skills` is exempt:
+                              // its read tools follow the skill assignment, not this list.
+                              const boundTools = agent.tools ?? [];
+                              const serversWithoutTools =
+                                boundTools.length > 0
+                                  ? (agent.mcpServers ?? []).filter(
+                                      (server) =>
+                                        server !== 'skills' &&
+                                        (toolCatalog[server]?.tools?.length ?? 0) > 0 &&
+                                        !boundTools.some((binding) => binding.server === server)
+                                    )
+                                  : [];
                               return (
                               <>
                                 <AppMultiSelect
@@ -5623,6 +5637,11 @@ function AgentsSection({
                                       {t('agents.clearSelection')}
                                     </button>
                                   </div>
+                                  {serversWithoutTools.length > 0 && (
+                                    <div role="alert" style={{ color: '#d97706' }}>
+                                      {t('agents.serversWithoutTools', { servers: serversWithoutTools.join(', ') })}
+                                    </div>
+                                  )}
                                   {(agent.mcpServers ?? []).length > 0 && (
                                     <div className="agent-tool-bulk-actions">
                                       {(agent.mcpServers ?? []).map((server) => {
@@ -5640,7 +5659,12 @@ function AgentsSection({
                                         
                                         return (
                                           <div key={server} className="agent-tool-server-row">
-                                            <span className="server-label">{server} ({count}): </span>
+                                            <span className="server-label">
+                                              {serversWithoutTools.includes(server) && (
+                                                <span style={{ color: '#d97706' }} aria-hidden="true">⚠ </span>
+                                              )}
+                                              {server} ({count}):{' '}
+                                            </span>
                                             <button
                                               type="button"
                                               className="link-button tiny"

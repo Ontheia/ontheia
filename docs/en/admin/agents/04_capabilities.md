@@ -4,11 +4,17 @@ Agents are functionally expanded through the assignment of MCP Servers, specific
 
 ## 1. MCP Server Assignment
 An Agent can be assigned multiple running MCP Servers.
-- **Effect:** The Agent "sees" all tools offered by the server in its system context.
+- **Effect:** The server is connected for the Agent. Which of its tools the model actually sees is decided by the **Tools** field (see section 2).
 - **Update:** New functions of a running server can be immediately incorporated into the configuration via the "Update Tool List" link.
 
-## 2. Selective Tools
-Instead of enabling an entire server, you can specifically select individual functions in the "Tools" field. This increases security and reduces token load (shorter system prompt).
+## 2. Tool Selection
+The "Tools" field works as a whitelist:
+- **Nothing selected:** The Agent sees all tools of all assigned servers.
+- **At least one tool selected:** The Agent sees **only** the selected tools. A server without a single selected tool is connected but invisible to the Agent — it simply does not use that server's functions, and no error message appears.
+
+> **Typical pitfall:** Agents created by the installer already have tools selected. Assigning a further MCP server does **not** add its tools. After assigning a server, select its tools in the "Tools" field — "All" next to the server selects all of them. The Admin Console marks affected servers with ⚠. The same applies when a server later offers new tools (for example after an update or a profile change): refresh the tool list and select the new tools.
+
+Instead of enabling an entire server, you can specifically select individual functions. This increases security and reduces token load (shorter system prompt).
 
 ## 3. Tool Approval (Default)
 This mode determines how the system reacts when the AI wants to execute an action:
