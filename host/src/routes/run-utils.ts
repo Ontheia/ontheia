@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import type { ChatMessage, RunMemoryOptions, RunRequest } from '../runtime/types.js';
+import type { ChatMessage, RunMemoryOptions, RunRequest, ToolApprovalMode } from '../runtime/types.js';
 import { extractTextFromContent, isPlainObject } from './utils.js';
 
 export function parseMessages(rawMessages: unknown): ChatMessage[] | null {
@@ -102,6 +102,26 @@ export function parseMemoryOptionsPayload(raw: unknown): RunMemoryOptions | unde
   return { enabled, top_k: topK, namespaces, allow_write: allowWrite };
 }
 
+const TOOL_APPROVAL_MODES: readonly string[] = ['prompt', 'granted', 'denied'];
+
+/** Accepts only the three known modes; anything else is ignored rather than passed on. */
+const parseToolApprovalMode = (value: unknown): ToolApprovalMode | undefined =>
+  typeof value === 'string' && TOOL_APPROVAL_MODES.includes(value) ? (value as ToolApprovalMode) : undefined;
+
+/**
+ * Standing per-run approvals keyed `${server}::${tool}` (the key the runners build);
+ * values other than 'once' | 'always' and keys without the separator are dropped.
+ */
+const parseToolPermissions = (value: unknown): Record<string, 'once' | 'always'> | undefined => {
+  if (!isPlainObject(value)) return undefined;
+  const out: Record<string, 'once' | 'always'> = {};
+  for (const [key, mode] of Object.entries(value)) {
+    const trimmed = key.trim();
+    if (trimmed.includes('::') && (mode === 'once' || mode === 'always')) out[trimmed] = mode;
+  }
+  return out;
+};
+
 export function parseRunRequest(body: unknown): RunRequest | null {
   if (!isPlainObject(body)) return null;
   const b = body as any;
@@ -120,6 +140,10 @@ export function parseRunRequest(body: unknown): RunRequest | null {
 
   if (!chainId && (!providerId || !modelId)) return null;
 
+  // Top-level fields win; `options.metadata` stays supported (the WebUI sends it there).
+  const toolApproval = parseToolApprovalMode(b.tool_approval) ?? parseToolApprovalMode(metadata?.tool_approval);
+  const toolPermissions = parseToolPermissions(b.tool_permissions) ?? parseToolPermissions(metadata?.tool_permissions);
+
   return {
     provider_id: providerId,
     model_id: modelId,
@@ -129,7 +153,9 @@ export function parseRunRequest(body: unknown): RunRequest | null {
     chain_id: chainId,
     chain_version_id: chainVersionId,
     options,
-    memory: parseMemoryOptionsPayload(b.memory)
+    memory: parseMemoryOptionsPayload(b.memory),
+    ...(toolApproval !== undefined && { tool_approval: toolApproval }),
+    ...(toolPermissions !== undefined && { tool_permissions: toolPermissions })
   };
 }
 
