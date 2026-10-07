@@ -211,3 +211,32 @@ test('allows wildcard URL allowlist', () => {
 
   assert.equal(result.valid, true);
 });
+
+test('finds the image behind option values such as --cap-drop ALL', () => {
+  const result = validateMcpServersConfig(
+    {
+      mcpServers: {
+        hardened: {
+          command: 'docker',
+          args: [
+            'run', '-i', '--rm', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+            '--pids-limit', '64', '--memory', '256m', '-e', 'TOKEN', 'alpine:3'
+          ]
+        }
+      }
+    },
+    deps
+  );
+
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+});
+
+test('still reports an unlisted image that follows --cap-drop ALL', () => {
+  const result = validateMcpServersConfig(
+    { mcpServers: { hardened: { command: 'docker', args: ['run', '-i', '--cap-drop', 'ALL', 'unauthorized/image'] } } },
+    deps
+  );
+
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((err) => err.message.includes('Image unauthorized/image is not in the allowlist')));
+});

@@ -281,12 +281,23 @@ function validatePackageSpec(
   }
 }
 
+// `docker run` options that take a value as the next token (`--opt value`). Without a complete
+// list the value is mistaken for the image (e.g. `--cap-drop ALL` -> image "ALL"). The
+// `--opt=value` form needs no entry: it is a single token starting with `-`.
+const DOCKER_RUN_FLAGS_WITH_VALUES = new Set([
+  '-v', '--volume', '-e', '--env', '--env-file', '--name', '--cpus', '-m', '--memory',
+  '--memory-swap', '--memory-reservation', '--pids-limit', '--security-opt', '--tmpfs',
+  '-l', '--label', '--label-file', '--network', '--net', '--network-alias', '--pull',
+  '-h', '--hostname', '-u', '--user', '-w', '--workdir', '--cap-add', '--cap-drop',
+  '--entrypoint', '--mount', '--platform', '--restart', '--shm-size', '--ulimit',
+  '--log-driver', '--log-opt', '--add-host', '--dns', '--group-add', '--cpu-shares',
+  '--cpuset-cpus', '--stop-signal', '--stop-timeout', '--sysctl', '--runtime',
+  '--userns', '--pid', '--ipc', '--uts', '--cgroupns', '--device', '-p', '--publish',
+  '--expose', '--gpus', '--ip', '--ip6', '--mac-address', '--link', '--volumes-from'
+]);
+
 function findDockerImage(args: string[]): string | null {
-  const flagsWithValues = new Set([
-    '-v', '--volume', '-e', '--env', '--name', '--cpus', '--memory', '--pids-limit',
-    '--security-opt', '--tmpfs', '--label', '--network', '--pull', '--hostname',
-    '--user', '--workdir'
-  ]);
+  const flagsWithValues = DOCKER_RUN_FLAGS_WITH_VALUES;
 
   for (let i = 0; i < args.length; i += 1) {
     const token = args[i];
