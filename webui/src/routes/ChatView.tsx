@@ -341,9 +341,8 @@ export function ChatView({
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
-  // Set when the app was suspended in the background and the run's stream may
-  // have died silently — iOS freezes the webview without firing the reader's
-  // error path, so nothing else would tell the user their first tap is lost.
+  // Set when a send or stream failed without any HTTP response (network down,
+  // host restarting): the run's stream is gone, so offer a reload.
   const [connectionLost, setConnectionLost] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [messageSearch, setMessageSearch] = useState('');
@@ -443,31 +442,6 @@ export function ChatView({
     setMessageSearch('');
     setConnectionLost(false);
   }, [activeChatId]);
-
-  // Mirror loading/isProcessing into refs so the visibilitychange listener —
-  // registered once — always reads the current run state, not a stale closure.
-  const loadingRef = useRef(false);
-  const processingRef = useRef(false);
-  useEffect(() => {
-    loadingRef.current = loading;
-    processingRef.current = isProcessing;
-  }, [loading, isProcessing]);
-
-  // On returning to a suspended app (iOS background), a run that still looks
-  // active in the UI is very likely orphaned: the webview was frozen mid-stream
-  // and the reader often never reports the disconnect. Show the banner then; as
-  // soon as events flow again the banner clears itself, so a live stream
-  // produces at most a short false alarm.
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (loadingRef.current || processingRef.current || serverRunIdRef.current || activeRunIdRef.current) {
-        setConnectionLost(true);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
