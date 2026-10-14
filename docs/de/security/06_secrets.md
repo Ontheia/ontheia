@@ -27,6 +27,6 @@
 - UI sollte Warnung aus `warnings[]` anzeigen und Startstatus prüfen.
 - REST-Antwort auf `/servers/start` liefert HTTP 400 mit `error="secrets_missing"`, `missingServers`, maskiertem Preview und Warnungen, damit Nutzer Secrets nachtragen kann.
 - Allgemeine Validierungsfehler (`/servers/validate`, `/servers/start`) liefern `error="invalid_argument"` mit Detail-Objekt; `/servers/stop/:name` gibt bei unbekanntem Server `error="not_found"` zurück.
-- Docker-Härtung: Volumes müssen read-only sein (`:ro`/`ro`), verbotene Flags wie `--privileged`, `--cap-add`, `--device` werden blockiert, und `--network` muss dem konfigurierten Hardening-Namen entsprechen.
+- Docker-Härtung: Volumes müssen read-only sein (`:ro`/`ro`), verbotene Flags wie `--privileged`, `--cap-add`, `--device` werden blockiert, Host-Namensräume (`--network host`, `--pid host`, `--ipc host`, `--uts host`, `--userns host`) werden in beiden Schreibweisen abgelehnt (`--flag=host` und `--flag host`), und `--network` muss dem konfigurierten Hardening-Namen entsprechen.
 - Dry-Run (`POST /servers/start`, `dryRun: true`) führt sämtliche Checks aus, startet aber keine Prozesse (Status `dry_run`).
 - Rootless-Prüfung: `ROOTLESS_DOCKER_HOST` muss auf einen Rootless-Socket (`/run/user/<uid>/docker.sock`) zeigen, sonst bricht `start` mit Warnung/Fehler ab. `scripts/rootless-preflight.sh` legt das Netzwerk (`MCP_DOCKER_NETWORK`) automatisch an.

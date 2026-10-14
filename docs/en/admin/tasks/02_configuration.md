@@ -43,7 +43,7 @@ Changes to a Task take effect immediately for all new Runs. Since Tasks are stor
 
 ## 4. Task Context History
 
-Every save stores the **superseded** version of the task context in `app.task_versions`. Below the context field, the collapsible **History** section lists the earlier versions, newest first, each with its number, timestamp, author and character count — the difference to the current length is shown alongside, so a version accidentally cut in half stands out at once.
+Every save stores the **superseded** version of the task context in `app.task_versions`. Below the context field, the collapsible **History** section lists the earlier versions, newest first, each with its number, timestamp (in the system time zone), author and character count — the difference to the current length is shown alongside, so a version accidentally cut in half stands out at once.
 
 Three actions per version:
 

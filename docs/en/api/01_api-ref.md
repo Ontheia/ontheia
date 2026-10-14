@@ -468,6 +468,8 @@ Used in the `POST /runs` endpoint.
       "tool_call_id": "string (optional)"
     }
   ],
+  "tool_approval": "prompt | granted | denied (optional, default: prompt)",
+  "tool_permissions": { "<server>::<tool>": "once | always" },
   "options": {
     "temperature": "number (0-2)",
     "max_tokens": "integer (1-32768)",
@@ -475,6 +477,8 @@ Used in the `POST /runs` endpoint.
   }
 }
 ```
+
+`tool_approval` decides how tool calls are handled: with `prompt` (default) the run waits for approval through `POST /runs/:id/tool-approval`, with `granted` it executes them without asking, with `denied` it refuses them. `tool_permissions` pre-approves individual tools (key `server::tool`). Both fields can also be passed in `options.metadata` (the WebUI does); a top-level field takes precedence. Other values are ignored.
 
 ### ToolApprovalPayload
 Used in the `POST /runs/:id/tool-approval` endpoint.

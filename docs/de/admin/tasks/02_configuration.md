@@ -43,7 +43,7 @@ Im Task-Kontext können Variablen in der Form `${variable}` oder `{{variable}}` 
 
 ## 4. Verlauf des Task-Kontexts
 
-Jedes Speichern legt die **abgelöste** Fassung des Task-Kontexts in `app.task_versions` ab. Unter dem Kontext-Feld führt der aufklappbare Abschnitt **Verlauf** die früheren Fassungen auf, neueste zuerst, jeweils mit Nummer, Zeitpunkt, Urheber und Zeichenzahl — die Differenz zur aktuellen Länge steht daneben, damit eine versehentlich halbierte Fassung sofort auffällt.
+Jedes Speichern legt die **abgelöste** Fassung des Task-Kontexts in `app.task_versions` ab. Unter dem Kontext-Feld führt der aufklappbare Abschnitt **Verlauf** die früheren Fassungen auf, neueste zuerst, jeweils mit Nummer, Zeitpunkt (in der Systemzeitzone), Urheber und Zeichenzahl — die Differenz zur aktuellen Länge steht daneben, damit eine versehentlich halbierte Fassung sofort auffällt.
 
 Drei Aktionen je Fassung:
 
