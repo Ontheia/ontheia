@@ -240,3 +240,56 @@ test('still reports an unlisted image that follows --cap-drop ALL', () => {
   assert.equal(result.valid, false);
   assert.ok(result.errors.some((err) => err.message.includes('Image unauthorized/image is not in the allowlist')));
 });
+
+const noRequiredNetwork: ValidationDeps = {
+  ...deps,
+  hardening: { defaults: { securityOptions: ['no-new-privileges'] } }
+};
+
+for (const flags of [
+  ['--network=host'],
+  ['--network', 'host'],
+  ['--net', 'host'],
+  ['--net=host']
+]) {
+  test(`rejects host networking written as "${flags.join(' ')}"`, () => {
+    const result = validateMcpServersConfig(
+      { mcpServers: { s: { command: 'docker', args: ['run', '-i', ...flags, 'alpine:3'] } } },
+      noRequiredNetwork
+    );
+
+    assert.equal(result.valid, false, 'must be rejected even when no network is required');
+    assert.ok(result.errors.some((err) => err.code === 'docker_forbidden_flags'));
+  });
+}
+
+for (const flags of [
+  ['--pid=host'],
+  ['--pid', 'host'],
+  ['--ipc', 'host'],
+  ['--uts', 'host'],
+  ['--userns', 'host']
+]) {
+  test(`rejects host namespace written as "${flags.join(' ')}"`, () => {
+    const result = validateMcpServersConfig(
+      { mcpServers: { s: { command: 'docker', args: ['run', '-i', ...flags, 'alpine:3'] } } },
+      noRequiredNetwork
+    );
+
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((err) => err.code === 'docker_forbidden_option'));
+  });
+}
+
+test('still accepts a named network and --pid with another value', () => {
+  const result = validateMcpServersConfig(
+    {
+      mcpServers: {
+        s: { command: 'docker', args: ['run', '-i', '--network', 'my-net', '--pid', 'container:other', 'alpine:3'] }
+      }
+    },
+    noRequiredNetwork
+  );
+
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+});

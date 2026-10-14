@@ -165,17 +165,23 @@ function validateDockerSpec(
     }
   }
 
-  if (args.some((arg) => arg === '--privileged' || arg.startsWith('--network=host'))) {
+  if (args.includes('--privileged') || hasHostOption(args, ['--network', '--net'])) {
     errors.push({
       message: `Server ${name}: forbidden docker flags (--privileged/--network=host).`,
       code: 'docker_forbidden_flags'
     });
   }
 
-  const forbiddenFlags = ['--device', '--init', '--pid=host', '--uts=host', '--ipc=host'];
+  const forbiddenFlags = ['--device', '--init'];
   for (const flag of forbiddenFlags) {
     if (args.some((arg) => arg === flag || arg.startsWith(`${flag}=`))) {
       errors.push({ message: `Server ${name}: forbidden docker option (${flag}).`, code: 'docker_forbidden_option' });
+    }
+  }
+  // Sharing a host namespace is forbidden in both spellings (`--pid=host` and `--pid host`).
+  for (const flag of ['--pid', '--uts', '--ipc', '--userns']) {
+    if (hasHostOption(args, [flag])) {
+      errors.push({ message: `Server ${name}: forbidden docker option (${flag}=host).`, code: 'docker_forbidden_option' });
     }
   }
 
@@ -295,6 +301,13 @@ const DOCKER_RUN_FLAGS_WITH_VALUES = new Set([
   '--userns', '--pid', '--ipc', '--uts', '--cgroupns', '--device', '-p', '--publish',
   '--expose', '--gpus', '--ip', '--ip6', '--mac-address', '--link', '--volumes-from'
 ]);
+
+// True if one of `flags` is given the value `host`, as `--flag=host` or as `--flag host`.
+function hasHostOption(args: string[], flags: string[]): boolean {
+  return args.some(
+    (arg, i) => flags.some((flag) => arg === `${flag}=host` || (arg === flag && args[i + 1] === 'host'))
+  );
+}
 
 function findDockerImage(args: string[]): string | null {
   const flagsWithValues = DOCKER_RUN_FLAGS_WITH_VALUES;
