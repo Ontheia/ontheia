@@ -4894,7 +4894,8 @@ function AgentsSection({
   onHasChanges,
   onRemoveTask,
   onRefreshAgents,
-  onReplaceSteps
+  onReplaceSteps,
+  timezone
 }: {
   agents: AgentDefinition[];
   providers: ProviderEntry[];
@@ -4909,6 +4910,8 @@ function AgentsSection({
   /** Reloads agents after a change made outside onUpdateTask, e.g. a version restore. */
   onRefreshAgents: () => Promise<void> | void;
   onReplaceSteps: (steps: ChainStep[]) => void;
+  /** System time zone setting; times are shown in it, not in the browser's. */
+  timezone?: string;
 }) {
   const { t } = useTranslation(['admin', 'common', 'chat', 'errors']);
   const [agentLabel, setAgentLabel] = useState('');
@@ -5850,6 +5853,7 @@ function AgentsSection({
         jumpTo={taskJump}
         onJumpHandled={clearTaskJump}
         onOpenAgent={jumpToAgent}
+        timezone={timezone}
       />}
 
       {agentsTab === 'chains' && <ChainsSection
@@ -5871,7 +5875,8 @@ function TaskEditForm({
   onUpdate,
   onRemove,
   onRestored,
-  onOpenAgent
+  onOpenAgent,
+  timezone
 }: {
   agentId: string;
   agentLabel: string;
@@ -5886,8 +5891,10 @@ function TaskEditForm({
   onRestored?: () => Promise<void> | void;
   /** Counterpart to the task links in the Agents tab: back to the owning agent. */
   onOpenAgent?: (agentId: string) => void;
+  /** System time zone setting; version times are shown in it, like everywhere else in the console. */
+  timezone?: string;
 }) {
-  const { t } = useTranslation(['admin', 'common', 'errors']);
+  const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const [draft, setDraft] = useState({
     label: task.label,
     contextPrompt: task.contextPrompt ?? '',
@@ -5979,7 +5986,8 @@ function TaskEditForm({
           await onRestored?.();
           setIsDirty(false);
         }}
-        formatDate={(iso) => new Date(iso).toLocaleString(undefined, {
+        formatDate={(iso) => new Date(iso).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+          timeZone: timezone || 'Europe/Berlin',
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         })}
       />
@@ -6052,7 +6060,8 @@ function TasksSection({
   onRefreshAgents,
   jumpTo,
   onJumpHandled,
-  onOpenAgent
+  onOpenAgent,
+  timezone
 }: {
   agents: AgentDefinition[];
   onAddTask: (agentId: string, task: AgentTaskDefinition) => Promise<void> | void;
@@ -6068,6 +6077,8 @@ function TasksSection({
   onJumpHandled?: () => void;
   /** Switches to the Agents tab and unfolds the given agent. */
   onOpenAgent?: (agentId: string) => void;
+  /** System time zone setting, passed on for the version history. */
+  timezone?: string;
 }) {
   const { t } = useTranslation(['admin', 'common', 'errors']);
   const [selectedAgent, setSelectedAgent] = useState<string>(() => agents[0]?.id ?? '');
@@ -6275,6 +6286,7 @@ function TasksSection({
                                     onRemove={onRemoveTask}
                                     onRestored={onRefreshAgents}
                                     onOpenAgent={onOpenAgent}
+                                    timezone={timezone}
                                   />
                                 )}
                               </div>
@@ -9129,6 +9141,7 @@ export function SettingsView() {
             onRemoveTask={handleRemoveTask}
             onRefreshAgents={refreshAgents}
             onReplaceSteps={(steps) => setChainSteps(steps)}
+            timezone={runtimeSettings.timezone}
           />
         );
       case 'skills':
