@@ -19,7 +19,7 @@
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/websocket": "^11.2.0",
-    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@modelcontextprotocol/client": "^2.4.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "bcryptjs": "^2.4.3",

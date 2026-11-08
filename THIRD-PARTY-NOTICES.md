@@ -22,6 +22,7 @@ under Apache-2.0 in any commercially licensed build.
 
 | Component | Where | Purpose | Copyright |
 |---|---|---|---|
+| @modelcontextprotocol/client, @modelcontextprotocol/core (MCP TypeScript SDK) | host | MCP client for stdio and Streamable HTTP servers | Anthropic, PBC and contributors (parts remain under MIT during the project's relicensing) |
 | pdfjs-dist (PDF.js) | webui, host | PDF rendering in the artifact panel; PDF → Markdown conversion | Mozilla Foundation and contributors |
 | prom-client | host | Prometheus metrics for `/metrics` | Simon Nord and contributors |
 

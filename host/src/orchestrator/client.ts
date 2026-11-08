@@ -20,10 +20,8 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { Client, StreamableHTTPClientTransport, type Transport } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { logger } from '../logger.js';
 
 export interface SpawnSpec {
@@ -62,6 +60,12 @@ const CONNECT_TIMEOUT_MS = (() => {
 // readable trace even when the process exits before the MCP handshake.
 const STDERR_TAIL_MAX = 4096;
 
+// SDK v2 caps one stdio message at 10 MB and closes the connection beyond it;
+// v1 buffered without a limit. Tool results that carry files (screenshots,
+// PDFs, base64 attachments) can exceed that, so the cap is raised rather than
+// letting such a call kill the server connection.
+const STDIO_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+
 export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient> {
   let transport: Transport;
   let stderrTail = '';
@@ -90,7 +94,8 @@ export async function connectMcpServer(spec: SpawnSpec): Promise<ConnectedClient
         LC_ALL: 'C.UTF-8',
         LC_CTYPE: 'C.UTF-8'
       },
-      stderr: 'pipe'
+      stderr: 'pipe',
+      maxBufferSize: STDIO_MAX_BUFFER_BYTES
     });
     if (stdioTransport.stderr) {
       stdioTransport.stderr.on('data', captureStderr);
