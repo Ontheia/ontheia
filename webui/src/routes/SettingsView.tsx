@@ -46,6 +46,7 @@ import {
 } from '../components/ui/tooltip';
 import { AppSelect, AppMultiSelect, APP_SELECT_EMPTY_VALUE, type MultiSelectOption } from '../components/AppSelect';
 import { NamespaceRulesEditor } from '../components/NamespaceRulesEditor';
+import { ModelReplaceCard } from '../components/ModelReplaceCard';
 import { copyText } from '../lib/clipboard';
 import { localizeError } from '@/lib/error-utils';
 import {
@@ -98,6 +99,8 @@ import {
   saveEmbeddingSettings,
   getSystemStatus,
   type SystemStatus,
+  type ModelRef,
+  type ModelReplaceResult,
   type AdminUserEntry,
   type EmbeddingSettings,
   type EmbeddingMode,
@@ -7559,10 +7562,12 @@ function EmbeddingSection({ providers }: { providers: ProviderEntry[] }) {
 
 function ProvidersSection({
   context,
-  timezone
+  timezone,
+  onModelReplaced
 }: { 
   context: ReturnType<typeof useProviderContext>;
   timezone?: string;
+  onModelReplaced?: (result: ModelReplaceResult, to: ModelRef) => void;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
   const { providers, addProvider, updateProvider, removeProvider, loading, error, offline, refresh } = context;
@@ -8264,6 +8269,8 @@ function ProvidersSection({
           </button>
         </div>      </div>}
 
+      {providerTab === 'model' && <ModelReplaceCard providers={providers} onReplaced={onModelReplaced} />}
+
       {providerTab === 'embedding' && <EmbeddingSection providers={providers} />}
 
       <div className="admin-card">
@@ -8903,6 +8910,21 @@ export function SettingsView() {
     }
   }, [setGlobalAgents]);
 
+  // The server already switched these; mirror it here so the auto-save of the
+  // general settings does not write the old model back on the next edit.
+  const handleModelReplaced = useCallback(
+    (result: ModelReplaceResult, to: ModelRef) => {
+      void refreshAgents();
+      if (result.settings.includes('promptOptimizer')) {
+        setPromptOptimizer({ ...promptOptimizer, providerId: to.provider, modelId: to.model });
+      }
+      if (result.settings.includes('rollingSummary')) {
+        setRollingSummary({ ...rollingSummary, providerId: to.provider, modelId: to.model });
+      }
+    },
+    [refreshAgents, promptOptimizer, setPromptOptimizer, rollingSummary, setRollingSummary]
+  );
+
   const persistSettings = useCallback(async () => {
     setSavingSettings(true);
     try {
@@ -9125,7 +9147,13 @@ export function SettingsView() {
           />
         );
       case 'providers':
-        return <ProvidersSection context={providerContext} timezone={runtimeSettings.timezone} />;
+        return (
+          <ProvidersSection
+            context={providerContext}
+            timezone={runtimeSettings.timezone}
+            onModelReplaced={handleModelReplaced}
+          />
+        );
       case 'agents':
         return (
           <AgentsSection

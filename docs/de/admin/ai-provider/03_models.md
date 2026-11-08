@@ -92,3 +92,21 @@ Diese Felder können auch in den **Provider**-Metadaten gesetzt werden und gelte
 ## 5. Verwaltung
 - Modelle können jederzeit hinzugefügt oder entfernt werden.
 - **Wichtig:** Wenn ein Modell entfernt wird, das noch von einem Agenten verwendet wird, fällt dieser auf den System-Standard oder eine Fehlermeldung zurück. Prüfen Sie vor dem Löschen die Abhängigkeiten.
+- Statt Agenten einzeln umzustellen, ersetzt **Modell ersetzen** ein Modell überall auf einmal (siehe unten).
+
+## 6. Modell ersetzen
+
+Agenten speichern ihr Modell als Provider- und Modell-ID. Kommt ein Nachfolger heraus (z. B. `claude-opus-5` → `claude-opus-5-5`), legen Sie ihn zunächst als neues Modell an und stellen dann alle Verwendungen in einem Schritt um: Admin-Konsole › AI-Provider › Tab **Modell** › Karte **Modell ersetzen**.
+
+1. **Ersetzen:** Zur Auswahl stehen nur Modelle, die tatsächlich verwendet werden, jeweils mit der Anzahl der Agenten, Chains und Einstellungen. Ein Modell, das nicht (mehr) als Chat-Modell angelegt ist, ist mit ⚠ markiert.
+2. **Durch:** jedes aktive Chat-Modell eines beliebigen Providers. Ein Wechsel des Providers ist erlaubt; die Oberfläche weist darauf hin, Preise, Kontextgröße und Reasoning-Einstellungen des neuen Modells zu prüfen.
+3. **Auswahl:** Alle Fundstellen sind vorausgewählt und lassen sich einzeln abwählen:
+   - **Agenten** – alle Agenten des Systems, auch private.
+   - **Aktive Chains** – die Chain erhält eine neue aktive Version mit dem neuen Modell (Chain-Standard und Modelle einzelner Schritte). Die bisherige Version bleibt erhalten und kann im Chain-Editor wieder aktiviert werden.
+   - **Systemeinstellungen** – Prompt-Optimierung und Rolling Summary.
+4. Nach der Bestätigung werden alle gewählten Stellen in einer Transaktion umgestellt.
+
+Das alte Modell bleibt in der Modellverwaltung unverändert. Rückgängig machen Sie die Änderung mit derselben Funktion in Gegenrichtung (bei Chains alternativ durch Aktivieren der vorherigen Version).
+
+**Nicht enthalten:** Embedding-Modelle (ein anderes Embedding-Modell erfordert eine Neuberechnung aller Vektoren, siehe [Embedding](/de/admin/ai-provider/06_embedding/)) sowie der Agent-Builder (seine Chain und seine Modell-Einstellung).
+

@@ -55,6 +55,16 @@ Button: **[Modell speichern]**
 
 > **Chat API / Reasoning Effort:** Diese Dropdowns sind eine geführte Oberfläche für die gleichnamigen Metadaten-Schlüssel (siehe [Modelle verwalten](/de/admin/ai-provider/03_models/)) — sie schreiben in dasselbe Feld wie eine manuelle JSON-Eingabe, nur strukturiert. **Chat API** erscheint nur bei OpenAI-kompatiblen Providern (automatisch erkannt über bekannte Provider-ID, passenden Hostname, expliziten Metadaten-Hinweis oder lokalen/privaten Host). **Reasoning Effort** erscheint zusätzlich bei Anthropic-Providern und steuert dort die adaptive Denktiefe (Extended Thinking) — inklusive Tool-Nutzung.
 
+**Karte: Modell ersetzen** — stellt Agenten, aktive Chains sowie Prompt-Optimierung und Rolling Summary in einem Schritt von einem Modell auf ein anderes um.
+
+| Feld | Typ | Beschreibung |
+|:---|:---|:---|
+| Ersetzen | Dropdown | Verwendete Modelle mit Anzahl der Agenten, Chains und Einstellungen; ⚠ = nicht als Chat-Modell angelegt. |
+| Durch | Dropdown | Aktive Chat-Modelle aller Provider. |
+| Agenten / Aktive Chains / Systemeinstellungen | Checkboxen | Fundstellen, alle vorausgewählt. |
+
+Button: **[An N Stellen ersetzen]** mit Bestätigungsdialog. Details: [Modelle verwalten › Modell ersetzen](/de/admin/ai-provider/03_models/).
+
 ---
 
 ## Tab: Embedding

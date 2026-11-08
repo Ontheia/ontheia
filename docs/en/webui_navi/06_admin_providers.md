@@ -55,6 +55,16 @@ Button: **[Save Model]**
 
 > **Chat API / Reasoning Effort:** These dropdowns are a guided interface for the metadata keys of the same name (see [Manage Models](/en/admin/ai-provider/03_models/)) — they write to the same field as a manual JSON entry, just structured. **Chat API** is only shown for OpenAI-compatible providers (detected automatically via known provider ID, matching hostname, explicit metadata hint, or a local/private host). **Reasoning Effort** is additionally shown for Anthropic providers, where it drives the adaptive thinking depth (Extended Thinking) — tool use included.
 
+**Card: Replace model** — moves agents, active chains, prompt optimization and rolling summary from one model to another in one step.
+
+| Field | Type | Description |
+|:---|:---|:---|
+| Replace | Dropdown | Models in use with the number of agents, chains and settings; ⚠ = not registered as a chat model. |
+| With | Dropdown | Active chat models of all providers. |
+| Agents / Active chains / System settings | Checkboxes | Places found, all preselected. |
+
+Button: **[Replace in N places]** with a confirmation dialog. Details: [Manage Models › Replace Model](/en/admin/ai-provider/03_models/).
+
 ---
 
 ## Tab: Embedding

@@ -29,6 +29,7 @@ import { registerAgentRoutes } from './routes/agents.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerProjectRoutes } from './routes/projects.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerModelReplaceRoutes } from './routes/model-replace.js';
 import { registerRunRoutes } from './routes/runs.js';
 import { registerCronRoutes } from './routes/cron.js';
 import { registerPromptRoutes } from './routes/prompts.js';
@@ -73,6 +74,7 @@ export async function registerRoutes(
   registerMemoryRoutes(server, context);
   registerProjectRoutes(server, context);
   registerAdminRoutes(server, { ...context, cronService });
+  registerModelReplaceRoutes(server, context);
   registerRunRoutes(server, context);
   registerCronRoutes(server, { ...context, cronService });
   registerPromptRoutes(server, context);

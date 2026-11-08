@@ -1687,6 +1687,46 @@ export function updateSystemSettingsAdmin(payload: Record<string, any>) {
   }) as Promise<{ status: string }>;
 }
 
+// ── Model replacement ─────────────────────────────────────────────────────────
+
+export interface ModelRef {
+  provider: string;
+  model: string;
+}
+
+export type ReplaceableModelSetting = 'promptOptimizer' | 'rollingSummary';
+
+export interface ModelUsageEntry extends ModelRef {
+  known: boolean;
+  agents: Array<{ id: string; label: string }>;
+  chains: Array<{ id: string; name: string; version: number }>;
+  settings: ReplaceableModelSetting[];
+}
+
+export interface ModelReplaceResult {
+  status: string;
+  agents: Array<{ id: string; label: string }>;
+  chains: Array<{ id: string; name: string; version: number }>;
+  settings: ReplaceableModelSetting[];
+}
+
+export function getModelUsage() {
+  return request('/admin/model-usage', { method: 'GET' }) as Promise<{ usage: ModelUsageEntry[] }>;
+}
+
+export function replaceModel(payload: {
+  from: ModelRef;
+  to: ModelRef;
+  agent_ids: string[];
+  chain_ids: string[];
+  settings: ReplaceableModelSetting[];
+}) {
+  return request('/admin/model-replace', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }) as Promise<ModelReplaceResult>;
+}
+
 // ── Embedding config ──────────────────────────────────────────────────────────
 
 export type EmbeddingMode = 'cloud' | 'local' | 'hybrid';

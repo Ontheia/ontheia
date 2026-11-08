@@ -287,6 +287,8 @@ Globale Konfiguration des Ontheia-Hosts.
 | :--- | :--- | :--- |
 | `GET` | `/admin/settings` | Ruft alle globalen Systemeinstellungen ab. |
 | `PATCH` | `/admin/settings` | Aktualisiert spezifische Systemeinstellungen (z.B. `allow_self_signup`). |
+| `GET` | `/admin/model-usage` | Listet alle verwendeten Provider/Modell-Paare mit den Agenten, aktiven Chains und Systemeinstellungen (`promptOptimizer`, `rollingSummary`), die sie nutzen; `known` zeigt, ob das Paar als Chat-Modell angelegt ist. Agent-Builder ausgenommen. |
+| `POST` | `/admin/model-replace` | Ersetzt ein Modell an den gewählten Stellen. Body: `{ from: { provider, model }, to: { provider, model }, agent_ids, chain_ids, settings }`. `to` muss ein aktives Chat-Modell sein. Chains erhalten eine neue aktive Version. Gibt die geänderten `agents`, `chains` und `settings` zurück. |
 | `GET` | `/admin/system/status` | Gibt Systemstatus zurück: Memory-Modus (`disabled`/`cloud`/`local`) und installierte Version. Nützlich für Monitoring und Skripte. |
 
 ### Vektor-Datenbank & Namespaces

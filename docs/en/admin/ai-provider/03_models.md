@@ -92,3 +92,21 @@ These fields can also be set in the **provider** metadata to apply to all of its
 ## 5. Management
 - Models can be added or removed at any time.
 - **Important:** If a model that is still being used by an agent is removed, the agent falls back to the system default or an error message. Check the dependencies before deleting.
+- Instead of switching agents one by one, **Replace model** replaces a model everywhere at once (see below).
+
+## 6. Replace Model
+
+Agents store their model as a provider and model ID. When a successor comes out (e.g. `claude-opus-5` → `claude-opus-5-5`), first add it as a new model, then move every use over in one step: Admin console › AI Provider › **Model** tab › **Replace model** card.
+
+1. **Replace:** only models that are actually in use are offered, each with the number of agents, chains and settings. A model that is no longer registered as a chat model is marked with ⚠.
+2. **With:** any active chat model of any provider. Changing the provider is allowed; the interface reminds you to check prices, context size and reasoning settings of the new model.
+3. **Selection:** every place is preselected and can be deselected individually:
+   - **Agents** – all agents in the system, private ones included.
+   - **Active chains** – the chain gets a new active version with the new model (chain default and the models of individual steps). The previous version is kept and can be reactivated in the chain editor.
+   - **System settings** – prompt optimization and rolling summary.
+4. After confirmation all selected places are switched in one transaction.
+
+The old model stays in the model registry unchanged. To undo, run the same function in the opposite direction (for chains, alternatively reactivate the previous version).
+
+**Not included:** embedding models (a different embedding model requires re-computing all vectors, see [Embedding](/en/admin/ai-provider/06_embedding/)) and the Agent-Builder (its chain and its model setting).
+
