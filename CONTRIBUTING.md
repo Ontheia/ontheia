@@ -34,7 +34,7 @@ Please **open an issue first** before starting work on large features or archite
 ### Prerequisites
 
 - Docker 24+ and Docker Compose v2
-- Node.js 20+ and npm
+- Node.js 26+ and npm
 - PostgreSQL client tools (optional, for direct DB access)
 - pre-commit (`pip install pre-commit`)
 

@@ -2,7 +2,7 @@
 ARG VITE_HOST_API_URL=http://localhost:8080
 ARG VITE_PROMPT_OPTIMIZER_CHAIN_ID
 ARG VITE_BUILDER_CHAIN_ID
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -19,7 +19,7 @@ ENV GIT_HASH=$GIT_HASH
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 RUN npm install -g serve
