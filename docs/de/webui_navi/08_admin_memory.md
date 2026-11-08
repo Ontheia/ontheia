@@ -56,11 +56,13 @@ Kombiniertes Suchformular und Schreibformular für Memory-Einträge.
 | Inhalt | Textarea | Text des neuen Memory-Eintrags (Pflichtfeld beim Schreiben). |
 | Gelöschte und abgelöste einbeziehen | Checkbox | Zeigt zusätzlich Einträge, die gelöscht, abgelaufen oder von einem neueren abgelöst wurden. Für einen Agenten sind diese unsichtbar; hier ist es der einzige Weg, eine falsche Ablösung zurückzunehmen. |
 | Mindest-Relevanz | Zahl (0–1) | Standard `0.3` — niedriger als die `0.4` eines Agenten, weil hier gesucht wird, was **existiert**, nicht der beste Kontext. `0` liefert immer so viele Treffer wie das Limit erlaubt, auch schwache. Geprüft wird die Relevanz nach Bonus und Rezenz, nicht die rohe Ähnlichkeit. |
-| Limit | Dropdown | Anzahl der Suchergebnisse: 5, 10, 20, 50. |
+| Limit | Dropdown | Treffer pro Seite: 5, 10, 20, 50, 100. |
 
 > **Ohne Namespace-Filter** wird über alles gesucht, was die Sitzung lesen darf: die eigenen `vector.agent.*`- und `vector.user.*`-Namespaces sowie `vector.global.*`. Bei null Treffern zeigt die Ansicht, worin gesucht wurde — „nicht vorhanden" und „am falschen Ort gesucht" sind sonst nicht zu unterscheiden.
 >
 > Der **relative Cutoff** ist hier abgeschaltet. Er misst den Abstand zum besten Treffer und würde bei einem Volltreffer dessen Nachbarn ausblenden — in einer Verwaltungsansicht genau verkehrt.
+>
+> **Blättern:** Gibt es mehr Treffer als das Limit, erscheinen unter der Liste „Treffer 51–100 von N" sowie **[‹ Zurück]** und **[Weiter ›]**. Ohne Query (oder mit `*`) wird nach Aktualität geblättert, N ist die Zahl aller passenden Einträge. Bei einer Textsuche werden die besten 1.000 Kandidaten einmal gewichtet und seitenweise gezeigt, damit sich zwischen den Seiten nichts verschiebt; ist dieser Vorrat ausgeschöpft, steht „1000+". Weiter als bis Treffer 1.000 lässt sich nicht blättern — dann die Suche eingrenzen. Gleichlautende Einträge werden je Seite zusammengefasst.
 
 Buttons: **[Suchen]** · **[Speichern]** (oder **[Aktualisieren]** beim Bearbeiten) · **[Abbrechen]** (beim Bearbeiten) · **[Alle auswählen]** · **[Ausgewählte löschen]** · **[Namespace leeren]** (mit Bestätigung).
 

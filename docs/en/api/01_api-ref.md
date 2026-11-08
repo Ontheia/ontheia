@@ -181,7 +181,7 @@ Interaction with long-term memory (pgvector).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/memory/search` | Semantic search. Query parameters: `namespace` (repeatable), `query`, `top_k`, `min_score` (default `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Responds with `{ namespaces, hits }` — `namespaces` names where it actually looked. Every hit carries `similarity` (raw cosine, `0…1`) **and** `relevance` (after namespace bonus and recency, **can exceed 1**); `min_score` checks the `relevance`. |
+| `GET` | `/memory/search` | Semantic search. Query parameters: `namespace` (repeatable), `query`, `top_k` (page size, max. 200), `offset`, `min_score` (default `0.3`), `include_hidden`, `project_id`, `lang`, `tags`, `metadata`. Responds with `{ namespaces, hits, offset, total, total_capped, has_more }` — `namespaces` names where it actually looked. `offset + top_k` is capped at 1,000; for a text search `total` counts the hits among the best 1,000 candidates (`total_capped: true` when that pool was full), without a query every matching entry. Every hit carries `similarity` (raw cosine, `0…1`) **and** `relevance` (after namespace bonus and recency, **can exceed 1**); `min_score` checks the `relevance`. |
 | `GET` | `/memory/namespaces` | Lists all namespaces accessible to the user. |
 | `GET` | `/memory/health` | Status check of the memory system (pgvector connection). |
 | `POST` | `/memory/documents` | Creates entries (array or single object). Fields: `namespace`, `content`, `metadata`, `ttl_seconds`, `class`, `observed_at`. |

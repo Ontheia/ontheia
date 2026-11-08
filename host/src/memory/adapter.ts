@@ -74,6 +74,23 @@ type NamespaceRule = {
 // Override per agent via the memory policy (min_score) when a corpus needs it.
 const DEFAULT_MIN_SCORE = 0.4;
 
+/**
+ * Paging window of the admin search. Semantic paging ranks one fixed candidate
+ * pool for every page — a pool that grew with the offset would let the
+ * re-ranking move entries across page borders, so one page could repeat or
+ * skip what the previous one showed.
+ */
+export const SEARCH_PAGE_WINDOW = 1000;
+export const SEARCH_PAGE_MAX_LIMIT = 200;
+
+export interface MemorySearchPage {
+  hits: MemoryHit[];
+  /** Hits in the window (semantic) or matching rows (browse). */
+  total: number;
+  /** The semantic pool was full: there may be more than `total`. */
+  totalCapped: boolean;
+}
+
 // Second stage after DEFAULT_MIN_SCORE, answering a different question: not
 // "is this hit related to anything?" but "is it still competitive within THIS
 // result list?". Measured over 3786 hits from 906 runs, 0.7 trims 3.6% of them
@@ -384,13 +401,40 @@ export class MemoryAdapter {
   }
 
   async search(namespaces: string[], options?: SearchOptions, client?: PoolClient): Promise<MemoryHit[]> {
-    if (this.disabled) return [];
+    return (await this.runSearch(namespaces, options, client)).hits;
+  }
+
+  /**
+   * One page of a search, for the admin console. Browsing (no query or "*")
+   * pages in SQL by recency and counts every matching row; a semantic search
+   * ranks a fixed pool of SEARCH_PAGE_WINDOW candidates and cuts the page out
+   * of it. `offset + topK` is capped at the window.
+   */
+  async searchPage(
+    namespaces: string[],
+    options: SearchOptions & { offset: number },
+    client?: PoolClient
+  ): Promise<MemorySearchPage> {
+    return this.runSearch(namespaces, options, client, { offset: options.offset });
+  }
+
+  private async runSearch(
+    namespaces: string[],
+    options: SearchOptions | undefined,
+    client: PoolClient | undefined,
+    page?: { offset: number }
+  ): Promise<MemorySearchPage> {
+    const empty: MemorySearchPage = { hits: [], total: 0, totalCapped: false };
+    if (this.disabled) return empty;
     if (!Array.isArray(namespaces) || namespaces.length === 0) {
-      return [];
+      return empty;
     }
     const db = client || this.db;
-    const requestedLimit = clamp(Math.floor(options?.topK ?? 5), 1, 50);
-    const fetchLimit = requestedLimit * 4;
+    const requestedLimit = clamp(Math.floor(options?.topK ?? 5), 1, page ? SEARCH_PAGE_MAX_LIMIT : 50);
+    const offset = page
+      ? clamp(Math.floor(Number(page.offset) || 0), 0, SEARCH_PAGE_WINDOW - requestedLimit)
+      : 0;
+    const fetchLimit = page ? SEARCH_PAGE_WINDOW : requestedLimit * 4;
     const dimension = options?.dimension ?? this.defaultDimension;
     const minScore = clamp(
       typeof options?.minScore === 'number' ? options.minScore : DEFAULT_MIN_SCORE,
@@ -446,8 +490,11 @@ export class MemoryAdapter {
     };
 
     let hits: MemoryHit[] = [];
+    const browsing = !embedding || isWildcardQuery;
+    let browseTotal = 0;
 
-    if (!embedding || isWildcardQuery) {
+    // `!embedding` is implied by `browsing`; spelled out so the else branch keeps its narrowing.
+    if (browsing || !embedding) {
       const params: any[] = [];
       const { sql: nsCond, nextIdx } = buildNamespaceCondition(params, 1);
       let idx = nextIdx;
@@ -458,15 +505,29 @@ export class MemoryAdapter {
         }
         params.push(...filterParams);
       }
-      params.push(fetchLimit);
-      const limitParam = `$${idx}`;
+      if (page) {
+        const count = await db.query(
+          `SELECT count(*)::int AS total FROM ${table.name} WHERE ${whereParts.join(' AND ')}`,
+          params
+        );
+        browseTotal = Number(count.rows[0]?.total ?? 0);
+      }
+      // Paging browses in SQL: the order is recency and nothing re-ranks it,
+      // so LIMIT/OFFSET give stable pages.
+      params.push(page ? requestedLimit : fetchLimit);
+      const limitParam = `$${idx++}`;
+      let offsetSql = '';
+      if (page) {
+        params.push(offset);
+        offsetSql = ` OFFSET $${idx}`;
+      }
       const fallback = await db.query(
         `SELECT id, namespace, content, metadata, created_at,
                 updated_at, observed_at, status, status_changed_at, class, deleted_at, superseded_by
            FROM ${table.name}
           WHERE ${whereParts.join(' AND ')}
           ORDER BY updated_at DESC
-          LIMIT ${limitParam}`,
+          LIMIT ${limitParam}${offsetSql}`,
         params
       );
       hits = fallback.rows.map((row) => mapRowToHit(row, 1.0));
@@ -528,8 +589,10 @@ export class MemoryAdapter {
       }, client);
     }
 
-    // Phase 3: Re-Ranking
-    if (this.rankingConfig || this.namespaceRules.size > 0) {
+    const poolFull = !browsing && hits.length >= fetchLimit;
+
+    // Phase 3: Re-Ranking — not for a browsed page, whose order is recency.
+    if ((this.rankingConfig || this.namespaceRules.size > 0) && !(page && browsing)) {
       hits.forEach((hit) => {
         hit.relevance = this.calculateRelevance(hit);
       });
@@ -543,7 +606,18 @@ export class MemoryAdapter {
     const scored = hits.filter((hit) => hit.relevance >= minScore);
 
     const deduped = this.deduplicateHits(scored);
-    return applyRelativeCutoff(deduped, relativeCutoff).slice(0, requestedLimit);
+    const ranked = applyRelativeCutoff(deduped, relativeCutoff);
+    if (!page) {
+      return { hits: ranked.slice(0, requestedLimit), total: ranked.length, totalCapped: false };
+    }
+    if (browsing) {
+      return { hits: ranked, total: browseTotal, totalCapped: false };
+    }
+    return {
+      hits: ranked.slice(offset, offset + requestedLimit),
+      total: ranked.length,
+      totalCapped: poolFull
+    };
   }
 
   /**

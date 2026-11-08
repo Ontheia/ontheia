@@ -56,11 +56,13 @@ Combined search form and write form for memory entries.
 | Content | Textarea | Text of the new memory entry (required when writing). |
 | Include deleted and superseded | Checkbox | Additionally shows entries that are deleted, expired or replaced by a newer one. An agent never sees these; here it is the only way to undo a wrong supersession. |
 | Min. relevance | Number (0–1) | Default `0.3` — below an agent's `0.4`, because this view looks for what **exists** rather than for the best context. `0` always returns as many hits as the limit allows, weak ones included. What is checked is the relevance after bonus and recency, not the raw similarity. |
-| Limit | Dropdown | Number of search results: 5, 10, 20, 50. |
+| Limit | Dropdown | Hits per page: 5, 10, 20, 50, 100. |
 
 > **Without a namespace filter** the search covers everything the session may read: its own `vector.agent.*` and `vector.user.*` namespaces plus `vector.global.*`. On an empty result the view lists where it looked — "not there" and "looked in the wrong place" are otherwise indistinguishable.
 >
 > The **relative cutoff** is switched off here. It measures distance to the best hit and would hide that hit's neighbours whenever one stands out — the opposite of what a management view needs.
+>
+> **Paging:** when there are more hits than the limit, the list shows "Hits 51–100 of N" with **[‹ Previous]** and **[Next ›]** below it. Without a query (or with `*`) it pages by recency, and N counts every matching entry. A text search ranks the best 1,000 candidates once and shows them page by page, so nothing shifts between pages; when that pool is exhausted it reads "1000+". Paging stops at hit 1,000 — narrow the search instead. Identical entries are folded per page.
 
 Buttons: **[Search]** · **[Save]** (or **[Update]** when editing) · **[Cancel]** (when editing) · **[Select All]** · **[Delete Selected]** · **[Clear Namespace]** (with confirmation).
 

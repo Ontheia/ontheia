@@ -33,6 +33,7 @@ import {
   RouteContext, 
   LoadedSession 
 } from './types.js';
+import { SEARCH_PAGE_MAX_LIMIT, SEARCH_PAGE_WINDOW } from '../memory/adapter.js';
 import { buildReadableNamespaces, slugifySegment, isGlobalNamespace } from '../memory/namespaces.js';
 import type { MemoryClass, MemoryHit, MemoryWriteInput } from '../memory/types.js';
 import { stripReservedMetadata } from '../memory/metadata.js';
@@ -278,7 +279,8 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
     ];
     const namespacesToUse = requestedNamespaces.length > 0 ? requestedNamespaces : fallbackNamespaces;
 
-    const topK = query?.top_k ? Math.min(Math.max(parseInt(query.top_k, 10), 1), 200) : 5;
+    const topK = query?.top_k ? Math.min(Math.max(parseInt(query.top_k, 10), 1), SEARCH_PAGE_MAX_LIMIT) : 5;
+    const offset = Math.max(parseInt(query?.offset, 10) || 0, 0);
     const searchQuery = query?.query || query?.q;
     // Deleted, expired and superseded entries are invisible to an agent by
     // design. An admin needs to reach them — a wrong supersession is otherwise
@@ -308,21 +310,23 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       }
     }
 
-    const { hits, allowedNamespaces } = await withRls(db, session.userId, session.role, async (client) => {
+    const { page, allowedNamespaces } = await withRls(db, session.userId, session.role, async (client) => {
       const { namespaces: allowed, allowedUserIds: uids } = await filterNamespacesForSession(db, namespacesToUse, session, client);
-      if (allowed.length === 0) return { hits: [], allowedNamespaces: [], allowedUserIds: uids };
+      if (allowed.length === 0) {
+        return { page: { hits: [], total: 0, totalCapped: false }, allowedNamespaces: [], allowedUserIds: uids };
+      }
       // A management view must find, not rank. The relevance floors exist to
       // keep weak hits out of an agent's context; here they would hide an
       // entry the admin knows is there, and nothing would say it was filtered.
-      const results = await memoryAdapter.search(
+      const results = await memoryAdapter.searchPage(
         allowed,
         // relativeCutoff stays off: it measures distance to the best hit, so a
         // single strong match would hide everything else — the opposite of what
         // a management view needs.
-        { topK, query: searchQuery, filters, minScore, relativeCutoff: 0, includeHidden },
+        { topK, offset, query: searchQuery, filters, minScore, relativeCutoff: 0, includeHidden },
         client
       );
-      return { hits: results, allowedNamespaces: allowed, allowedUserIds: uids };
+      return { page: results, allowedNamespaces: allowed, allowedUserIds: uids };
     });
 
     if (allowedNamespaces.length === 0) {
@@ -352,7 +356,18 @@ export function registerMemoryRoutes(server: FastifyInstance, context: RouteCont
       }
     });
 
-    return { namespaces: allowedNamespaces, hits: hits.map((hit) => mapHitToEvent(hit)) };
+    // The adapter clamps the offset to the paging window; report the one used.
+    const usedOffset = Math.min(offset, Math.max(SEARCH_PAGE_WINDOW - topK, 0));
+    return {
+      namespaces: allowedNamespaces,
+      hits: page.hits.map((hit) => mapHitToEvent(hit)),
+      offset: usedOffset,
+      total: page.total,
+      total_capped: page.totalCapped,
+      // topK, not the hit count: a browsed page folds duplicates and can come
+      // back shorter than the rows it covers.
+      has_more: page.totalCapped || usedOffset + topK < page.total
+    };
   });
 
   server.post('/memory/documents', async (request, reply) => {

@@ -1369,6 +1369,8 @@ function MemorySection({
   const [memoryTab, setMemoryTab] = useState<MemoryTabId>('dashboard');
 
   const [searchResults, setSearchResults] = useState<MemorySearchHit[]>([]);
+  // Position of the shown page; null until a search ran.
+  const [searchPage, setSearchPage] = useState<{ offset: number; total: number; totalCapped: boolean; hasMore: boolean } | null>(null);
   const [selectedHits, setSelectedHits] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -2014,13 +2016,14 @@ function MemorySection({
     setMetaTtlSeconds('');
     // Results of the previous filter, which would read as this one's answer
     setSearchResults([]);
+    setSearchPage(null);
     setSearchedNamespaces([]);
     setSelectedHits(new Set());
     setErrorMessage(null);
     setMemoryTab('search');
   }, []);
 
-  const handleMemorySearch = useCallback(async () => {
+  const handleMemorySearch = useCallback(async (offset = 0) => {
     setSearchLoading(true);
     setErrorMessage(null);
     try {
@@ -2030,6 +2033,7 @@ function MemorySection({
       const q = searchQuery.trim();
       if (q) params.append('query', q);
       params.append('top_k', String(searchLimit));
+      if (offset > 0) params.append('offset', String(offset));
       if (includeHidden) params.append('include_hidden', 'true');
       if (searchMinScore.trim()) params.append('min_score', searchMinScore.trim());
       if (metaProjectId.trim()) params.append('project_id', metaProjectId.trim());
@@ -2054,12 +2058,19 @@ function MemorySection({
       }
       const hits: MemorySearchHit[] = Array.isArray(data?.hits) ? data.hits : [];
       setSearchResults(hits);
+      setSearchPage({
+        offset: typeof data?.offset === 'number' ? data.offset : offset,
+        total: typeof data?.total === 'number' ? data.total : hits.length,
+        totalCapped: data?.total_capped === true,
+        hasMore: data?.has_more === true
+      });
       setSearchedNamespaces(Array.isArray(data?.namespaces) ? data.namespaces : []);
       setSelectedHits(new Set());
       setEditingId(null);
     } catch (error: any) {
       setErrorMessage(localizeError(error, t, 'memory.searchFailed'));
       setSearchResults([]);
+      setSearchPage(null);
       setSearchedNamespaces([]);
     } finally {
       setSearchLoading(false);
@@ -2642,7 +2653,7 @@ function MemorySection({
               className="w-20"
               value={String(searchLimit)}
               onValueChange={(next) => setSearchLimit(Number(next))}
-              options={[5, 10, 20, 50].map((n) => ({ value: String(n), label: String(n) }))}
+              options={[5, 10, 20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
             />
           </div>
           <button
@@ -2879,6 +2890,33 @@ function MemorySection({
             </table>
           </div>
         )}
+      {searchResults.length > 0 && searchPage && (searchPage.offset > 0 || searchPage.hasMore) && (
+        <div className="flex items-center justify-end gap-3 text-xs text-slate-400">
+          <span>
+            {t('memory.pageRange', {
+              from: searchPage.offset + 1,
+              to: searchPage.offset + searchResults.length,
+              total: searchPage.totalCapped ? `${searchPage.total}+` : searchPage.total
+            })}
+          </span>
+          <button
+            type="button"
+            className="btn-default"
+            onClick={() => void handleMemorySearch(Math.max(searchPage.offset - searchLimit, 0))}
+            disabled={searchLoading || searchPage.offset === 0}
+          >
+            {t('memory.pagePrev')}
+          </button>
+          <button
+            type="button"
+            className="btn-default"
+            onClick={() => void handleMemorySearch(searchPage.offset + searchLimit)}
+            disabled={searchLoading || !searchPage.hasMore}
+          >
+            {t('memory.pageNext')}
+          </button>
+        </div>
+      )}
       </>}
 
       {memoryTab === 'agentPolicy' && <>
