@@ -3,9 +3,11 @@
 Ontheia bundles third-party open-source components. This file lists the direct
 dependencies whose licenses carry attribution requirements that apply to every
 distributed build — including builds shipped under the commercial license
-(see LICENSE-COMMERCIAL.md). All of them are permissive: they may be used in
-proprietary and commercial products, provided their copyright and license
-notices are retained and reproduced with the distribution.
+(see LICENSE-COMMERCIAL.md). All of them except elkjs are permissive: they may
+be used in proprietary and commercial products, provided their copyright and
+license notices are retained and reproduced with the distribution. elkjs is
+dual-licensed under a weak-copyleft and a copyleft license; see its section
+below.
 
 The overwhelming majority of dependencies are MIT-licensed. The components
 below are listed individually because their terms differ from MIT.
@@ -40,6 +42,26 @@ permitted provided the copyright notice and permission notice are retained.
 | lucide-react | webui | Icon set |
 | jsonrepair | host | Repairing malformed JSON from model output |
 | node-cron | host | Schedule execution |
+
+## Eclipse Public License 2.0 or GPL-3.0-or-later (elkjs)
+
+elkjs is offered under either license, at the recipient's choice. Ontheia's
+AGPL-licensed distribution uses the GPL-3.0-or-later option, which is
+compatible with the AGPLv3. EPL-2.0 is a weak-copyleft license: elkjs may ship
+unmodified as a separate module inside a larger work under other terms, but its
+source must remain available and changes to elkjs itself stay under EPL-2.0.
+**Builds shipped under the commercial license: review this component before
+distribution** — either rely on the EPL-2.0 option with its source-availability
+obligation, or build the web interface without ELK and set Mermaid's layout to
+dagre.
+
+| Component | Where | Purpose | Copyright |
+|---|---|---|---|
+| elkjs (Eclipse Layout Kernel) | webui, via Mermaid | Layout engine for Mermaid diagrams (default layout) | Kiel University and the ELK contributors |
+
+The full license text ships with the package (`node_modules/elkjs/LICENSE.md`);
+EPL-2.0: https://www.eclipse.org/legal/epl-2.0/ ·
+GPL-3.0: https://www.gnu.org/licenses/gpl-3.0.html
 
 ## MIT License
 

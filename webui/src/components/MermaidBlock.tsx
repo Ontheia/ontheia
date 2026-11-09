@@ -40,10 +40,15 @@ function loadMermaid() {
       // this value as a CSS keyword but emits it quoted into the SVG stylesheet,
       // so 'inherit' would measure with the app font and render with a fallback
       // font — clipping labels at the node border.
+      // ELK lays out dense diagrams with far fewer crossings than dagre; a
+      // diagram can still ask for dagre (or the classic look) in its
+      // frontmatter.
       mod.default.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
         theme: 'dark',
+        layout: 'elk',
+        look: 'neo',
         fontFamily: "'Inter', system-ui, sans-serif"
       });
       return mod.default;
