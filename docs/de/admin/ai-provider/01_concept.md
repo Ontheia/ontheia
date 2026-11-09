@@ -12,5 +12,5 @@ Ontheia nutzt eine interne Abstraktionsschicht, die es ermöglicht:
 ## Hierarchie
 
 1. **Provider:** Die technische Basis (z. B. "OpenAI Produktion").
-2. **Modell:** Die verfügbaren Einheiten dieses Providers (z. B. `gpt-5.6-terra`, `gpt-5.6-luna`).
+2. **Modell:** Die verfügbaren Einheiten dieses Providers (z. B. `gpt-6.1-terra`, `gpt-6-luna`).
 3. **Zuweisung:** Agenten werden nicht direkt an eine URL, sondern an eine Kombination aus Provider und Modell gebunden.

@@ -184,7 +184,7 @@ async function main() {
 
     const providers = [
       { slug: 'openai',    label: 'OpenAI',         url: 'https://api.openai.com/v1',                                    auth: 'bearer', key: 'OPENAI_API_KEY',    header: null,        active: process.env.HAS_OPENAI_KEY    === 'true', testModel: null,                testMethod: 'GET',  testPath: null         },
-      { slug: 'anthropic', label: 'Anthropic',      url: 'https://api.anthropic.com/v1',                                 auth: 'header', key: 'ANTHROPIC_API_KEY', header: 'x-api-key', active: process.env.HAS_ANTHROPIC_KEY === 'true', testModel: 'claude-sonnet-5', testMethod: 'POST', testPath: '/v1/messages' },
+      { slug: 'anthropic', label: 'Anthropic',      url: 'https://api.anthropic.com/v1',                                 auth: 'header', key: 'ANTHROPIC_API_KEY', header: 'x-api-key', active: process.env.HAS_ANTHROPIC_KEY === 'true', testModel: 'claude-haiku-5-5', testMethod: 'POST', testPath: '/v1/messages' },
       { slug: 'xai',       label: 'xAI (Grok)',     url: 'https://api.x.ai/v1',                                         auth: 'bearer', key: 'XAI_API_KEY',       header: null,        active: process.env.HAS_XAI_KEY       === 'true', testModel: null,                testMethod: 'GET',  testPath: null         },
       // Google is the only base URL here that ends in a slash, and that decides
       // how the default test path resolves against it. `/v1/chat/completions`
@@ -249,18 +249,18 @@ async function main() {
 
     const models: Array<{ pid: string; key: string; label: string; capability?: string; meta?: Record<string, unknown> }> = [];
     if (openaiPid) {
-      models.push({ pid: openaiPid, key: 'gpt-5.6-luna',                 label: 'GPT-5.6 Luna',  meta: REASONING_RESPONSES });
-      models.push({ pid: openaiPid, key: 'gpt-5.6-terra',                label: 'GPT-5.6 Terra', meta: REASONING_RESPONSES });
-      models.push({ pid: openaiPid, key: 'gpt-5.6-sol',                  label: 'GPT-5.6 Sol',   meta: REASONING_RESPONSES });
+      models.push({ pid: openaiPid, key: 'gpt-6-luna',                   label: 'GPT-6 Luna',    meta: REASONING_RESPONSES });
+      models.push({ pid: openaiPid, key: 'gpt-6.1-terra',                label: 'GPT-6.1 Terra', meta: REASONING_RESPONSES });
+      models.push({ pid: openaiPid, key: 'gpt-6.1-sol',                  label: 'GPT-6.1 Sol',   meta: REASONING_RESPONSES });
       models.push({ pid: openaiPid, key: 'text-embedding-3-small',       label: 'text-embedding-3-small', capability: 'embedding', meta: { dimension: 1536, metric: 'cosine', normalize: true } });
     }
     if (anthropicPid) {
-      models.push({ pid: anthropicPid, key: 'claude-haiku-4-5',          label: 'Claude Haiku 4.5',  meta: REASONING_ONLY });
-      models.push({ pid: anthropicPid, key: 'claude-sonnet-5',           label: 'Claude Sonnet 5',   meta: REASONING_ONLY });
-      models.push({ pid: anthropicPid, key: 'claude-opus-4-8',           label: 'Claude Opus 4.8',   meta: REASONING_ONLY });
+      models.push({ pid: anthropicPid, key: 'claude-haiku-5-5',          label: 'Claude Haiku 5.5',  meta: REASONING_ONLY });
+      models.push({ pid: anthropicPid, key: 'claude-sonnet-5-5',         label: 'Claude Sonnet 5.5', meta: REASONING_ONLY });
+      models.push({ pid: anthropicPid, key: 'claude-opus-5-5',           label: 'Claude Opus 5.5',   meta: REASONING_ONLY });
     }
     if (xaiPid) {
-      models.push({ pid: xaiPid, key: 'grok-4.5',                        label: 'Grok 4.5',       meta: REASONING_RESPONSES });
+      models.push({ pid: xaiPid, key: 'grok-4.7',                        label: 'Grok 4.7',       meta: REASONING_RESPONSES });
       models.push({ pid: xaiPid, key: 'grok-build-0.1',                  label: 'Grok Build 0.1', meta: REASONING_RESPONSES });
     }
     if (googlePid) {
@@ -337,9 +337,9 @@ async function main() {
     const firstActiveSlug = providers.find(p => p.active)?.slug ?? (ollamaPid ? 'ollama' : null);
     if (firstActiveSlug) {
       const builderModel =
-        firstActiveSlug === 'openai'    ? 'gpt-5.6-terra' :
-        firstActiveSlug === 'anthropic' ? 'claude-sonnet-5' :
-        firstActiveSlug === 'xai'       ? 'grok-4.5' :
+        firstActiveSlug === 'openai'    ? 'gpt-6.1-terra' :
+        firstActiveSlug === 'anthropic' ? 'claude-sonnet-5-5' :
+        firstActiveSlug === 'xai'       ? 'grok-4.7' :
         firstActiveSlug === 'google'    ? 'gemini-3.1-flash-lite' :
         (ollamaChatModel || null);  // null if no chat model selected for Ollama
       if (builderModel) {
