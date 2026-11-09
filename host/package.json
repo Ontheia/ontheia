@@ -7,7 +7,7 @@
     "start": "node dist/index.js",
     "build": "rm -rf dist && tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "test": "npm run build && node --test \"dist/**/*.spec.js\"",
     "memory:reembed": "node dist/scripts/reembed_worker.js",
     "memory:verify": "node dist/scripts/memory_verify.js",
@@ -33,16 +33,17 @@
     "prom-client": "^15.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.6.6",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.15.6",
-    "@typescript-eslint/eslint-plugin": "^8.5.0",
-    "@typescript-eslint/parser": "^8.5.0",
-    "eslint": "^8.57.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "pino-pretty": "^13.1.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.72.1"
   },
   "license": "AGPL-3.0-or-later",
   "author": "Wolfgang Brangl <https://ontheia.ai>"

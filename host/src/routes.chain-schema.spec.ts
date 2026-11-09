@@ -29,7 +29,6 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 // Ajv draft 2020 instance (typed as any to avoid ESM/TS friction)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const AjvModule: any = require('ajv/dist/2020');
 const AjvClass: any = AjvModule.default ?? AjvModule;
 

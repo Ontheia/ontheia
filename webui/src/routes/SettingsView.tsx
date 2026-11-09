@@ -6470,7 +6470,7 @@ function ChainsSection({
           const agentIdRaw = typeof raw.agent_id === 'string' && raw.agent_id.trim().length > 0 ? raw.agent_id.trim() : '';
           const taskIdRaw = typeof raw.task_id === 'string' && raw.task_id.trim().length > 0 ? raw.task_id.trim() : '';
           const nameRaw = typeof raw.name === 'string' && raw.name.trim().length > 0 ? raw.name.trim() : stepId;
-          let config = '';
+          let config: string;
           try {
             config = JSON.stringify(inner, null, 2);
           } catch {
@@ -6658,7 +6658,7 @@ function ChainsSection({
       const agentIdRaw = typeof raw.agent_id === 'string' && raw.agent_id.trim().length > 0 ? raw.agent_id.trim() : '';
       const taskIdRaw = typeof raw.task_id === 'string' && raw.task_id.trim().length > 0 ? raw.task_id.trim() : '';
       const nameRaw = typeof raw.name === 'string' && raw.name.trim().length > 0 ? raw.name.trim() : stepId;
-      let config = '';
+      let config: string;
       try {
         config = JSON.stringify(inner, null, 2);
       } catch {
@@ -6871,7 +6871,7 @@ function ChainsSection({
               config = parsed;
             }
           } catch (error) {
-            throw new Error(`Step ${stepId}: ${(error as Error)?.message ?? t('chains.invalidJson')}`);
+            throw new Error(`Step ${stepId}: ${(error as Error)?.message ?? t('chains.invalidJson')}`, { cause: error });
           }
         }
         validateStepConfig(stepId, stepType, config);

@@ -1090,7 +1090,7 @@ const handleSaveSettings = useCallback(async () => {
       } catch (error: any) {
         const message = localizeError(error, t, 'common:error');
         setProfileError(message);
-        throw new Error(message);
+        throw new Error(message, { cause: error });
       }
     }
 
@@ -1126,7 +1126,7 @@ const handleSaveSettings = useCallback(async () => {
       } catch (error: any) {
         const message = localizeError(error, t, 'common:error');
         setPasswordError(message);
-        throw new Error(message);
+        throw new Error(message, { cause: error });
       }
     }
 

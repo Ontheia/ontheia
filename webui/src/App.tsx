@@ -275,7 +275,7 @@ function AuthenticatedApp() {
           const currentId = location.pathname.startsWith('/chat/') ? location.pathname.split('/')[2] : null;
           const currentIndex = currentId ? messages.findIndex(m => m.id === currentId) : -1;
 
-          let nextIndex = -1;
+          let nextIndex: number;
           if (event.key === 'PageUp') {
             nextIndex = currentIndex > 0 ? currentIndex - 1 : messages.length - 1;
           } else {

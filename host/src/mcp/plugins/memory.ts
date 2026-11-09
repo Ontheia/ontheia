@@ -92,7 +92,7 @@ export async function handleMemorySearch(
     session_id: metadata.session_id
   };
 
-  let namespaces: string[] = [];
+  let namespaces: string[];
 
   const policy = await loadMemoryPolicy(db as Pool, context?.run?.agent_id, context?.run?.task_id, dbClient as PoolClient);
 
@@ -252,7 +252,7 @@ export async function handleMemoryWrite(
     targetNamespace = resolveNamespaceTemplate(rawNamespace, ctx);
   } catch (err) {
     const detail = err instanceof NamespaceError ? err.message : String(err);
-    throw new Error(`Namespace '${rawNamespace}' is unusable: ${detail}`);
+    throw new Error(`Namespace '${rawNamespace}' is unusable: ${detail}`, { cause: err });
   }
 
   if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {
@@ -354,7 +354,7 @@ export async function handleMemoryDelete(
     targetNamespace = resolveNamespaceTemplate(args.namespace, ctx);
   } catch (err) {
     const detail = err instanceof NamespaceError ? err.message : String(err);
-    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`);
+    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`, { cause: err });
   }
 
   if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {
@@ -476,7 +476,7 @@ export async function handleMemoryUpdate(
     targetNamespace = resolveNamespaceTemplate(args.namespace, ctx);
   } catch (err) {
     const detail = err instanceof NamespaceError ? err.message : String(err);
-    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`);
+    throw new Error(`Namespace '${args.namespace}' is unusable: ${detail}`, { cause: err });
   }
 
   if (!isNamespaceAllowed(targetNamespace, policy.allowedWriteNamespaces || [], ctx)) {

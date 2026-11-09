@@ -266,8 +266,8 @@ function validatePackageSpec(
     errors.push({ message: `Server ${name}: could not find package name in args.`, code: 'package_not_found' });
     return;
   }
-  let list: string[] = [];
-  let file = '';
+  let list: string[];
+  let file: string;
   if (spec.command === 'uvx') {
     list = allowlists.pypi;
     file = 'config/allowlist.packages.pypi';

@@ -1603,7 +1603,7 @@ ${contextSnippet}
       const anyErr = err as any;
       const errorMsg = err instanceof Error ? `${err.message}${anyErr.cause ? ' (Cause: ' + JSON.stringify(anyErr.cause) + ')' : ''}` : String(err);
       this.debug(`RestCall failed: ${errorMsg}`, err instanceof Error ? { message: err.message } : undefined);
-      throw new Error(`HTTP ${method} to ${url} failed: ${errorMsg}`);
+      throw new Error(`HTTP ${method} to ${url} failed: ${errorMsg}`, { cause: err });
     }
   }
 }

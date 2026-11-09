@@ -134,6 +134,7 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
         if ('prompt_template_id' in body) { updates.push(`prompt_template_id = $${idx++}`); values.push(body.prompt_template_id); }
         if ('prompt_text' in body) { updates.push(`prompt_text = $${idx++}`); values.push(body.prompt_text || null); }
         if ('chat_id' in body) { updates.push(`chat_id = $${idx++}`); values.push(body.chat_id || null); }
+        // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
         if ('notify' in body) { updates.push(`notify = $${idx++}`); values.push(body.notify === true); }
 
         if (updates.length === 0) {

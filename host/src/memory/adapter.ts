@@ -489,7 +489,7 @@ export class MemoryAdapter {
       return { sql, nextIdx: idx };
     };
 
-    let hits: MemoryHit[] = [];
+    let hits: MemoryHit[];
     const browsing = !embedding || isWildcardQuery;
     let browseTotal = 0;
 

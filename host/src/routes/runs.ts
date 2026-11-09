@@ -702,6 +702,7 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
       if (body.project_id !== undefined) { updates.push(`project_id = $${idx++}`); values.push(body.project_id); }
       const settingsPatch = normalizeChatSettings(body.settings);
       if (settingsPatch) {
+        // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
         updates.push(`settings = COALESCE(settings, '{}'::jsonb) || $${idx++}::jsonb`);
         values.push(JSON.stringify(settingsPatch));
       }

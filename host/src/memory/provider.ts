@@ -206,7 +206,7 @@ function resolveSecret(value?: string): string | undefined {
     return resolveSecretRef(value, [defaultEnvSource]);
   } catch (error) {
     if (error instanceof SecretResolutionError) {
-      throw new Error(`Secret could not be resolved (${value}).`);
+      throw new Error(`Secret could not be resolved (${value}).`, { cause: error });
     }
     throw error;
   }

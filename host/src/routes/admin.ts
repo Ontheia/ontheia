@@ -219,6 +219,7 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     let idx = 2;
     if (body.name !== undefined) { updates.push(`name = $${idx++}`); values.push(body.name); }
     if (body.role) { updates.push(`role = $${idx++}`); values.push(body.role); }
+    // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
     if (body.status) { updates.push(`status = $${idx++}`); values.push(body.status); }
     if (updates.length === 0) {
       reply.code(400);

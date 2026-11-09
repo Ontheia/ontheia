@@ -69,7 +69,7 @@ async function request(path: string, init?: RequestInit) {
   });
 
   const text = await response.text();
-  let data: unknown = null;
+  let data: unknown;
   try {
     data = text ? JSON.parse(text) : null;
   } catch (err) {
@@ -783,8 +783,8 @@ export function runAgentStream(
   };
 
   const flushBuffer = () => {
-    let separatorIndex = -1;
-    let separatorLength = 0;
+    let separatorIndex: number;
+    let separatorLength: number;
 
     const findSeparator = (input: string) => {
       const crlf = input.indexOf('\r\n\r\n');

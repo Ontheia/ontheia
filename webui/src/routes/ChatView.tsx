@@ -1216,7 +1216,6 @@ export function ChatView({
       const title = status === 'success' ? t('runFinished') : t('runFailed');
       const trigger = () => {
         try {
-          // eslint-disable-next-line no-new
           new Notification(title, { body });
         } catch (error) {
           console.warn(t('notificationFailed'), error);

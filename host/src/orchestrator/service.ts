@@ -805,7 +805,7 @@ export class OrchestratorService {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error({ error, server: serverName, tool: params.name }, 'Tool call failed');
-      throw new Error(`Tool "${params.name}" on server "${serverName}" failed: ${msg}`);
+      throw new Error(`Tool "${params.name}" on server "${serverName}" failed: ${msg}`, { cause: error });
     }
   }
 

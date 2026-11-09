@@ -415,7 +415,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
   const setActiveRunForChat = useCallback((chatId: string, runId: string | null) => {
     setActiveRunByChatIdState(prev => {
       if (runId === null) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [chatId]: _removed, ...rest } = prev;
         return rest;
       }
@@ -467,7 +466,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setActiveRunByChatIdState(prev => {
         const entry = Object.entries(prev).find(([, runId]) => runId === status.id);
         if (!entry) return prev;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [entry[0]]: _, ...rest } = prev;
         return rest;
       });

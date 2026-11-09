@@ -193,15 +193,13 @@ export async function testProviderConnection(
 
   const headers: Record<string, string> = {};
   const warnings: string[] = [];
-  let resolvedKey: string | null = null;
-
   if (isAnthropic) {
     headers['anthropic-version'] = '2023-06-01';
   }
 
   if (authMode !== 'none') {
     const resolved = await resolveProviderApiKey(request.apiKey ?? null);
-    resolvedKey = resolved.key;
+    const resolvedKey = resolved.key;
     if (resolved.warnings.length > 0) {
       warnings.push(...resolved.warnings);
     }
