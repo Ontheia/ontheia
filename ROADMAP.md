@@ -6,9 +6,25 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.6.x — Memory & Artifacts
+## Current: v0.7.x — Security & Platform Refresh
 
-Building on the v0.5.x feature base. Shipped with 0.6.0:
+Building on the v0.6.x feature base. Shipped with 0.7.0:
+
+- **Server control behind sign-in** — starting, stopping and validating MCP servers is admin-only, the process list and tool approvals need a session, and an approval can only be answered by the owner of the run. The unused memory bridge routes, which accepted any caller, are gone.
+- **Replace a model in one step** — when a successor model arrives, the admin console moves every agent, active chain and system setting from the old model to the new one, across providers if needed, with a preview to deselect individual places. Chains get a new version, so the previous one stays restorable.
+- **Memory search pages** — the admin search is no longer capped at 50 hits; browsing pages by recency with an exact count, a text search ranks one fixed pool so pages never shift.
+- **Platform refresh** — Node 26, MCP TypeScript SDK v2, Flyway 13 and ESLint 10, plus updated dependencies with no known vulnerabilities in production
+- **Diagrams laid out with ELK** — Mermaid 12 with the ELK layout and the neo look; dense diagrams read with far fewer crossings
+- **Current models on fresh installs** — the installer seeds GPT-6, Claude 5.5 and Grok 4.7
+- **Updates no longer break open tabs** — a tab still holding the previous build reloads once instead of failing silently on PDF previews and diagrams
+
+Breaking changes in 0.7.0:
+
+- **Sign-in required for server and approval routes** — `POST /servers/start`, `/servers/stop/:name`, `/servers/stop-all` and `/servers/validate` are admin-only; `GET /servers/processes` and `POST /runs/:id/tool-approval` require a session. Scripts that called them without a token now get `401`.
+- **Memory bridge routes removed** — `POST /mcp/tools/memory-search`, `-write`, `-delete` and `-update` answer `404`. Agents are unaffected: their memory tools run inside the host.
+- **Diagrams look different** — Mermaid 12 lays out with ELK and draws in the neo look. A diagram can still request `layout: dagre` or `look: classic` in its frontmatter.
+
+Shipped with 0.6.0:
 
 - **Artifacts** — a file an agent reads or writes arrives as a card, not a wall of text; one click opens it in a side panel with edit/preview, conflict-safe saving and a built-in PDF viewer. Every code block in an answer carries a pencil, so a draft in chat becomes a file without leaving the conversation.
 - **Memory with a lifecycle** — an entry stays unconfirmed until it holds up, a correction supersedes the earlier wording instead of erasing it, and a deletion follows through to whatever was derived from it. Entries also carry a class — episodic, semantic, procedural, working, document — and the date the fact applied, kept apart from the date it was stored.
@@ -55,7 +71,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.6.x)
+## Near-term (v0.7.x)
 
 | Feature | Description |
 |---|---|
@@ -63,7 +79,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Mid-term (v0.7+)
+## Mid-term (v0.8+)
 
 | Feature | Description |
 |---|---|
