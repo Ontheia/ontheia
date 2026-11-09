@@ -29,6 +29,9 @@ import './setupI18n';
 import { ChatSidebarProvider } from './context/chat-sidebar-context';
 import { ProviderContextProvider } from './context/provider-context';
 import { AuthProvider } from './context/auth-context';
+import { installStaleBuildReload } from './lib/stale-build';
+
+installStaleBuildReload();
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
