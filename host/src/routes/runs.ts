@@ -154,6 +154,7 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
         }
         runMap.set(callId, {
           callId,
+          userId: session.userId,
           info,
           resolve,
           reject
@@ -408,6 +409,8 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
   });
 
   server.post('/runs/:id/tool-approval', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
     const { id: runId } = request.params as { id: string };
     const body = request.body as any;
     const callId = body?.call_id || body?.tool_key;
@@ -418,7 +421,9 @@ export function registerRunRoutes(server: FastifyInstance, context: RouteContext
     }
 
     const runMap = pendingToolApprovals.get(runId) as any;
-    const pending = runMap?.get(callId);
+    const found = runMap?.get(callId);
+    // Someone else's run reads as "nothing pending" — no hint that it exists.
+    const pending = found && found.userId === auth.session.userId ? found : undefined;
 
     request.log.info({ runId, callId, hasPending: !!pending, body }, 'Tool approval request received');
     

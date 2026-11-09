@@ -4,7 +4,7 @@ Diese Dokumentation beschreibt die verfügbaren API-Endpunkte des Ontheia-Hosts.
 
 ## Authentifizierung & Benutzer
 
-Alle Endpunkte (außer `/auth/login` und `/auth/signup`) erfordern ein gültiges Bearer-Token im `Authorization`-Header.
+Alle Endpunkte (außer `/auth/login`, `/auth/signup`, `/auth/logout` und `/health`) erfordern ein gültiges Bearer-Token im `Authorization`-Header.
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
@@ -170,7 +170,7 @@ Runs repräsentieren die tatsächliche Ausführung eines Agenten oder einer Chai
 | `GET` | `/runs/:id` | Liefert Details und Events eines Runs. |
 | `POST` | `/runs/:id/stop` | Bricht einen laufenden Run ab. |
 | `GET` | `/runs/:id/stream` | SSE-Endpoint für Streaming-Events eines Runs. |
-| `POST` | `/runs/:id/tool-approval` | Bestätigt oder lehnt eine Tool-Freigabe-Anfrage ab (erfordert `call_id`). |
+| `POST` | `/runs/:id/tool-approval` | Bestätigt oder lehnt eine Tool-Freigabe-Anfrage ab (erfordert `call_id`). Nur für eigene Runs; eine fremde Freigabe wird wie „nichts offen“ beantwortet (`409 no_pending_toolcall`). |
 | `GET` | `/runs/recent` | Listet die kürzlich ausgeführten Runs auf. |
 
 ---
@@ -243,10 +243,10 @@ Verwaltung von Model Context Protocol Servern und Tool-Konfigurationen.
 | `GET` | `/servers/configs` | Listet MCP-Server-Konfigurationen auf. |
 | `POST` | `/servers/configs` | Speichert/Aktualisiert eine MCP-Server-Konfiguration. |
 | `DELETE` | `/servers/configs/:name` | Löscht eine MCP-Server-Konfiguration. |
-| `POST` | `/servers/validate` | Prüft eine Konfiguration auf Korrektheit. |
-| `POST` | `/servers/start` | Startet einen MCP-Server manuell. |
-| `POST` | `/servers/stop/:name` | Stoppt einen spezifischen MCP-Server-Prozess. |
-| `POST` | `/servers/stop-all` | Stoppt alle laufenden MCP-Server. |
+| `POST` | `/servers/validate` | Prüft eine Konfiguration auf Korrektheit. Nur Admin. |
+| `POST` | `/servers/start` | Startet einen MCP-Server manuell. Nur Admin. |
+| `POST` | `/servers/stop/:name` | Stoppt einen spezifischen MCP-Server-Prozess. Nur Admin. |
+| `POST` | `/servers/stop-all` | Stoppt alle laufenden MCP-Server. Nur Admin. |
 | `GET` | `/servers/processes` | Listet aktuell laufende MCP-Prozesse auf. |
 | `GET` | `/mcp/tools` | Listet alle verfügbaren Tools aller aktiven Server auf. |
 | `GET` | `/providers` | Listet alle registrierten LLM-Provider auf. |
@@ -254,15 +254,6 @@ Verwaltung von Model Context Protocol Servern und Tool-Konfigurationen.
 | `PUT` | `/providers/:id` | Aktualisiert einen spezifischen LLM-Provider. |
 | `DELETE` | `/providers/:id` | Löscht einen spezifischen LLM-Provider. |
 | `POST` | `/providers/test` | Testet die Verbindung zu einem LLM-Provider. |
-
-### Interne Tool-Endpunkte (Bridge)
-Diese Endpunkte dienen als Brücke für MCP-Tools, um direkt mit dem Host-System zu interagieren.
-
-| Methode | Pfad | Beschreibung |
-| :--- | :--- | :--- |
-| `POST` | `/mcp/tools/memory-search` | Suche im Vektor-Memory (Tool-Aufruf). |
-| `POST` | `/mcp/tools/memory-write` | Schreiben ins Vektor-Memory (Tool-Aufruf). |
-| `POST` | `/mcp/tools/memory-delete` | Löschen aus dem Vektor-Memory (Tool-Aufruf). |
 
 ---
 

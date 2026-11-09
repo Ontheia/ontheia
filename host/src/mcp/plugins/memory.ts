@@ -20,7 +20,6 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { FastifyInstance } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import type { MemoryAdapter } from '../../memory/adapter.js';
 import type { MemoryClass } from '../../memory/types.js';
@@ -380,45 +379,6 @@ export async function handleMemoryDelete(
     };
   }
   return { success: true, affected };
-}
-
-export function memoryTools(server: FastifyInstance, db: Pool, memoryAdapter: MemoryAdapter) {
-  
-  server.post('/mcp/tools/memory-search', async (request, reply) => {
-    try {
-      return await handleMemorySearch(db, memoryAdapter, request.body as any, { run: (request.body as any).run });
-    } catch (err) {
-      reply.code(400);
-      return { error: (err as Error).message };
-    }
-  });
-
-  server.post('/mcp/tools/memory-write', async (request, reply) => {
-    try {
-      return await handleMemoryWrite(db, memoryAdapter, request.body as any, { run: (request.body as any).run });
-    } catch (err) {
-      reply.code(400);
-      return { error: (err as Error).message };
-    }
-  });
-
-  server.post('/mcp/tools/memory-delete', async (request, reply) => {
-    try {
-      return await handleMemoryDelete(db, memoryAdapter, request.body as any, { run: (request.body as any).run });
-    } catch (err) {
-      reply.code(400);
-      return { error: (err as Error).message };
-    }
-  });
-
-  server.post('/mcp/tools/memory-update', async (request, reply) => {
-    try {
-      return await handleMemoryUpdate(db, memoryAdapter, request.body as any, { run: (request.body as any).run });
-    } catch (err) {
-      reply.code(400);
-      return { error: (err as Error).message };
-    }
-  });
 }
 
 /**

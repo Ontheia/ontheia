@@ -3,6 +3,8 @@
 ## Request
 ```
 POST /servers/start
+Authorization: Bearer <Admin-Token>
+
 {
   "dryRun": true,
   "mcpServers": {

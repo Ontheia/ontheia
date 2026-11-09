@@ -1,4 +1,4 @@
-Dry Run: curl -X POST http://localhost:8080/servers/start -H "Content-Type: application/json" -d @- <<"EOF"
+Dry Run: curl -X POST http://localhost:8080/servers/start -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d @- <<"EOF"
 {
   "dryRun": true,
   "mcpServers": {

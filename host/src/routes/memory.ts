@@ -37,7 +37,7 @@ import { SEARCH_PAGE_MAX_LIMIT, SEARCH_PAGE_WINDOW } from '../memory/adapter.js'
 import { buildReadableNamespaces, slugifySegment, isGlobalNamespace } from '../memory/namespaces.js';
 import type { MemoryClass, MemoryHit, MemoryWriteInput } from '../memory/types.js';
 import { stripReservedMetadata } from '../memory/metadata.js';
-import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, handleMemoryUpdate, memoryTools } from '../mcp/plugins/memory.js';
+import { handleMemorySearch, handleMemoryWrite, handleMemoryDelete, handleMemoryUpdate } from '../mcp/plugins/memory.js';
 import { handleDelegation } from '../mcp/plugins/delegation.js';
 import { enqueueReembedJobs } from '../memory/reembed.js';
 import fs from 'fs/promises';
@@ -218,8 +218,6 @@ const unionOver = (adapter: { tableNames: string[] }, select: string, where = ''
 
 export function registerMemoryRoutes(server: FastifyInstance, context: RouteContext) {
   const { db, memoryAdapter, orchestrator } = context;
-
-  memoryTools(server, db, memoryAdapter);
 
   orchestrator.registerInternalToolHandler('memory', async (name, args, ctx) => {
     const userId = ctx?.userId;

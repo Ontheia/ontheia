@@ -436,6 +436,8 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.post('/servers/validate', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
     const result = orchestrator.validate(request.body);
     if (!result.valid) {
       reply.code(400);
@@ -449,7 +451,11 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     return result;
   });
 
+  // Starts processes on the host — a body may carry a full server config, so
+  // this is admin-only like every other server-management route.
   server.post('/servers/start', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
     const body = request.body as any;
     const dryRun = Boolean(body?.dryRun);
     
@@ -516,14 +522,25 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
     return result;
   });
 
-  server.post('/servers/stop/:name', async (request) => {
+  server.post('/servers/stop/:name', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
     const { name } = request.params as { name: string };
     return orchestrator.stop(name);
   });
 
-  server.post('/servers/stop-all', async () => orchestrator.stopAll());
+  server.post('/servers/stop-all', async (request, reply) => {
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
+    if (!auth) return;
+    return orchestrator.stopAll();
+  });
 
-  server.get('/servers/processes', async () => orchestrator.listProcesses());
+  // Every signed-in user: the chat sidebar shows the MCP server status.
+  server.get('/servers/processes', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    return orchestrator.listProcesses();
+  });
 
   server.get('/mcp/tools', async (request, reply) => {
     const auth = await requireSession(db, request, reply, { requireAdmin: true });

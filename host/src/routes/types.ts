@@ -52,6 +52,8 @@ export type RouteContext = {
 
 export type ToolApprovalWaiter = {
   toolKey: string;
+  /** Owner of the run; only this user may answer the approval. */
+  userId?: string;
   info: { server?: string | null; tool: string; arguments: Record<string, unknown> };
   resolve: (mode: 'once' | 'always' | 'deny') => void;
   reject: (error: Error) => void;

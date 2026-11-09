@@ -4,7 +4,7 @@ This documentation describes the available API endpoints of the Ontheia host.
 
 ## Authentication & Users
 
-All endpoints (except `/auth/login` and `/auth/signup`) require a valid Bearer token in the `Authorization` header.
+All endpoints (except `/auth/login`, `/auth/signup`, `/auth/logout` and `/health`) require a valid Bearer token in the `Authorization` header.
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -170,7 +170,7 @@ Runs represent the actual execution of an agent or a chain.
 | `GET` | `/runs/:id` | Returns details and events of a run. |
 | `POST` | `/runs/:id/stop` | Cancels a running run. |
 | `GET` | `/runs/:id/stream` | SSE endpoint for streaming events of a run. |
-| `POST` | `/runs/:id/tool-approval` | Approves or denies a tool approval request (requires `call_id`). |
+| `POST` | `/runs/:id/tool-approval` | Approves or denies a tool approval request (requires `call_id`). Own runs only; someone else's approval is answered like "nothing pending" (`409 no_pending_toolcall`). |
 | `GET` | `/runs/recent` | Lists recently executed runs. |
 
 ---
@@ -243,10 +243,10 @@ Management of Model Context Protocol servers and tool configurations.
 | `GET` | `/servers/configs` | Lists MCP server configurations. |
 | `POST` | `/servers/configs` | Saves/updates an MCP server configuration. |
 | `DELETE` | `/servers/configs/:name` | Deletes an MCP server configuration. |
-| `POST` | `/servers/validate` | Validates a configuration for correctness. |
-| `POST` | `/servers/start` | Starts an MCP server manually. |
-| `POST` | `/servers/stop/:name` | Stops a specific MCP server process. |
-| `POST` | `/servers/stop-all` | Stops all running MCP servers. |
+| `POST` | `/servers/validate` | Validates a configuration for correctness. Admin only. |
+| `POST` | `/servers/start` | Starts an MCP server manually. Admin only. |
+| `POST` | `/servers/stop/:name` | Stops a specific MCP server process. Admin only. |
+| `POST` | `/servers/stop-all` | Stops all running MCP servers. Admin only. |
 | `GET` | `/servers/processes` | Lists currently running MCP processes. |
 | `GET` | `/mcp/tools` | Lists all available tools from all active servers. |
 | `GET` | `/providers` | Lists all registered LLM providers. |
@@ -254,15 +254,6 @@ Management of Model Context Protocol servers and tool configurations.
 | `PUT` | `/providers/:id` | Updates a specific LLM provider. |
 | `DELETE` | `/providers/:id` | Deletes a specific LLM provider. |
 | `POST` | `/providers/test` | Tests the connection to an LLM provider. |
-
-### Internal Tool Endpoints (Bridge)
-These endpoints serve as a bridge for MCP tools to interact directly with the host system.
-
-| Method | Path | Description |
-| :--- | :--- | :--- |
-| `POST` | `/mcp/tools/memory-search` | Search in vector memory (tool call). |
-| `POST` | `/mcp/tools/memory-write` | Write to vector memory (tool call). |
-| `POST` | `/mcp/tools/memory-delete` | Delete from vector memory (tool call). |
 
 ---
 
