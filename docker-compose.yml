@@ -20,7 +20,7 @@ services:
 
   migrator:
     container_name: ontheia-migrator
-    image: flyway/flyway:10-alpine
+    image: flyway/flyway:13-alpine
     command: >
       -url=${FLYWAY_URL:-jdbc:postgresql://db:5432/ontheia}
       -user=${FLYWAY_USER:-postgres}
@@ -29,10 +29,11 @@ services:
       -baselineOnMigrate=true
       -connectRetries=60
       -ignoreMigrationPatterns=*:missing
+      -locations=filesystem:/flyway/migrations
       -placeholders.ONTHEIA_APP_PASSWORD=${ONTHEIA_APP_PASSWORD:-ontheia_app_pwd_123}
       migrate
     volumes:
-      - ./migrations:/flyway/sql:ro
+      - ./migrations:/flyway/migrations:ro
     depends_on:
       db:
         condition: service_healthy

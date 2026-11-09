@@ -229,7 +229,8 @@ for image in ontheia-host ontheia-webui; do
     docker image inspect "$image" &>/dev/null && docker image rm "$image" 2>/dev/null || true
 done
 if [ "$KEEP_DATA" != true ]; then
-    for image in pgvector/pgvector:pg16 flyway/flyway:10-alpine; do
+    # flyway:10-alpine is the image of installs from before the switch to 13.
+    for image in pgvector/pgvector:pg16 flyway/flyway:13-alpine flyway/flyway:10-alpine; do
         docker image inspect "$image" &>/dev/null && docker image rm "$image" 2>/dev/null || true
     done
 fi
