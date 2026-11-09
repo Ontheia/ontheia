@@ -108,5 +108,5 @@ Agents store their model as a provider and model ID. When a successor comes out 
 
 The old model stays in the model registry unchanged. To undo, run the same function in the opposite direction (for chains, alternatively reactivate the previous version).
 
-**Not included:** embedding models (a different embedding model requires re-computing all vectors, see [Embedding](/en/admin/ai-provider/06_embedding/)) and the Agent-Builder (its chain and its model setting).
+**Not included:** embedding models (a different embedding model requires re-computing all vectors, see [Embedding](/en/admin/ai-provider/06_embedding/)).
 

@@ -108,5 +108,5 @@ Agenten speichern ihr Modell als Provider- und Modell-ID. Kommt ein Nachfolger h
 
 Das alte Modell bleibt in der Modellverwaltung unverändert. Rückgängig machen Sie die Änderung mit derselben Funktion in Gegenrichtung (bei Chains alternativ durch Aktivieren der vorherigen Version).
 
-**Nicht enthalten:** Embedding-Modelle (ein anderes Embedding-Modell erfordert eine Neuberechnung aller Vektoren, siehe [Embedding](/de/admin/ai-provider/06_embedding/)) sowie der Agent-Builder (seine Chain und seine Modell-Einstellung).
+**Nicht enthalten:** Embedding-Modelle (ein anderes Embedding-Modell erfordert eine Neuberechnung aller Vektoren, siehe [Embedding](/de/admin/ai-provider/06_embedding/)).
 
