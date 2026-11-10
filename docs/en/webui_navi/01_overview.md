@@ -11,11 +11,12 @@ left sidebar         | chat area              | right sidebar
 ─────────────────────┼────────────────────────┼──────────────────────
 Logo / Header        │ (chat messages)        │ Run Status
 Button: New Chat     │                        │ Chain Console
-Search field         │                        │ Warnings
-── Projects ──       │                        │ Tool Queue
-  Chat entries       │                        │ Automation
-── History ──        │                        │ MCP Servers
-  Chat entries       │                        │ Memory Hits
+Inbox (counter)      │                        │ Warnings
+Search field         │                        │ Tool Queue
+── Projects ──       │                        │ Automation
+  Chat entries       │                        │ MCP Servers
+── History ──        │                        │ Memory Hits
+  Chat entries       │                        │
 ─────────────────────│                        │
 User menu*           │ [Composer]             │
 (Avatar dropdown)    │                        │
@@ -30,8 +31,11 @@ User menu*           │ [Composer]             │
 
 > **Artifact panel:** When the user opens a file card in the chat, an additional window overlays the view on the right (see [File Cards & Artifact Panel](/en/webui_navi/15_artifact_panel/)). It is not a fixed part of the layout and appears only on demand.
 
+> **Inbox:** Collects approvals, results and errors of runs that started in the background (schedule, trigger). The number next to it is the count of open entries (see [Inbox](/en/webui_navi/16_inbox/)).
+
 Detailed documentation:
 - [Left Sidebar](/en/webui_navi/13_sidebar_left/)
+- [Inbox](/en/webui_navi/16_inbox/)
 - [Right Sidebar](/en/webui_navi/14_sidebar_right/)
 - [Composer](/en/webui_navi/12_composer/)
 - [File Cards & Artifact Panel](/en/webui_navi/15_artifact_panel/)

@@ -11,11 +11,12 @@ linke Sidebar        | Chat-Bereich          | rechte Sidebar
 ─────────────────────┼───────────────────────┼──────────────────────
 Logo / Header        │ (Chat-Nachrichten)    │ Run-Status
 Button: Neuer Chat   │                       │ Chain Console
-Suchfeld             │                       │ Warnungen
-── Projekte ──       │                       │ Tool Queue
-  Chat-Einträge      │                       │ Automatisierung
-── Verlauf ──        │                       │ MCP-Server
-  Chat-Einträge      │                       │ Memory-Treffer
+Posteingang (Zähler) │                       │ Warnungen
+Suchfeld             │                       │ Tool Queue
+── Projekte ──       │                       │ Automatisierung
+  Chat-Einträge      │                       │ MCP-Server
+── Verlauf ──        │                       │ Memory-Treffer
+  Chat-Einträge      │                       │
 ─────────────────────│                       │
 Benutzermenü*        │ [Composer]            │
 (Avatar-Dropdown)    │                       │
@@ -30,8 +31,11 @@ Benutzermenü*        │ [Composer]            │
 
 > **Artefakt-Panel:** Öffnet der Nutzer eine Dateikarte im Chat, legt sich rechts ein zusätzliches Fenster über die Ansicht (siehe [Dateikarten & Artefakt-Panel](/de/webui_navi/15_artifact_panel/)). Es ist kein fester Bestandteil des Layouts und erscheint nur bei Bedarf.
 
+> **Posteingang:** Sammelt Freigaben, Ergebnisse und Fehler von Läufen, die im Hintergrund gestartet sind (Zeitplan, Trigger). Die Zahl daneben nennt die offenen Einträge (siehe [Posteingang](/de/webui_navi/16_inbox/)).
+
 Detaildokumentation:
 - [Linke Sidebar](/de/webui_navi/13_sidebar_left/)
+- [Posteingang](/de/webui_navi/16_inbox/)
 - [Rechte Sidebar](/de/webui_navi/14_sidebar_right/)
 - [Composer](/de/webui_navi/12_composer/)
 - [Dateikarten & Artefakt-Panel](/de/webui_navi/15_artifact_panel/)
