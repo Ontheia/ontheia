@@ -229,6 +229,7 @@ await skillService.start();
 
 const runService = new RunService(dbPool, orchestrator, memoryAdapter, skillService);
 const inboxService = new InboxService(dbPool, server.log);
+await inboxService.expireOrphanedApprovals();
 const cronService = new CronService(dbPool, runService, server.log, inboxService);
 await cronService.start();
 

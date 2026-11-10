@@ -30,6 +30,8 @@ import { loadGlobalRuntime } from '../routes/settings-utils.js';
 import { pushUserNotification } from '../routes/runs-state.js';
 import { buildAutomationSystemNote } from './automation-utils.js';
 import { outcomeFromEvents, type InboxService } from './InboxService.js';
+import { registerActiveRun, unregisterActiveRun } from './run-registry.js';
+import type { ToolApprovalMode } from './types.js';
 
 export class CronService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
@@ -98,7 +100,7 @@ export class CronService {
       throw new Error(`Invalid user_id: "${user_id}"`);
     }
 
-    const { role, messageContent, userLanguage } = await withTransaction(this.db, async (client) => {
+    const { role, messageContent, userLanguage, agentApproval } = await withTransaction(this.db, async (client) => {
       await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
       await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
 
@@ -127,7 +129,24 @@ export class CronService {
           resolvedMessage = tplRes.rows[0].content;
         }
       }
-      return { role: resolvedRole, messageContent: resolvedMessage, userLanguage: resolvedLanguage, desktopNotificationsEnabled: desktopNotifications };
+      // The tools the agent may always use. Only read when the job asks for
+      // approvals: 'granted' never looks at it.
+      let resolvedAgentApproval: { permissions: Record<string, 'once' | 'always'> } | null = null;
+      if (jobData.approval_mode === 'inbox' && jobData.agent_id && !jobData.chain_id) {
+        const agentRes = await client.query(
+          'SELECT default_tool_permissions FROM app.agents WHERE id = $1',
+          [jobData.agent_id]
+        );
+        const agentRow = agentRes.rows[0];
+        if (agentRow) {
+          resolvedAgentApproval = {
+            permissions: agentRow.default_tool_permissions && typeof agentRow.default_tool_permissions === 'object'
+              ? agentRow.default_tool_permissions
+              : {}
+          };
+        }
+      }
+      return { role: resolvedRole, messageContent: resolvedMessage, userLanguage: resolvedLanguage, desktopNotificationsEnabled: desktopNotifications, agentApproval: resolvedAgentApproval };
     });
 
     this.log.info({ jobId: id, name, role }, 'Executing job');
@@ -172,26 +191,58 @@ export class CronService {
 
     // Fixed here rather than inside executeRun so the inbox entry can name the run.
     const effectiveRunId = runId ?? randomUUID();
-    const events = await this.runService.executeRun({
-      provider_id: '',
-      model_id: '',
-      agent_id: jobData.agent_id,
-      task_id: jobData.task_id,
-      chain_id: jobData.chain_id,
-      messages,
-      memory: { enabled: true },
-      tool_approval: 'granted'
-    }, {
-      userId: user_id,
-      role,
-      runId: effectiveRunId,
-      chatId,
-      trigger: { type: 'cron', id },
-      scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
-      title: chatTitle,
-      onEvent: (_event) => {},
-      logger: this.log
-    });
+
+    // 'granted' (the default) approves every tool call. 'inbox' is the job's
+    // counterpart to "ask for approval" in the composer: like there, the choice
+    // made for this run wins over the agent's default mode, and only the tools
+    // the agent may always use skip the question. A chain resolves the
+    // permissions of each step's agent itself.
+    const asksInbox = jobData.approval_mode === 'inbox' && Boolean(this.inboxService);
+    const toolApproval: ToolApprovalMode = asksInbox ? 'prompt' : 'granted';
+
+    // Registered here rather than inside executeRun: the approval callback
+    // needs the same signal to stop waiting when the run is stopped.
+    const controller = new AbortController();
+    registerActiveRun(effectiveRunId, controller, user_id);
+
+    let events;
+    try {
+      events = await this.runService.executeRun({
+        provider_id: '',
+        model_id: '',
+        agent_id: jobData.agent_id,
+        task_id: jobData.task_id,
+        chain_id: jobData.chain_id,
+        messages,
+        memory: { enabled: true },
+        tool_approval: toolApproval,
+        ...(asksInbox && agentApproval ? { tool_permissions: agentApproval.permissions } : {})
+      }, {
+        userId: user_id,
+        role,
+        runId: effectiveRunId,
+        chatId,
+        trigger: { type: 'cron', id },
+        scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
+        title: chatTitle,
+        onEvent: (_event) => {},
+        abortSignal: controller.signal,
+        waitForToolApproval: asksInbox
+          ? this.inboxService!.createApprovalWaiter({
+              userId: user_id,
+              runId: effectiveRunId,
+              title: name,
+              chatId,
+              triggerType: 'cron',
+              triggerId: id,
+              signal: controller.signal
+            })
+          : undefined,
+        logger: this.log
+      });
+    } finally {
+      unregisterActiveRun(effectiveRunId);
+    }
 
     const hasError = events.some(e => e.type === 'error');
     const errorMsg = hasError ? (events.find(e => e.type === 'error') as any).message || 'Run failed' : null;

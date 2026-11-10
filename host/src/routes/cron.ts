@@ -89,8 +89,8 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
     try {
       const job = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         const res = await client.query(
-          `INSERT INTO app.cron_jobs (user_id, name, schedule, run_at, chat_title_template, agent_id, task_id, chain_id, prompt_template_id, prompt_text, chat_id, notify, active, prevent_overlap)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          `INSERT INTO app.cron_jobs (user_id, name, schedule, run_at, chat_title_template, agent_id, task_id, chain_id, prompt_template_id, prompt_text, chat_id, notify, active, prevent_overlap, approval_mode)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
            RETURNING *`,
           [
             auth.session.userId, body.name,
@@ -99,7 +99,8 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
             body.agent_id || null, body.task_id || null, body.chain_id || null,
             body.prompt_template_id || null, body.prompt_text || null,
             body.chat_id || null, body.notify === true,
-            body.active !== false, body.prevent_overlap !== false
+            body.active !== false, body.prevent_overlap !== false,
+            body.approval_mode === 'inbox' ? 'inbox' : 'granted'
           ]
         );
         return res.rows[0];
@@ -134,8 +135,9 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
         if ('prompt_template_id' in body) { updates.push(`prompt_template_id = $${idx++}`); values.push(body.prompt_template_id); }
         if ('prompt_text' in body) { updates.push(`prompt_text = $${idx++}`); values.push(body.prompt_text || null); }
         if ('chat_id' in body) { updates.push(`chat_id = $${idx++}`); values.push(body.chat_id || null); }
-        // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
         if ('notify' in body) { updates.push(`notify = $${idx++}`); values.push(body.notify === true); }
+        // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
+        if ('approval_mode' in body) { updates.push(`approval_mode = $${idx++}`); values.push(body.approval_mode === 'inbox' ? 'inbox' : 'granted'); }
 
         if (updates.length === 0) {
           reply.code(400);

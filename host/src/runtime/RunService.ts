@@ -62,6 +62,7 @@ import {
   type FileEnvelopeEntry
 } from './ArtifactService.js';
 import { registerActiveRun, unregisterActiveRun } from './run-registry.js';
+import { trackApprovalWaits } from './approval-clock.js';
 
 export type RunContext = {
   userId: string;
@@ -118,7 +119,11 @@ export class RunService {
   ) {}
 
   async executeRun(request: RunRequest, context: RunContext): Promise<RunEvent[]> {
-    const { userId, onEvent, waitForToolApproval, logger } = context;
+    const { userId, onEvent, logger } = context;
+    // Approval waits are timed so the tool loop's limit does not count them.
+    const waitForToolApproval = context.waitForToolApproval
+      ? trackApprovalWaits(context.waitForToolApproval)
+      : undefined;
     const role = context.role || 'user';
     const runId = context.runId || randomUUID();
     // Runs that arrive without an abort signal (cron runs, chain test runs, …)

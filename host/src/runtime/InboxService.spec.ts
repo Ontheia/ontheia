@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { outcomeFromEvents, stripMarkdown, summarizeForInbox } from './InboxService.js';
+import { APPROVAL_ARGUMENTS_MAX_CHARS, approvalArgumentsForInbox, outcomeFromEvents, stripMarkdown, summarizeForInbox } from './InboxService.js';
 import type { RunEvent } from './types.js';
 
 test('summarizeForInbox collapses whitespace and keeps short text whole', () => {
@@ -93,4 +93,19 @@ test('summarizeForInbox drops Markdown markers, tables and code blocks', () => {
 
 test('stripMarkdown removes a code block that was never closed', () => {
   assert.equal(stripMarkdown('Text\n```js\nconst a = 1;').trim(), 'Text');
+});
+
+test('approval arguments are kept as they are while small', () => {
+  const args = { path: '/tmp/a.txt', overwrite: true };
+  assert.equal(approvalArgumentsForInbox(args), args);
+  assert.deepEqual(approvalArgumentsForInbox(undefined), {});
+});
+
+test('oversized approval arguments become a marked preview', () => {
+  const stored = approvalArgumentsForInbox({ content: 'x'.repeat(APPROVAL_ARGUMENTS_MAX_CHARS) }) as {
+    _truncated: boolean; _chars: number; preview: string;
+  };
+  assert.equal(stored._truncated, true);
+  assert.ok(stored._chars > APPROVAL_ARGUMENTS_MAX_CHARS);
+  assert.ok(stored.preview.length <= 2001);
 });

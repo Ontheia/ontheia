@@ -54,6 +54,28 @@ export function registerInboxRoutes(server: FastifyInstance, context: RouteConte
     return { ok: true, done };
   });
 
+  server.post('/api/inbox/:id/resolve', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { id } = request.params as { id: string };
+    const mode = (request.body as { mode?: unknown } | null)?.mode;
+    if (mode !== 'once' && mode !== 'always' && mode !== 'deny') {
+      reply.code(400);
+      return { error: 'invalid_mode' };
+    }
+    const outcome = isUuid(id) ? await inboxService.resolveApproval(auth.session.userId, id, mode) : 'not_found';
+    if (outcome === 'not_found') {
+      reply.code(404);
+      return { error: 'not_found' };
+    }
+    if (outcome === 'gone') {
+      // The run that asked is no longer waiting (stopped, timed out, host restarted).
+      reply.code(409);
+      return { error: 'approval_no_longer_pending' };
+    }
+    return { ok: true };
+  });
+
   server.post('/api/inbox/:id/done', async (request, reply) => {
     const auth = await requireSession(db, request, reply);
     if (!auth) return;

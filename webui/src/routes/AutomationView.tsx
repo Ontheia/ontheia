@@ -540,7 +540,6 @@ function JobDialog({
   initialJob?: CronJobEntry | null;
 }) {
   const { t } = useTranslation(['automation', 'common', 'chat', 'errors']);
-  const { preferences } = useChatSidebar();
   const [name, setName] = useState('');
   const [scheduleMode, setScheduleMode] = useState<'recurring' | 'once'>('recurring');
   const [schedule, setSchedule] = useState('0 9 * * *');
@@ -554,6 +553,7 @@ function JobDialog({
   const [promptText, setPromptText] = useState('');
   const [chatId, setChatId] = useState('');
   const [notify, setNotify] = useState(false);
+  const [approvalMode, setApprovalMode] = useState<'granted' | 'inbox'>('granted');
   const [preventOverlap, setPreventOverlap] = useState(true);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [chats, setChats] = useState<{ id: string; title: string }[]>([]);
@@ -575,6 +575,7 @@ function JobDialog({
       setPromptText(initialJob.prompt_text || '');
       setChatId(initialJob.chat_id || '');
       setNotify(initialJob.notify ?? false);
+      setApprovalMode(initialJob.approval_mode === 'inbox' ? 'inbox' : 'granted');
       setPreventOverlap(initialJob.prevent_overlap ?? true);
     } else {
       setName('');
@@ -688,6 +689,7 @@ function JobDialog({
         prompt_text: promptMode === 'text' ? (promptText || null) : null,
         chat_id: chatId || null,
         notify,
+        approval_mode: approvalMode,
         prevent_overlap: preventOverlap,
         active: initialJob ? initialJob.active : true
       };
@@ -899,29 +901,51 @@ function JobDialog({
               <p className="settings-hint">{t('chatTargetHint')}</p>
             </div>
 
-            {preferences.desktopNotifications && (
-              <div className="settings-field">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span>{t('notifyOnComplete')}</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-[300px] text-xs">
-                        {t('notifyOnCompleteDesc')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <input
-                    type="checkbox"
-                    className="app-toggle"
-                    checked={notify}
-                    onChange={e => setNotify(e.target.checked)}
-                  />
+            {/* Always shown: the result entry in the inbox does not depend on
+                desktop notifications being enabled. */}
+            <div className="settings-field">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span>{t('notifyOnComplete')}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[300px] text-xs">
+                      {t('notifyOnCompleteDesc')}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
+                <input
+                  type="checkbox"
+                  className="app-toggle"
+                  checked={notify}
+                  onChange={e => setNotify(e.target.checked)}
+                />
               </div>
-            )}
+            </div>
+
+            <div className="settings-field">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span>{t('approvalViaInbox')}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[320px] text-xs">
+                      {t('approvalViaInboxDesc')}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <input
+                  type="checkbox"
+                  className="app-toggle"
+                  checked={approvalMode === 'inbox'}
+                  onChange={e => setApprovalMode(e.target.checked ? 'inbox' : 'granted')}
+                />
+              </div>
+            </div>
 
             <div className="settings-field">
               <div className="flex items-center justify-between">

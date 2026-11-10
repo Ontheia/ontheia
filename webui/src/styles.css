@@ -5609,7 +5609,8 @@ textarea.app-input {
 
 /* Small variant. A class of its own because this file comes after the Tailwind
    utilities: `h-8 text-xs` next to `btn-default` loses to the rule above. */
-.btn-default.btn-sm {
+.btn-default.btn-sm,
+.danger-button.btn-sm {
   height: 1.875rem;
   padding: 0 0.7rem;
   font-size: 0.75rem;

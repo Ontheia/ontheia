@@ -23,7 +23,10 @@
 import type { Pool } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
 import { withRls } from '../routes/utils.js';
-import { pushUserNotification } from '../routes/runs-state.js';
+import { pendingToolApprovals, pushUserNotification } from '../routes/runs-state.js';
+import type { ToolApprovalWaiter } from '../routes/types.js';
+import { getSystemNumber } from './system-flags.js';
+import type { ApprovalWaiter } from './approval-clock.js';
 import type { RunEvent } from './types.js';
 
 /**
@@ -65,6 +68,37 @@ export type NewInboxItem = {
 };
 
 export const INBOX_SUMMARY_MAX_CHARS = 400;
+export const DEFAULT_APPROVAL_TIMEOUT_HOURS = 24;
+/** Arguments above this size are stored as a cut-off preview, not as JSON. */
+export const APPROVAL_ARGUMENTS_MAX_CHARS = 20_000;
+
+const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+export type ApprovalMode = 'once' | 'always' | 'deny';
+
+export type ApprovalWaiterContext = {
+  userId: string;
+  runId: string;
+  /** Shown as the entry's title — the name of the job or trigger. */
+  title: string;
+  chatId?: string | null;
+  triggerType?: string | null;
+  triggerId?: string | null;
+  /** Aborting the run closes its pending approvals. */
+  signal?: AbortSignal;
+};
+
+/** Keeps what the user needs to decide; a megabyte of file content is not that. */
+export function approvalArgumentsForInbox(args: unknown): unknown {
+  let json: string;
+  try {
+    json = JSON.stringify(args ?? {});
+  } catch {
+    return { _unserializable: true };
+  }
+  if (json.length <= APPROVAL_ARGUMENTS_MAX_CHARS) return args ?? {};
+  return { _truncated: true, _chars: json.length, preview: `${json.slice(0, 2000)}…` };
+}
 export const INBOX_PAGE_MAX_LIMIT = 100;
 
 /**
@@ -201,6 +235,141 @@ export class InboxService {
       );
       return { open: res.rows[0].open, approvals: res.rows[0].approvals };
     });
+  }
+
+  /**
+   * Builds the approval callback for one background run. Each tool call that
+   * needs a decision becomes an inbox entry and waits — in the same registry
+   * the chat uses, so the ownership check and the chat's own approval route
+   * apply unchanged.
+   *
+   * The wait ends with the user's answer, with the timeout (counts as a
+   * refusal, the run carries on) or with the run being stopped.
+   */
+  createApprovalWaiter(ctx: ApprovalWaiterContext): ApprovalWaiter {
+    return async (callId, info) => {
+      const hours = await getSystemNumber(this.db, 'inbox_approval_timeout_hours', DEFAULT_APPROVAL_TIMEOUT_HOURS);
+      const timeoutMs = Math.min(hours, 24 * 30) * 3_600_000;
+
+      const itemId = await this.add({
+        userId: ctx.userId,
+        kind: 'approval',
+        title: ctx.title,
+        summary: [info?.server, info?.tool].filter(Boolean).join(' › ') || null,
+        runId: ctx.runId,
+        chatId: ctx.chatId ?? null,
+        triggerType: ctx.triggerType ?? null,
+        triggerId: ctx.triggerId ?? null,
+        payload: {
+          call_id: callId,
+          server: info?.server ?? null,
+          tool: info?.tool ?? null,
+          arguments: approvalArgumentsForInbox(info?.arguments),
+          expires_at: new Date(Date.now() + timeoutMs).toISOString()
+        }
+      });
+      // Without an entry nobody can answer; waiting a day for nothing helps no one.
+      if (!itemId) return 'deny';
+
+      return new Promise<ApprovalMode>((resolve, reject) => {
+        let settled = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const onAbort = () => finish('expired', 'aborted', () => reject(new Error('aborted')));
+
+        const finish = (status: 'done' | 'expired', resolution: string, settle: () => void) => {
+          if (settled) return;
+          settled = true;
+          if (timer) clearTimeout(timer);
+          ctx.signal?.removeEventListener('abort', onAbort);
+          const runMap = pendingToolApprovals.get(ctx.runId);
+          runMap?.delete(callId);
+          if (runMap && runMap.size === 0) pendingToolApprovals.delete(ctx.runId);
+          void this.closeApproval(ctx.userId, itemId, status, resolution);
+          settle();
+        };
+
+        const waiter: ToolApprovalWaiter = {
+          toolKey: callId,
+          userId: ctx.userId,
+          info: { server: info?.server ?? null, tool: info?.tool, arguments: info?.arguments ?? {} },
+          resolve: (mode) => finish('done', mode, () => resolve(mode)),
+          reject: (error) => finish('expired', 'aborted', () => reject(error))
+        };
+        let runMap = pendingToolApprovals.get(ctx.runId);
+        if (!runMap) {
+          runMap = new Map();
+          pendingToolApprovals.set(ctx.runId, runMap);
+        }
+        runMap.set(callId, waiter);
+
+        timer = setTimeout(() => finish('expired', 'timeout', () => resolve('deny')), timeoutMs);
+        // A pending approval must not keep the process alive on shutdown.
+        timer.unref?.();
+
+        if (ctx.signal?.aborted) onAbort();
+        else ctx.signal?.addEventListener('abort', onAbort, { once: true });
+      });
+    };
+  }
+
+  /**
+   * Answers an approval from the inbox. Returns 'gone' when the entry is open
+   * but no run is waiting for it any more — it is closed as expired then.
+   */
+  async resolveApproval(userId: string, id: string, mode: ApprovalMode): Promise<'ok' | 'not_found' | 'gone'> {
+    const item = await withRls(this.db, userId, 'user', async (client) => {
+      const res = await client.query(
+        `SELECT run_id, payload->>'call_id' AS call_id FROM app.inbox_items
+         WHERE id = $1 AND user_id = $2 AND kind = 'approval' AND status = 'open'`,
+        [id, userId]
+      );
+      return res.rows[0] as { run_id: string | null; call_id: string | null } | undefined;
+    });
+    if (!item) return 'not_found';
+
+    const pending = item.run_id && item.call_id ? pendingToolApprovals.get(item.run_id)?.get(item.call_id) : undefined;
+    if (!pending || pending.userId !== userId) {
+      await this.closeApproval(userId, id, 'expired', 'gone');
+      return 'gone';
+    }
+    pending.resolve(mode);
+    return 'ok';
+  }
+
+  private async closeApproval(userId: string, id: string, status: 'done' | 'expired', resolution: string): Promise<void> {
+    try {
+      await withRls(this.db, userId, 'user', async (client) => {
+        await client.query(
+          `UPDATE app.inbox_items SET status = $3, resolution = $4, resolved_at = now()
+           WHERE id = $1 AND user_id = $2 AND status = 'open'`,
+          [id, userId, status, resolution]
+        );
+      });
+      pushUserNotification(userId, { type: 'inbox_item', item_id: id, kind: 'approval', closed: true });
+    } catch (err) {
+      this.log.error({ err, id }, 'Failed to close inbox approval');
+    }
+  }
+
+  /**
+   * A waiting run does not survive a restart of the host, so an approval left
+   * open by the previous process can never be answered. Called once on start.
+   */
+  async expireOrphanedApprovals(): Promise<number> {
+    try {
+      const count = await withRls(this.db, SYSTEM_USER_ID, 'admin', async (client) => {
+        const res = await client.query(
+          `UPDATE app.inbox_items SET status = 'expired', resolution = 'restart', resolved_at = now()
+           WHERE kind = 'approval' AND status = 'open'`
+        );
+        return res.rowCount ?? 0;
+      });
+      if (count > 0) this.log.info({ count }, 'Expired approvals left over from the previous process');
+      return count;
+    } catch (err) {
+      this.log.error({ err }, 'Failed to expire orphaned approvals');
+      return 0;
+    }
   }
 
   /**

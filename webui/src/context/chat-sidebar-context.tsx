@@ -1045,6 +1045,16 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
                   const payload = JSON.parse(line.slice(5).trim());
                   if (payload?.type === 'inbox_item') {
                     window.dispatchEvent(new CustomEvent('ontheia:inbox_item', { detail: payload }));
+                    // A waiting approval blocks a run — worth interrupting for.
+                    // Results and errors already announce themselves via cron_complete.
+                    if (payload.kind === 'approval' && !payload.closed
+                      && 'Notification' in window && Notification.permission === 'granted') {
+                      const n = new Notification(i18n.t('inbox:approvalNotificationTitle', { name: payload.title }), {
+                        body: i18n.t('inbox:approvalNotificationBody'),
+                        tag: `inbox-${payload.item_id}`
+                      });
+                      n.onclick = () => { window.focus(); window.location.assign('/inbox'); };
+                    }
                   }
                   if (payload?.type === 'cron_complete') {
                     window.dispatchEvent(new CustomEvent('ontheia:cron_complete', { detail: payload }));

@@ -23,8 +23,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, Check, CheckCheck, Inbox, MessageSquare, ShieldQuestion, Loader2, AlertCircle } from 'lucide-react';
-import { listInbox, markAllInboxDone, markInboxItemDone, type InboxItem } from '../lib/api';
+import { AlertTriangle, CheckCircle2, Check, CheckCheck, Inbox, MessageSquare, ShieldQuestion, Loader2, AlertCircle, X } from 'lucide-react';
+import { listInbox, markAllInboxDone, markInboxItemDone, resolveInboxApproval, type InboxItem } from '../lib/api';
 import { INBOX_CHANGED_EVENT, INBOX_ITEM_EVENT } from '../hooks/use-inbox-count';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
@@ -43,6 +43,7 @@ export function InboxView() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
 
   const load = useCallback(async (which: Filter) => {
     try {
@@ -79,6 +80,22 @@ export function InboxView() {
       await load(filter);
     } catch (err) {
       setError(localizeError(err, t, 'inbox:actionError'));
+    }
+  };
+
+  const handleResolve = async (id: string, mode: 'once' | 'always' | 'deny') => {
+    setResolving(id);
+    try {
+      await resolveInboxApproval(id, mode);
+      setError(null);
+    } catch (err) {
+      // 409: the run stopped waiting meanwhile — say so instead of a generic error.
+      const status = (err as { status?: number } | null)?.status;
+      setError(status === 409 ? t('approval.gone') : localizeError(err, t, 'inbox:actionError'));
+    } finally {
+      setResolving(null);
+      announceChange();
+      await load(filter);
     }
   };
 
@@ -146,7 +163,7 @@ export function InboxView() {
           <header className="admin-settings-header flex items-center justify-between">
             <div>
               <h2>{t(filter === 'open' ? 'headingOpen' : 'headingAll')}</h2>
-              <p>{t('headingDesc')}</p>
+              <p>{t(items.some((item) => item.status === 'open' && item.kind === 'approval') ? 'headingDescApprovals' : 'headingDesc')}</p>
             </div>
             <Button onClick={() => void handleDoneAll()} disabled={!closableOpen} className="admin-mcp-action">
               <CheckCheck className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -202,13 +219,33 @@ export function InboxView() {
                           )}
                           {!isOpen && (
                             <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                              {t(`status.${item.status}`)}
+                              {item.kind === 'approval' && item.resolution
+                                ? t(`resolution.${item.resolution}`, { defaultValue: t(`status.${item.status}`) })
+                                : t(`status.${item.status}`)}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">{formatDate(item.created_at)}</p>
-                        {item.summary && (
+                        {item.kind === 'approval' ? (
+                          <ApprovalDetails item={item} formatDate={formatDate} />
+                        ) : item.summary && (
                           <p className="text-sm text-foreground/80 mt-2 break-words whitespace-pre-wrap">{item.summary}</p>
+                        )}
+                        {isOpen && item.kind === 'approval' && (
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            <button type="button" className="btn-default btn-sm" disabled={resolving === item.id} onClick={() => void handleResolve(item.id, 'once')}>
+                              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t('approval.once')}
+                            </button>
+                            <button type="button" className="btn-default btn-sm" disabled={resolving === item.id} onClick={() => void handleResolve(item.id, 'always')}>
+                              <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t('approval.always')}
+                            </button>
+                            <button type="button" className="danger-button btn-sm" disabled={resolving === item.id} onClick={() => void handleResolve(item.id, 'deny')}>
+                              <X className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t('approval.deny')}
+                            </button>
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -243,5 +280,45 @@ export function InboxView() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** What the run wants to do: which tool, with which arguments, and until when it waits. */
+function ApprovalDetails({ item, formatDate }: { item: InboxItem; formatDate: (iso: string) => string }) {
+  const { t } = useTranslation(['inbox']);
+  const payload = item.payload as {
+    server?: string | null;
+    tool?: string | null;
+    arguments?: unknown;
+    expires_at?: string;
+  };
+  const args = payload.arguments as { _truncated?: boolean; _chars?: number; preview?: string } | undefined;
+  const truncated = Boolean(args && typeof args === 'object' && args._truncated);
+  const hasArguments = args !== undefined && args !== null
+    && !(typeof args === 'object' && Object.keys(args as object).length === 0);
+
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-sm text-foreground/80">
+        {t('approval.wants')}:{' '}
+        <span className="font-mono text-xs text-amber-200">
+          {[payload.server, payload.tool].filter(Boolean).join(' › ')}
+        </span>
+      </p>
+      {hasArguments && (
+        <details>
+          <summary className="cursor-pointer text-xs text-muted-foreground">{t('approval.arguments')}</summary>
+          {truncated && (
+            <p className="mt-1 text-xs text-muted-foreground">{t('approval.argumentsTruncated', { chars: args?._chars })}</p>
+          )}
+          <pre className="mt-1 max-h-64 overflow-auto rounded-lg bg-black/30 p-2 text-[0.7rem] text-amber-50/80 whitespace-pre-wrap break-all">
+            {truncated ? args?.preview : JSON.stringify(args, null, 2)}
+          </pre>
+        </details>
+      )}
+      {item.status === 'open' && payload.expires_at && (
+        <p className="text-xs text-muted-foreground">{t('approval.expires', { time: formatDate(payload.expires_at) })}</p>
+      )}
+    </div>
   );
 }

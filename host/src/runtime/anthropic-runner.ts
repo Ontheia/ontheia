@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import type { OrchestratorService } from '../orchestrator/service.js';
@@ -119,7 +120,7 @@ export async function runAnthropicCompletion(
       break;
     }
 
-    if (Date.now() > timeoutAt) {
+    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
       emit({ type: 'error', code: 'tool_loop_timeout', message: 'Time limit for tool execution exceeded.' });
       break;
     }

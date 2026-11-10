@@ -44,6 +44,7 @@
  * Activation is opt-in per model/provider metadata `chat_api: "responses"`
  * (dispatch in provider-run.ts). Chat completions stays the default.
  */
+import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
 import type { ProviderRecord, ProviderModelRecord } from '../providers/repository.js';
@@ -317,7 +318,7 @@ export async function runResponsesCompletion(
       emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
       break;
     }
-    if (Date.now() > timeoutAt) {
+    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
       emit({ type: 'error', code: 'tool_loop_timeout', message: 'Time limit for tool execution exceeded.' });
       break;
     }

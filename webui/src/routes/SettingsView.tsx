@@ -815,10 +815,12 @@ function GeneralSection({
   promptOptimizer,
   rollingSummary,
   maxToolCalls,
+  approvalTimeoutHours,
   onRuntimeChange,
   onPromptOptimizerChange,
   onRollingSummaryChange,
   onMaxToolCallsChange,
+  onApprovalTimeoutHoursChange,
   onHasChanges
 }: {
   runtimeSettings: { toolLoopTimeoutMs: number; requestRateLimitPerMinute: number; timezone?: string };
@@ -826,10 +828,12 @@ function GeneralSection({
   promptOptimizer: { providerId: string | null; modelId: string | null };
   rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number };
   maxToolCalls: string;
+  approvalTimeoutHours: string;
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number }) => void;
   onMaxToolCallsChange: (value: string) => void;
+  onApprovalTimeoutHoursChange: (value: string) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
   const { t } = useTranslation(['admin', 'common', 'errors']);
@@ -956,6 +960,24 @@ function GeneralSection({
             />
             <p className="settings-hint">
               {t('general.maxToolCallsHint')}
+            </p>
+          </label>
+          <label className="settings-field">
+            <span>{t('general.approvalTimeout')}</span>
+            <Input
+              type="number"
+              min={1}
+              max={720}
+              value={approvalTimeoutHours}
+              onChange={(event) => {
+                if (event.target.value !== '' && !/^\d+$/.test(event.target.value)) return;
+                onApprovalTimeoutHoursChange(event.target.value);
+                onHasChanges(true);
+              }}
+              placeholder={t('general.approvalTimeoutPlaceholder')}
+            />
+            <p className="settings-hint">
+              {t('general.approvalTimeoutHint')}
             </p>
           </label>
           <label className="settings-field">
@@ -8871,6 +8893,9 @@ export function SettingsView() {
   // dirty check — only a changed value is PATCHed.
   const [maxToolCalls, setMaxToolCalls] = useState('');
   const maxToolCallsInitialRef = useRef('');
+  // Same pattern for the inbox approval wait (system setting, hours).
+  const [approvalTimeoutHours, setApprovalTimeoutHours] = useState('');
+  const approvalTimeoutInitialRef = useRef('');
   useEffect(() => {
     getSystemSettingsAdmin()
       .then((rows) => {
@@ -8878,6 +8903,10 @@ export function SettingsView() {
         const draft = typeof entry?.value === 'number' ? String(entry.value) : '';
         setMaxToolCalls(draft);
         maxToolCallsInitialRef.current = draft;
+        const timeoutEntry = rows.find((item) => item.key === 'inbox_approval_timeout_hours');
+        const timeoutDraft = typeof timeoutEntry?.value === 'number' ? String(timeoutEntry.value) : '';
+        setApprovalTimeoutHours(timeoutDraft);
+        approvalTimeoutInitialRef.current = timeoutDraft;
       })
       .catch(() => {});
   }, []);
@@ -8999,6 +9028,17 @@ export function SettingsView() {
         }
       }
 
+      if (approvalTimeoutHours !== approvalTimeoutInitialRef.current) {
+        const trimmed = approvalTimeoutHours.trim();
+        const value = trimmed === '' ? null : Math.max(1, Math.min(720, Number.parseInt(trimmed, 10)));
+        if (trimmed === '' || Number.isFinite(value)) {
+          await updateSystemSettingsAdmin({ inbox_approval_timeout_hours: value });
+          const normalized = value === null ? '' : String(value);
+          approvalTimeoutInitialRef.current = normalized;
+          setApprovalTimeoutHours(normalized);
+        }
+      }
+
       setHasChanges(false);
     } catch (error) {
       console.error(t('general.settingsSaveError'), error);
@@ -9006,6 +9046,7 @@ export function SettingsView() {
       setSavingSettings(false);
     }
   }, [
+    approvalTimeoutHours,
     builderDefaults,
     chainSteps,
     maxToolCalls,
@@ -9164,10 +9205,12 @@ export function SettingsView() {
             promptOptimizer={promptOptimizer}
             rollingSummary={rollingSummary}
             maxToolCalls={maxToolCalls}
+            approvalTimeoutHours={approvalTimeoutHours}
             onRuntimeChange={(patch) => configureRuntimeSettings(patch)}
             onPromptOptimizerChange={setPromptOptimizer}
             onRollingSummaryChange={setRollingSummary}
             onMaxToolCallsChange={setMaxToolCalls}
+            onApprovalTimeoutHoursChange={setApprovalTimeoutHours}
             onHasChanges={setHasChanges}
           />
         );

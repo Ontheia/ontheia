@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { Logger } from 'pino';
 import Ajv from 'ajv';
@@ -436,7 +437,7 @@ async function runCliLoop(
       emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
       return events;
     }
-    if (Date.now() > timeoutAt) {
+    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
       emit({ type: 'error', code: 'tool_loop_timeout', message: 'Tool loop timed out.' });
       return events;
     }
@@ -707,7 +708,7 @@ export async function runOpenAiCompletion(
       return events;
     }
 
-    if (Date.now() > timeoutAt) {
+    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
       emit({
         type: 'error',
         code: 'tool_loop_timeout',
@@ -1108,7 +1109,7 @@ async function handleOpenAiToolCalls(params: {
 }): Promise<ToolCallHandlingResult> {
   const {
     db, responseBody, conversation, toolset, orchestrator, emit,
-    totalToolCalls, deadline, options,
+    totalToolCalls, deadline, timeoutSeconds, options,
     toolAccessBlocked, toolApprovalMode, toolPermissions = {},
     agent_id, task_id, provider_id, model_id, context_options
   } = params;
@@ -1147,7 +1148,8 @@ async function handleOpenAiToolCalls(params: {
       return 'abort';
     }
 
-    if (Date.now() > deadline) {
+    // The loop's start is not passed down; deadline minus its length is the same instant.
+    if (isPastDeadline(deadline, deadline - timeoutSeconds * 1000, options?.waitForToolApproval)) {
       emit({ type: 'error', code: 'timeout', message: 'Timeout' });
       return 'abort';
     }

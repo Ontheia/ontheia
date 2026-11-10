@@ -1783,6 +1783,8 @@ export type CronJobEntry = {
   created_by_agent_id: string | null;
   schedule_depth: number;
   notify: boolean;
+  /** 'granted' approves every tool call; 'inbox' applies the agent's settings and asks in the inbox. */
+  approval_mode: 'granted' | 'inbox';
   prevent_overlap: boolean;
   active: boolean;
   last_run_at: string | null;
@@ -1883,6 +1885,7 @@ export function createCronJob(payload: {
   prompt_text?: string | null;
   chat_id?: string | null;
   notify?: boolean;
+  approval_mode?: 'granted' | 'inbox';
   prevent_overlap?: boolean;
   active?: boolean;
 }) {
@@ -1905,6 +1908,7 @@ export function updateCronJob(id: string, payload: {
   prompt_text?: string | null;
   chat_id?: string | null;
   notify?: boolean;
+  approval_mode?: 'granted' | 'inbox';
   active?: boolean;
 }) {
   return request(`/api/cron/${encodeURIComponent(id)}`, {
@@ -1987,6 +1991,14 @@ export function listInbox(params: { status?: 'open' | 'all'; limit?: number; off
 
 export function getInboxCount() {
   return request('/api/inbox/count', { method: 'GET' }) as Promise<{ open: number; approvals: number }>;
+}
+
+/** Answers a pending tool approval. Rejects with 409 when the run is no longer waiting. */
+export function resolveInboxApproval(id: string, mode: 'once' | 'always' | 'deny') {
+  return request(`/api/inbox/${encodeURIComponent(id)}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ mode })
+  }) as Promise<{ ok: true }>;
 }
 
 export function markInboxItemDone(id: string) {
