@@ -1016,25 +1016,6 @@ function GeneralSection({
       </div>
 
       <div className="settings-section">
-        <h3>{t('general.responseStreaming')}</h3>
-        <p className="settings-preamble">{t('general.responseStreamingDesc')}</p>
-        <div className="space-y-4">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              className="app-toggle"
-              checked={responseStreaming}
-              onChange={(e) => updateResponseStreaming(e.target.checked)}
-            />
-            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
-              {t('general.responseStreamingToggle')}
-            </span>
-          </label>
-        </div>
-        <p className="settings-hint">{t('general.responseStreamingHint')}</p>
-      </div>
-
-      <div className="settings-section">
         <h3>{t('general.triggers')}</h3>
         <p className="settings-preamble">{t('general.triggersDesc')}</p>
         <div className="space-y-4">
@@ -1051,6 +1032,25 @@ function GeneralSection({
           </label>
         </div>
         <p className="settings-hint">{t('general.triggersHint')}</p>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('general.responseStreaming')}</h3>
+        <p className="settings-preamble">{t('general.responseStreamingDesc')}</p>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              className="app-toggle"
+              checked={responseStreaming}
+              onChange={(e) => updateResponseStreaming(e.target.checked)}
+            />
+            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+              {t('general.responseStreamingToggle')}
+            </span>
+          </label>
+        </div>
+        <p className="settings-hint">{t('general.responseStreamingHint')}</p>
       </div>
 
       <div className="settings-section">
