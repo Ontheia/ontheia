@@ -108,7 +108,8 @@ Geplante Agenten-Interaktionen basierend auf Zeitintervallen oder Einmalzeitpunk
 | `prompt_text` | string \| null | Direkte Texteingabe als Benutzernachricht (Alternative zu `prompt_template_id`). |
 | `chat_id` | string \| null | Bestehender Chat, in dem der Job fortgesetzt wird. |
 | `chat_title_template` | string \| null | Titelvorlage mit `{{name}}` und `{{timestamp}}`. |
-| `notify` | boolean | Desktop-Benachrichtigung nach Abschluss senden. |
+| `notify` | boolean | Ergebnis jedes Laufs in den Posteingang legen und, falls aktiviert, eine Desktop-Benachrichtigung senden. Fehler landen unabhängig davon im Posteingang. |
+| `approval_mode` | `"granted"` \| `"inbox"` | Tool-Freigabe. `granted` (Standard): Der Job genehmigt sich jeden Tool-Aufruf selbst. `inbox`: Tool-Aufrufe warten im Posteingang, außer bei Tools, die der Agent immer nutzen darf. |
 | `prevent_overlap` | boolean | Überlappende Ausführungen verhindern. |
 | `active` | boolean | Job aktiv/inaktiv schalten. |
 
@@ -116,7 +117,70 @@ Geplante Agenten-Interaktionen basierend auf Zeitintervallen oder Einmalzeitpunk
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `GET` | `/api/events` | SSE-Stream für Echtzeit-Push-Events (z. B. `cron_complete`). Authentifizierung via Bearer-Token. Event-Typ: `notification`, Payload enthält `type`, `job_id`, `job_name`, `chat_id`, `success`. |
+| `GET` | `/api/events` | SSE-Stream für Echtzeit-Push-Events. Authentifizierung via Bearer-Token. Event-Typ: `notification`. `type: "cron_complete"` trägt `job_id`, `job_name`, `chat_id`, `success`; `type: "inbox_item"` trägt `item_id`, `kind`, bei neuen Einträgen `title` und `chat_id`, bei geschlossenen Freigaben `closed: true`. |
+
+---
+
+## Trigger (Webhook)
+
+Läufe, die ein anderes System auslöst. Konzept: [Trigger (Webhook)](/de/automation/02_triggers/).
+
+### Eingang
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `POST` | `/hooks/:id` | Startet den Lauf des Triggers. Keine Session; Token im Header `Authorization: Bearer <Token>` oder `X-Ontheia-Token`. Body: JSON bis 256 KB. Antwort `202` mit `{ status: "accepted", event_id, run_id }` oder `{ status: "skipped", reason: "overlap" }`. Fehler: `401` (Token falsch/fehlend, Trigger unbekannt oder inaktiv), `404` (Trigger global aus), `413`, `415`, `429`. |
+
+### Verwaltung
+
+Alle Routen erfordern eine Session und wirken nur auf die eigenen Trigger.
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `GET` | `/api/triggers` | Listet die eigenen Trigger. Antwort: `{ triggers, enabled }`; `enabled` ist der globale Schalter. Der Token-Hash wird nie ausgegeben. |
+| `POST` | `/api/triggers` | Legt einen Trigger an. Antwort `201` mit `{ trigger, token }` — die einzige Antwort, die das Token enthält. |
+| `PATCH` | `/api/triggers/:id` | Ändert Felder eines Triggers. |
+| `DELETE` | `/api/triggers/:id` | Löscht Trigger und Protokoll. |
+| `POST` | `/api/triggers/:id/rotate-token` | Erzeugt ein neues Token (`{ token }`); das bisherige ist sofort ungültig. |
+| `POST` | `/api/triggers/:id/test` | Startet einen Lauf mit `{ payload }` über die Session statt des Tokens. Zählt gegen dieselben Limits; funktioniert auch bei inaktivem Trigger. |
+| `GET` | `/api/triggers/:id/events` | Die letzten 50 Protokolleinträge: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
+
+**Felder POST/PATCH `/api/triggers`:**
+
+| Feld | Typ | Beschreibung |
+| --- | --- | --- |
+| `name` | string | Anzeigename, höchstens 120 Zeichen. Pflicht beim Anlegen. |
+| `agent_id` | uuid \| null | Agent. Agent oder Chain ist Pflicht. |
+| `task_id` | uuid \| null | Optionaler Task. |
+| `chain_id` | uuid \| null | Optionale Chain. |
+| `prompt_template` | string | Anweisung mit `{{payload}}`, `{{payload.a.b}}`, `{{name}}`, `{{timestamp}}`. Leer = Standardtext mit allen Daten. |
+| `approval_mode` | `"inbox"` \| `"granted"` \| `"denied"` | Tool-Freigabe. Standard `inbox`. |
+| `inbox_result` | `"always"` \| `"errors"` \| `"never"` | Was der Lauf im Posteingang meldet. Standard `always`. |
+| `chat_id` | string \| null | Bestehender Chat, in dem jeder Lauf fortgesetzt wird. Leer = neuer Chat pro Aufruf. |
+| `chat_title_template` | string | Titelvorlage mit `{{name}}` und `{{timestamp}}`. |
+| `rate_limit_per_min` | integer | 1 – 600, Standard 10. |
+| `prevent_overlap` | boolean | Aufrufe während eines laufenden Laufs überspringen. |
+| `active` | boolean | Trigger aktiv/inaktiv schalten. |
+
+Zielt ein Trigger auf einen Agenten, einen Task oder eine Chain, auf die der Besitzer keinen Zugriff hat, antwortet die Route mit `403 target_not_accessible`.
+
+---
+
+## Posteingang
+
+Freigaben, Ergebnisse und Fehler von Hintergrundläufen. Konzept: [Posteingang](/de/automation/03_inbox/). Alle Routen erfordern eine Session und wirken nur auf die eigenen Einträge, auch für Admins.
+
+| Methode | Pfad | Beschreibung |
+| :--- | :--- | :--- |
+| `GET` | `/api/inbox` | Listet Einträge. Query: `status` (`open` Standard, `all`), `limit` (1 – 100, Standard 50), `offset`. Antwort: `{ items, total, open }`. Offene Freigaben stehen vorn. |
+| `GET` | `/api/inbox/count` | `{ open, approvals }` für den Zähler. |
+| `POST` | `/api/inbox/:id/resolve` | Beantwortet eine Freigabe. Body: `{ mode: "once" \| "always" \| "deny" }`. `409 approval_no_longer_pending`, wenn der Lauf nicht mehr wartet. |
+| `POST` | `/api/inbox/:id/done` | Schließt ein Ergebnis oder einen Fehler. Für Freigaben `404`. |
+| `POST` | `/api/inbox/done-all` | Schließt alle offenen Ergebnisse und Fehler. Antwort: `{ ok, done }`. |
+
+**Eintrag:** `id`, `kind` (`approval`/`result`/`error`), `status` (`open`/`done`/`expired`), `run_id`, `chat_id` (null, wenn der Chat nicht mehr existiert), `trigger_type` (`cron`/`webhook`), `trigger_id`, `title`, `summary`, `payload`, `resolution`, `created_at`, `resolved_at`. Bei Freigaben enthält `payload` die Felder `call_id`, `server`, `tool`, `arguments` und `expires_at`.
+
+Eine Freigabe eines Hintergrundlaufs lässt sich weiterhin auch über `POST /runs/:id/tool-approval` beantworten.
 
 ---
 
@@ -277,7 +341,7 @@ Globale Konfiguration des Ontheia-Hosts.
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
 | `GET` | `/admin/settings` | Ruft alle globalen Systemeinstellungen ab. |
-| `PATCH` | `/admin/settings` | Aktualisiert spezifische Systemeinstellungen (z.B. `allow_self_signup`). |
+| `PATCH` | `/admin/settings` | Aktualisiert spezifische Systemeinstellungen (z.B. `allow_self_signup`, `max_tool_calls`, `triggers_enabled`, `inbox_approval_timeout_hours`). |
 | `GET` | `/admin/model-usage` | Listet alle verwendeten Provider/Modell-Paare mit den Agenten, aktiven Chains und Systemeinstellungen (`promptOptimizer`, `rollingSummary`), die sie nutzen; `known` zeigt, ob das Paar als Chat-Modell angelegt ist. Agent-Builder ausgenommen. |
 | `POST` | `/admin/model-replace` | Ersetzt ein Modell an den gewählten Stellen. Body: `{ from: { provider, model }, to: { provider, model }, agent_ids, chain_ids, settings }`. `to` muss ein aktives Chat-Modell sein. Chains erhalten eine neue aktive Version. Gibt die geänderten `agents`, `chains` und `settings` zurück. |
 | `GET` | `/admin/system/status` | Gibt Systemstatus zurück: Memory-Modus (`disabled`/`cloud`/`local`) und installierte Version. Nützlich für Monitoring und Skripte. |

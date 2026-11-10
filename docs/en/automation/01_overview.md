@@ -2,6 +2,8 @@
 
 Ontheia offers an integrated system for automating agent workflows via scheduled jobs. This allows for the execution of regular tasks (e.g., daily briefings, weekly reports, or continuous data processing) without manual interaction.
 
+This page describes runs on a schedule. Runs set off by another system are described in [Triggers (Webhook)](./02_triggers.md). What background runs put in front of you is collected in the [Inbox](./03_inbox.md).
+
 ## Concepts
 
 ### Recurring Schedules (Cron)
@@ -28,8 +30,13 @@ When a job has a **Chat Target** assigned, it loads the existing chat history on
 ### Concurrency Control
 To conserve resources and avoid logic conflicts, the **"Prevent Overlap"** option can be activated. If active, a scheduled run is skipped if the previous execution of the same job has not yet finished.
 
-### Desktop Notification on Completion
-If the **"Notify on Completion"** option is active and the user has enabled desktop notifications in their settings, a browser notification is shown after the job finishes. It includes a direct link to the associated chat.
+### Report the Result
+If the **"Report the result"** option is active, every run puts its result into the owner's [inbox](./03_inbox.md). If the user has enabled desktop notifications in their settings, a browser notification with a direct link to the chat is shown as well. A failed run reaches the inbox regardless of this option.
+
+### Tool Approval
+By default a job approves every tool call itself, because nobody sits at the screen to be asked. With **"Ask for approvals in the inbox"** every tool call waits in the inbox for an answer instead — except for tools the agent is always allowed to use. Without an answer, the approval counts as refused after the configured waiting time (default 24 hours) and the run carries on with that. Details: [Inbox › Approvals](./03_inbox.md#approvals).
+
+The option applies to jobs created in the interface or through the API. Jobs an agent creates through `create_schedule` approve their tool calls themselves.
 
 ### Manual Execution
 Every job can be triggered manually at any time via the play icon in the Admin Console. This is useful for tests or unscheduled executions.

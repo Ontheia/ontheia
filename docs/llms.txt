@@ -4,7 +4,7 @@
 
 Ontheia turns isolated language models into integrated, action-capable assistants. A master planner analyzes complex requests, breaks them into subtasks, and delegates them to specialized agents. Each agent has its own tools, decision logic, and persistent memory. All data stays on-premise.
 
-Core capabilities: multi-agent orchestration with A2A delegation (up to 5 levels deep), MCP server integration (Docker-isolated), long-term vector memory (pgvector), visual chain/workflow designer, scheduled automation (cron), Agent Skills (open agentskills.io standard — compatible with Claude Code, GitHub Copilot, Cursor), multi-tenancy with RBAC and Row-Level Security.
+Core capabilities: multi-agent orchestration with A2A delegation (up to 5 levels deep), MCP server integration (Docker-isolated), long-term vector memory (pgvector), visual chain/workflow designer, scheduled and event-driven automation (cron, webhook triggers) with an inbox for tool approvals and results, Agent Skills (open agentskills.io standard — compatible with Claude Code, GitHub Copilot, Cursor), multi-tenancy with RBAC and Row-Level Security.
 
 Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, PostgreSQL + pgvector, rootless Docker for MCP server isolation.
 
@@ -91,7 +91,9 @@ Tech stack: Node.js/TypeScript backend (Fastify), React/TypeScript frontend, Pos
 - [Dry Run](https://docs.ontheia.ai/en/api/02_dry_run): Test agent and chain execution without side effects
 
 ## Automation
-- [Overview](https://docs.ontheia.ai/en/automation/01_overview): Automation capabilities, webhooks, triggers
+- [Overview](https://docs.ontheia.ai/en/automation/01_overview): Scheduled runs (cron and one-time jobs), agent-created schedules
+- [Triggers (Webhook)](https://docs.ontheia.ai/en/automation/02_triggers): Start an agent or chain from an incoming webhook; token, placeholders, limits, security
+- [Inbox](https://docs.ontheia.ai/en/automation/03_inbox): Tool approvals, results and errors of background runs
 
 ## Observability
 - [Logging](https://docs.ontheia.ai/en/observability/01_logging): Log levels, log files, structured logging
@@ -135,8 +137,9 @@ Field-by-field reference of every screen — the most precise source for what a 
 - [Admin › Memory](https://docs.ontheia.ai/en/webui_navi/08_admin_memory): Memory browser, policies, audit widgets
 - [Admin › Info](https://docs.ontheia.ai/en/webui_navi/09_admin_info): System status and version information
 - [User Settings](https://docs.ontheia.ai/en/webui_navi/10_user_settings): Personal settings, profile, security
-- [Automation](https://docs.ontheia.ai/en/webui_navi/11_automation): Scheduled task forms and controls
+- [Automation](https://docs.ontheia.ai/en/webui_navi/11_automation): Schedule and trigger forms and controls
 - [Composer](https://docs.ontheia.ai/en/webui_navi/12_composer): Input area, attachments, agent and model picker
 - [Left Sidebar](https://docs.ontheia.ai/en/webui_navi/13_sidebar_left): Navigation, projects, history, user menu
 - [Right Sidebar](https://docs.ontheia.ai/en/webui_navi/14_sidebar_right): Run status, tool queue, MCP servers, memory hits
 - [File Cards & Artifact Panel](https://docs.ontheia.ai/en/webui_navi/15_artifact_panel): File cards in the chat, panel editor, PDF viewer, saving drafts as files
+- [Inbox](https://docs.ontheia.ai/en/webui_navi/16_inbox): Inbox view, entry kinds, approval buttons, sidebar counter

@@ -10,6 +10,7 @@ Die linke Sidebar ist die primäre Navigation der Chat-Ansicht.
 Logo / Header
 ────────────────────
 [+ Neuer Chat]
+Posteingang (Zähler)
 Suchfeld
 ────────────────────
 ── Projekte ──
@@ -27,6 +28,9 @@ Benutzermenü (Avatar)
 
 ### Neuer Chat
 Button oben links — öffnet einen leeren Chat ohne Projekt-Zuordnung.
+
+### Posteingang
+Öffnet den [Posteingang](/de/webui_navi/16_inbox/) mit den Freigaben, Ergebnissen und Fehlern von Hintergrundläufen. Die Zahl daneben nennt die offenen Einträge; bei eingeklappter Sidebar zeigt ein Punkt am Symbol, dass etwas offen ist.
 
 ### Suchfeld
 Filtert die Chat-Liste nach Titel. Suche erfolgt lokal über die geladenen Einträge.
@@ -59,7 +63,7 @@ Am unteren Rand der linken Sidebar. Öffnet ein Dropdown-Menü mit:
 | --- | --- |
 | **Administration** | Admin-Konsole (nur für Admins sichtbar) |
 | **Einstellungen** | Benutzereinstellungen |
-| **Automatisierung** | Cron-Jobs und Zeitpläne |
+| **Automatisierung** | Zeitpläne und Trigger |
 | **Dokumentation** | Öffnet [docs.ontheia.ai](https://docs.ontheia.ai) in einem neuen Tab — in der Sprache der Oberfläche |
 | **Abmelden** | Session beenden |
 

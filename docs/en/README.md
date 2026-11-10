@@ -44,13 +44,15 @@ Screen-by-screen reference of every view — useful when looking up a single fie
 
 - **[Overview](./webui_navi/01_overview.md):** How the interface is laid out.
 - **Admin console:** [General](./webui_navi/02_admin_general.md) · [Users](./webui_navi/03_admin_users.md) · [MCP](./webui_navi/04_admin_mcp.md) · [Skills](./webui_navi/05_admin_skills.md) · [Providers](./webui_navi/06_admin_providers.md) · [Agents](./webui_navi/07_admin_agents.md) · [Memory](./webui_navi/08_admin_memory.md) · [Info](./webui_navi/09_admin_info.md)
-- **User views:** [Settings](./webui_navi/10_user_settings.md) · [Automation](./webui_navi/11_automation.md) · [Composer](./webui_navi/12_composer.md) · [Left sidebar](./webui_navi/13_sidebar_left.md) · [Right sidebar](./webui_navi/14_sidebar_right.md) · [Artifact panel](./webui_navi/15_artifact_panel.md)
+- **User views:** [Settings](./webui_navi/10_user_settings.md) · [Automation](./webui_navi/11_automation.md) · [Composer](./webui_navi/12_composer.md) · [Left sidebar](./webui_navi/13_sidebar_left.md) · [Right sidebar](./webui_navi/14_sidebar_right.md) · [Artifact panel](./webui_navi/15_artifact_panel.md) · [Inbox](./webui_navi/16_inbox.md)
 
 ---
 
 ## ⚙️ Automation
 
 - **[Cron Jobs & Schedules](./automation/01_overview.md):** Run agent workflows on a schedule.
+- **[Triggers (Webhook)](./automation/02_triggers.md):** Let other systems start a run.
+- **[Inbox](./automation/03_inbox.md):** Approvals, results and errors of background runs.
 
 ---
 

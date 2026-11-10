@@ -10,6 +10,7 @@ The left sidebar is the primary navigation of the chat view.
 Logo / Header
 ────────────────────
 [+ New Chat]
+Inbox (counter)
 Search field
 ────────────────────
 ── Projects ──
@@ -27,6 +28,9 @@ User menu (Avatar)
 
 ### New Chat
 Button at the top left — opens an empty chat without project assignment.
+
+### Inbox
+Opens the [inbox](/en/webui_navi/16_inbox/) with the approvals, results and errors of background runs. The number next to it is the count of open entries; with the sidebar collapsed, a dot on the icon shows that something is open.
 
 ### Search Field
 Filters the chat list by title. Search is performed locally over loaded entries.
@@ -59,7 +63,7 @@ At the bottom of the left sidebar. Opens a dropdown menu with:
 | --- | --- |
 | **Administration** | Admin console (only visible to admins) |
 | **Settings** | User settings |
-| **Automation** | Cron jobs and schedules |
+| **Automation** | Schedules and triggers |
 | **Documentation** | Opens [docs.ontheia.ai](https://docs.ontheia.ai) in a new tab — in the interface language |
 | **Sign out** | End session |
 

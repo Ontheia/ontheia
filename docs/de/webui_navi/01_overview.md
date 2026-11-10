@@ -86,4 +86,6 @@ linkes Panel (Menü)  | rechtes Panel
 ─────────────────────┼──────────────────────────────────────────────
 Zeitpläne (Cron)     │ Header: Cron-Jobs + Button [Neuer Job]
                      │ Liste der konfigurierten Cron-Jobs
+Trigger (Webhook)    │ Header: Trigger + Button [Neuer Trigger]
+                     │ Liste der eigenen Trigger
 ```

@@ -44,13 +44,15 @@ Bildschirmweise Referenz aller Ansichten — nützlich beim Nachschlagen eines e
 
 - **[Übersicht](./webui_navi/01_overview.md):** Aufbau der Oberfläche.
 - **Admin-Konsole:** [Allgemein](./webui_navi/02_admin_general.md) · [Benutzer](./webui_navi/03_admin_users.md) · [MCP](./webui_navi/04_admin_mcp.md) · [Skills](./webui_navi/05_admin_skills.md) · [Provider](./webui_navi/06_admin_providers.md) · [Agents](./webui_navi/07_admin_agents.md) · [Memory](./webui_navi/08_admin_memory.md) · [Info](./webui_navi/09_admin_info.md)
-- **Benutzer-Ansichten:** [Einstellungen](./webui_navi/10_user_settings.md) · [Automatisierung](./webui_navi/11_automation.md) · [Composer](./webui_navi/12_composer.md) · [Linke Sidebar](./webui_navi/13_sidebar_left.md) · [Rechte Sidebar](./webui_navi/14_sidebar_right.md) · [Artefakt-Panel](./webui_navi/15_artifact_panel.md)
+- **Benutzer-Ansichten:** [Einstellungen](./webui_navi/10_user_settings.md) · [Automatisierung](./webui_navi/11_automation.md) · [Composer](./webui_navi/12_composer.md) · [Linke Sidebar](./webui_navi/13_sidebar_left.md) · [Rechte Sidebar](./webui_navi/14_sidebar_right.md) · [Artefakt-Panel](./webui_navi/15_artifact_panel.md) · [Posteingang](./webui_navi/16_inbox.md)
 
 ---
 
 ## ⚙️ Automatisierung
 
 - **[Cron-Jobs & Zeitpläne](./automation/01_overview.md):** Agenten-Workflows zeitgesteuert ausführen.
+- **[Trigger (Webhook)](./automation/02_triggers.md):** Läufe von anderen Systemen auslösen lassen.
+- **[Posteingang](./automation/03_inbox.md):** Freigaben, Ergebnisse und Fehler von Hintergrundläufen.
 
 ---
 

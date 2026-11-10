@@ -2,7 +2,7 @@
 
 **Pfad:** Linke Sidebar → Automatisierung (Uhr-Icon)
 
-Abschnitt: **Zeitpläne (Cron)**
+Abschnitte: **Zeitpläne (Cron)** · **Trigger (Webhook)**
 
 ---
 
@@ -51,7 +51,8 @@ Button: **[Neuer Job]** — öffnet das Erstell-Modal.
 | Chat-Titel Vorlage | Text | | Titelvorlage für den automatisch erstellten Chat. Platzhalter: `{{name}}`, `{{timestamp}}`. |
 | Chat-Ziel | Dropdown | | Bestehenden Chat auswählen, in dem der Job fortgesetzt wird. Leer = neuer Chat bei jeder Ausführung. |
 | Überlappung verhindern | Checkbox | | Falls aktiviert: geplanter Lauf wird übersprungen, wenn die vorherige Ausführung noch läuft. |
-| Bei Abschluss benachrichtigen | Checkbox | | Sendet eine Desktop-Benachrichtigung wenn der Job abgeschlossen ist. Nur sichtbar, wenn Desktop-Benachrichtigungen in den Einstellungen aktiviert sind. |
+| Ergebnis melden | Schalter | | Legt das Ergebnis jedes Laufs in den [Posteingang](/de/webui_navi/16_inbox/). Mit aktivierten Desktop-Benachrichtigungen kommt zusätzlich eine Browser-Benachrichtigung. Ein fehlgeschlagener Lauf landet in jedem Fall im Posteingang. |
+| Freigaben im Posteingang anfragen | Schalter | | Aus (Standard): Der Job genehmigt sich jeden Tool-Aufruf selbst. An: Jeder Tool-Aufruf wartet im Posteingang auf eine Antwort, außer bei Tools, die der Agent immer nutzen darf. |
 
 Buttons: **[Speichern]** · **[Abbrechen]**
 
@@ -62,3 +63,44 @@ Buttons: **[Speichern]** · **[Abbrechen]**
 Unterhalb der Job-Tabelle: Liste der letzten Ausführungen mit Zeitstempel, Job-Name und Status.
 
 Laufende Ausführungen lassen sich über den **Stop-Button im Run-Status der rechten Sidebar** (Aktivitäts-Panel) beenden — siehe [Rechte Sidebar](/de/webui_navi/14_sidebar_right/) — oder über den **Stop-Button am Chat-Eintrag in der linken Sidebar** — siehe [Linke Sidebar](/de/webui_navi/13_sidebar_left/).
+
+---
+
+## Trigger (Webhook)
+
+Konzept, Aufruf und Sicherheit: [Trigger (Webhook)](/de/automation/02_triggers/).
+
+Zeigt die eigenen Trigger als Karten: Name, Marke für die Tool-Freigabe, Adresse mit Kopierknopf, Ziel, letzter Aufruf und letzter Fehler.
+
+| Aktion | Symbol | Wirkung |
+| --- | --- | --- |
+| Testen | Play | Öffnet einen Dialog für Beispieldaten (JSON) und startet damit einen Lauf – über die Anmeldung, ohne Token. |
+| Protokoll | Uhr | Klappt die letzten Aufrufe aus: Zeitpunkt, Status, empfangene Daten, Fehler, Link zum Chat. |
+| Neues Token | Schlüssel | Erzeugt nach Rückfrage ein neues Token. Das bisherige ist sofort ungültig. |
+| Bearbeiten | Stift | Öffnet das Modal mit den gespeicherten Werten. |
+| Löschen | Papierkorb | Löscht Trigger und Protokoll nach Rückfrage. |
+| Aktiv | Schalter | Deaktiviert antwortet der Trigger wie ein unbekannter (`401`). |
+
+Button: **[Neuer Trigger]** — öffnet das Erstell-Modal.
+
+Sind Trigger für die Installation ausgeschaltet, steht ein Hinweis über der Liste.
+
+### Modal: Trigger anlegen / Trigger bearbeiten
+
+| Feld | Typ | Pflicht | Beschreibung |
+| --- | --- | --- | --- |
+| Name | Text | ✓ | Anzeigename, auch Titel der Posteingang-Einträge. Höchstens 120 Zeichen. |
+| Agent | Dropdown | ✓ | Agent, der den Lauf ausführt. |
+| Task (Optional) | Dropdown | | Task des gewählten Agents. |
+| Chain (Optional) | Dropdown | | Chain statt Task. Schließt Task aus. |
+| Anweisung | Textarea | | Benutzernachricht an den Agenten. Platzhalter: `{{payload}}`, `{{payload.feld}}`, `{{name}}`, `{{timestamp}}`. Leer = der Agent bekommt die Daten mit der Bitte, sie gemäß seiner Aufgabe zu verarbeiten. |
+| Tool-Freigabe | Dropdown | ✓ | **Im Posteingang anfragen** (Standard) · **Alle Tools erlauben** (mit Warnhinweis) · **Keine Tools**. |
+| Im Posteingang melden | Dropdown | ✓ | **Jedes Ergebnis** (Standard) · **Nur Fehler** · **Nichts**. |
+| Aufrufe pro Minute | Zahl | ✓ | 1 – 600, Standard 10. Weitere Aufrufe werden abgewiesen. |
+| Überlappung verhindern | Schalter | | Ein Aufruf während eines laufenden Laufs dieses Triggers wird übersprungen. |
+
+Buttons: **[Speichern]** · **[Abbrechen]**
+
+### Dialog nach dem Anlegen
+
+Zeigt **Adresse**, **Token** und ein **`curl`-Beispiel**, jeweils mit Kopierknopf. Das Token ist nur hier sichtbar. Derselbe Dialog erscheint nach **Neues Token**.

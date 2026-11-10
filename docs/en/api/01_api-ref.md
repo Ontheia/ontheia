@@ -108,7 +108,8 @@ Scheduled agent interactions based on time intervals or one-time timestamps.
 | `prompt_text` | string \| null | Direct text input as user message (alternative to `prompt_template_id`). |
 | `chat_id` | string \| null | Existing chat to continue the job in. |
 | `chat_title_template` | string \| null | Title template with `{{name}}` and `{{timestamp}}`. |
-| `notify` | boolean | Send desktop notification on completion. |
+| `notify` | boolean | Put the result of every run into the inbox and, if enabled, send a desktop notification. Errors reach the inbox regardless. |
+| `approval_mode` | `"granted"` \| `"inbox"` | Tool approval. `granted` (default): the job approves every tool call itself. `inbox`: tool calls wait in the inbox, except for tools the agent is always allowed to use. |
 | `prevent_overlap` | boolean | Prevent overlapping executions. |
 | `active` | boolean | Enable/disable the job. |
 
@@ -116,7 +117,70 @@ Scheduled agent interactions based on time intervals or one-time timestamps.
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/events` | SSE stream for real-time push events (e.g., `cron_complete`). Authentication via Bearer token. Event type: `notification`, payload contains `type`, `job_id`, `job_name`, `chat_id`, `success`. |
+| `GET` | `/api/events` | SSE stream for real-time push events. Authentication via Bearer token. Event type: `notification`. `type: "cron_complete"` carries `job_id`, `job_name`, `chat_id`, `success`; `type: "inbox_item"` carries `item_id`, `kind`, for new entries `title` and `chat_id`, for closed approvals `closed: true`. |
+
+---
+
+## Triggers (Webhook)
+
+Runs set off by another system. Concept: [Triggers (Webhook)](/en/automation/02_triggers/).
+
+### Incoming
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `POST` | `/hooks/:id` | Starts the trigger's run. No session; token in the header `Authorization: Bearer <token>` or `X-Ontheia-Token`. Body: JSON up to 256 KB. Response `202` with `{ status: "accepted", event_id, run_id }` or `{ status: "skipped", reason: "overlap" }`. Errors: `401` (token wrong/missing, trigger unknown or inactive), `404` (triggers switched off globally), `413`, `415`, `429`. |
+
+### Management
+
+All routes require a session and act on your own triggers only.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/triggers` | Lists your triggers. Response: `{ triggers, enabled }`; `enabled` is the global switch. The token hash is never returned. |
+| `POST` | `/api/triggers` | Creates a trigger. Response `201` with `{ trigger, token }` — the only response that carries the token. |
+| `PATCH` | `/api/triggers/:id` | Changes fields of a trigger. |
+| `DELETE` | `/api/triggers/:id` | Deletes trigger and log. |
+| `POST` | `/api/triggers/:id/rotate-token` | Creates a new token (`{ token }`); the previous one stops working at once. |
+| `POST` | `/api/triggers/:id/test` | Starts a run with `{ payload }` through the session instead of the token. Counts against the same limits; also works for an inactive trigger. |
+| `GET` | `/api/triggers/:id/events` | The latest 50 log entries: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
+
+**Fields POST/PATCH `/api/triggers`:**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | string | Display name, at most 120 characters. Required on create. |
+| `agent_id` | uuid \| null | Agent. An agent or a chain is required. |
+| `task_id` | uuid \| null | Optional task. |
+| `chain_id` | uuid \| null | Optional chain. |
+| `prompt_template` | string | Instruction with `{{payload}}`, `{{payload.a.b}}`, `{{name}}`, `{{timestamp}}`. Empty = default text with all data. |
+| `approval_mode` | `"inbox"` \| `"granted"` \| `"denied"` | Tool approval. Default `inbox`. |
+| `inbox_result` | `"always"` \| `"errors"` \| `"never"` | What the run reports to the inbox. Default `always`. |
+| `chat_id` | string \| null | Existing chat every run continues in. Empty = new chat per call. |
+| `chat_title_template` | string | Title template with `{{name}}` and `{{timestamp}}`. |
+| `rate_limit_per_min` | integer | 1 – 600, default 10. |
+| `prevent_overlap` | boolean | Skip calls during an active run. |
+| `active` | boolean | Switch the trigger on or off. |
+
+If a trigger targets an agent, a task or a chain its owner has no access to, the route answers `403 target_not_accessible`.
+
+---
+
+## Inbox
+
+Approvals, results and errors of background runs. Concept: [Inbox](/en/automation/03_inbox/). All routes require a session and act on your own entries only, also for admins.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/inbox` | Lists entries. Query: `status` (`open` default, `all`), `limit` (1 – 100, default 50), `offset`. Response: `{ items, total, open }`. Open approvals come first. |
+| `GET` | `/api/inbox/count` | `{ open, approvals }` for the counter. |
+| `POST` | `/api/inbox/:id/resolve` | Answers an approval. Body: `{ mode: "once" \| "always" \| "deny" }`. `409 approval_no_longer_pending` when the run is no longer waiting. |
+| `POST` | `/api/inbox/:id/done` | Closes a result or an error. `404` for approvals. |
+| `POST` | `/api/inbox/done-all` | Closes all open results and errors. Response: `{ ok, done }`. |
+
+**Entry:** `id`, `kind` (`approval`/`result`/`error`), `status` (`open`/`done`/`expired`), `run_id`, `chat_id` (null when the chat no longer exists), `trigger_type` (`cron`/`webhook`), `trigger_id`, `title`, `summary`, `payload`, `resolution`, `created_at`, `resolved_at`. For approvals `payload` holds `call_id`, `server`, `tool`, `arguments` and `expires_at`.
+
+An approval of a background run can still be answered through `POST /runs/:id/tool-approval` as well.
 
 ---
 
@@ -277,7 +341,7 @@ Global configuration of the Ontheia host.
 | Method | Path | Description |
 | :--- | :--- | :--- |
 | `GET` | `/admin/settings` | Retrieves all global system settings. |
-| `PATCH` | `/admin/settings` | Updates specific system settings (e.g., `allow_self_signup`). |
+| `PATCH` | `/admin/settings` | Updates specific system settings (e.g., `allow_self_signup`, `max_tool_calls`, `triggers_enabled`, `inbox_approval_timeout_hours`). |
 | `GET` | `/admin/model-usage` | Lists every provider/model pair in use with the agents, active chains and system settings (`promptOptimizer`, `rollingSummary`) that use it; `known` tells whether the pair is registered as a chat model. Agent-Builder excluded. |
 | `POST` | `/admin/model-replace` | Replaces a model in the selected places. Body: `{ from: { provider, model }, to: { provider, model }, agent_ids, chain_ids, settings }`. `to` must be an active chat model. Chains get a new active version. Returns the changed `agents`, `chains` and `settings`. |
 | `GET` | `/admin/system/status` | Returns system status: memory mode (`disabled`/`cloud`/`local`) and installed version. Useful for monitoring and scripts. |

@@ -2,7 +2,7 @@
 
 **Path:** Left sidebar → Automation (clock icon)
 
-Section: **Schedules (Cron)**
+Sections: **Schedules (Cron)** · **Triggers (Webhook)**
 
 ---
 
@@ -51,7 +51,8 @@ Button: **[New Job]** — opens the create modal.
 | Chat Title Template | Text | | Title template for the automatically created chat. Placeholders: `{{name}}`, `{{timestamp}}`. |
 | Chat Target | Dropdown | | Select an existing chat to continue the job in. Empty = new chat per execution. |
 | Prevent Overlap | Checkbox | | If enabled: a scheduled run is skipped if the previous execution has not yet finished. |
-| Notify on Completion | Checkbox | | Sends a desktop notification when the job finishes. Only visible when desktop notifications are enabled in settings. |
+| Report the result | Switch | | Puts the result of every run into the [inbox](/en/webui_navi/16_inbox/). With desktop notifications enabled, a browser notification is sent as well. A failed run reaches the inbox either way. |
+| Ask for approvals in the inbox | Switch | | Off (default): the job approves every tool call itself. On: every tool call waits in the inbox for an answer, except for tools the agent is always allowed to use. |
 
 Buttons: **[Save]** · **[Cancel]**
 
@@ -62,3 +63,44 @@ Buttons: **[Save]** · **[Cancel]**
 Below the job table: list of recent executions with timestamp, job name, and status.
 
 Running executions can be stopped via the **stop button in the Run Status section of the right sidebar** (activity panel) — see [Right Sidebar](/en/webui_navi/14_sidebar_right/) — or via the **stop button on the chat entry in the left sidebar** — see [Left Sidebar](/en/webui_navi/13_sidebar_left/).
+
+---
+
+## Triggers (Webhook)
+
+Concept, calling and security: [Triggers (Webhook)](/en/automation/02_triggers/).
+
+Shows your own triggers as cards: name, badge for the tool approval, address with copy button, target, last call and last error.
+
+| Action | Icon | Effect |
+| --- | --- | --- |
+| Test | Play | Opens a dialog for sample data (JSON) and starts a run with it — through the sign-in, without the token. |
+| Log | Clock | Expands the latest calls: time, status, received data, error, link to the chat. |
+| New token | Key | Creates a new token after confirmation. The previous one stops working at once. |
+| Edit | Pencil | Opens the modal with the stored values. |
+| Delete | Trash | Deletes trigger and log after confirmation. |
+| Active | Switch | Deactivated, the trigger answers like an unknown one (`401`). |
+
+Button: **[New trigger]** — opens the create modal.
+
+If triggers are switched off for the installation, a notice is shown above the list.
+
+### Modal: Create Trigger / Edit Trigger
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| Name | Text | ✓ | Display name, also the title of the inbox entries. At most 120 characters. |
+| Agent | Dropdown | ✓ | Agent that executes the run. |
+| Task (Optional) | Dropdown | | Task of the selected agent. |
+| Chain (Optional) | Dropdown | | Chain instead of a task. Excludes Task. |
+| Instruction | Textarea | | User message to the agent. Placeholders: `{{payload}}`, `{{payload.field}}`, `{{name}}`, `{{timestamp}}`. Empty = the agent receives the data with the request to handle it according to its task. |
+| Tool approval | Dropdown | ✓ | **Ask in the inbox** (default) · **Allow all tools** (with a warning) · **No tools**. |
+| Report to the inbox | Dropdown | ✓ | **Every result** (default) · **Errors only** · **Nothing**. |
+| Calls per minute | Number | ✓ | 1 – 600, default 10. Further calls are refused. |
+| Prevent Overlap | Switch | | A call during an active run of this trigger is skipped. |
+
+Buttons: **[Save]** · **[Cancel]**
+
+### Dialog After Creating
+
+Shows the **address**, the **token** and a **`curl` example**, each with a copy button. The token is visible here only. The same dialog appears after **New token**.

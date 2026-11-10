@@ -2,6 +2,8 @@
 
 Ontheia bietet ein integriertes System zur Automatisierung von Agenten-Workflows über zeitgesteuerte Jobs. Dies ermöglicht es, regelmäßige Aufgaben (z. B. tägliche Briefings, wöchentliche Berichte oder kontinuierliche Datenverarbeitung) ohne manuelle Interaktion auszuführen.
 
+Diese Seite beschreibt Läufe nach Zeitplan. Läufe, die ein anderes System auslöst, beschreibt [Trigger (Webhook)](./02_triggers.md). Was Hintergrundläufe dir vorlegen, sammelt der [Posteingang](./03_inbox.md).
+
 ## Konzepte
 
 ### Wiederkehrende Zeitpläne (Cron)
@@ -28,8 +30,13 @@ Wird einem Job ein **Chat-Ziel** zugewiesen, lädt der Job beim Ausführen den b
 ### Überlappungsschutz (Concurrency Control)
 Um Ressourcen zu schonen und Logik-Konflikte zu vermeiden, kann die Option **„Überlappung verhindern"** aktiviert werden. Ist diese aktiv, wird ein geplanter Lauf übersprungen, falls die vorherige Ausführung desselben Jobs noch nicht abgeschlossen ist.
 
-### Desktop-Benachrichtigung bei Abschluss
-Ist die Option **„Bei Abschluss benachrichtigen"** aktiv und hat der Benutzer Desktop-Benachrichtigungen in seinen Einstellungen aktiviert, wird nach Abschluss des Jobs eine Browser-Notification angezeigt. Diese enthält einen Direktlink zum zugehörigen Chat.
+### Ergebnis melden
+Ist die Option **„Ergebnis melden"** aktiv, legt jeder Lauf sein Ergebnis in den [Posteingang](./03_inbox.md) des Besitzers. Hat der Benutzer Desktop-Benachrichtigungen in seinen Einstellungen aktiviert, erscheint zusätzlich eine Browser-Notification mit Direktlink zum Chat. Ein fehlgeschlagener Lauf landet unabhängig von dieser Option im Posteingang.
+
+### Tool-Freigabe
+Ein Job genehmigt sich standardmäßig jeden Tool-Aufruf selbst, weil niemand am Bildschirm sitzt, den er fragen könnte. Mit **„Freigaben im Posteingang anfragen"** wartet stattdessen jeder Tool-Aufruf im Posteingang auf eine Antwort – außer bei Tools, die der Agent immer nutzen darf. Bleibt die Antwort aus, gilt die Freigabe nach der eingestellten Wartezeit (Standard 24 Stunden) als abgelehnt, und der Lauf geht damit weiter. Details: [Posteingang › Freigaben](./03_inbox.md#freigaben).
+
+Die Option gilt für Jobs, die in der Oberfläche oder über die API angelegt werden. Jobs, die ein Agent über `create_schedule` anlegt, genehmigen sich ihre Tool-Aufrufe selbst.
 
 ### Manuelle Ausführung
 Jeder Job kann jederzeit manuell über das Play-Icon in der Admin-Konsole getriggert werden. Dies ist nützlich für Tests oder außerplanmäßige Ausführungen.

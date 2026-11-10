@@ -86,4 +86,6 @@ left panel (menu)    | right panel
 ─────────────────────┼──────────────────────────────────────────────
 Schedules (Cron)     │ Header: Cron Jobs + Button [New Job]
                      │ List of configured cron jobs
+Triggers (Webhook)   │ Header: Triggers + Button [New trigger]
+                     │ List of your own triggers
 ```

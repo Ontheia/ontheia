@@ -10,10 +10,21 @@
 | --- | --- | --- | --- |
 | Tool Loop Timeout (Seconds) | Number | 60 – 3600 | Maximum duration the agent may spend on tool calls. Default: 600 s. |
 | Max. Tool Calls per Run | Number | 1 – 1000 | Global cap on the number of tool calls in a single run, for every provider path. Empty = default (50). |
+| Inbox approval wait (hours) | Number | 1 – 720 | How long a background run waits in the [inbox](/en/automation/03_inbox/) for a tool approval before it counts as refused. Empty = default (24). |
 | Request Rate Limit | Number | 1 – 500 | Limits provider calls per minute to avoid HTTP 429 errors. Default: 10. |
 | System Timezone | Text | IANA format, e.g. `Europe/Berlin` | Default timezone for cron jobs and audit logs. |
 
 > These settings apply globally and override individual user settings. Save via **[Apply]**.
+
+---
+
+## Section: Webhook Triggers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| Accept incoming trigger calls | Switch | Default: on. Off: every call to `/hooks/…` is refused with `404`; the triggers themselves are kept. Saved immediately (no **[Apply]** needed), effective within 30 seconds. |
+
+> Details: [Triggers (Webhook)](/en/automation/02_triggers/).
 
 ---
 
