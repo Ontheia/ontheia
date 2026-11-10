@@ -205,6 +205,14 @@ Certificate and key must be readable by the Caddy service. Each block goes on li
 
 > **Note:** Browsers show a security warning for self-signed certificates. The certificate can be marked as trusted in your browser or operating system.
 
+The same applies to every sender of a [webhook trigger](../automation/02_triggers.md): it refuses the connection as long as it does not trust the certificate (`curl: (60) SSL certificate problem: self-signed certificate`). Hand the sender the certificate, not the key:
+
+```bash
+curl --cacert ontheia.crt -X POST 'https://192.168.1.10/api/hooks/<id>' …
+```
+
+`curl -k` switches the check off entirely. That is fine for a quick test, not for operation: the token would then also go to a server that merely poses as Ontheia.
+
 ---
 
 ## Common Issues

@@ -205,6 +205,14 @@ In `.env` steht dann `VITE_HOST_API_URL=https://192.168.1.10/api` und `ALLOWED_O
 
 > **Hinweis:** Browser zeigen eine Sicherheitswarnung für Self-Signed-Zertifikate. Das Zertifikat kann im Browser oder im Betriebssystem als vertrauenswürdig markiert werden.
 
+Dasselbe gilt für jeden Absender eines [Webhook-Triggers](../automation/02_triggers.md): Er lehnt die Verbindung ab, solange er dem Zertifikat nicht vertraut (`curl: (60) SSL certificate problem: self-signed certificate`). Gib dem Absender das Zertifikat mit, nicht den Schlüssel:
+
+```bash
+curl --cacert ontheia.crt -X POST 'https://192.168.1.10/api/hooks/<id>' …
+```
+
+`curl -k` schaltet die Prüfung ganz ab. Das taugt für einen schnellen Test, nicht für den Betrieb: Das Token ginge dann auch an einen Server, der sich nur als Ontheia ausgibt.
+
 ---
 
 ## Häufige Probleme
