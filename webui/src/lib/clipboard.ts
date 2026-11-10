@@ -20,7 +20,12 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-export async function copyText(text: string): Promise<boolean> {
+/**
+ * @param container Where the fallback's hidden textarea is placed. Inside an
+ *   open dialog pass the dialog element: its focus trap takes focus back from
+ *   anything outside, leaving the fallback with nothing selected to copy.
+ */
+export async function copyText(text: string, container?: HTMLElement | null): Promise<boolean> {
   try {
     if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
@@ -37,11 +42,12 @@ export async function copyText(text: string): Promise<boolean> {
     textarea.style.opacity = '0';
     textarea.style.left = '-1000px';
     textarea.style.top = '-1000px';
-    document.body.appendChild(textarea);
+    const host = container ?? document.body;
+    host.appendChild(textarea);
     textarea.focus();
     textarea.select();
     const ok = document.execCommand('copy');
-    document.body.removeChild(textarea);
+    host.removeChild(textarea);
     return ok;
   } catch (err) {
     console.warn('Copy failed', err);

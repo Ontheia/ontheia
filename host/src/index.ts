@@ -43,6 +43,8 @@ import { NullEmbeddingProvider } from './memory/provider.js';
 import { RunService } from './runtime/RunService.js';
 import { CronService } from './runtime/CronService.js';
 import { InboxService } from './runtime/InboxService.js';
+import { closeOrphanedRuns } from './runtime/run-registry.js';
+import { TriggerService } from './runtime/TriggerService.js';
 import { SkillService } from './runtime/SkillService.js';
 
 const config = loadConfig();
@@ -228,8 +230,17 @@ const skillService = new SkillService(dbPool, server.log);
 await skillService.start();
 
 const runService = new RunService(dbPool, orchestrator, memoryAdapter, skillService);
+// Before anything can start a run: close the logs of runs the previous process left open.
+try {
+  const closed = await closeOrphanedRuns(dbPool);
+  if (closed > 0) server.log.info({ closed }, 'Closed run logs left open by the previous process');
+} catch (err) {
+  server.log.error({ err }, 'Failed to close orphaned run logs');
+}
 const inboxService = new InboxService(dbPool, server.log);
 await inboxService.expireOrphanedApprovals();
+const triggerService = new TriggerService(dbPool, runService, inboxService, server.log);
+await triggerService.closeOrphanedEvents();
 const cronService = new CronService(dbPool, runService, server.log, inboxService);
 await cronService.start();
 
@@ -269,7 +280,7 @@ server.get('/metrics', async (request, reply) => {
 
 server.get('/health', async () => ({ status: 'ok', rootless: rootlessCheckOk }));
 
-await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config, skillService, inboxService);
+await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config, skillService, inboxService, triggerService);
 
 async function bootstrapAutoStartServers(attempt = 1, maxAttempts = 5) {
   try {

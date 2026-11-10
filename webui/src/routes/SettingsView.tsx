@@ -842,6 +842,7 @@ function GeneralSection({
   const [motdSaved, setMotdSaved] = useState(false);
   const [promptCaching, setPromptCaching] = useState(true);
   const [responseStreaming, setResponseStreaming] = useState(true);
+  const [triggersEnabled, setTriggersEnabled] = useState(true);
 
   useEffect(() => {
     getSystemSettingsAdmin()
@@ -852,6 +853,8 @@ function GeneralSection({
         setPromptCaching(cachingEntry?.value !== false);
         const streamingEntry = data.find((item) => item.key === 'response_streaming');
         setResponseStreaming(streamingEntry?.value !== false);
+        const triggersEntry = data.find((item) => item.key === 'triggers_enabled');
+        setTriggersEnabled(triggersEntry?.value !== false);
       })
       .catch(() => {});
   }, []);
@@ -873,6 +876,16 @@ function GeneralSection({
     } catch {
       setResponseStreaming(!value);
       console.error(t('general.responseStreamingSaveError'));
+    }
+  };
+
+  const updateTriggersEnabled = async (value: boolean) => {
+    setTriggersEnabled(value);
+    try {
+      await updateSystemSettingsAdmin({ triggers_enabled: value });
+    } catch {
+      setTriggersEnabled(!value);
+      console.error(t('general.triggersSaveError'));
     }
   };
 
@@ -1019,6 +1032,25 @@ function GeneralSection({
           </label>
         </div>
         <p className="settings-hint">{t('general.responseStreamingHint')}</p>
+      </div>
+
+      <div className="settings-section">
+        <h3>{t('general.triggers')}</h3>
+        <p className="settings-preamble">{t('general.triggersDesc')}</p>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              className="app-toggle"
+              checked={triggersEnabled}
+              onChange={(e) => updateTriggersEnabled(e.target.checked)}
+            />
+            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+              {t('general.triggersToggle')}
+            </span>
+          </label>
+        </div>
+        <p className="settings-hint">{t('general.triggersHint')}</p>
       </div>
 
       <div className="settings-section">

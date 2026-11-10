@@ -2008,3 +2008,89 @@ export function markInboxItemDone(id: string) {
 export function markAllInboxDone() {
   return request('/api/inbox/done-all', { method: 'POST' }) as Promise<{ ok: true; done: number }>;
 }
+
+// --- Webhook triggers ---
+
+export type TriggerApprovalMode = 'inbox' | 'granted' | 'denied';
+export type TriggerInboxResult = 'always' | 'errors' | 'never';
+
+export type TriggerEntry = {
+  id: string;
+  name: string;
+  agent_id: string | null;
+  task_id: string | null;
+  chain_id: string | null;
+  prompt_template: string;
+  approval_mode: TriggerApprovalMode;
+  inbox_result: TriggerInboxResult;
+  chat_id: string | null;
+  chat_title_template: string;
+  rate_limit_per_min: number;
+  prevent_overlap: boolean;
+  active: boolean;
+  last_triggered_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TriggerEventEntry = {
+  id: string;
+  received_at: string;
+  status: 'started' | 'success' | 'error' | 'rate_limited' | 'overlap_skipped' | 'busy';
+  source: 'webhook' | 'test';
+  run_id: string | null;
+  chat_id: string | null;
+  payload: unknown;
+  error: string | null;
+};
+
+export type TriggerInput = Partial<Pick<TriggerEntry,
+  'name' | 'agent_id' | 'task_id' | 'chain_id' | 'prompt_template' | 'approval_mode' | 'inbox_result' |
+  'chat_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
+
+/** Address a sender posts to. The token goes into a header, never into this URL. */
+export function triggerHookUrl(id: string) {
+  return `${API_BASE}/hooks/${id}`;
+}
+
+export function listTriggers() {
+  return request('/api/triggers', { method: 'GET' }) as Promise<{ triggers: TriggerEntry[]; enabled: boolean }>;
+}
+
+/** The response is the only time the token is readable. */
+export function createTrigger(payload: TriggerInput) {
+  return request('/api/triggers', { method: 'POST', body: JSON.stringify(payload) }) as Promise<{
+    trigger: TriggerEntry;
+    token: string;
+  }>;
+}
+
+export function updateTrigger(id: string, payload: TriggerInput) {
+  return request(`/api/triggers/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  }) as Promise<{ trigger: TriggerEntry }>;
+}
+
+export function deleteTrigger(id: string) {
+  return request(`/api/triggers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/** Invalidates the previous token at once. */
+export function rotateTriggerToken(id: string) {
+  return request(`/api/triggers/${encodeURIComponent(id)}/rotate-token`, { method: 'POST' }) as Promise<{ token: string }>;
+}
+
+export function testTrigger(id: string, payload: unknown) {
+  return request(`/api/triggers/${encodeURIComponent(id)}/test`, {
+    method: 'POST',
+    body: JSON.stringify({ payload })
+  }) as Promise<{ status: 'accepted' | 'skipped'; event_id?: string; run_id?: string; reason?: string }>;
+}
+
+export function listTriggerEvents(id: string) {
+  return request(`/api/triggers/${encodeURIComponent(id)}/events`, { method: 'GET' }) as Promise<{
+    events: TriggerEventEntry[];
+  }>;
+}

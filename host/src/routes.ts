@@ -34,6 +34,8 @@ import { registerRunRoutes } from './routes/runs.js';
 import { registerCronRoutes } from './routes/cron.js';
 import { registerInboxRoutes } from './routes/inbox.js';
 import type { InboxService } from './runtime/InboxService.js';
+import { registerTriggerRoutes } from './routes/triggers.js';
+import type { TriggerService } from './runtime/TriggerService.js';
 import { registerPromptRoutes } from './routes/prompts.js';
 import { RouteContext } from './routes/types.js';
 import { RunService } from './runtime/RunService.js';
@@ -57,7 +59,8 @@ export async function registerRoutes(
   runService: RunService,
   config: ServiceConfig,
   skillService?: SkillService,
-  inboxService?: InboxService
+  inboxService?: InboxService,
+  triggerService?: TriggerService
 ) {
   const promptOptimizerChainId = process.env.PROMPT_OPTIMIZER_CHAIN_ID || process.env.VITE_PROMPT_OPTIMIZER_CHAIN_ID || '';
   const builderChainId = process.env.BUILDER_CHAIN_ID || process.env.VITE_BUILDER_CHAIN_ID || '';
@@ -81,6 +84,7 @@ export async function registerRoutes(
   registerRunRoutes(server, context);
   registerCronRoutes(server, { ...context, cronService });
   if (inboxService) registerInboxRoutes(server, { ...context, inboxService });
+  if (triggerService) registerTriggerRoutes(server, { ...context, triggerService });
   registerPromptRoutes(server, context);
   if (skillService) registerSkillRoutes(server, { ...context, skillService });
   registerArtifactRoutes(server, { ...context, skillService });

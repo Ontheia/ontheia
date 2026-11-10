@@ -77,6 +77,7 @@ import {
 
 import { useTranslation } from 'react-i18next';
 import { localizeError } from '../lib/error-utils';
+import { TriggerPanel } from '../components/TriggerPanel';
 
 export function AutomationView() {
   const { t, i18n } = useTranslation(['automation', 'common', 'chat', 'errors']);
@@ -89,6 +90,7 @@ export function AutomationView() {
   const [runningJobs, setRunningJobs] = useState<Set<string>>(new Set());
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
   const [allChains, setAllChains] = useState<ChainEntry[]>([]);
+  const [section, setSection] = useState<'cron' | 'triggers'>('cron');
   
   const { agents, upsertRunStatus, runtimeSettings } = useChatSidebar();
   const { refreshCronJobs } = useSecondarySidebar();
@@ -225,13 +227,28 @@ export function AutomationView() {
             <p>{t('description')}</p>
           </div>
           <nav className="admin-settings-nav">
-            <button type="button" className="admin-settings-link active">
+            <button
+              type="button"
+              className={cn('admin-settings-link', section === 'cron' && 'active')}
+              onClick={() => setSection('cron')}
+            >
               <span className="admin-settings-link-label">{t('schedules')}</span>
               <span className="admin-settings-link-desc">{t('manageRuns')}</span>
+            </button>
+            <button
+              type="button"
+              className={cn('admin-settings-link', section === 'triggers' && 'active')}
+              onClick={() => setSection('triggers')}
+            >
+              <span className="admin-settings-link-label">{t('triggers')}</span>
+              <span className="admin-settings-link-desc">{t('triggersDesc')}</span>
             </button>
           </nav>
         </aside>
 
+        {section === 'triggers' ? (
+          <TriggerPanel agents={agents} allChains={allChains} timezone={runtimeSettings.timezone} />
+        ) : (
         <div className="admin-settings-content">
           <header className="admin-settings-header flex items-center justify-between">
             <div>
@@ -425,6 +442,7 @@ export function AutomationView() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <JobDialog

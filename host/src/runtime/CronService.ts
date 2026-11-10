@@ -22,16 +22,14 @@
  */
 import type { Pool } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
-import { randomUUID } from 'crypto';
 import cron from 'node-cron';
 import { RunService } from './RunService.js';
 import { isUuid, withTransaction } from '../routes/utils.js';
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
 import { pushUserNotification } from '../routes/runs-state.js';
 import { buildAutomationSystemNote } from './automation-utils.js';
-import { outcomeFromEvents, type InboxService } from './InboxService.js';
-import { registerActiveRun, unregisterActiveRun } from './run-registry.js';
-import type { ToolApprovalMode } from './types.js';
+import type { InboxService } from './InboxService.js';
+import { executeBackgroundRun, loadRunUser } from './background-run.js';
 
 export class CronService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
@@ -100,152 +98,49 @@ export class CronService {
       throw new Error(`Invalid user_id: "${user_id}"`);
     }
 
-    const { role, messageContent, userLanguage, agentApproval } = await withTransaction(this.db, async (client) => {
-      await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
-      await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
-
-      const userRes = await client.query('SELECT role FROM app.users WHERE id = $1', [user_id]);
-      if (!userRes.rows[0]) {
-        throw Object.assign(new Error(`User ${user_id} no longer exists — stopping job`), { userDeleted: true });
-      }
-      const resolvedRole = userRes.rows[0].role;
-
-      const settingsRes = await client.query(
-        `SELECT settings->'preferences'->>'language' AS lang,
-                settings->'preferences'->>'desktopNotifications' AS desktop_notifications
-         FROM app.user_settings WHERE user_id = $1`,
-        [user_id]
-      );
-      const lang = settingsRes.rows[0]?.lang;
-      const resolvedLanguage: 'de' | 'en' = lang === 'de' || lang === 'en' ? lang : 'en';
-      const desktopNotifications = settingsRes.rows[0]?.desktop_notifications === 'true';
-
-      let resolvedMessage = runId ? 'Manually triggered cron job' : 'Auto-triggered by cron';
-      if (jobData.prompt_text) {
-        resolvedMessage = jobData.prompt_text;
-      } else if (jobData.prompt_template_id) {
-        const tplRes = await client.query('SELECT content FROM app.prompt_templates WHERE id = $1', [jobData.prompt_template_id]);
-        if (tplRes.rowCount && tplRes.rowCount > 0) {
-          resolvedMessage = tplRes.rows[0].content;
-        }
-      }
-      // The tools the agent may always use. Only read when the job asks for
-      // approvals: 'granted' never looks at it.
-      let resolvedAgentApproval: { permissions: Record<string, 'once' | 'always'> } | null = null;
-      if (jobData.approval_mode === 'inbox' && jobData.agent_id && !jobData.chain_id) {
-        const agentRes = await client.query(
-          'SELECT default_tool_permissions FROM app.agents WHERE id = $1',
-          [jobData.agent_id]
-        );
-        const agentRow = agentRes.rows[0];
-        if (agentRow) {
-          resolvedAgentApproval = {
-            permissions: agentRow.default_tool_permissions && typeof agentRow.default_tool_permissions === 'object'
-              ? agentRow.default_tool_permissions
-              : {}
-          };
-        }
-      }
-      return { role: resolvedRole, messageContent: resolvedMessage, userLanguage: resolvedLanguage, desktopNotificationsEnabled: desktopNotifications, agentApproval: resolvedAgentApproval };
-    });
-
-    this.log.info({ jobId: id, name, role }, 'Executing job');
-
-    // Determine chat: use existing chat_id or create a new one
-    let chatId: string;
-    let historyMessages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [];
-
-    if (jobData.chat_id) {
-      chatId = jobData.chat_id;
-      try {
-        const histRes = await withTransaction(this.db, async (client) => {
-          await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
-          await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
-          return client.query(
-            `SELECT role, content FROM app.chat_messages
-             WHERE chat_id = $1 AND deleted_at IS NULL
-             ORDER BY created_at ASC`,
-            [chatId]
-          );
-        });
-        historyMessages = histRes.rows
-          .filter((r: any) => ['user', 'assistant', 'system', 'tool'].includes(r.role))
-          .map((r: any) => ({ role: r.role as 'user' | 'assistant' | 'system' | 'tool', content: r.content }));
-      } catch (err) {
-        this.log.warn({ err, jobId: id, chatId }, 'Failed to load chat history — proceeding without history');
-      }
-    } else {
-      chatId = randomUUID();
+    const runUser = await loadRunUser(this.db, user_id);
+    if (!runUser) {
+      throw Object.assign(new Error(`User ${user_id} no longer exists — stopping job`), { userDeleted: true });
     }
 
-    const runTimestamp = new Date().toLocaleString(userLanguage === 'de' ? 'de-DE' : 'en-US', { timeZone: timezone });
-    const chatTitle = (chat_title_template || 'Auto-Run: {{name}} [{{timestamp}}]')
-      .replace('{{name}}', name)
-      .replace('{{timestamp}}', runTimestamp);
-
-    const messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }> = [
-      ...historyMessages,
-      { role: 'system', content: buildAutomationSystemNote('cron', name) },
-      { role: 'user', content: messageContent }
-    ];
-
-    // Fixed here rather than inside executeRun so the inbox entry can name the run.
-    const effectiveRunId = runId ?? randomUUID();
-
-    // 'granted' (the default) approves every tool call. 'inbox' is the job's
-    // counterpart to "ask for approval" in the composer: like there, the choice
-    // made for this run wins over the agent's default mode, and only the tools
-    // the agent may always use skip the question. A chain resolves the
-    // permissions of each step's agent itself.
-    const asksInbox = jobData.approval_mode === 'inbox' && Boolean(this.inboxService);
-    const toolApproval: ToolApprovalMode = asksInbox ? 'prompt' : 'granted';
-
-    // Registered here rather than inside executeRun: the approval callback
-    // needs the same signal to stop waiting when the run is stopped.
-    const controller = new AbortController();
-    registerActiveRun(effectiveRunId, controller, user_id);
-
-    let events;
-    try {
-      events = await this.runService.executeRun({
-        provider_id: '',
-        model_id: '',
-        agent_id: jobData.agent_id,
-        task_id: jobData.task_id,
-        chain_id: jobData.chain_id,
-        messages,
-        memory: { enabled: true },
-        tool_approval: toolApproval,
-        ...(asksInbox && agentApproval ? { tool_permissions: agentApproval.permissions } : {})
-      }, {
-        userId: user_id,
-        role,
-        runId: effectiveRunId,
-        chatId,
-        trigger: { type: 'cron', id },
-        scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
-        title: chatTitle,
-        onEvent: (_event) => {},
-        abortSignal: controller.signal,
-        waitForToolApproval: asksInbox
-          ? this.inboxService!.createApprovalWaiter({
-              userId: user_id,
-              runId: effectiveRunId,
-              title: name,
-              chatId,
-              triggerType: 'cron',
-              triggerId: id,
-              signal: controller.signal
-            })
-          : undefined,
-        logger: this.log
+    let messageContent = runId ? 'Manually triggered cron job' : 'Auto-triggered by cron';
+    if (jobData.prompt_text) {
+      messageContent = jobData.prompt_text;
+    } else if (jobData.prompt_template_id) {
+      const tplRes = await withTransaction(this.db, async (client) => {
+        await client.query(`SELECT set_config('app.user_role', 'admin', true)`);
+        await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [user_id]);
+        return client.query('SELECT content FROM app.prompt_templates WHERE id = $1', [jobData.prompt_template_id]);
       });
-    } finally {
-      unregisterActiveRun(effectiveRunId);
+      if (tplRes.rowCount && tplRes.rowCount > 0) messageContent = tplRes.rows[0].content;
     }
 
-    const hasError = events.some(e => e.type === 'error');
-    const errorMsg = hasError ? (events.find(e => e.type === 'error') as any).message || 'Run failed' : null;
+    this.log.info({ jobId: id, name, role: runUser.role }, 'Executing job');
+
+    const { chatId, hasError, errorMessage: errorMsg } = await executeBackgroundRun(
+      { db: this.db, runService: this.runService, inboxService: this.inboxService, log: this.log },
+      {
+        userId: user_id,
+        role: runUser.role,
+        language: runUser.language,
+        timezone,
+        name,
+        trigger: { type: 'cron', id },
+        agentId: jobData.agent_id,
+        taskId: jobData.task_id,
+        chainId: jobData.chain_id,
+        systemNote: buildAutomationSystemNote('cron', name),
+        message: messageContent,
+        chatId: jobData.chat_id,
+        chatTitleTemplate: chat_title_template || 'Auto-Run: {{name}} [{{timestamp}}]',
+        // 'granted' is the default: a job approves its own tool calls unless it asks.
+        approval: jobData.approval_mode === 'inbox' ? 'inbox' : 'granted',
+        // A result only when the job asks for it; an error always.
+        inboxResult: jobData.notify ? 'always' : 'errors',
+        scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
+        runId
+      }
+    );
 
     this.log.debug({ jobId: id }, 'Updating job status');
     try {
@@ -259,22 +154,6 @@ export class CronService {
       });
     } catch (updateErr) {
       this.log.error({ err: updateErr, jobId: id }, 'Failed to update job status');
-    }
-
-    // An error always reaches the inbox — a failed background run nobody hears
-    // about is the case the inbox exists for. A result only when the job asks.
-    const outcome = outcomeFromEvents(events);
-    if (this.inboxService && (outcome.kind === 'error' || jobData.notify)) {
-      await this.inboxService.add({
-        userId: user_id,
-        kind: outcome.kind,
-        title: name,
-        summary: outcome.summary,
-        runId: effectiveRunId,
-        chatId,
-        triggerType: 'cron',
-        triggerId: id
-      });
     }
 
     if (jobData.notify) {

@@ -54,3 +54,15 @@ export function abortActiveRun(runId: string, userId: string): 'stopping' | 'not
   entry.controller.abort();
   return 'stopping';
 }
+type Queryable = { query: (text: string) => Promise<{ rows: Array<{ closed: number }> }> };
+
+/**
+ * Closes the logs of runs a previous host process left open; without a closing
+ * event they read as "still running". The work happens in the database function
+ * (migration V88) because run logs are visible to their owner only and the host
+ * acts for no user at this point. Called once on start, before any run exists.
+ */
+export async function closeOrphanedRuns(db: Queryable): Promise<number> {
+  const res = await db.query('SELECT app.close_orphaned_runs() AS closed');
+  return res.rows[0]?.closed ?? 0;
+}
