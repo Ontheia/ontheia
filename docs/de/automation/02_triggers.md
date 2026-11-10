@@ -38,7 +38,7 @@ Die Felder des Dialogs beschreibt die [Oberflächen-Referenz](/de/webui_navi/11_
 ## Aufruf
 
 ```bash
-curl -X POST 'https://meine-domain.de/hooks/<id>' \
+curl -X POST 'https://meine-domain.de/api/hooks/<id>' \
   -H 'Authorization: Bearer ontr_…' \
   -H 'Content-Type: application/json' \
   -d '{"event": "opened", "battery": 87}'
@@ -52,7 +52,7 @@ curl -X POST 'https://meine-domain.de/hooks/<id>' \
 
 Das Token wird nur im Header angenommen, nicht in der Adresse. In einer Adresse landet es in den Protokollen jedes Proxys auf dem Weg.
 
-Die Adresse setzt sich aus der Basis-Adresse der Host-API und `/hooks/<id>` zusammen. Hinter einem Reverse Proxy muss dieser Pfad zum Host weitergeleitet werden, wenn Absender von außen kommen.
+Die Adresse setzt sich aus der Basis-Adresse der Host-API und `/hooks/<id>` zusammen. Hinter einem Reverse Proxy nach der [Anleitung](../configuration/04_reverse_proxy.md) lautet sie `https://meine-domain.de/api/hooks/<id>`; die Oberfläche zeigt die richtige Adresse an.
 
 ### Antworten
 

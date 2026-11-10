@@ -11,8 +11,20 @@ Internet / LAN
  Reverse Proxy  (Port 80 / 443)
       │
       ├─── /          → WebUI    (ontheia-webui:5173)
-      └─── /api/      → Host API (ontheia-host:8080)
+      └─── /api/…     → Host API (ontheia-host:8080), without the /api prefix
 ```
+
+### The `/api` Prefix Is Removed
+
+The proxy forwards everything below `/api/` to the host and removes `/api` from the path while doing so. This is necessary because the host has no common prefix: its routes are called `/auth/…`, `/runs/…`, `/memory/…`, `/hooks/…` and, for part of the interface, `/api/…` themselves.
+
+| The browser calls | The host receives |
+| --- | --- |
+| `https://my-domain.com/api/auth/login` | `/auth/login` |
+| `https://my-domain.com/api/api/cron` | `/api/cron` |
+| `https://my-domain.com/api/hooks/<id>` | `/hooks/<id>` |
+
+The doubled `/api/api/` in the second row is correct: the first belongs to the proxy, the second to the route. If the proxy forwards the path unchanged, the host already answers the sign-in with `Route POST:/api/auth/login not found`.
 
 Both services run inside the Docker network `ontheia-net`. The proxy is either in the same network or accesses the mapped ports via `localhost`.
 
@@ -26,23 +38,14 @@ Both services run inside the Docker network `ontheia-net`. The proxy is either i
 
 ```bash
 my-domain.com {
-    # WebUI
-    handle /* {
-        reverse_proxy localhost:5173
-    }
-
-    # Backend API
-    handle /api/* {
+    # Backend API: /api is removed before the request reaches the host
+    handle_path /api/* {
         reverse_proxy localhost:8080
     }
 
-    # WebSocket (for live connections)
-    handle /ws/* {
-        reverse_proxy localhost:8080 {
-            transport http {
-                dial_timeout 30s
-            }
-        }
+    # WebUI: everything else
+    handle {
+        reverse_proxy localhost:5173
     }
 }
 ```
@@ -101,27 +104,22 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
-    # Backend API
+    # Backend API. The trailing slash of proxy_pass removes /api.
     location /api/ {
-        proxy_pass         http://localhost:8080/api/;
+        proxy_pass         http://localhost:8080/;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
 
+        # Answers and notifications arrive as a stream (SSE): do not buffer,
+        # and keep the connection open while no data flows.
+        proxy_buffering    off;
+        proxy_read_timeout 3600s;
+
         # For large file uploads (Memory Ingest)
         client_max_body_size 50M;
-    }
-
-    # WebSocket
-    location /ws/ {
-        proxy_pass         http://localhost:8080/ws/;
-        proxy_http_version 1.1;
-        proxy_set_header   Upgrade $http_upgrade;
-        proxy_set_header   Connection "upgrade";
-        proxy_set_header   Host $host;
-        proxy_read_timeout 86400s;
     }
 }
 ```
@@ -154,11 +152,15 @@ VITE_HOST_API_URL=https://my-domain.com/api
 ALLOWED_ORIGINS=https://my-domain.com
 ```
 
-Then rebuild the WebUI:
+Then rebuild the WebUI and restart the host. The API address is written into the WebUI at build time; the host reads `ALLOWED_ORIGINS` on start:
 
 ```bash
-docker compose up --build -d webui
+docker compose up --build -d host webui
 ```
+
+### Webhook Triggers
+
+The address of a [trigger](../automation/02_triggers.md) is `VITE_HOST_API_URL` followed by `/hooks/<id>`, so behind the proxy `https://my-domain.com/api/hooks/<id>`. The interface shows this address when the trigger is created. No proxy entry of its own is needed; the entry for `/api/` covers it.
 
 ---
 
@@ -178,8 +180,8 @@ Caddyfile with local TLS:
 ```bash
 192.168.1.10 {
     tls ontheia.crt ontheia.key
-    handle /* { reverse_proxy localhost:5173 }
-    handle /api/* { reverse_proxy localhost:8080 }
+    handle_path /api/* { reverse_proxy localhost:8080 }
+    handle { reverse_proxy localhost:5173 }
 }
 ```
 
@@ -192,7 +194,9 @@ Caddyfile with local TLS:
 | Issue | Cause | Solution |
 |---|---|---|
 | 502 Bad Gateway | Container not running | Check with `docker compose ps` |
-| WebSocket drops | Missing `Upgrade` header | nginx: add `proxy_set_header Upgrade` + `Connection "upgrade"` |
-| CORS errors | `ALLOWED_ORIGINS` misconfigured | Set exact browser URL (no trailing slash) in `.env`, rebuild WebUI |
+| Sign-in fails, `Route … /api/auth/login not found` | The proxy forwards `/api` unchanged | Caddy: `handle_path /api/*` instead of `handle /api/*`. nginx: `proxy_pass http://localhost:8080/;` with the trailing slash |
+| Answers appear in one piece instead of continuously | nginx buffers the stream | Set `proxy_buffering off;` in the `/api/` block |
+| Connection drops after a minute of idling | nginx `proxy_read_timeout` too short | Set `proxy_read_timeout 3600s;` in the `/api/` block |
+| CORS errors | `ALLOWED_ORIGINS` misconfigured | Set exact browser URL (no trailing slash) in `.env`, restart the host |
 | Upload fails | nginx `client_max_body_size` too small | Set `client_max_body_size 50M` in nginx config |
 | Certificate expired | Let's Encrypt renewal failed | Test manually with `sudo certbot renew`; check Certbot timer |

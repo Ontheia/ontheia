@@ -38,7 +38,7 @@ The dialog's fields are described in the [interface reference](/en/webui_navi/11
 ## Calling a Trigger
 
 ```bash
-curl -X POST 'https://my-domain.com/hooks/<id>' \
+curl -X POST 'https://my-domain.com/api/hooks/<id>' \
   -H 'Authorization: Bearer ontr_…' \
   -H 'Content-Type: application/json' \
   -d '{"event": "opened", "battery": 87}'
@@ -52,7 +52,7 @@ curl -X POST 'https://my-domain.com/hooks/<id>' \
 
 The token is accepted in a header only, not in the address. In an address it ends up in the logs of every proxy on the way.
 
-The address is the base address of the host API followed by `/hooks/<id>`. Behind a reverse proxy this path has to be forwarded to the host if senders come from outside.
+The address is the base address of the host API followed by `/hooks/<id>`. Behind a reverse proxy set up as in the [guide](../configuration/04_reverse_proxy.md) it reads `https://my-domain.com/api/hooks/<id>`; the interface shows the correct address.
 
 ### Responses
 
