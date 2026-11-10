@@ -172,18 +172,36 @@ Für den Betrieb im Heimnetz oder Intranet ohne öffentliche Domain:
 # Self-Signed Zertifikat erzeugen (gültig 10 Jahre)
 openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
   -keyout ontheia.key -out ontheia.crt \
-  -subj "/CN=192.168.1.10"
+  -subj "/CN=192.168.1.10" \
+  -addext "subjectAltName=IP:192.168.1.10"
 ```
+
+Der Eintrag `subjectAltName` ist nötig: Aktuelle Browser prüfen die Adresse nur dort, nicht im `CN`.
 
 Im Caddyfile mit lokalem TLS:
 
 ```bash
+{
+    # Für eine IP-Adresse nennt der Browser keinen Servernamen. Mit default_sni
+    # weiß Caddy trotzdem, welches Zertifikat gemeint ist.
+    default_sni 192.168.1.10
+}
+
 192.168.1.10 {
-    tls ontheia.crt ontheia.key
-    handle_path /api/* { reverse_proxy localhost:8080 }
-    handle { reverse_proxy localhost:5173 }
+    tls /etc/caddy/ontheia.crt /etc/caddy/ontheia.key
+
+    handle_path /api/* {
+        reverse_proxy localhost:8080
+    }
+    handle {
+        reverse_proxy localhost:5173
+    }
 }
 ```
+
+Zertifikat und Schlüssel müssen für den Caddy-Dienst lesbar sein. Jeder Block steht auf eigenen Zeilen; `handle { reverse_proxy … }` in einer Zeile nimmt Caddy nicht an.
+
+In `.env` steht dann `VITE_HOST_API_URL=https://192.168.1.10/api` und `ALLOWED_ORIGINS=https://192.168.1.10`.
 
 > **Hinweis:** Browser zeigen eine Sicherheitswarnung für Self-Signed-Zertifikate. Das Zertifikat kann im Browser oder im Betriebssystem als vertrauenswürdig markiert werden.
 
@@ -197,6 +215,7 @@ Im Caddyfile mit lokalem TLS:
 | Anmeldung scheitert, `Route … /api/auth/login not found` | Der Proxy leitet `/api` unverändert weiter | Caddy: `handle_path /api/*` statt `handle /api/*`. nginx: `proxy_pass http://localhost:8080/;` mit Schrägstrich am Ende |
 | Antworten erscheinen erst am Stück statt fortlaufend | nginx puffert den Stream | `proxy_buffering off;` im `/api/`-Block setzen |
 | Verbindung bricht nach einer Minute Leerlauf ab | nginx `proxy_read_timeout` zu kurz | `proxy_read_timeout 3600s;` im `/api/`-Block setzen |
+| TLS-Fehler `internal error` beim Aufruf über eine IP-Adresse | Caddy findet ohne Servernamen kein Zertifikat | `default_sni <IP>` in den globalen Block des Caddyfile setzen |
 | CORS-Fehler | `ALLOWED_ORIGINS` falsch gesetzt | Exakte Browser-URL (ohne trailing slash) in `.env` eintragen, Host neu starten |
 | Upload schlägt fehl | nginx `client_max_body_size` zu klein | `client_max_body_size 50M` in nginx-Config setzen |
 | Zertifikat läuft ab | Let's Encrypt Renewal fehlgeschlagen | `sudo certbot renew` manuell testen; Certbot-Timer prüfen |
