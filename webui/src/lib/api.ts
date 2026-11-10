@@ -1949,3 +1949,50 @@ export async function exportMyData(): Promise<void> {
 export function deleteMyAccount(): Promise<void> {
   return request('/auth/me', { method: 'DELETE' }) as Promise<void>;
 }
+
+// --- Inbox ---
+
+export type InboxItemKind = 'approval' | 'result' | 'error';
+export type InboxItemStatus = 'open' | 'done' | 'expired';
+
+export type InboxItem = {
+  id: string;
+  kind: InboxItemKind;
+  status: InboxItemStatus;
+  run_id: string | null;
+  /** Null when the chat no longer exists. */
+  chat_id: string | null;
+  trigger_type: string | null;
+  trigger_id: string | null;
+  title: string;
+  summary: string | null;
+  payload: Record<string, unknown>;
+  resolution: string | null;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export function listInbox(params: { status?: 'open' | 'all'; limit?: number; offset?: number } = {}) {
+  const search = new URLSearchParams();
+  if (params.status) search.set('status', params.status);
+  if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.offset !== undefined) search.set('offset', String(params.offset));
+  const qs = search.toString();
+  return request(`/api/inbox${qs ? `?${qs}` : ''}`, { method: 'GET' }) as Promise<{
+    items: InboxItem[];
+    total: number;
+    open: number;
+  }>;
+}
+
+export function getInboxCount() {
+  return request('/api/inbox/count', { method: 'GET' }) as Promise<{ open: number; approvals: number }>;
+}
+
+export function markInboxItemDone(id: string) {
+  return request(`/api/inbox/${encodeURIComponent(id)}/done`, { method: 'POST' }) as Promise<{ ok: true }>;
+}
+
+export function markAllInboxDone() {
+  return request('/api/inbox/done-all', { method: 'POST' }) as Promise<{ ok: true; done: number }>;
+}

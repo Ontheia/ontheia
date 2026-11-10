@@ -1043,6 +1043,9 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
               } else if (line.startsWith('data:') && eventType === 'notification') {
                 try {
                   const payload = JSON.parse(line.slice(5).trim());
+                  if (payload?.type === 'inbox_item') {
+                    window.dispatchEvent(new CustomEvent('ontheia:inbox_item', { detail: payload }));
+                  }
                   if (payload?.type === 'cron_complete') {
                     window.dispatchEvent(new CustomEvent('ontheia:cron_complete', { detail: payload }));
                     if ('Notification' in window && Notification.permission === 'granted') {

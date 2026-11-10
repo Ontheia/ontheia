@@ -32,6 +32,8 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerModelReplaceRoutes } from './routes/model-replace.js';
 import { registerRunRoutes } from './routes/runs.js';
 import { registerCronRoutes } from './routes/cron.js';
+import { registerInboxRoutes } from './routes/inbox.js';
+import type { InboxService } from './runtime/InboxService.js';
 import { registerPromptRoutes } from './routes/prompts.js';
 import { RouteContext } from './routes/types.js';
 import { RunService } from './runtime/RunService.js';
@@ -54,7 +56,8 @@ export async function registerRoutes(
   cronService: CronService,
   runService: RunService,
   config: ServiceConfig,
-  skillService?: SkillService
+  skillService?: SkillService,
+  inboxService?: InboxService
 ) {
   const promptOptimizerChainId = process.env.PROMPT_OPTIMIZER_CHAIN_ID || process.env.VITE_PROMPT_OPTIMIZER_CHAIN_ID || '';
   const builderChainId = process.env.BUILDER_CHAIN_ID || process.env.VITE_BUILDER_CHAIN_ID || '';
@@ -77,6 +80,7 @@ export async function registerRoutes(
   registerModelReplaceRoutes(server, context);
   registerRunRoutes(server, context);
   registerCronRoutes(server, { ...context, cronService });
+  if (inboxService) registerInboxRoutes(server, { ...context, inboxService });
   registerPromptRoutes(server, context);
   if (skillService) registerSkillRoutes(server, { ...context, skillService });
   registerArtifactRoutes(server, { ...context, skillService });

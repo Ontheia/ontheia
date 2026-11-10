@@ -5607,6 +5607,15 @@ textarea.app-input {
   border: 1px solid transparent;
 }
 
+/* Small variant. A class of its own because this file comes after the Tailwind
+   utilities: `h-8 text-xs` next to `btn-default` loses to the rule above. */
+.btn-default.btn-sm {
+  height: 1.875rem;
+  padding: 0 0.7rem;
+  font-size: 0.75rem;
+  gap: 0.3rem;
+}
+
 .btn-default,
 .admin-mcp-action {
   background: rgba(56, 189, 248, 0.18) !important;

@@ -29,6 +29,7 @@ import { ChatView } from './routes/ChatView';
 import { SettingsView as AdminConsoleView } from './routes/SettingsView';
 import { UserSettingsView } from './routes/UserSettingsView';
 import { AutomationView } from './routes/AutomationView';
+import { InboxView } from './routes/InboxView';
 import { AppSidebar } from './components/app-sidebar';
 import { SidebarProvider, SidebarInset, useSidebar } from './components/ui/sidebar';
 import { useChatSidebar } from './context/chat-sidebar-context';
@@ -121,6 +122,7 @@ function AuthenticatedApp() {
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/servers');
   const isUserSettingsRoute = location.pathname.startsWith('/user-settings');
   const isAutomationRoute = location.pathname.startsWith('/automation');
+  const isInboxRoute = location.pathname.startsWith('/inbox');
 
   const isAdmin = user?.role === 'admin';
   const {
@@ -233,7 +235,7 @@ function AuthenticatedApp() {
     }
   }, [agents, primary.type, primary.id, isInitializing, isChatRoute]);
 
-  const showGlobalTopbar = !isChatRoute && (isAdminRoute || isUserSettingsRoute || isAutomationRoute);
+  const showGlobalTopbar = !isChatRoute && (isAdminRoute || isUserSettingsRoute || isAutomationRoute || isInboxRoute);
 
   const handleDeleteCurrentChat = async () => {
     const chatId = location.pathname.startsWith('/chat/') ? location.pathname.split('/')[2] : null;
@@ -375,6 +377,7 @@ function AuthenticatedApp() {
                       element={isAdmin ? <AdminConsoleView /> : <Navigate to="/chat" replace />}
                     />
                     <Route path="/automation" element={<AutomationView />} />
+                    <Route path="/inbox" element={<InboxView />} />
                     <Route path="/user-settings" element={<UserSettingsView />} />
                     <Route path="/settings" element={<Navigate to="/user-settings" replace />} />
                     <Route path="/" element={<Navigate to="/chat" replace />} />

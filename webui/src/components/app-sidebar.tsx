@@ -27,6 +27,7 @@ import {
   ChevronDown,
   LogOut,
   MessageCircle,
+  Inbox,
   MoreHorizontal,
   Search,
   Settings,
@@ -93,6 +94,7 @@ import {
   stopRun
 } from "../lib/api"
 import { useAuth } from "@/context/auth-context"
+import { useInboxCount } from "@/hooks/use-inbox-count"
 
 const SIDEBAR_WIDTH = "17rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
@@ -106,6 +108,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { messages: historyEntries, activeChatId, removeChat, refreshChats, upsertMessage, activeRunByChatId } = useChatSidebar()
   const { logout, user } = useAuth()
   const isCollapsed = sidebar.state === "collapsed"
+  const inboxCount = useInboxCount(Boolean(user))
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -455,6 +458,31 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
               {!isCollapsed && <span>{t('newChat', { ns: 'sidebar' })}</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => navigate("/inbox")}
+              isActive={location.pathname.startsWith("/inbox")}
+              className={cn(isCollapsed && "justify-center")}
+              aria-label={
+                inboxCount.open > 0
+                  ? `${t('inbox', { ns: 'sidebar' })} – ${t('inboxOpenCount', { ns: 'sidebar', count: inboxCount.open })}`
+                  : t('inbox', { ns: 'sidebar' })
+              }
+            >
+              <span className="relative">
+                <Inbox className="h-4 w-4" aria-hidden="true" />
+                {isCollapsed && inboxCount.open > 0 && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-sky-400" aria-hidden="true" />
+                )}
+              </span>
+              {!isCollapsed && <span>{t('inbox', { ns: 'sidebar' })}</span>}
+              {!isCollapsed && inboxCount.open > 0 && (
+                <span className="ml-auto rounded-full bg-sky-500/20 px-2 py-0.5 text-[0.65rem] font-medium text-sky-100 tabular-nums">
+                  {inboxCount.open > 99 ? '99+' : inboxCount.open}
+                </span>
+              )}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

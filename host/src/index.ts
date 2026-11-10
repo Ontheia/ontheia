@@ -42,6 +42,7 @@ import { loadEmbeddingRuntime } from './memory/runtime.js';
 import { NullEmbeddingProvider } from './memory/provider.js';
 import { RunService } from './runtime/RunService.js';
 import { CronService } from './runtime/CronService.js';
+import { InboxService } from './runtime/InboxService.js';
 import { SkillService } from './runtime/SkillService.js';
 
 const config = loadConfig();
@@ -227,7 +228,8 @@ const skillService = new SkillService(dbPool, server.log);
 await skillService.start();
 
 const runService = new RunService(dbPool, orchestrator, memoryAdapter, skillService);
-const cronService = new CronService(dbPool, runService, server.log);
+const inboxService = new InboxService(dbPool, server.log);
+const cronService = new CronService(dbPool, runService, server.log, inboxService);
 await cronService.start();
 
 // The metric labels carry agent and task IDs, so /metrics is not public data.
@@ -266,7 +268,7 @@ server.get('/metrics', async (request, reply) => {
 
 server.get('/health', async () => ({ status: 'ok', rootless: rootlessCheckOk }));
 
-await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config, skillService);
+await registerRoutes(server, orchestrator, dbPool, memoryAdapter, cronService, runService, config, skillService, inboxService);
 
 async function bootstrapAutoStartServers(attempt = 1, maxAttempts = 5) {
   try {

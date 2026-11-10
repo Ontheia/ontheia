@@ -29,6 +29,7 @@ import { isUuid, withTransaction } from '../routes/utils.js';
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
 import { pushUserNotification } from '../routes/runs-state.js';
 import { buildAutomationSystemNote } from './automation-utils.js';
+import { outcomeFromEvents, type InboxService } from './InboxService.js';
 
 export class CronService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
@@ -39,7 +40,8 @@ export class CronService {
   constructor(
     private db: Pool,
     private runService: RunService,
-    logger: FastifyBaseLogger
+    logger: FastifyBaseLogger,
+    private inboxService?: InboxService
   ) {
     this.log = logger.child({ component: 'CronService' });
   }
@@ -168,6 +170,8 @@ export class CronService {
       { role: 'user', content: messageContent }
     ];
 
+    // Fixed here rather than inside executeRun so the inbox entry can name the run.
+    const effectiveRunId = runId ?? randomUUID();
     const events = await this.runService.executeRun({
       provider_id: '',
       model_id: '',
@@ -180,7 +184,7 @@ export class CronService {
     }, {
       userId: user_id,
       role,
-      runId,
+      runId: effectiveRunId,
       chatId,
       trigger: { type: 'cron', id },
       scheduleDepth: typeof jobData.schedule_depth === 'number' ? jobData.schedule_depth : 0,
@@ -204,6 +208,22 @@ export class CronService {
       });
     } catch (updateErr) {
       this.log.error({ err: updateErr, jobId: id }, 'Failed to update job status');
+    }
+
+    // An error always reaches the inbox — a failed background run nobody hears
+    // about is the case the inbox exists for. A result only when the job asks.
+    const outcome = outcomeFromEvents(events);
+    if (this.inboxService && (outcome.kind === 'error' || jobData.notify)) {
+      await this.inboxService.add({
+        userId: user_id,
+        kind: outcome.kind,
+        title: name,
+        summary: outcome.summary,
+        runId: effectiveRunId,
+        chatId,
+        triggerType: 'cron',
+        triggerId: id
+      });
     }
 
     if (jobData.notify) {
