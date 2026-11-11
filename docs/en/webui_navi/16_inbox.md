@@ -40,7 +40,7 @@ All                    │ List of entries, approvals first
 | **[Open chat]** | all entries whose chat exists | Opens the run's chat. |
 | **[Done]** | result, error | Closes the entry. |
 | **[Allow once]** | approval | Executes this one tool call. |
-| **[Allow for this run]** | approval | Allows the tool for the rest of the run. |
+| **[Allow for this run]** | approval | Allows the tool for the rest of the run, including agents the run delegates to. |
 | **[Refuse]** | approval | Rejects the tool call. |
 | **[Mark all done]** | header | Closes all open results and errors. Approvals stay open. |
 

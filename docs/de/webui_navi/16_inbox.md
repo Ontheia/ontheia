@@ -40,7 +40,7 @@ Alle                   │ Liste der Einträge, Freigaben zuerst
 | **[Zum Chat]** | allen Einträgen mit vorhandenem Chat | Öffnet den Chat des Laufs. |
 | **[Erledigt]** | Ergebnis, Fehler | Schließt den Eintrag. |
 | **[Einmal erlauben]** | Freigabe | Führt diesen einen Tool-Aufruf aus. |
-| **[Für diesen Lauf erlauben]** | Freigabe | Erlaubt das Tool für den Rest des Laufs. |
+| **[Für diesen Lauf erlauben]** | Freigabe | Erlaubt das Tool für den Rest des Laufs, auch in Agenten, an die der Lauf delegiert. |
 | **[Ablehnen]** | Freigabe | Weist den Tool-Aufruf ab. |
 | **[Alle erledigt]** | Kopfzeile | Schließt alle offenen Ergebnisse und Fehler. Freigaben bleiben offen. |
 

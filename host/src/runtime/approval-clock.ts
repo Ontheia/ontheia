@@ -57,6 +57,26 @@ export function trackApprovalWaits(waiter: ApprovalWaiter): ApprovalWaiter {
 }
 
 /**
+ * "Always" is an answer for the whole run. Each runner keeps its own list of
+ * tools the user allowed, and a delegated sub-run starts with an empty one, so
+ * without this the same tool is asked again after every delegation. The waiter
+ * is the one object the whole run shares; it remembers the answer and gives it
+ * again without asking.
+ */
+export function rememberAlwaysApprovals(waiter: ApprovalWaiter): ApprovalWaiter {
+  const allowed = new Set<string>();
+  return async (toolKey, info) => {
+    const server = typeof info?.server === 'string' ? info.server : '';
+    const tool = typeof info?.tool === 'string' ? info.tool : '';
+    const key = server && tool ? `${server}::${tool}` : null;
+    if (key && allowed.has(key)) return 'always';
+    const mode = await waiter(toolKey, info);
+    if (key && mode === 'always') allowed.add(key);
+    return mode;
+  };
+}
+
+/**
  * Milliseconds spent waiting for approvals since `since`. Overlapping waits
  * (parallel sub-runs asking at the same time) count once.
  */

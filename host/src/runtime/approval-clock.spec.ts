@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { approvalWaitMs, isPastDeadline, trackApprovalWaits } from './approval-clock.js';
+import { approvalWaitMs, isPastDeadline, rememberAlwaysApprovals, trackApprovalWaits } from './approval-clock.js';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -72,4 +72,32 @@ test('the deadline moves by the time spent waiting', async () => {
   await waiter('call', {});
   assert.equal(isPastDeadline(deadline, startedAt, waiter), false);
   assert.equal(isPastDeadline(deadline, startedAt, undefined), true);
+});
+
+test('an "always" answer is given again without asking, per tool', async () => {
+  const asked: string[] = [];
+  const waiter = rememberAlwaysApprovals(async (_id, info) => { asked.push(info.tool); return 'always'; });
+  assert.equal(await waiter('1', { server: 'mail', tool: 'read' }), 'always');
+  assert.equal(await waiter('2', { server: 'mail', tool: 'read' }), 'always');
+  assert.equal(await waiter('3', { server: 'mail', tool: 'send' }), 'always');
+  assert.equal(await waiter('4', { server: 'other', tool: 'read' }), 'always');
+  assert.deepEqual(asked, ['read', 'send', 'read']);
+});
+
+test('"once" and "deny" are asked again every time', async () => {
+  const answers = ['once', 'deny', 'once'] as const;
+  let calls = 0;
+  const waiter = rememberAlwaysApprovals(async () => answers[calls++]);
+  assert.equal(await waiter('1', { server: 'mail', tool: 'send' }), 'once');
+  assert.equal(await waiter('2', { server: 'mail', tool: 'send' }), 'deny');
+  assert.equal(await waiter('3', { server: 'mail', tool: 'send' }), 'once');
+  assert.equal(calls, 3);
+});
+
+test('a call without server and tool is never remembered', async () => {
+  let calls = 0;
+  const waiter = rememberAlwaysApprovals(async () => { calls++; return 'always'; });
+  await waiter('1', {});
+  await waiter('2', {});
+  assert.equal(calls, 2);
 });
