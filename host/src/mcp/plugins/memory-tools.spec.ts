@@ -113,3 +113,43 @@ test('each call builds a fresh object', () => {
   assert.notEqual(first[0], second[0]);
   assert.deepEqual(first, second);
 });
+
+const spec = (name: string, options?: Parameters<typeof buildMemoryToolSpecs>[0]) => {
+  const found = buildMemoryToolSpecs(options).find((s) => s.name === name);
+  assert.ok(found, `${name} is declared`);
+  return found;
+};
+
+test('memory-write tells the model to search before storing a changeable fact', () => {
+  const description = spec('memory-write').description;
+  assert.match(description, /memory-search/);
+  assert.match(description, /supersedes/);
+  assert.match(description, /identical content/);
+});
+
+test('memory-delete points to supersedes for a changed fact', () => {
+  assert.match(spec('memory-delete').description, /supersedes/);
+});
+
+const classHint = (options?: Parameters<typeof buildMemoryToolSpecs>[0]) =>
+  String(spec('memory-write', options).schema.properties.class.description);
+
+test('the class hint lists the defaults of the writable namespaces', () => {
+  const defaults: Record<string, string> = {
+    'vector.agent.abc.memory': 'episodic',
+    'vector.agent.abc.howto': 'procedural'
+  };
+  const hint = classHint({
+    writeNamespaces: ['vector.agent.abc.memory', 'vector.agent.abc.howto', 'vector.agent.abc.preferences'],
+    resolveClass: (ns) => defaults[ns]
+  });
+  assert.match(hint, /vector\.agent\.abc\.memory → episodic/);
+  assert.match(hint, /vector\.agent\.abc\.howto → procedural/);
+  assert.match(hint, /No default: vector\.agent\.abc\.preferences/);
+});
+
+test('the class hint names no namespace without a resolver or for a wildcard', () => {
+  assert.doesNotMatch(classHint({ writeNamespaces: ['vector.agent.abc.memory'] }), /Defaults:|No default:/);
+  const hint = classHint({ writeNamespaces: ['vector.agent.abc.*'], resolveClass: () => undefined });
+  assert.doesNotMatch(hint, /Defaults:|No default:/);
+});

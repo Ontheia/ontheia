@@ -134,6 +134,14 @@ export class OrchestratorService {
     this.dockerNetworkName = options.dockerNetworkName;
   }
 
+  /**
+   * Default memory class of a namespace, from the namespace rules. Undefined
+   * when no rule names one or no memory adapter is configured.
+   */
+  resolveMemoryClass(namespace: string): string | undefined {
+    return this.memoryAdapter?.resolveClassForNamespace(namespace);
+  }
+
   registerInternalToolHandler(serverName: string, handler: (name: string, args: any, context?: any) => Promise<any>) {
     this.internalToolHandlers.set(serverName, handler);
   }

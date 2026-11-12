@@ -115,7 +115,13 @@ export const loadServerTools = async (
   
   for (const serverName of uniqueServers) {
     if (serverName === 'memory') {
-      resolved.push(...buildMemoryRunTools({ userId, writeNamespaces: memoryWriteNamespaces }));
+      resolved.push(
+        ...buildMemoryRunTools({
+          userId,
+          writeNamespaces: memoryWriteNamespaces,
+          resolveClass: (ns) => orchestrator.resolveMemoryClass(ns)
+        })
+      );
       continue;
     }
 

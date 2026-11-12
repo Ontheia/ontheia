@@ -442,7 +442,11 @@ export class ChainRunner {
    */
   private getInternalTools(writeNamespaces?: string[]): RunToolDefinition[] {
     return [
-      ...buildMemoryRunTools({ userId: this.templateContext.user_id, writeNamespaces }),
+      ...buildMemoryRunTools({
+        userId: this.templateContext.user_id,
+        writeNamespaces,
+        resolveClass: (ns) => this.memoryAdapter.resolveClassForNamespace(ns)
+      }),
       ...buildDelegationRunTools()
     ];
   }

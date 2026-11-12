@@ -61,10 +61,47 @@ export interface MemoryToolSpec {
  * "the memory tool seems to allow only the user's namespace, which feels
  * contradictory" — and spent a reasoning step on a contradiction we wrote.
  */
-export function buildMemoryToolSpecs(options?: {
+export type MemoryToolOptions = {
   userId?: string;
   writeNamespaces?: string[];
-}): MemoryToolSpec[] {
+  /**
+   * Looks up the class a namespace assigns when the caller names none. The
+   * defaults live in the namespace rules, which an admin can edit — so the
+   * description is built from them instead of naming namespaces in the text,
+   * where it would go stale the first time a rule changes.
+   */
+  resolveClass?: (namespace: string) => string | undefined;
+};
+
+/**
+ * Tells the model which of its writable namespaces carry a default class and
+ * which do not. Without this it has to guess: "omit it to use the namespace
+ * default" left preferences unclassified, because that namespace has none.
+ * Patterns with a wildcard are skipped — a default belongs to a concrete
+ * namespace, and a pattern would wrongly be listed as having none.
+ */
+function describeClassDefaults(writable: string[], resolveClass?: (namespace: string) => string | undefined): string {
+  if (!resolveClass) return '';
+  const concrete = writable.filter((ns) => !ns.includes('*'));
+  if (concrete.length === 0) return '';
+  const withDefault: string[] = [];
+  const without: string[] = [];
+  for (const ns of concrete) {
+    const cls = resolveClass(ns);
+    if (cls) withDefault.push(`${ns} → ${cls}`);
+    else without.push(ns);
+  }
+  const parts: string[] = [];
+  if (withDefault.length > 0) parts.push(` Defaults: ${withDefault.join(', ')}.`);
+  if (without.length > 0) {
+    parts.push(
+      ` No default: ${without.join(', ')} — there, set it whenever one clearly fits (a preference or a fact about a person is semantic, an "if X then Y" rule is procedural) and leave it out for a thought that asserts nothing; a guessed class is worse than none.`
+    );
+  }
+  return parts.join('');
+}
+
+export function buildMemoryToolSpecs(options?: MemoryToolOptions): MemoryToolSpec[] {
   const userId = typeof options?.userId === 'string' && options.userId.trim() ? options.userId.trim() : null;
   const writable = (options?.writeNamespaces ?? []).filter((ns) => typeof ns === 'string' && ns.trim());
 
@@ -116,7 +153,10 @@ export function buildMemoryToolSpecs(options?: {
     },
     {
       name: 'memory-write',
-      description: 'Store an important piece of information or fact in long-term memory.',
+      // These rules used to be repeated in the context of every task that
+      // writes memory. Here every model sees them at the moment of the call.
+      description:
+        'Store an important piece of information or fact in long-term memory. Before storing a fact that can change (a device, version, address, vehicle, provider, state), call memory-search with the core of the fact first, even if nothing about it is in your context. If an older version turns up, pass its id as `supersedes` (the fact changed) or use memory-update (same fact, only wording or tags wrong). Writing again does not correct an entry: an existing entry is matched only on identical content in the same namespace, so a write that differs by one word creates a second entry, and both are found from then on.',
       schema: {
         type: 'object',
         properties: {
@@ -138,7 +178,8 @@ export function buildMemoryToolSpecs(options?: {
             type: 'string',
             enum: ['episodic', 'semantic', 'procedural', 'working'],
             description:
-              'Kind of memory: episodic (something that happened, at a time), semantic (a fact that holds until replaced), procedural (a rule or how-to), working (needed for the current task only). Omit it to use the namespace default.'
+              'Kind of memory: episodic (something that happened, at a time), semantic (a fact that holds until replaced), procedural (a rule or how-to), working (needed for the current task only). Omit it to use the namespace default; set it where the entry differs from that default — an observation that persists as a state (a software version, a consumption figure) is semantic even where the default is episodic.' +
+              describeClassDefaults(writable, options?.resolveClass)
           }
         },
         required: ['content', 'namespace']
@@ -147,7 +188,7 @@ export function buildMemoryToolSpecs(options?: {
     {
       name: 'memory-delete',
       description:
-        'Delete outdated or incorrect information from memory. Prefer deleting by id (taken from a memory-search hit) — content matching is exact and fails on any whitespace or formatting difference.',
+        'Delete outdated or incorrect information from memory. Prefer deleting by id (taken from a memory-search hit) — content matching is exact and fails on any whitespace or formatting difference. Use it only for entries that were wrong from the start or should never have been stored; when a fact has changed, write the new one with `supersedes` instead, so the change stays on record.',
       schema: {
         type: 'object',
         properties: {
@@ -196,7 +237,7 @@ export function buildMemoryToolSpecs(options?: {
 }
 
 /** Shape used by the run path and the chain runner. */
-export function buildMemoryRunTools(options?: { userId?: string; writeNamespaces?: string[] }): RunToolDefinition[] {
+export function buildMemoryRunTools(options?: MemoryToolOptions): RunToolDefinition[] {
   return buildMemoryToolSpecs(options).map((spec) => ({
     name: spec.name,
     server: 'memory',
@@ -206,7 +247,7 @@ export function buildMemoryRunTools(options?: { userId?: string; writeNamespaces
 }
 
 /** Shape used by `OrchestratorService.listTools`. */
-export function buildMemoryMcpTools(options?: { userId?: string; writeNamespaces?: string[] }): Array<{
+export function buildMemoryMcpTools(options?: MemoryToolOptions): Array<{
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
