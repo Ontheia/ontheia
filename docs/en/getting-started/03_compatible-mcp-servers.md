@@ -1092,7 +1092,7 @@ PAPERLESS_API_KEY=your-api-token
 > - **Read-only:** `PAPERLESS_READ_ONLY=true` hides every writing tool (64 tools remain). Without it the server offers more than 115 tools, among them `empty_trash`, `update_config`, `delete_document` and `email_document`. For write access, narrow the set with `PAPERLESS_DISABLED_TOOLS` or `PAPERLESS_TOOLSETS`.
 > - **API version:** the default is 9 and works with 2.x and 3.x. On 3.x, `10` enables the 3.x tools.
 > - **Semantic search and AI workflows** (`EMBEDDINGS_ENABLED`, `run_task`) are off by default; switched on, they send document content to OpenAI or Ollama.
-> - **Known limits (1.6.1):** `download_document` returns only the size of a PDF, not the file. `list_documents` passes ID filters set to `0` on to Paperless, which then finds nothing; a model that fills in every optional field gets empty results.
+> - **Known limit (1.6.1):** `download_document` returns only the size of a PDF, not the file.
 
 </details>
 
