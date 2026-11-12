@@ -21,10 +21,9 @@
  * or contact https://ontheia.ai
  */
 import { createHash } from 'node:crypto';
-import { statSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { HardeningConfig, loadHardeningConfig, readAllowlist } from '../config.js';
+import { HardeningConfig, allowlistStamp, loadHardeningConfig, readAllowlist } from '../config.js';
 import { validateMcpServersConfig } from './validator.js';
 import { buildPreview } from './preview.js';
 import { Runner, RunnerLifecycleEvent } from './runner.js';
@@ -90,12 +89,12 @@ export class OrchestratorService {
     bun: string;
   };
 
-  private allowlistMtimes: {
-    images: number;
-    urls: number;
-    npm: number;
-    pypi: number;
-    bun: number;
+  private allowlistStamps: {
+    images: string;
+    urls: string;
+    npm: string;
+    pypi: string;
+    bun: string;
   };
 
   private memoryAdapter?: MemoryAdapter;
@@ -118,13 +117,7 @@ export class OrchestratorService {
       pypi: configPaths.allowlistPackages.pypi,
       bun: configPaths.allowlistPackages.bun
     };
-    this.allowlistMtimes = {
-      images: 0,
-      urls: 0,
-      npm: 0,
-      pypi: 0,
-      bun: 0
-    };
+    this.allowlistStamps = { images: '', urls: '', npm: '', pypi: '', bun: '' };
     this.imageAllowlist = [];
     this.urlAllowlist = [];
     this.packageAllowlist = { npm: [], pypi: [], bun: [] };
@@ -155,16 +148,6 @@ export class OrchestratorService {
     });
   }
 
-  private getFileMtime(path: string) {
-    try {
-      const stats = statSync(path);
-      return stats.mtimeMs;
-    } catch (error) {
-      this.logger.warn({ path, error }, 'Allowlist file could not be read');
-      return 0;
-    }
-  }
-
   private reloadAllowlistsIfNeeded(force = false) {
     const updates: string[] = [];
 
@@ -173,14 +156,18 @@ export class OrchestratorService {
       path: string,
       assign: (entries: string[]) => void
     ) => {
-      const mtime = this.getFileMtime(path);
-      if (!force && mtime !== 0 && mtime <= this.allowlistMtimes[key]) {
+      // The `.local` file counts too: it is merged into the list, so adding,
+      // editing or removing it must take effect without touching the main file.
+      const { stamp, mainMissing } = allowlistStamp(path);
+      if (mainMissing) {
+        this.logger.warn({ path }, 'Allowlist file could not be read');
+      } else if (!force && stamp === this.allowlistStamps[key]) {
         return;
       }
       try {
         const entries = readAllowlist(path);
         assign(entries);
-        this.allowlistMtimes[key] = mtime;
+        this.allowlistStamps[key] = stamp;
         updates.push(`${key}:${entries.length}`);
       } catch (error) {
         this.logger.warn({ path, error }, 'Allowlist could not be reloaded');

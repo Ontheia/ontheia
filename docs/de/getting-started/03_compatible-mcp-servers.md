@@ -990,7 +990,8 @@ DATABASE_URL=postgresql://user:passwort@localhost:5432/datenbankname
 | Server | Beschreibung | Repository |
 |---|---|---|
 | **nextcloud-mcp-server** | Nextcloud-Dateien und -Ordner verwalten | [github.com/cbcoutinho/nextcloud-mcp-server](https://github.com/cbcoutinho/nextcloud-mcp-server) |
-| **paperless-mcp** | Paperless-NGX Dokumentenmanagement | [github.com/baruchiro/paperless-mcp](https://github.com/baruchiro/paperless-mcp) |
+| **paperless-mcp** (baruchiro) | Paperless-ngx Dokumentenmanagement | [github.com/baruchiro/paperless-mcp](https://github.com/baruchiro/paperless-mcp) |
+| **paperless-mcp** (OrellBuehler) | Paperless-ngx 2.x/3.x — Suche, Dokumente, Metadaten, Nur-Lese-Modus, Tool-Filter, 3.x-Funktionen (Versionen, Zusammenführen, PDF-Bearbeitung) | [github.com/OrellBuehler/paperless-mcp](https://github.com/OrellBuehler/paperless-mcp) |
 | **jellyfin-mcp** | Jellyfin-Mediaserver steuern — Bibliothek, Wiedergabe, Playlisten | [github.com/jaredtrent/jellyfin-mcp](https://github.com/jaredtrent/jellyfin-mcp) |
 
 <details>
@@ -1026,7 +1027,7 @@ NEXTCLOUD_PASSWORD=app-passwort
 </details>
 
 <details>
-<summary>⚙ paperless-mcp — Konfiguration</summary>
+<summary>⚙ paperless-mcp (baruchiro) — Konfiguration</summary>
 
 ```json
 {
@@ -1052,6 +1053,46 @@ PAPERLESS_API_KEY=dein-api-token
 ```
 
 > Token unter Paperless-NGX → Profil → API-Token generieren.
+>
+> Getestet mit Paperless-ngx 2.x und 3.4 (Server-Version 2.2.1).
+
+</details>
+
+<details>
+<summary>⚙ paperless-mcp (OrellBuehler) — Konfiguration</summary>
+
+```json
+{
+  "mcpServers": {
+    "paperless3": {
+      "command": "npx",
+      "args": ["-y", "@orellbuehler/paperless-mcp@1.6.1"],
+      "env": {
+        "PAPERLESS_URL": "secret:PAPERLESS_URL",
+        "PAPERLESS_TOKEN": "secret:PAPERLESS_API_KEY",
+        "PAPERLESS_READ_ONLY": "true",
+        "PAPERLESS_API_VERSION": "10"
+      }
+    }
+  }
+}
+```
+
+**Allowlist** (`config/allowlist.packages.npm`): `@orellbuehler/paperless-mcp@1.6.1`
+
+**`.env`:**
+```
+PAPERLESS_URL=https://paperless.example.com
+PAPERLESS_API_KEY=dein-api-token
+```
+
+> Getestet mit Paperless-ngx 3.4 (API-Version 10) und Server-Version 1.6.1.
+>
+> - **Name des Tokens:** Dieser Server erwartet `PAPERLESS_TOKEN`, nicht `PAPERLESS_API_KEY`. Beide Server können dasselbe Secret nutzen.
+> - **Nur lesen:** `PAPERLESS_READ_ONLY=true` blendet alle schreibenden Tools aus (es bleiben 64). Ohne den Schalter bietet der Server über 115 Tools an, darunter `empty_trash`, `update_config`, `delete_document` und `email_document`. Für Schreibzugriff die Auswahl mit `PAPERLESS_DISABLED_TOOLS` oder `PAPERLESS_TOOLSETS` eingrenzen.
+> - **API-Version:** Standard ist 9 und funktioniert mit 2.x und 3.x. Auf 3.x schaltet `10` die 3.x-Tools frei.
+> - **Semantische Suche und KI-Workflows** (`EMBEDDINGS_ENABLED`, `run_task`) sind standardmäßig aus; eingeschaltet senden sie Dokumentinhalte an OpenAI oder Ollama.
+> - **Bekannte Grenzen (1.6.1):** `download_document` liefert bei einem PDF nur die Größe, nicht die Datei. `list_documents` gibt mit `0` belegte ID-Filter an Paperless weiter, das dann nichts findet; ein Modell, das alle optionalen Felder ausfüllt, bekommt leere Ergebnisse.
 
 </details>
 

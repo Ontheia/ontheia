@@ -20,7 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, statSync } from 'fs';
 import path from 'path';
 import { logger } from './logger.js';
 
@@ -96,6 +96,22 @@ export function loadConfig(): ServiceConfig {
     allowedOrigins,
     metricsToken: process.env.METRICS_TOKEN?.trim() || undefined
   };
+}
+
+/**
+ * Changes whenever the allowlist or its `.local` companion is created, edited
+ * or removed. `readAllowlist` merges both files, so both decide when to reload.
+ */
+export function allowlistStamp(filePath: string): { stamp: string; mainMissing: boolean } {
+  const mtime = (p: string): number => {
+    try {
+      return statSync(p).mtimeMs;
+    } catch {
+      return 0;
+    }
+  };
+  const main = mtime(filePath);
+  return { stamp: `${main}:${mtime(filePath + '.local')}`, mainMissing: main === 0 };
 }
 
 export function readAllowlist(filePath: string): string[] {
