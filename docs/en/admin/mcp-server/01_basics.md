@@ -58,9 +58,16 @@ command: Short description shown by list_commands
 command  (no description)
 ```
 
-This file is the single source of truth — no code change is needed to add, remove, or update commands. The path can be overridden via `ALLOWLIST_CLI_COMMANDS_PATH`.
+This file is the single source of truth — no code change is needed to add, remove, or update commands. The path can be overridden via `ALLOWLIST_CLI_COMMANDS_PATH`. The file is read when the cli-server starts; a change takes effect after it restarts.
 
-> **Security:** `execute` only accepts commands that appear in the allowlist. `run_skill_script` additionally bounds all paths to the skill directory to prevent traversal attacks.
+What the agent sees of it:
+
+- **Command names** are part of the `execute` tool definition as long as the list holds at most 40 commands, so the agent does not have to fetch them first. For a longer list the definition gives only the count and points to `list_commands`.
+- **Descriptions** are returned by `list_commands` only. Keep them short, and put rules a command cannot do without at the start.
+- **Entries without a program** on the container's search path (not installed, or a pure shell builtin such as `cd`) are not shown. The cli-server reports them in its log at startup.
+- `execute` starts the program directly, without a shell. Pipes, redirects and wildcards are not interpreted.
+
+> **Security:** `execute` only accepts commands that appear in the allowlist. The command is given as a name without a path and resolved through the search path; a call with a path is rejected. `run_skill_script` additionally bounds all paths to the skill directory to prevent traversal attacks.
 
 ---
 

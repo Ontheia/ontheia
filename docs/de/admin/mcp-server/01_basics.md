@@ -58,9 +58,16 @@ befehl: Kurzbeschreibung für list_commands
 befehl  (ohne Beschreibung)
 ```
 
-Diese Datei ist die einzige Quelle — kein Code-Change nötig um Befehle hinzuzufügen, zu entfernen oder zu beschreiben. Der Pfad kann über `ALLOWLIST_CLI_COMMANDS_PATH` überschrieben werden.
+Diese Datei ist die einzige Quelle — kein Code-Change nötig um Befehle hinzuzufügen, zu entfernen oder zu beschreiben. Der Pfad kann über `ALLOWLIST_CLI_COMMANDS_PATH` überschrieben werden. Die Datei wird beim Start des cli-server gelesen; eine Änderung wirkt nach dessen Neustart.
 
-> **Sicherheit:** `execute` akzeptiert nur Befehle die in der Allowlist stehen. `run_skill_script` begrenzt alle Pfade zusätzlich auf das Skill-Verzeichnis um Traversal-Angriffe zu verhindern.
+Was der Agent davon sieht:
+
+- **Befehlsnamen** stehen direkt in der Tool-Definition von `execute`, solange die Liste höchstens 40 Befehle umfasst. Der Agent muss sie dann nicht erst abrufen. Bei einer längeren Liste nennt die Definition nur die Anzahl und verweist auf `list_commands`.
+- **Beschreibungen** liefert nur `list_commands`. Halte sie kurz, und schreibe Regeln, die für einen Befehl zwingend sind, an den Anfang.
+- **Einträge ohne Programm** im Suchpfad des Containers (nicht installiert, oder ein reiner Shell-Befehl wie `cd`) werden nicht angezeigt. Der cli-server meldet sie beim Start im Log.
+- `execute` startet das Programm direkt, ohne Shell. Pipes, Umleitungen und Wildcards werden nicht ausgewertet.
+
+> **Sicherheit:** `execute` akzeptiert nur Befehle die in der Allowlist stehen. Der Befehl wird als Name ohne Pfad angegeben und über den Suchpfad aufgelöst; ein Aufruf mit Pfad wird abgelehnt. `run_skill_script` begrenzt alle Pfade zusätzlich auf das Skill-Verzeichnis um Traversal-Angriffe zu verhindern.
 
 ---
 

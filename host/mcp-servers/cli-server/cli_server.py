@@ -38,9 +38,34 @@ class CliServer:
     # deadline, making the documented maximum the guaranteed failure case.
     # 50 s leaves room for the 0.5 s loop tick and transport overhead.
     BG_WAIT_MAX = 50
+    # Up to this many command names are written into the `execute` tool
+    # definition. The definition travels with every run, so a larger allowlist
+    # is announced by its size only and stays behind list_commands.
+    COMMAND_NAMES_MAX = 40
 
     def __init__(self):
         self.allowed_commands, self.command_help = self._load_allowlist()
+        # Entries that no program stands behind (a shell builtin such as
+        # `command`, a package that is not installed) stay allowed but are not
+        # advertised: a name in the tool definition is a promise that it runs.
+        self.available_commands = [c for c in self.allowed_commands if shutil.which(c)]
+        missing = [c for c in self.allowed_commands if c not in self.available_commands]
+        if missing:
+            logger.warning(
+                "Allowlist entries without an executable in PATH (not advertised): " + ", ".join(missing)
+            )
+        names_inline = 0 < len(self.available_commands) <= self.COMMAND_NAMES_MAX
+        command_schema = {
+            "type": "string",
+            "description": (
+                "Command name only, without a path. Allowed: " + ", ".join(self.available_commands) + "."
+                if names_inline else
+                f"Command name only, without a path. {len(self.available_commands)} commands are allowed; "
+                "call list_commands for the names."
+            )
+        }
+        if names_inline:
+            command_schema["enum"] = list(self.available_commands)
         self.base_workdir = os.environ.get("BASE_WORKDIR", os.getcwd())
         self.timeout = int(os.environ.get("COMMAND_TIMEOUT", "30"))
         # Detached runs started by this server instance (log_path → Popen) and
@@ -102,16 +127,26 @@ class CliServer:
             },
             {
                 "name": "list_commands",
-                "description": "Discover allowed shell commands.",
+                "description": (
+                    "Usage notes and an example for each allowed command. The names are listed in "
+                    "`execute` already; call this when you need an example or a command-specific rule."
+                    if names_inline else
+                    "List the allowed commands, each with usage notes and an example."
+                ),
                 "inputSchema": {"type": "object", "properties": {}}
             },
             {
                 "name": "execute",
-                "description": "Execute an allowed shell command. Output wrapped in XML tags.",
+                "description": (
+                    "Execute an allowed command. Output wrapped in XML tags. "
+                    "The program is started directly, not through a shell: pipes, redirects "
+                    "(|, >, 2>/dev/null), && and wildcards are not interpreted. Put only the command "
+                    "name in `command` and every argument as its own element in `args`."
+                ),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "command":    {"type": "string", "description": "Command name (must be in allowlist)"},
+                        "command":    command_schema,
                         "args":       {"type": "array", "items": {"type": "string"}, "description": "Arguments"},
                         "input_data": {"type": "string", "description": "Optional stdin data"}
                     },
@@ -510,7 +545,7 @@ class CliServer:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {"listChanged": True}},
-                    "serverInfo": {"name": "cli-server", "version": "2.2.0"}
+                    "serverInfo": {"name": "cli-server", "version": "2.3.0"}
                 }
             }
 
@@ -743,7 +778,9 @@ class CliServer:
             if tool_name == "list_commands":
                 return {
                     "jsonrpc": "2.0", "id": request_id,
-                    "result": {"content": [{"type": "text", "text": json.dumps(self.command_help, indent=2)}]}
+                    "result": {"content": [{"type": "text", "text": json.dumps(
+                        {c: self.command_help.get(c, "") for c in self.available_commands}, indent=2
+                    )}]}
                 }
 
             # ── execute ──────────────────────────────────────────────────────
@@ -753,13 +790,32 @@ class CliServer:
                 input_raw = tool_args.get("input_data", "")
                 input_data = input_raw.replace("\\n", "\n")
 
-                cmd_base = os.path.basename(cmd)
-                if cmd_base not in [c.strip() for c in self.allowed_commands]:
-                    res_data = {"error": f"Command '{cmd}' not in allowlist."}
+                # The name itself is checked, never its basename: comparing
+                # only the basename let '/any/dir/ls' pass as 'ls' and run
+                # whatever file sat there. The program is taken from PATH.
+                allowed_hint = "Allowed: " + ", ".join(self.available_commands) + "."
+                resolved = None
+                if not isinstance(cmd, str) or not cmd.strip():
+                    res_data = {"error": f"No command given. {allowed_hint}"}
+                elif "/" in cmd or "\\" in cmd:
+                    res_data = {"error": f"Pass the command name without a path. {allowed_hint}"}
+                elif cmd not in self.allowed_commands:
+                    res_data = {"error": (
+                        f"Command '{cmd}' is not in the allowlist. {allowed_hint} "
+                        "Only the command name belongs in `command`; arguments go into `args`."
+                    )}
                 else:
+                    # Looked up at call time, so a program installed after the
+                    # server started is found without a restart.
+                    resolved = shutil.which(cmd)
+                    if not resolved:
+                        res_data = {"error": (
+                            f"Command '{cmd}' is allowed but not installed in this environment. {allowed_hint}"
+                        )}
+                if resolved:
                     try:
-                        full_cmd = [cmd] + args
-                        logger.info(f"Executing: {' '.join(full_cmd)}")
+                        full_cmd = [resolved] + args
+                        logger.info(f"Executing: {' '.join([cmd] + args)}")
                         p = subprocess.run(
                             full_cmd,
                             input=input_data,
@@ -774,10 +830,12 @@ class CliServer:
                     except Exception as e:
                         res_data = {"error": str(e)}
 
-                return {
-                    "jsonrpc": "2.0", "id": request_id,
-                    "result": {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
-                }
+                # A refusal or a failed start is an error in MCP terms. A program
+                # that ran and exited non-zero is not: its output is the result.
+                result = {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
+                if "error" in res_data:
+                    result["isError"] = True
+                return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
             # ── list_logs ────────────────────────────────────────────────────
             if tool_name == "list_logs":
@@ -850,7 +908,7 @@ class CliServer:
 
 def main():
     server = CliServer()
-    logger.info("CLI Server started (v2.2.0)")
+    logger.info("CLI Server started (v2.3.0)")
     try:
         for line in sys.stdin:
             if not line.strip():
