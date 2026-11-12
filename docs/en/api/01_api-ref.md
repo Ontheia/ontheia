@@ -145,6 +145,8 @@ All routes require a session and act on your own triggers only.
 | `POST` | `/api/triggers/:id/test` | Starts a run with `{ payload }` through the session instead of the token. Counts against the same limits; also works for an inactive trigger. |
 | `GET` | `/api/triggers/:id/events` | The latest 50 log entries: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
 
+**Triggers of other users (admin only):** An admin creates a trigger for another user by passing `user_id` in the body of `POST /api/triggers`. The trigger then belongs to that user: the run has that user's rights, results and approvals go to that user's inbox, and access to the agent, task and chain is checked for that user. `GET /api/triggers?user_id=<uuid>` lists that user's triggers. Changing, deleting, renewing the token, testing and the log work for an admin on every trigger. Every trigger carries `user_id`. Without the admin role, a foreign `user_id` yields `403` and a foreign trigger `404`.
+
 **Fields POST/PATCH `/api/triggers`:**
 
 | Field | Type | Description |

@@ -2,7 +2,7 @@
 
 A trigger starts an agent or a chain when another system calls its address. This lets Ontheia react to events instead of waiting for input in the chat or for a schedule: a sensor reports a value, a script has finished, a service has a new document.
 
-Every user can create triggers of their own. The run acts as the trigger's owner, with that user's role and rights.
+Every user can create triggers of their own. The run acts as the trigger's owner, with that user's role and rights. An admin can also create and manage triggers for other users through the API (see the API reference); the web UI shows everyone only their own.
 
 ## Flow
 

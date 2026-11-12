@@ -32,6 +32,7 @@ import {
   type TriggerRow,
   type TriggerService
 } from '../runtime/TriggerService.js';
+import { loadRunUser } from '../runtime/background-run.js';
 
 const APPROVAL_MODES = ['inbox', 'granted', 'denied'] as const;
 const INBOX_RESULTS = ['always', 'errors', 'never'] as const;
@@ -39,7 +40,7 @@ const NAME_MAX = 120;
 const PROMPT_MAX = 20_000;
 
 // The hash never leaves the host: a trigger is listed without it.
-const PUBLIC_COLUMNS = `id, name, agent_id, task_id, chain_id, prompt_template, approval_mode, inbox_result,
+const PUBLIC_COLUMNS = `id, user_id, name, agent_id, task_id, chain_id, prompt_template, approval_mode, inbox_result,
   chat_id, chat_title_template, rate_limit_per_min, prevent_overlap, active,
   last_triggered_at, last_error, created_at, updated_at`;
 
@@ -104,11 +105,37 @@ function parseFields(body: Record<string, unknown>, requireName: boolean): { fie
 export function registerTriggerRoutes(server: FastifyInstance, context: RouteContext & { triggerService: TriggerService }) {
   const { db, triggerService } = context;
 
-  const loadOwn = (userId: string, role: string, id: string) =>
+  // A trigger belongs to one user: it runs as that user, and its results and
+  // approvals land in that user's inbox. An admin manages the triggers of every
+  // user, because setting up the sender (a mail watcher, a monitoring system)
+  // is admin work; everyone else sees only their own.
+  const loadManaged = (userId: string, role: string, id: string) =>
     withRls(db, userId, role, async (client) => {
-      const res = await client.query('SELECT * FROM app.triggers WHERE id = $1 AND user_id = $2', [id, userId]);
+      const res = await client.query(
+        `SELECT * FROM app.triggers WHERE id = $1 AND (user_id = $2 OR $3)`,
+        [id, userId, role === 'admin']
+      );
       return res.rows[0] as TriggerRow | undefined;
     });
+
+  /**
+   * The user a request acts for: the session user, or — for an admin naming
+   * `user_id` — that user, with their own role so target access is checked as
+   * it will be when the trigger runs.
+   */
+  const resolveOwner = async (
+    session: { userId: string; role: string },
+    requested: unknown
+  ): Promise<{ userId: string; role: string } | { error: string; status: number }> => {
+    if (requested === undefined || requested === null || requested === '' || requested === session.userId) {
+      return { userId: session.userId, role: session.role };
+    }
+    if (session.role !== 'admin') return { error: 'forbidden', status: 403 };
+    if (typeof requested !== 'string' || !isUuid(requested)) return { error: 'invalid_user_id', status: 400 };
+    const user = await loadRunUser(db, requested);
+    if (!user) return { error: 'unknown_user', status: 400 };
+    return { userId: requested, role: user.role };
+  };
 
   // ── Management (session) ───────────────────────────────────────────────────
 
@@ -116,10 +143,15 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     const { userId, role } = auth.session;
+    const owner = await resolveOwner(auth.session, (request.query as { user_id?: string }).user_id);
+    if ('error' in owner) {
+      reply.code(owner.status);
+      return { error: owner.error };
+    }
     const triggers = await withRls(db, userId, role, async (client) => {
       const res = await client.query(
         `SELECT ${PUBLIC_COLUMNS} FROM app.triggers WHERE user_id = $1 ORDER BY created_at DESC`,
-        [userId]
+        [owner.userId]
       );
       return res.rows;
     });
@@ -130,7 +162,13 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     const auth = await requireSession(db, request, reply);
     if (!auth) return;
     const { userId, role } = auth.session;
-    const parsed = parseFields((request.body ?? {}) as Record<string, unknown>, true);
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const owner = await resolveOwner(auth.session, body.user_id);
+    if ('error' in owner) {
+      reply.code(owner.status);
+      return { error: owner.error };
+    }
+    const parsed = parseFields(body, true);
     if ('error' in parsed) {
       reply.code(400);
       return { error: parsed.error };
@@ -140,7 +178,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       reply.code(400);
       return { error: 'target_required' };
     }
-    if (!(await triggerService.targetAccessible(userId, role, f))) {
+    if (!(await triggerService.targetAccessible(owner.userId, owner.role, f))) {
       reply.code(403);
       return { error: 'target_not_accessible' };
     }
@@ -154,7 +192,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING ${PUBLIC_COLUMNS}`,
         [
-          userId, f.name, hashTriggerToken(token),
+          owner.userId, f.name, hashTriggerToken(token),
           f.agent_id ?? null, f.task_id ?? null, f.chain_id ?? null, f.prompt_template ?? '',
           f.approval_mode ?? 'inbox', f.inbox_result ?? 'always',
           f.chat_id ?? null, f.chat_title_template ?? 'Trigger: {{name}} [{{timestamp}}]',
@@ -173,7 +211,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     if (!auth) return;
     const { userId, role } = auth.session;
     const { id } = request.params as { id: string };
-    const existing = isUuid(id) ? await loadOwn(userId, role, id) : undefined;
+    const existing = isUuid(id) ? await loadManaged(userId, role, id) : undefined;
     if (!existing) {
       reply.code(404);
       return { error: 'not_found' };
@@ -193,7 +231,9 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       reply.code(400);
       return { error: 'target_required' };
     }
-    if (!(await triggerService.targetAccessible(userId, role, merged))) {
+    // Checked as the owner, whoever edits: the trigger runs as the owner.
+    const ownerRole = existing.user_id === userId ? role : (await loadRunUser(db, existing.user_id))?.role ?? 'user';
+    if (!(await triggerService.targetAccessible(existing.user_id, ownerRole, merged))) {
       reply.code(403);
       return { error: 'target_not_accessible' };
     }
@@ -202,7 +242,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       const res = await client.query(
         `UPDATE app.triggers SET ${sets.join(', ')}, updated_at = now()
          WHERE id = $1 AND user_id = $2 RETURNING ${PUBLIC_COLUMNS}`,
-        [id, userId, ...entries.map(([, value]) => value)]
+        [id, existing.user_id, ...entries.map(([, value]) => value)]
       );
       return res.rows[0];
     });
@@ -216,7 +256,10 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     const { id } = request.params as { id: string };
     const deleted = isUuid(id)
       ? await withRls(db, userId, role, async (client) => {
-          const res = await client.query('DELETE FROM app.triggers WHERE id = $1 AND user_id = $2', [id, userId]);
+          const res = await client.query(
+            'DELETE FROM app.triggers WHERE id = $1 AND (user_id = $2 OR $3)',
+            [id, userId, role === 'admin']
+          );
           return (res.rowCount ?? 0) > 0;
         })
       : false;
@@ -237,8 +280,8 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     const rotated = isUuid(id)
       ? await withRls(db, userId, role, async (client) => {
           const res = await client.query(
-            'UPDATE app.triggers SET token_hash = $3, updated_at = now() WHERE id = $1 AND user_id = $2',
-            [id, userId, hashTriggerToken(token)]
+            'UPDATE app.triggers SET token_hash = $3, updated_at = now() WHERE id = $1 AND (user_id = $2 OR $4)',
+            [id, userId, hashTriggerToken(token), role === 'admin']
           );
           return (res.rowCount ?? 0) > 0;
         })
@@ -259,7 +302,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     if (!auth) return;
     const { userId, role } = auth.session;
     const { id } = request.params as { id: string };
-    const trigger = isUuid(id) ? await loadOwn(userId, role, id) : undefined;
+    const trigger = isUuid(id) ? await loadManaged(userId, role, id) : undefined;
     if (!trigger) {
       reply.code(404);
       return { error: 'not_found' };
@@ -285,9 +328,9 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
                 CASE WHEN c.id IS NULL THEN NULL ELSE e.chat_id END AS chat_id
          FROM app.trigger_events e
          LEFT JOIN app.chats c ON c.id = e.chat_id
-         WHERE e.trigger_id = $1 AND e.user_id = $2
+         WHERE e.trigger_id = $1 AND (e.user_id = $2 OR $3)
          ORDER BY e.received_at DESC LIMIT 50`,
-        [id, userId]
+        [id, userId, role === 'admin']
       );
       return { events: res.rows };
     });

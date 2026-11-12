@@ -145,6 +145,8 @@ Alle Routen erfordern eine Session und wirken nur auf die eigenen Trigger.
 | `POST` | `/api/triggers/:id/test` | Startet einen Lauf mit `{ payload }` über die Session statt des Tokens. Zählt gegen dieselben Limits; funktioniert auch bei inaktivem Trigger. |
 | `GET` | `/api/triggers/:id/events` | Die letzten 50 Protokolleinträge: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
 
+**Trigger anderer Benutzer (nur Admin):** Ein Admin legt mit `user_id` im Body von `POST /api/triggers` einen Trigger für einen anderen Benutzer an. Der Trigger gehört dann diesem Benutzer: Der Lauf arbeitet mit dessen Rechten, Ergebnisse und Freigaben landen in dessen Posteingang, und der Zugriff auf Agent, Task und Chain wird für ihn geprüft. `GET /api/triggers?user_id=<uuid>` listet dessen Trigger. Ändern, Löschen, Token erneuern, Testen und das Protokoll funktionieren für einen Admin bei jedem Trigger. Jeder Trigger enthält `user_id`. Ohne Admin-Rolle führt ein fremdes `user_id` zu `403`, ein fremder Trigger zu `404`.
+
 **Felder POST/PATCH `/api/triggers`:**
 
 | Feld | Typ | Beschreibung |

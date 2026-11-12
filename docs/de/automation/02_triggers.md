@@ -2,7 +2,7 @@
 
 Ein Trigger startet einen Agenten oder eine Chain, wenn ein anderes System seine Adresse aufruft. Damit reagiert Ontheia auf Ereignisse, statt auf eine Eingabe im Chat oder einen Zeitplan zu warten: ein Sensor meldet einen Wert, ein Skript ist fertig, ein Dienst hat ein neues Dokument.
 
-Jeder Benutzer kann eigene Trigger anlegen. Der Lauf handelt als Besitzer des Triggers, mit dessen Rolle und Rechten.
+Jeder Benutzer kann eigene Trigger anlegen. Der Lauf handelt als Besitzer des Triggers, mit dessen Rolle und Rechten. Ein Admin kann über die API auch Trigger für andere Benutzer anlegen und verwalten (siehe API-Referenz); in der Oberfläche sieht jeder nur seine eigenen.
 
 ## Ablauf
 
