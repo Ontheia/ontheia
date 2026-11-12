@@ -17,7 +17,7 @@ find: Search files. Example: ['/mnt/nextcloud', '-name', '*.docx']. NEVER pass s
 cp: Copy file. Example: ['/src/file.docx', '/dst/file.docx']
 
 # ── Script execution ───────────────────────────────────────────────────────────
-node: Run JavaScript file. Example: ['/tmp/create_doc.js']. Do NOT use for inline -e scripts — write to a file first.
+node: Run JavaScript file. Example: ['/tmp/create_doc.js'].
 
 # ── Python ─────────────────────────────────────────────────────────────────────
 python3: Run Python inline. Example: ['-c', 'print("hello")']
