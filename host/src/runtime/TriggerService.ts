@@ -129,6 +129,23 @@ export function renderTriggerPrompt(
   });
 }
 
+const TITLE_VALUE_MAX_CHARS = 80;
+
+/**
+ * Fills `{{payload.a.b}}` in a chat title: one line, cut short, empty when the
+ * field is missing. `{{name}}` and `{{timestamp}}` are left for the run to
+ * fill, and a value cannot bring placeholders of its own.
+ */
+export function renderTriggerTitle(template: string, payload: unknown): string {
+  return template.replace(/\{\{\s*payload\.([A-Za-z0-9_.$-]+)\s*\}\}/g, (_match, path: string) => {
+    const value = lookupPath(payload, path);
+    if (value === undefined || value === null) return '';
+    const text = (typeof value === 'string' ? value : JSON.stringify(value))
+      .replace(/[\r\n\t]+/g, ' ').replace(/[{}]/g, '').trim();
+    return text.length > TITLE_VALUE_MAX_CHARS ? `${text.slice(0, TITLE_VALUE_MAX_CHARS)}…` : text;
+  });
+}
+
 /** What the protocol keeps of a body. */
 export function payloadForEventLog(payload: unknown): unknown {
   const json = JSON.stringify(payload ?? null) ?? 'null';
@@ -350,7 +367,7 @@ export class TriggerService {
           systemNote: buildAutomationSystemNote('webhook', trigger.name),
           message: renderTriggerPrompt(trigger.prompt_template, payload, { name: trigger.name, timestamp }),
           chatId: trigger.chat_id,
-          chatTitleTemplate: trigger.chat_title_template || 'Trigger: {{name}} [{{timestamp}}]',
+          chatTitleTemplate: renderTriggerTitle(trigger.chat_title_template || 'Trigger: {{name}} [{{timestamp}}]', payload),
           approval: trigger.approval_mode,
           inboxResult: trigger.inbox_result,
           runId

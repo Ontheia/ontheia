@@ -159,7 +159,7 @@ All routes require a session and act on your own triggers only.
 | `approval_mode` | `"inbox"` \| `"granted"` \| `"denied"` | Tool approval. Default `inbox`. |
 | `inbox_result` | `"always"` \| `"errors"` \| `"never"` | What the run reports to the inbox. Default `always`. |
 | `chat_id` | string \| null | Existing chat every run continues in. Empty = new chat per call. |
-| `chat_title_template` | string | Title template with `{{name}}` and `{{timestamp}}`. |
+| `chat_title_template` | string | Title template with `{{name}}`, `{{timestamp}}` and `{{payload.field}}` (one line, at most 80 characters per field). |
 | `rate_limit_per_min` | integer | 1 – 600, default 10. |
 | `prevent_overlap` | boolean | Skip calls during an active run. |
 | `active` | boolean | Switch the trigger on or off. |

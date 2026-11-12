@@ -159,7 +159,7 @@ Alle Routen erfordern eine Session und wirken nur auf die eigenen Trigger.
 | `approval_mode` | `"inbox"` \| `"granted"` \| `"denied"` | Tool-Freigabe. Standard `inbox`. |
 | `inbox_result` | `"always"` \| `"errors"` \| `"never"` | Was der Lauf im Posteingang meldet. Standard `always`. |
 | `chat_id` | string \| null | Bestehender Chat, in dem jeder Lauf fortgesetzt wird. Leer = neuer Chat pro Aufruf. |
-| `chat_title_template` | string | Titelvorlage mit `{{name}}` und `{{timestamp}}`. |
+| `chat_title_template` | string | Titelvorlage mit `{{name}}`, `{{timestamp}}` und `{{payload.feld}}` (einzeilig, höchstens 80 Zeichen je Feld). |
 | `rate_limit_per_min` | integer | 1 – 600, Standard 10. |
 | `prevent_overlap` | boolean | Aufrufe während eines laufenden Laufs überspringen. |
 | `active` | boolean | Trigger aktiv/inaktiv schalten. |

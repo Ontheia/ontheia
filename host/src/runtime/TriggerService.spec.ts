@@ -31,6 +31,7 @@ import {
   payloadBlock,
   payloadForEventLog,
   renderTriggerPrompt,
+  renderTriggerTitle,
   tokenFromHeaders,
   triggerTokenMatches
 } from './TriggerService.js';
@@ -126,4 +127,17 @@ test('a refused hit does not extend the block', () => {
   limiter.allow('a', 1, 0);
   for (let t = 100; t < 1000; t += 100) assert.equal(limiter.allow('a', 1, t), false);
   assert.equal(limiter.allow('a', 1, 1001), true);
+});
+
+test('a chat title takes fields of the payload, on one line and cut short', () => {
+  assert.equal(
+    renderTriggerTitle('Mail: {{payload.subject}} [{{timestamp}}]', { subject: 'Wetter\nheute' }),
+    'Mail: Wetter heute [{{timestamp}}]'
+  );
+  assert.equal(renderTriggerTitle('{{ payload.a.b }}|{{payload.missing}}|{{name}}', { a: { b: 7 } }), '7||{{name}}');
+  assert.equal(renderTriggerTitle('{{payload.s}}', { s: 'x'.repeat(200) }).length, 81);
+});
+
+test('a payload value cannot smuggle placeholders into the title', () => {
+  assert.equal(renderTriggerTitle('{{payload.s}}', { s: '{{name}}' }), 'name');
 });
