@@ -129,13 +129,16 @@ export function mapMessagesForResponses(messages: ChatMessage[]): {
 
 /** Responses API uses a flat tool definition (no `function` wrapper). */
 export function mapToolsForResponses(tools: RunToolDefinition[]): ResponseItem[] {
-  // `strict: true` is deliberately omitted: it requires fully strict JSON
-  // schemas (additionalProperties: false everywhere), which many MCP tool
-  // schemas do not satisfy.
+  // `strict: false` must be said: the Responses API defaults to strict. In
+  // strict mode every property counts as required, so the model fills each
+  // optional field with a neutral value (0, "", []) — and a tool that takes
+  // `correspondent__id: 0` as a real filter then finds nothing. MCP schemas
+  // are written with optional fields, and many would not pass as strict.
   return tools.map((t) => ({
     type: 'function',
     name: t.call_name || t.name,
     description: t.description || '',
+    strict: false,
     parameters: (t.parameters as Record<string, unknown>) ?? { type: 'object', properties: {} }
   }));
 }

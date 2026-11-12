@@ -90,6 +90,7 @@ test('mapToolsForResponses: flat definition without function wrapper', () => {
     type: 'function',
     name: 'cli_tools__run_skill_script',
     description: 'Run a script',
+    strict: false,
     parameters: { type: 'object', properties: { script_path: { type: 'string' } } }
   });
   // Missing description/parameters get safe defaults; call_name falls back to name.
@@ -97,6 +98,7 @@ test('mapToolsForResponses: flat definition without function wrapper', () => {
     type: 'function',
     name: 'noop',
     description: '',
+    strict: false,
     parameters: { type: 'object', properties: {} }
   });
 });
