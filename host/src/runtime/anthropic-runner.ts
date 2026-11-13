@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
@@ -345,6 +346,24 @@ export async function runAnthropicCompletion(
             onEvent: emit,
             waitForToolApproval: options?.waitForToolApproval
           });
+
+          // A tool that ran and failed is an error, not a success with an
+          // error text in it — see mcpErrorText.
+          const reported = mcpErrorText(result);
+          if (reported !== null) {
+            emit({
+              type: 'tool_call',
+              call_id: tc.id,
+              tool: toolDef.name,
+              server: toolDef.server,
+              status: 'error',
+              arguments: tc.input,
+              error: reported,
+              finished_at: new Date().toISOString()
+            });
+            conversation.push({ role: 'tool', content: `Error: ${reported}`, tool_call_id: tc.id });
+            continue;
+          }
 
           emit({
             type: 'tool_call',

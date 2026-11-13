@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { Logger } from 'pino';
@@ -1323,6 +1324,23 @@ async function handleOpenAiToolCalls(params: {
         userId: options?.userId,
         role: options?.role
       });
+
+      // A tool that ran and failed is an error, not a success with an error
+      // text in it — see mcpErrorText.
+      const reported = mcpErrorText(result);
+      if (reported !== null) {
+        emit({
+          type: 'tool_call',
+          call_id: rawCall.id,
+          tool: toolDefinition.name,
+          server: toolDefinition.server,
+          status: 'error',
+          arguments: args,
+          error: reported
+        });
+        conversation.push({ role: 'tool', content: `Error: ${reported}`, tool_call_id: rawCall.id });
+        continue;
+      }
 
       emit({
         type: 'tool_call', 

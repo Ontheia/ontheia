@@ -44,6 +44,7 @@
  * Activation is opt-in per model/provider metadata `chat_api: "responses"`
  * (dispatch in provider-run.ts). Chat completions stays the default.
  */
+import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
@@ -527,6 +528,24 @@ export async function runResponsesCompletion(
             onEvent: emit,
             waitForToolApproval: options?.waitForToolApproval
           });
+
+          // A tool that ran and failed is an error, not a success with an
+          // error text in it — see mcpErrorText.
+          const reported = mcpErrorText(result);
+          if (reported !== null) {
+            emit({
+              type: 'tool_call',
+              call_id: callId,
+              tool: toolDef.name,
+              server: toolDef.server,
+              status: 'error',
+              arguments: args,
+              error: reported,
+              finished_at: new Date().toISOString()
+            });
+            pushOutput(`Error: ${reported}`);
+            continue;
+          }
 
           emit({
             type: 'tool_call',
