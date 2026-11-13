@@ -42,7 +42,9 @@ Buttons: **[Konfiguration speichern]** · **[Validieren]** · **[Dry Run]** · *
 
 **Gespeicherte MCP-Server (Akkordeon):**
 
-Jeder gespeicherte Server wird als aufklappbarer Eintrag angezeigt. Im geöffneten Zustand sichtbar: Befehl, Letzter Start, Statuszeit, Validiert / Auto-Start und die Liste der verfügbaren Tools.
+Jeder gespeicherte Server wird als aufklappbarer Eintrag angezeigt. Im geöffneten Zustand sichtbar: Befehl, Letzter Start, Statuszeit, Validiert / Auto-Start, die zugewiesenen Agenten und die Liste der verfügbaren Tools.
+
+**Zugewiesene Agenten** zeigt, welche Agenten den Server in ihrer Konfiguration führen. Ein Agent mit dem Zusatz „kein Tool" hat den Server zugewiesen, aber keines seiner Tools gebunden; er sieht den Server nicht, solange er überhaupt Tools gebunden hat. Die Bindung erfolgt unter Agenten → Tools.
 
 Aktionen pro Server: **Bearbeiten** (lädt Konfig in den Editor oben) · **Starten** (▶) · **Stoppen** (■) · **Löschen** (🗑).
 

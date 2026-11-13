@@ -42,7 +42,9 @@ Buttons: **[Save Configuration]** · **[Validate]** · **[Dry Run]** · **[Stop 
 
 **Saved MCP Servers (Accordion):**
 
-Each saved server appears as a collapsible entry. When expanded: Command, Last Start, Status Time, Validated / Auto-Start, and the list of available tools.
+Each saved server appears as a collapsible entry. When expanded: Command, Last Start, Status Time, Validated / Auto-Start, the assigned agents, and the list of available tools.
+
+**Assigned agents** shows which agents carry the server in their configuration. An agent marked "no tool" has the server assigned but none of its tools bound; it cannot see the server as long as it has any tools bound at all. Tools are bound under Agents → Tools.
 
 Actions per server: **Edit** (loads config into the editor above) · **Start** (▶) · **Stop** (■) · **Delete** (🗑).
 

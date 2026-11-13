@@ -3895,6 +3895,7 @@ function McpServerSection({
   onHasChanges,
   onProcessesUpdate,
   liveStatuses,
+  agents,
   timezone
 }: {
   configDraft: string;
@@ -3902,6 +3903,7 @@ function McpServerSection({
   onHasChanges: (hasChanges: boolean) => void;
   onProcessesUpdate: (processes: ProcessInfo[]) => void;
   liveStatuses: McpStatusEntry[];
+  agents: AgentDefinition[];
   timezone?: string;
 }) {
   const { t, i18n } = useTranslation(['admin', 'common', 'errors']);
@@ -4715,6 +4717,23 @@ function McpServerSection({
                 const isLoadingTools = loadingToolNameSet.has(row.name);
                 const isActive = activeStoredConfig === row.name;
                 const isOpen = openServer === row.name;
+                // An assigned server whose tools are not bound stays invisible
+                // to the model once the agent binds any tool at all (same rule
+                // as findServersWithoutTools in the host). Listing such an
+                // agent without a mark would claim a use that does not exist.
+                const serverAgents = isOpen
+                  ? agents
+                      .filter((agent) => (agent.mcpServers ?? []).includes(row.name))
+                      .map((agent) => {
+                        const bindings = agent.tools ?? [];
+                        return {
+                          id: agent.id,
+                          label: agent.label,
+                          noTools: bindings.length > 0 && !bindings.some((binding) => binding.server === row.name)
+                        };
+                      })
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                  : [];
                 return (
                   <div
                     key={row.name}
@@ -4757,6 +4776,36 @@ function McpServerSection({
                             </span>
                           </div>
                         </div>
+                        <div className="mb-2">
+                          <span className="admin-mcp-meta-label">{t('mcp.assignedAgents')}</span>
+                          {serverAgents.length > 0 ? (
+                            <div className="admin-mcp-tools">
+                              {serverAgents.map((agent) =>
+                                agent.noTools ? (
+                                  <span
+                                    key={agent.id}
+                                    className="admin-mcp-tool-chip muted help"
+                                    title={t('mcp.agentNoTools')}
+                                  >
+                                    {agent.label} · {t('mcp.agentNoToolsShort')}
+                                  </span>
+                                ) : (
+                                  <span key={agent.id} className="admin-mcp-tool-chip">
+                                    {agent.label}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          ) : (
+                            <span className="muted text-xs ml-1">{t('mcp.noAgents')}</span>
+                          )}
+                        </div>
+                        <div>
+                        <span className="admin-mcp-meta-label">
+                          {toolInfo && toolInfo.tools.length > 0
+                            ? t('mcp.totalTools', { count: toolInfo.tools.length })
+                            : t('mcp.toolsHeading')}
+                        </span>
                         {toolInfo && toolInfo.tools.length > 0 ? (
                           <div className="admin-mcp-tools">
                             {toolInfo.tools.map((tool) =>
@@ -4777,9 +4826,6 @@ function McpServerSection({
                                 </span>
                               )
                             )}
-                            <div className="w-full text-xs text-slate-500 mt-1">
-                              {t('mcp.totalTools', { count: toolInfo.tools.length })}
-                            </div>
                           </div>
                         ) : row.process?.status === 'running' ? (
                           <div className="admin-mcp-tools-refresh">
@@ -4805,6 +4851,7 @@ function McpServerSection({
                         ) : (
                           <span className="muted">{t('mcp.onlyWhenRunning')}</span>
                         )}
+                        </div>
                         {row.synthetic ? (
                           <p className="muted">{t('mcp.internalServer')}</p>
                         ) : (
@@ -9256,6 +9303,7 @@ export function SettingsView() {
             onHasChanges={setHasChanges}
             onProcessesUpdate={setMcpProcesses}
             liveStatuses={mcpStatuses}
+            agents={agents}
             timezone={runtimeSettings.timezone}
           />
         );
