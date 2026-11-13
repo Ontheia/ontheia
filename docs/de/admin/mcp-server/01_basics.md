@@ -67,7 +67,9 @@ Was der Agent davon sieht:
 - **Einträge ohne Programm** im Suchpfad des Containers (nicht installiert, oder ein reiner Shell-Befehl wie `cd`) werden nicht angezeigt. Der cli-server meldet sie beim Start im Log.
 - `execute` startet das Programm direkt, ohne Shell. Pipes, Umleitungen und Wildcards werden nicht ausgewertet.
 
-> **Sicherheit:** `execute` akzeptiert nur Befehle die in der Allowlist stehen. Der Befehl wird als Name ohne Pfad angegeben und über den Suchpfad aufgelöst; ein Aufruf mit Pfad wird abgelehnt. `run_skill_script` begrenzt alle Pfade zusätzlich auf das Skill-Verzeichnis um Traversal-Angriffe zu verhindern.
+> **Sicherheit:** `execute` akzeptiert nur Befehle die in der Allowlist stehen. Der Befehl wird als Name ohne Pfad angegeben und über den Suchpfad aufgelöst; ein Aufruf mit Pfad wird abgelehnt.
+>
+> **Die Allowlist ist nur ohne Interpreter eine Sperre.** `python3`, `node` und `uv` führen beliebigen Code aus und können daraus jedes andere Programm starten; ein Agent erreicht damit auch Befehle, die nicht auf der Liste stehen. Dasselbe gilt eingeschränkt für `find` (über `-exec`), `awk` und `sed`. Mit solchen Einträgen ist die Liste eine Orientierung für den Agenten, und die wirkliche Grenze ist der Container: eingebundene Verzeichnisse, erreichbare Netze, Benutzerrechte. Wer eine harte Grenze braucht, etwa für Agenten, die fremde Eingaben verarbeiten, gibt keinen dieser Befehle frei. `run_skill_script` begrenzt alle Pfade zusätzlich auf das Skill-Verzeichnis um Traversal-Angriffe zu verhindern.
 
 ---
 

@@ -67,7 +67,9 @@ What the agent sees of it:
 - **Entries without a program** on the container's search path (not installed, or a pure shell builtin such as `cd`) are not shown. The cli-server reports them in its log at startup.
 - `execute` starts the program directly, without a shell. Pipes, redirects and wildcards are not interpreted.
 
-> **Security:** `execute` only accepts commands that appear in the allowlist. The command is given as a name without a path and resolved through the search path; a call with a path is rejected. `run_skill_script` additionally bounds all paths to the skill directory to prevent traversal attacks.
+> **Security:** `execute` only accepts commands that appear in the allowlist. The command is given as a name without a path and resolved through the search path; a call with a path is rejected.
+>
+> **The allowlist is a barrier only without interpreters.** `python3`, `node` and `uv` run arbitrary code and can start any other program from it, so an agent reaches commands that are not on the list. The same holds, to a lesser degree, for `find` (via `-exec`), `awk` and `sed`. With such entries the list is guidance for the agent, and the real boundary is the container: mounted directories, reachable networks, user rights. If you need a hard boundary, for instance for agents that process input from outside, allow none of these commands. `run_skill_script` additionally bounds all paths to the skill directory to prevent traversal attacks.
 
 ---
 
