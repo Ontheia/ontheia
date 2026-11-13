@@ -20,6 +20,8 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { loadGlobalRuntime } from '../routes/settings-utils.js';
+import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
 import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
@@ -311,7 +313,46 @@ export interface RunOptions {
   role?: string;
 }
 
+/**
+ * The tool loop timeout an admin set under General → Runtime. No caller ever
+ * passed it down, so every run used the built-in 600 s whatever the setting
+ * said — the 600-second aborts on .13 happened with 3600 configured. Resolved
+ * here because every run, chain step and delegated run comes through this
+ * function. An explicit option still wins; an unreadable setting falls back to
+ * the runners' default.
+ */
+async function resolveToolLoopTimeoutMs(db: Pool | PoolClient, options?: RunOptions): Promise<number | undefined> {
+  if (typeof options?.toolLoopTimeoutMs === 'number' && Number.isFinite(options.toolLoopTimeoutMs)) {
+    return options.toolLoopTimeoutMs;
+  }
+  try {
+    const configured = (await loadGlobalRuntime(db as Pool)).toolLoopTimeoutMs;
+    if (typeof configured === 'number' && Number.isFinite(configured)) {
+      // Same range the settings page offers: 60 to 3600 seconds.
+      return Math.min(3_600_000, Math.max(60_000, Math.floor(configured)));
+    }
+  } catch (err) {
+    (options?.logger ?? rootLogger).warn({ err }, 'Could not read the tool loop timeout setting — using the default');
+  }
+  return undefined;
+}
+
 export async function runProviderCompletion(
+  db: Pool | PoolClient,
+  orchestrator: OrchestratorService,
+  payload: RunRequest,
+  options?: RunOptions
+): Promise<RunEvent[]> {
+  const toolLoopTimeoutMs = await resolveToolLoopTimeoutMs(db, options);
+  return dispatchProviderCompletion(
+    db,
+    orchestrator,
+    payload,
+    toolLoopTimeoutMs === undefined ? options : { ...options, toolLoopTimeoutMs }
+  );
+}
+
+async function dispatchProviderCompletion(
   db: Pool | PoolClient,
   orchestrator: OrchestratorService,
   payload: RunRequest,
@@ -381,7 +422,7 @@ async function runCliLoop(
   const log = options?.logger ?? rootLogger;
   const toolset = Array.isArray(payload.toolset) ? payload.toolset : [];
   const allowedToolNames = new Set(toolset.map(t => t.call_name ?? t.name));
-  const toolCallCounter = { value: 0 };
+  const toolCallCounter: ToolCallBudget = { value: 0 };
 
   // Build conversation identical to OpenAI path
   const incomingMessages = payload.messages || [];
@@ -430,7 +471,7 @@ async function runCliLoop(
   }
 
   const startedAt = Date.now();
-  const toolLoopTimeoutMs = DEFAULT_TOOL_LOOP_TIMEOUT_MS;
+  const toolLoopTimeoutMs = options?.toolLoopTimeoutMs ?? DEFAULT_TOOL_LOOP_TIMEOUT_MS;
   const timeoutAt = startedAt + toolLoopTimeoutMs;
 
   while (true) {
@@ -438,16 +479,32 @@ async function runCliLoop(
       emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
       return events;
     }
-    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
-      emit({ type: 'error', code: 'tool_loop_timeout', message: 'Tool loop timed out.' });
-      return events;
+    if (!toolCallCounter.wrapUp && isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
+      toolCallCounter.wrapUp = 'time';
+    }
+    // A limit is reached: one more request, without tools, for a closing
+    // answer — see run-limits.ts.
+    if (toolCallCounter.wrapUp) {
+      if (toolCallCounter.wrapUpSent) {
+        emit(limitError(toolCallCounter.wrapUp));
+        return events;
+      }
+      toolCallCounter.wrapUpSent = true;
+      emit(limitWarning(toolCallCounter.wrapUp));
+      conversation.push({
+        role: 'user',
+        content: wrapUpNotice(toolCallCounter.wrapUp, {
+          maxToolCalls: await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
+          timeoutSeconds: Math.round(toolLoopTimeoutMs / 1000)
+        })
+      });
     }
 
     emit({ type: 'step_start', step: 'dispatch_provider_request', timestamp: new Date().toISOString() });
 
     let completion: import('../providers/cli-runner.js').CliCompletion;
     try {
-      completion = await runCliCompletion(provider, model, conversation, toolset, allowedToolNames);
+      completion = await runCliCompletion(provider, model, conversation, toolCallCounter.wrapUpSent ? [] : toolset, allowedToolNames);
     } catch (err: any) {
       log.error({ err }, 'CLI provider error');
       emit({ type: 'error', code: 'provider_error', message: err.message ?? 'CLI provider error' });
@@ -466,7 +523,13 @@ async function runCliLoop(
       });
     }
 
-    if (completion.finishReason === 'stop' || completion.tool_calls.length === 0) {
+    if (toolCallCounter.wrapUpSent && toolCallCounter.wrapUp && !(completion.content ?? '').trim()) {
+      // The closing request brought no text: stop the hard way.
+      emit(limitError(toolCallCounter.wrapUp));
+      return events;
+    }
+
+    if (toolCallCounter.wrapUpSent || completion.finishReason === 'stop' || completion.tool_calls.length === 0) {
       emit({
         type: 'complete',
         status: 'success',
@@ -692,7 +755,7 @@ export async function runOpenAiCompletion(
   const sanitizedIncoming = sanitizeHistory(remainingMessages);
   conversation.push(...sanitizedIncoming.map((message) => ({ ...message })));
   
-  const toolCallCounter = { value: 0 };
+  const toolCallCounter: ToolCallBudget = { value: 0 };
   const fingerprintHistory = new Map<string, number>();
 
   if (toolApprovalMode === 'denied' && toolset.length > 0) {
@@ -709,18 +772,32 @@ export async function runOpenAiCompletion(
       return events;
     }
 
-    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
-      emit({
-        type: 'error',
-        code: 'tool_loop_timeout',
-        message: `Tool loop exceeded the time limit of ${timeoutSeconds}s.`
+    if (!toolCallCounter.wrapUp && isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
+      toolCallCounter.wrapUp = 'time';
+    }
+    // A limit is reached: one more request, without tools, for a closing
+    // answer — see run-limits.ts.
+    if (toolCallCounter.wrapUp) {
+      if (toolCallCounter.wrapUpSent) {
+        emit(limitError(toolCallCounter.wrapUp));
+        return events;
+      }
+      toolCallCounter.wrapUpSent = true;
+      emit(limitWarning(toolCallCounter.wrapUp));
+      conversation.push({
+        role: 'user',
+        content: wrapUpNotice(toolCallCounter.wrapUp, {
+          maxToolCalls: await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
+          timeoutSeconds
+        })
       });
-      return events;
     }
 
     const requestPayload: RunRequest = {
       ...payload,
-      messages: conversation
+      messages: conversation,
+      // The closing request offers no tools, so the answer has to be text.
+      ...(toolCallCounter.wrapUpSent ? { toolset: [] } : {})
     };
 
     const timestamp = new Date().toISOString();
@@ -854,6 +931,11 @@ export async function runOpenAiCompletion(
       }
 
       const content = normalizeMessageContent(responseBody);
+      if (toolCallCounter.wrapUpSent && toolCallCounter.wrapUp && !String(content ?? '').trim()) {
+        // The closing request brought no text: stop the hard way.
+        emit(limitError(toolCallCounter.wrapUp));
+        return events;
+      }
       emit({
         type: 'complete',
         status: 'success',
@@ -884,7 +966,7 @@ async function consumeEventStream(
   options?: RunOptions,
   context?: {
     conversation: ChatMessage[];
-    toolCallCounter: { value: number };
+    toolCallCounter: ToolCallBudget;
     deadline: number;
     timeoutSeconds: number;
     toolAccessBlocked: boolean;
@@ -1088,6 +1170,13 @@ async function consumeEventStream(
 
 type ToolCallHandlingResult = 'continue' | 'abort' | 'noop';
 
+/**
+ * The run's tool-call count, shared by the loops and the tool handler. It also
+ * carries a reached limit from the handler back to the loop that sends the
+ * closing request — see run-limits.ts.
+ */
+type ToolCallBudget = { value: number; wrapUp?: LimitReason; wrapUpSent?: boolean };
+
 async function handleOpenAiToolCalls(params: {
   db: Pool | PoolClient;
   responseBody: any;
@@ -1095,7 +1184,7 @@ async function handleOpenAiToolCalls(params: {
   toolset: RunToolDefinition[];
   orchestrator: OrchestratorService;
   emit: (event: RunEvent) => void;
-  totalToolCalls: { value: number };
+  totalToolCalls: ToolCallBudget;
   deadline: number;
   timeoutSeconds: number;
   options?: RunOptions;
@@ -1150,15 +1239,36 @@ async function handleOpenAiToolCalls(params: {
     }
 
     // The loop's start is not passed down; deadline minus its length is the same instant.
+    let reached: LimitReason | null = null;
     if (isPastDeadline(deadline, deadline - timeoutSeconds * 1000, options?.waitForToolApproval)) {
-      emit({ type: 'error', code: 'timeout', message: 'Timeout' });
-      return 'abort';
+      reached = 'time';
+    } else {
+      totalToolCalls.value += 1;
+      if (totalToolCalls.value > maxToolCalls) reached = 'tool_calls';
     }
-
-    totalToolCalls.value += 1;
-    if (totalToolCalls.value > maxToolCalls) {
-      emit({ type: 'error', code: 'limit', message: 'Too many tool calls' });
-      return 'abort';
+    if (reached) {
+      if (totalToolCalls.wrapUpSent) {
+        emit(limitError(reached));
+        return 'abort';
+      }
+      // Every tool call needs a result, so this call and the ones after it
+      // are answered as not executed; the loop then sends the closing request.
+      for (const skipped of rawToolCalls.slice(rawToolCalls.indexOf(rawCall))) {
+        if (!skipped?.id) continue;
+        const skippedName = String(skipped.function?.name ?? '');
+        const skippedDef = toolset.find((t) => (t.call_name || t.name) === skippedName);
+        emit({
+          type: 'tool_call',
+          call_id: skipped.id,
+          tool: skippedDef?.name ?? skippedName,
+          server: skippedDef?.server ?? '',
+          status: 'error',
+          error: skippedCallText(reached)
+        });
+        conversation.push({ role: 'tool', content: `Error: ${skippedCallText(reached)}`, tool_call_id: skipped.id });
+      }
+      totalToolCalls.wrapUp = reached;
+      return 'continue';
     }
 
     const functionName = rawCall?.function?.name;

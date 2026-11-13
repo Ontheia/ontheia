@@ -7,6 +7,7 @@ Bestimmt die maximale Zeit, die ein Agent in einer einzigen "Schleife" verbringe
 - **Bereich:** 60 bis 3600 Sekunden.
 - **Standard:** 600 Sekunden (10 Minuten).
 - **Zweck:** Verhindert, dass Agenten in unendliche Tool-Aufrufe geraten oder übermäßig viele Ressourcen verbrauchen, wenn sie keine Lösung finden.
+- **Wartezeit auf Freigaben zählt nicht mit:** Solange ein Tool-Aufruf auf eine Freigabe wartet (im Chat oder im Posteingang), läuft die Frist nicht weiter.
 
 ## 2. Max. Tool-Aufrufe pro Run
 Begrenzt die Anzahl der Tool-Aufrufe in einem einzelnen Agenten-Run — das zweite Schutzband neben dem Tool-Loop Timeout: Das Timeout begrenzt die *Zeit*, die die Schleife dauern darf, diese Einstellung die *Anzahl* der Aufrufe.
@@ -15,6 +16,15 @@ Begrenzt die Anzahl der Tool-Aufrufe in einem einzelnen Agenten-Run — das zwei
 - **Geltungsbereich:** global für alle Provider-Pfade — die Anthropic-API, die OpenAI-Responses-API und OpenAI-kompatible Chat-Completions.
 - **Zweck:** Kosten-Schutz. Eine entgleiste Agenten-Schleife stoppt nach der eingestellten Anzahl an Aufrufen, selbst wenn jeder einzelne Aufruf schnell ist und das zeitbasierte Timeout allein nie greifen würde.
 - **Gespeichert als:** `max_tool_calls` in `app.system_settings` (anders als die Nachbarfelder, die im `app.user_settings`-Eintrag des System-Users liegen); pro Run gelesen, mit 30 Sekunden Cache.
+- **Gilt pro Lauf:** Ein delegierter Agent zählt seine Aufrufe selbst, mit derselben Grenze. Ein Lauf mit vielen Delegationen kann deshalb insgesamt ein Vielfaches der Grenze verbrauchen; als Obergrenze für die Gesamtkosten eines Auftrags taugt die Einstellung nicht.
+
+### Was beim Erreichen einer Grenze passiert
+Erreicht ein Lauf das Timeout oder die maximale Zahl der Tool-Aufrufe, bricht er nicht sofort ab. Das Modell bekommt eine letzte Anfrage ohne Tools mit dem Auftrag, zusammenzufassen, was erledigt ist und was offen bleibt.
+
+- Der Lauf endet als abgeschlossen, mit diesem Teilergebnis als Antwort. Im Posteingang erscheint er als Ergebnis, nicht als Fehler.
+- Im Trace steht eine Warnung mit dem Code `run_limit_reached`. Aufrufe, die das Modell noch angefordert hatte, sind dort als nicht ausgeführt vermerkt.
+- Liefert auch die letzte Anfrage keinen Text, endet der Lauf mit dem Fehler `tool_call_limit_exceeded` bzw. `tool_loop_timeout`.
+- Die Grenze wird dem Modell vorher nicht angekündigt.
 
 ## 3. Memory Kontext-Größe (Top K)
 Legt fest, wie viele relevante Fragmente aus dem Vektorspeicher pro Anfrage an das LLM übergeben werden.

@@ -387,8 +387,11 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
       const updated = applyUserSettingsPatch(current, patch ?? {});
       await persistUserSettings(db, session.userId, updated, client);
 
+      // The global values are the base of every admin patch, not the defaults:
+      // a patch naming one field used to reset its neighbours — setting only
+      // the tool loop timeout silently put the rate limit back from 50 to 10.
       if (session.role === 'admin' && patch?.runtime) {
-        const normalizedRuntime = normalizeRuntimeSettings(patch.runtime, DEFAULT_USER_SETTINGS.runtime);
+        const normalizedRuntime = normalizeRuntimeSettings(patch.runtime, await loadGlobalRuntime(db, client));
         await persistGlobalRuntime(db, normalizedRuntime, client);
         updated.runtime = normalizedRuntime;
       } else {
@@ -396,7 +399,7 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
       }
 
       if (session.role === 'admin' && patch?.uiFlags) {
-        const normalizedUiFlags = normalizeUiFlags(patch.uiFlags, DEFAULT_USER_SETTINGS.uiFlags);
+        const normalizedUiFlags = normalizeUiFlags(patch.uiFlags, await loadGlobalUiFlags(db, client));
         await persistGlobalUiFlags(db, normalizedUiFlags, client);
         updated.uiFlags = { ...updated.uiFlags, memoryTopK: normalizedUiFlags.memoryTopK, allowMemoryWrite: normalizedUiFlags.allowMemoryWrite };
       } else {
@@ -420,7 +423,7 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
       }
 
       if (session.role === 'admin' && patch?.rollingSummary) {
-        const normalized = normalizeRollingSummary(patch.rollingSummary, DEFAULT_USER_SETTINGS.rollingSummary);
+        const normalized = normalizeRollingSummary(patch.rollingSummary, await loadGlobalRollingSummary(db, client));
         await persistGlobalRollingSummary(db, normalized, client);
         updated.rollingSummary = normalized;
       } else {

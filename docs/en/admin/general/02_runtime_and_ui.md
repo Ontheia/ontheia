@@ -7,6 +7,7 @@ Determines the maximum time an agent may spend in a single "loop" calling tools.
 - **Range:** 60 to 3600 seconds.
 - **Default:** 600 seconds (10 minutes).
 - **Purpose:** Prevents agents from getting into infinite tool call loops or consuming excessive resources when they cannot find a solution.
+- **Waiting for approvals does not count:** While a tool call waits for an approval (in the chat or in the inbox), the clock is paused.
 
 ## 2. Max Tool Calls per Run
 Caps the number of tool calls in a single agent run — the second guardrail alongside the Tool Loop Timeout: the timeout bounds the *time* the loop may take, this setting bounds the *count* of calls.
@@ -15,6 +16,15 @@ Caps the number of tool calls in a single agent run — the second guardrail alo
 - **Scope:** Global for every provider path — the Anthropic API, the OpenAI Responses API and OpenAI-compatible chat completions.
 - **Purpose:** Cost protection. A runaway agent loop stops after the configured number of calls even when every single call is fast, so the time-based timeout alone would never trigger.
 - **Stored as:** `max_tool_calls` in `app.system_settings` (unlike the neighboring fields, which live in the system user's `app.user_settings` entry); read per run with a 30-second cache.
+- **Applies per run:** A delegated agent counts its own calls, against the same limit. A run with many delegations can therefore use a multiple of the limit in total; the setting is not a cap on the overall cost of a job.
+
+### What happens when a limit is reached
+A run that reaches the timeout or the maximum number of tool calls does not stop at once. The model gets one last request without tools, asking it to sum up what is done and what is still open.
+
+- The run ends as completed, with that partial result as its answer. In the inbox it appears as a result, not as an error.
+- The trace carries a warning with the code `run_limit_reached`. Calls the model had still asked for are recorded there as not executed.
+- If the last request returns no text either, the run ends with the error `tool_call_limit_exceeded` or `tool_loop_timeout`.
+- The limit is not announced to the model beforehand.
 
 ## 3. Memory Context Size (Top K)
 Defines how many relevant fragments from the vector memory are passed to the LLM per request.

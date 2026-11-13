@@ -44,6 +44,7 @@
  * Activation is opt-in per model/provider metadata `chat_api: "responses"`
  * (dispatch in provider-run.ts). Chat completions stays the default.
  */
+import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
 import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
@@ -316,15 +317,32 @@ export async function runResponsesCompletion(
   }
 
   let toolCallCounter = 0;
+  let wrapUp: LimitReason | null = null;
+  let wrapUpSent = false;
 
   while (true) {
     if (options?.signal?.aborted) {
       emit({ type: 'error', code: 'aborted', message: 'Run was aborted by user.' });
       break;
     }
-    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
-      emit({ type: 'error', code: 'tool_loop_timeout', message: 'Time limit for tool execution exceeded.' });
-      break;
+    if (!wrapUp && isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
+      wrapUp = 'time';
+    }
+    // A limit is reached: one more request, without tools, for a closing
+    // answer — see run-limits.ts. A second pass here means that request did
+    // not end the run, so it stops the hard way.
+    if (wrapUp) {
+      if (wrapUpSent) {
+        emit(limitError(wrapUp));
+        break;
+      }
+      wrapUpSent = true;
+      emit(limitWarning(wrapUp));
+      input.push({
+        type: 'message',
+        role: 'user',
+        content: wrapUpNotice(wrapUp, { maxToolCalls, timeoutSeconds: Math.round((timeoutAt - startedAt) / 1000) })
+      });
     }
 
     emit({ type: 'step_start', step: 'dispatch_provider_request', timestamp: new Date().toISOString() });
@@ -340,7 +358,9 @@ export async function runResponsesCompletion(
     if (instructions) body.instructions = instructions;
     if (responseTools.length > 0) {
       body.tools = responseTools;
-      body.tool_choice = 'auto';
+      // On the closing request the tools stay listed (the input refers to
+      // them); the model is only barred from calling.
+      body.tool_choice = wrapUpSent ? 'none' : 'auto';
     }
     if (typeof payload.options?.max_tokens === 'number') {
       body.max_output_tokens = payload.options.max_tokens;
@@ -421,6 +441,16 @@ export async function runResponsesCompletion(
       const functionCalls = output.filter((item) => item.type === 'function_call');
       const assistantText = extractOutputText(output);
 
+      if (wrapUpSent && wrapUp) {
+        // The closing answer. Function calls in it are ignored.
+        if (assistantText.trim()) {
+          emit({ type: 'complete', status: 'success', output: assistantText, metadata: { provider_url: url.toString(), model: payload.model_id } });
+        } else {
+          emit(limitError(wrapUp));
+        }
+        break;
+      }
+
       if (functionCalls.length === 0) {
         emit({ type: 'complete', status: 'success', output: assistantText, metadata: { provider_url: url.toString(), model: payload.model_id } });
         break;
@@ -440,8 +470,25 @@ export async function runResponsesCompletion(
 
         toolCallCounter++;
         if (toolCallCounter > maxToolCalls) {
-          emit({ type: 'error', code: 'tool_call_limit_exceeded', message: 'Too many tool calls.' });
-          return events;
+          // Every function_call needs an output, so this call and the ones
+          // after it are answered as not executed before the closing request.
+          for (const skipped of functionCalls.slice(functionCalls.indexOf(call))) {
+            const skippedId = String((skipped as any).call_id ?? '');
+            const skippedName = String((skipped as any).name ?? '');
+            const skippedDef = toolset.find((t) => (t.call_name || t.name) === skippedName);
+            emit({
+              type: 'tool_call',
+              call_id: skippedId,
+              tool: skippedDef?.name ?? skippedName,
+              server: skippedDef?.server ?? '',
+              status: 'error',
+              error: skippedCallText('tool_calls'),
+              finished_at: new Date().toISOString()
+            });
+            input.push({ type: 'function_call_output', call_id: skippedId, output: `Error: ${skippedCallText('tool_calls')}` });
+          }
+          wrapUp = 'tool_calls';
+          break;
         }
 
         let args: Record<string, unknown> = {};

@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
 import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
@@ -106,6 +107,8 @@ export async function runAnthropicCompletion(
   }
 
   let toolCallCounter = 0;
+  let wrapUp: LimitReason | null = null;
+  let wrapUpSent = false;
 
   // Resolve the prompt-caching toggle once per run (Anthropic-only lever).
   const cachingEnabled = await isPromptCachingEnabled(db);
@@ -121,9 +124,23 @@ export async function runAnthropicCompletion(
       break;
     }
 
-    if (isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
-      emit({ type: 'error', code: 'tool_loop_timeout', message: 'Time limit for tool execution exceeded.' });
-      break;
+    if (!wrapUp && isPastDeadline(timeoutAt, startedAt, options?.waitForToolApproval)) {
+      wrapUp = 'time';
+    }
+    // A limit is reached: one more request, without tools, for a closing
+    // answer — see run-limits.ts. A second pass here means that request did
+    // not end the run, so it stops the hard way.
+    if (wrapUp) {
+      if (wrapUpSent) {
+        emit(limitError(wrapUp));
+        break;
+      }
+      wrapUpSent = true;
+      emit(limitWarning(wrapUp));
+      conversation.push({
+        role: 'user',
+        content: wrapUpNotice(wrapUp, { maxToolCalls, timeoutSeconds: Math.round(toolLoopTimeoutMs / 1000) })
+      });
     }
 
     const { system, messages } = mapMessagesForAnthropic(conversation);
@@ -156,6 +173,9 @@ export async function runAnthropicCompletion(
         system: systemBlocks as any,
         messages: messages as any,
         tools: anthropicTools.length > 0 ? anthropicTools : undefined,
+        // The tools stay in the request (the history refers to them and the
+        // cached prefix stays intact); the model is only barred from calling.
+        ...(wrapUpSent && anthropicTools.length > 0 ? { tool_choice: { type: 'none' } } : {}),
         // Sampling params are rejected alongside thinking (and removed
         // entirely on Opus 4.7+), so they are only sent with thinking off.
         temperature: thinkingEnabled ? undefined : ((payload.options?.temperature as number) ?? undefined),
@@ -228,6 +248,16 @@ export async function runAnthropicCompletion(
         });
       }
 
+      if (wrapUpSent && wrapUp) {
+        // The closing answer. Tool calls in it are ignored — none were offered.
+        if (assistantText.trim()) {
+          emit({ type: 'complete', status: 'success', output: assistantText });
+        } else {
+          emit(limitError(wrapUp));
+        }
+        break;
+      }
+
       // Add assistant response to conversation
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -259,8 +289,24 @@ export async function runAnthropicCompletion(
 
         toolCallCounter++;
         if (toolCallCounter > maxToolCalls) {
-          emit({ type: 'error', code: 'tool_call_limit_exceeded', message: 'Too many tool calls.' });
-          return events;
+          // Every tool_use needs a result, so this call and the ones after it
+          // are answered as not executed before the closing request goes out.
+          for (const skipped of toolCalls.slice(toolCalls.indexOf(tc))) {
+            const skippedDef = toolset.find((t) => (t.call_name || t.name) === skipped.name);
+            emit({
+              type: 'tool_call',
+              call_id: skipped.id,
+              tool: skippedDef?.name ?? skipped.name,
+              server: skippedDef?.server ?? '',
+              status: 'error',
+              arguments: skipped.input,
+              error: skippedCallText('tool_calls'),
+              finished_at: new Date().toISOString()
+            });
+            conversation.push({ role: 'tool', content: `Error: ${skippedCallText('tool_calls')}`, tool_call_id: skipped.id });
+          }
+          wrapUp = 'tool_calls';
+          break;
         }
 
         const toolDef = toolset.find(t => (t.call_name || t.name) === tc.name);
