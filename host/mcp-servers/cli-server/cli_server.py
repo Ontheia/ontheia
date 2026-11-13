@@ -832,9 +832,12 @@ class CliServer:
 
                 # A refusal or a failed start is an error in MCP terms. A program
                 # that ran and exited non-zero is not: its output is the result.
-                result = {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
+                # An error goes out as plain text: wrapped in JSON it reached the
+                # trace and the model as an escaped object inside an error string.
                 if "error" in res_data:
-                    result["isError"] = True
+                    result = {"content": [{"type": "text", "text": str(res_data["error"])}], "isError": True}
+                else:
+                    result = {"content": [{"type": "text", "text": json.dumps(res_data, indent=2)}]}
                 return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
             # ── list_logs ────────────────────────────────────────────────────
