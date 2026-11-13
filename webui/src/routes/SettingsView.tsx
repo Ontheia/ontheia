@@ -285,7 +285,8 @@ const mapAdminAgentToDefinition = (agent: any): AgentDefinition | null => {
     visibility,
     allowedUsers,
     showInComposer,
-    ownerId: agent.owner_id
+    ownerId: agent.owner_id,
+    maxToolCalls: typeof agent.max_tool_calls === 'number' ? agent.max_tool_calls : null
   };
 };
 
@@ -5714,6 +5715,34 @@ function AgentsSection({
                           />
                         </label>
                         <label>
+                          <span>{t('agents.maxToolCalls')}</span>
+                          {/* Uncontrolled and saved on blur: the editor saves every
+                              change at once, and a save per keystroke would store
+                              "2" on the way to "200". */}
+                          <Input
+                            key={`${agent.id}:${agent.maxToolCalls ?? ''}`}
+                            className="app-input"
+                            type="number"
+                            min={1}
+                            max={1000}
+                            defaultValue={agent.maxToolCalls ?? ''}
+                            placeholder={t('agents.maxToolCallsPlaceholder')}
+                            title={t('agents.maxToolCallsHint')}
+                            onBlur={(event) => {
+                              const raw = event.target.value.trim();
+                              const parsed = raw === '' ? null : Number(raw);
+                              const valid =
+                                parsed === null || (Number.isInteger(parsed) && parsed >= 1 && parsed <= 1000);
+                              if (!valid) {
+                                event.target.value = agent.maxToolCalls != null ? String(agent.maxToolCalls) : '';
+                                return;
+                              }
+                              if (parsed === (agent.maxToolCalls ?? null)) return;
+                              void onUpsertAgent({ ...agent, maxToolCalls: parsed });
+                            }}
+                          />
+                        </label>
+                        <label>
                           <span>{t('agents.mcpServers')}</span>
                             <AppMultiSelect
                               values={agent.mcpServers ?? []}
@@ -9259,6 +9288,9 @@ export function SettingsView() {
       visibility: agent.visibility ?? 'private',
       allowed_user_ids: agent.allowedUsers ?? [],
       show_in_composer: agent.showInComposer ?? true,
+      // Only sent when the editor knows the value, so a definition from
+      // elsewhere cannot clear a cap by omission.
+      ...(agent.maxToolCalls !== undefined ? { max_tool_calls: agent.maxToolCalls } : {}),
       ...(agent.ownerId ? { owner_id: agent.ownerId } : {})
     };
     try {

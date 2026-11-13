@@ -16,13 +16,14 @@ Begrenzt die Anzahl der Tool-Aufrufe in einem einzelnen Agenten-Run — das zwei
 - **Geltungsbereich:** global für alle Provider-Pfade — die Anthropic-API, die OpenAI-Responses-API und OpenAI-kompatible Chat-Completions.
 - **Zweck:** Kosten-Schutz. Eine entgleiste Agenten-Schleife stoppt nach der eingestellten Anzahl an Aufrufen, selbst wenn jeder einzelne Aufruf schnell ist und das zeitbasierte Timeout allein nie greifen würde.
 - **Gespeichert als:** `max_tool_calls` in `app.system_settings` (anders als die Nachbarfelder, die im `app.user_settings`-Eintrag des System-Users liegen); pro Run gelesen, mit 30 Sekunden Cache.
-- **Gilt pro Lauf:** Ein delegierter Agent zählt seine Aufrufe selbst, mit derselben Grenze. Ein Lauf mit vielen Delegationen kann deshalb insgesamt ein Vielfaches der Grenze verbrauchen; als Obergrenze für die Gesamtkosten eines Auftrags taugt die Einstellung nicht.
+- **Eigene Grenze je Agent:** Im Agenten-Editor lässt sich für einzelne Agenten eine abweichende Grenze setzen (Feld „Max. Tool-Aufrufe pro Run"). Sie ersetzt für Läufe dieses Agenten die globale. So bleibt die globale Grenze niedrig und stoppt Schleifen früh, während ein Agent mit Stapelarbeit mehr Aufrufe bekommt.
+- **Gilt pro Lauf:** Ein delegierter Agent zählt seine Aufrufe selbst, mit seiner eigenen Grenze oder der globalen. Ein Lauf mit vielen Delegationen kann deshalb insgesamt ein Vielfaches der Grenze verbrauchen; als Obergrenze für die Gesamtkosten eines Auftrags taugt die Einstellung nicht.
 
 ### Was beim Erreichen einer Grenze passiert
 Erreicht ein Lauf das Timeout oder die maximale Zahl der Tool-Aufrufe, bricht er nicht sofort ab. Das Modell bekommt eine letzte Anfrage ohne Tools mit dem Auftrag, zusammenzufassen, was erledigt ist und was offen bleibt.
 
 - Der Lauf endet als abgeschlossen, mit diesem Teilergebnis als Antwort. Im Posteingang erscheint er als Ergebnis, nicht als Fehler.
-- Im Trace steht eine Warnung mit dem Code `run_limit_reached`. Aufrufe, die das Modell noch angefordert hatte, sind dort als nicht ausgeführt vermerkt.
+- Im Trace steht eine Warnung mit dem Code `run_limit_reached`. Bei der Aufrufgrenze nennt sie den angewandten Wert und seine Herkunft (Agent oder global). Aufrufe, die das Modell noch angefordert hatte, sind dort als nicht ausgeführt vermerkt.
 - Liefert auch die letzte Anfrage keinen Text, endet der Lauf mit dem Fehler `tool_call_limit_exceeded` bzw. `tool_loop_timeout`.
 - Die Grenze wird dem Modell vorher nicht angekündigt.
 

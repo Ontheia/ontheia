@@ -52,6 +52,8 @@ export type AgentDefinition = {
   toolPermissions?: Record<string, 'once' | 'always'>;
   mcpServers?: string[];
   tools?: AgentToolBinding[];
+  /** The agent's own tool-call cap per run; null = the global setting applies. */
+  maxToolCalls?: number | null;
   tasks: AgentTaskDefinition[];
   chains?: AgentChainDefinition[];
   visibility?: 'private' | 'public';
@@ -88,6 +90,7 @@ export function cloneAgents(source: AgentDefinition[]): AgentDefinition[] {
     visibility: agent.visibility ?? 'private',
     allowedUsers: agent.allowedUsers ? [...agent.allowedUsers] : undefined,
     ownerId: agent.ownerId,
-    showInComposer: agent.showInComposer ?? true
+    showInComposer: agent.showInComposer ?? true,
+    ...(agent.maxToolCalls !== undefined ? { maxToolCalls: agent.maxToolCalls } : {})
   }));
 }

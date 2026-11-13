@@ -112,6 +112,7 @@ export type AgentRecord = {
   default_tools: Array<{ server: string; tool: string }>;
   default_tool_permissions: Record<string, 'once' | 'always'>;
   metadata: Record<string, unknown>;
+  max_tool_calls: number | null;
   visibility: string;
   owner_id: string;
   created_by: string | null;

@@ -295,8 +295,9 @@ export async function runResponsesCompletion(
 
   const startedAt = Date.now();
   const timeoutAt = startedAt + (options?.toolLoopTimeoutMs ?? DEFAULT_TOOL_LOOP_TIMEOUT_MS);
-  // Global cap on tool calls per run ('max_tool_calls' system setting).
-  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
+  // Cap on tool calls per run: the agent's own or the global setting, resolved
+  // in runProviderCompletion.
+  const maxToolCalls = options?.toolCallLimit?.limit ?? await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
 
   const toolset = Array.isArray(payload.toolset) ? payload.toolset : [];
   const responseTools = mapToolsForResponses(toolset);
@@ -337,7 +338,7 @@ export async function runResponsesCompletion(
         break;
       }
       wrapUpSent = true;
-      emit(limitWarning(wrapUp));
+      emit(limitWarning(wrapUp, options?.toolCallLimit));
       input.push({
         type: 'message',
         role: 'user',

@@ -52,14 +52,37 @@ export function limitError(reason: LimitReason): RunEvent {
   return { type: 'error', code: LIMIT_ERROR_CODE[reason], message: LIMIT_ERROR_MESSAGE[reason] };
 }
 
+/** Highest tool-call cap an agent or the global setting may carry. */
+export const MAX_TOOL_CALLS_CEILING = 1000;
+
+/**
+ * The cap that applies to a run and where it comes from. An agent may carry
+ * its own in `metadata.max_tool_calls`: a low global cap stops a runaway loop
+ * early, while an agent doing batch work (178 calls to label I/O channels on
+ * .13) needs more than any sensible global value.
+ */
+export type ToolCallLimit = { limit: number; source: 'agent' | 'global' };
+
+/** An agent's own cap, or null when the value is absent or not usable. */
+export function parseAgentMaxToolCalls(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  if (value < 1 || value > MAX_TOOL_CALLS_CEILING) return null;
+  return value;
+}
+
 /** Marks in the trace that the run was closed by a limit, not by the model. */
-export function limitWarning(reason: LimitReason): RunEvent {
+export function limitWarning(reason: LimitReason, applied?: ToolCallLimit): RunEvent {
+  // Without the number and its origin a cap that differs from the global
+  // setting cannot be explained from the trace.
+  const which = applied
+    ? ` (${applied.limit}, ${applied.source === 'agent' ? 'set for this agent' : 'global setting'})`
+    : '';
   return {
     type: 'warning',
     code: 'run_limit_reached',
     message:
       reason === 'tool_calls'
-        ? 'Tool call limit reached — the model was asked for a closing answer without tools.'
+        ? `Tool call limit reached${which} — the model was asked for a closing answer without tools.`
         : 'Time limit reached — the model was asked for a closing answer without tools.',
     timestamp: new Date().toISOString()
   };

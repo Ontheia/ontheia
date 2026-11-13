@@ -21,7 +21,16 @@
  * or contact https://ontheia.ai
  */
 import { loadGlobalRuntime } from '../routes/settings-utils.js';
-import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
+import {
+  limitError,
+  limitWarning,
+  parseAgentMaxToolCalls,
+  skippedCallText,
+  wrapUpNotice,
+  type LimitReason,
+  type ToolCallLimit
+} from './run-limits.js';
+import { isUuid, withRls } from '../routes/utils.js';
 import { mcpErrorText } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
@@ -308,6 +317,8 @@ export interface RunOptions {
     info: { server?: string | null; tool: string; arguments: Record<string, unknown> }
   ) => Promise<'once' | 'always' | 'deny'>;
   toolLoopTimeoutMs?: number;
+  /** The run's tool-call cap, resolved once in runProviderCompletion. */
+  toolCallLimit?: ToolCallLimit;
   session?: any;
   userId?: string;
   role?: string;
@@ -337,6 +348,46 @@ async function resolveToolLoopTimeoutMs(db: Pool | PoolClient, options?: RunOpti
   return undefined;
 }
 
+/**
+ * The tool-call cap of this run: the agent's own (`metadata.max_tool_calls`)
+ * where it has a usable one, the global setting otherwise. Resolved here for
+ * the same reason as the timeout — a delegated run and a chain step come
+ * through this function with their own agent_id, so each gets the cap of the
+ * agent that actually runs, not of the one that called it.
+ */
+async function resolveToolCallLimit(
+  db: Pool | PoolClient,
+  agentId: string | undefined,
+  options?: RunOptions
+): Promise<ToolCallLimit> {
+  const global: ToolCallLimit = {
+    limit: await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
+    source: 'global'
+  };
+  if (!agentId || !isUuid(agentId)) return global;
+  try {
+    const read = (client: Pool | PoolClient) =>
+      client.query(`SELECT metadata->'max_tool_calls' AS value FROM app.agents WHERE id = $1`, [agentId]);
+    const res = options?.userId
+      ? await withRls(db, options.userId, options.role ?? 'user', read)
+      : await read(db);
+    const raw = res.rows[0]?.value;
+    if (raw === undefined || raw === null) return global;
+    const own = parseAgentMaxToolCalls(raw);
+    if (own === null) {
+      (options?.logger ?? rootLogger).warn(
+        { agentId, value: raw },
+        'Agent max_tool_calls is not a whole number from 1 to 1000 — using the global setting'
+      );
+      return global;
+    }
+    return { limit: own, source: 'agent' };
+  } catch (err) {
+    (options?.logger ?? rootLogger).warn({ err, agentId }, 'Could not read the agent tool-call cap — using the global setting');
+    return global;
+  }
+}
+
 export async function runProviderCompletion(
   db: Pool | PoolClient,
   orchestrator: OrchestratorService,
@@ -344,12 +395,12 @@ export async function runProviderCompletion(
   options?: RunOptions
 ): Promise<RunEvent[]> {
   const toolLoopTimeoutMs = await resolveToolLoopTimeoutMs(db, options);
-  return dispatchProviderCompletion(
-    db,
-    orchestrator,
-    payload,
-    toolLoopTimeoutMs === undefined ? options : { ...options, toolLoopTimeoutMs }
-  );
+  const toolCallLimit = await resolveToolCallLimit(db, payload.agent_id, options);
+  return dispatchProviderCompletion(db, orchestrator, payload, {
+    ...options,
+    toolCallLimit,
+    ...(toolLoopTimeoutMs === undefined ? {} : { toolLoopTimeoutMs })
+  });
 }
 
 async function dispatchProviderCompletion(
@@ -490,11 +541,11 @@ async function runCliLoop(
         return events;
       }
       toolCallCounter.wrapUpSent = true;
-      emit(limitWarning(toolCallCounter.wrapUp));
+      emit(limitWarning(toolCallCounter.wrapUp, options?.toolCallLimit));
       conversation.push({
         role: 'user',
         content: wrapUpNotice(toolCallCounter.wrapUp, {
-          maxToolCalls: await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
+          maxToolCalls: options?.toolCallLimit?.limit ?? await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
           timeoutSeconds: Math.round(toolLoopTimeoutMs / 1000)
         })
       });
@@ -783,11 +834,11 @@ export async function runOpenAiCompletion(
         return events;
       }
       toolCallCounter.wrapUpSent = true;
-      emit(limitWarning(toolCallCounter.wrapUp));
+      emit(limitWarning(toolCallCounter.wrapUp, options?.toolCallLimit));
       conversation.push({
         role: 'user',
         content: wrapUpNotice(toolCallCounter.wrapUp, {
-          maxToolCalls: await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
+          maxToolCalls: options?.toolCallLimit?.limit ?? await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS),
           timeoutSeconds
         })
       });
@@ -1205,8 +1256,9 @@ async function handleOpenAiToolCalls(params: {
   } = params;
   const log = options?.logger ?? rootLogger;
 
-  // Global cap on tool calls per run ('max_tool_calls' system setting).
-  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
+  // Cap on tool calls per run: the agent's own or the global setting, see
+  // resolveToolCallLimit.
+  const maxToolCalls = options?.toolCallLimit?.limit ?? await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
   
   const firstChoice = Array.isArray(responseBody?.choices) ? responseBody.choices[0] : undefined;
   const assistantMessage = firstChoice?.message;

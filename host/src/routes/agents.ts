@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { MAX_TOOL_CALLS_CEILING, parseAgentMaxToolCalls } from '../runtime/run-limits.js';
 import type { FastifyInstance } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import { randomUUID } from 'crypto';
@@ -62,6 +63,24 @@ export const sanitizeToolPermissions = (input: unknown): Record<string, 'once' |
   return out;
 };
 
+const MAX_TOOL_CALLS_MESSAGE = `max_tool_calls must be a whole number from 1 to ${MAX_TOOL_CALLS_CEILING}, or null to use the global setting.`;
+
+/**
+ * Reads the optional `max_tool_calls` field of an agent create/update body.
+ * null or an empty string clears the agent's own cap.
+ */
+export const readMaxToolCallsField = (
+  body: any
+): { given: boolean; value: number | null; invalid: boolean } => {
+  if (!body || typeof body !== 'object' || !('max_tool_calls' in body)) {
+    return { given: false, value: null, invalid: false };
+  }
+  const raw = body.max_tool_calls;
+  if (raw === null || raw === '') return { given: true, value: null, invalid: false };
+  const value = parseAgentMaxToolCalls(raw);
+  return { given: true, value, invalid: value === null };
+};
+
 export const mapAgentRow = (row: any): AgentRecord => ({
   id: String(row.id),
   label: typeof row.label === 'string' ? row.label : '',
@@ -74,6 +93,8 @@ export const mapAgentRow = (row: any): AgentRecord => ({
   default_tools: Array.isArray(row.default_tools) ? row.default_tools : [],
   default_tool_permissions: sanitizeToolPermissions(row.default_tool_permissions),
   metadata: isPlainObject(row.metadata) ? (row.metadata as Record<string, unknown>) : {},
+  // The agent's own tool-call cap, kept in metadata; null means the global one applies.
+  max_tool_calls: parseAgentMaxToolCalls(isPlainObject(row.metadata) ? (row.metadata as Record<string, unknown>).max_tool_calls : undefined),
   visibility: row.visibility ?? 'private',
   owner_id: row.owner_id ? String(row.owner_id) : '',
   created_by: row.created_by ? String(row.created_by) : null,
@@ -489,7 +510,16 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     const defaultMcpServers = sanitizeStringArray(body?.default_mcp_servers);
     const defaultTools = sanitizeDefaultTools(body?.default_tools);
     const defaultToolPermissions = sanitizeToolPermissions(body?.default_tool_permissions);
-    const metadata = body?.metadata && typeof body.metadata === 'object' ? body.metadata : {};
+    const metadata: Record<string, unknown> = body?.metadata && typeof body.metadata === 'object' ? { ...body.metadata } : {};
+    const createLimit = readMaxToolCallsField(body);
+    if (createLimit.invalid) {
+      reply.code(400);
+      return { error: 'agents_max_tool_calls_invalid', message: MAX_TOOL_CALLS_MESSAGE };
+    }
+    if (createLimit.given) {
+      if (createLimit.value === null) delete metadata.max_tool_calls;
+      else metadata.max_tool_calls = createLimit.value;
+    }
     const visibility = typeof body?.visibility === 'string' && ['private', 'public'].includes(body.visibility) ? body.visibility : 'private';
     const active = typeof body?.active === 'boolean' ? body.active : true;
     const showInComposer = typeof body?.show_in_composer === 'boolean' ? body.show_in_composer : true;
@@ -667,9 +697,28 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       updates.push(`default_tool_permissions = $${idx++}::jsonb`);
       values.push(JSON.stringify(sanitizeToolPermissions(body.default_tool_permissions)));
     }
+    // max_tool_calls lives in metadata but has its own field, so a client can
+    // set it without sending (and thereby replacing) the whole metadata object.
+    const patchLimit = readMaxToolCallsField(body);
+    if (patchLimit.invalid) {
+      reply.code(400);
+      return { error: 'agents_max_tool_calls_invalid', message: MAX_TOOL_CALLS_MESSAGE };
+    }
     if (body && 'metadata' in body) {
+      const nextMetadata: Record<string, unknown> = isPlainObject(body.metadata) ? { ...body.metadata } : {};
+      if (patchLimit.given) {
+        if (patchLimit.value === null) delete nextMetadata.max_tool_calls;
+        else nextMetadata.max_tool_calls = patchLimit.value;
+      }
       updates.push(`metadata = $${idx++}::jsonb`);
-      values.push(JSON.stringify(body.metadata || {}));
+      values.push(JSON.stringify(nextMetadata));
+    } else if (patchLimit.given) {
+      if (patchLimit.value === null) {
+        updates.push(`metadata = COALESCE(metadata, '{}'::jsonb) - 'max_tool_calls'`);
+      } else {
+        updates.push(`metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{max_tool_calls}', $${idx++}::jsonb)`);
+        values.push(JSON.stringify(patchLimit.value));
+      }
     }
     let nextVisibility: string | undefined;
     if (typeof body?.visibility === 'string') {

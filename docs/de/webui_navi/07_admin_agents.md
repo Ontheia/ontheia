@@ -36,6 +36,7 @@ Jeder Agent erscheint als aufklappbarer Eintrag. Im geöffneten Zustand inline e
 | Provider | Dropdown | Ändert den Provider direkt im Akkordeon. |
 | Modell | Dropdown | Ändert das Standard-Modell direkt im Akkordeon. |
 | Tool-Freigabe (Standard) | Dropdown | `Nachfragen` (Agent fragt vor jedem Tool-Aufruf), `Voller Zugriff` (ohne Rückfrage), `Blockiert` (keine Tool-Aufrufe). |
+| Max. Tool-Aufrufe pro Run | Zahl | Eigene Grenze für Läufe dieses Agenten (1 bis 1000). Leer = die globale Einstellung unter Allgemein gilt. Gespeichert wird beim Verlassen des Feldes. Gedacht für Agenten mit Stapelarbeit, während die globale Grenze niedrig bleibt. |
 | MCP-Server | Multiselect | Weist dem Agent verfügbare MCP-Server zu. |
 | Tools | Multiselect | Wählt einzelne Tools aus den zugewiesenen Servern. Buttons: **Alle auswählen** · **Auswahl leeren** · **Tool-Liste aktualisieren**. |
 | Skills | Multiselect | Weist dem Agent verfügbare Skills zu. Zugewiesene Skills werden als Katalog in den System-Kontext jedes Runs injiziert; der Agent aktiviert sie bei Bedarf via `activate_skill`. Globale Skills (vom Admin installiert) und nutzer-eigene Skills werden aufgelistet. |

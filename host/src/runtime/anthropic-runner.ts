@@ -49,6 +49,7 @@ export async function runAnthropicCompletion(
     logger?: any;
     waitForToolApproval?: any;
     toolLoopTimeoutMs?: number;
+    toolCallLimit?: import('./run-limits.js').ToolCallLimit;
     userId?: string;
     role?: string;
   }
@@ -115,8 +116,9 @@ export async function runAnthropicCompletion(
   // Response streaming (global 'response_streaming' toggle): emit run_token
   // deltas while the model generates instead of one block at the end.
   const streamingEnabled = await getSystemFlag(db, 'response_streaming');
-  // Global cap on tool calls per run ('max_tool_calls' system setting).
-  const maxToolCalls = await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
+  // Cap on tool calls per run: the agent's own or the global setting, resolved
+  // in runProviderCompletion.
+  const maxToolCalls = options?.toolCallLimit?.limit ?? await getSystemNumber(db, 'max_tool_calls', DEFAULT_MAX_TOOL_CALLS);
 
   while (true) {
     if (options?.signal?.aborted) {
@@ -136,7 +138,7 @@ export async function runAnthropicCompletion(
         break;
       }
       wrapUpSent = true;
-      emit(limitWarning(wrapUp));
+      emit(limitWarning(wrapUp, options?.toolCallLimit));
       conversation.push({
         role: 'user',
         content: wrapUpNotice(wrapUp, { maxToolCalls, timeoutSeconds: Math.round(toolLoopTimeoutMs / 1000) })

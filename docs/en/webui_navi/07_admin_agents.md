@@ -36,6 +36,7 @@ Each agent appears as a collapsible entry. When expanded, inline-editable:
 | Provider | Dropdown | Changes the provider directly in the accordion. |
 | Model | Dropdown | Changes the default model directly in the accordion. |
 | Tool Approval (Default) | Dropdown | `Ask` (agent asks before each tool call), `Full Access` (without confirmation), `Blocked` (no tool calls). |
+| Max. Tool Calls per Run | Number | Own cap for runs of this agent (1 to 1000). Empty = the global setting under General applies. Saved when the field loses focus. Meant for agents doing batch work while the global cap stays low. |
 | MCP Servers | Multiselect | Assigns available MCP servers to the agent. |
 | Tools | Multiselect | Selects individual tools from assigned servers. Buttons: **Select All** · **Clear Selection** · **Refresh Tool List**. |
 | Skills | Multiselect | Assigns available skills to the agent. Selected skills are injected as a catalog into every run's system context; the agent activates them on demand via `activate_skill`. Global skills (installed by admin) and user-scope skills are listed. |

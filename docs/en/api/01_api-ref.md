@@ -564,6 +564,7 @@ Used in the `POST /agents` and `PATCH /agents/:id` endpoints (both admin-only; a
   "default_tools": [ { "server": "string", "tool": "string" } ],
   "default_tool_permissions": { "<server>::<tool>": "once | always" },
   "metadata": {},
+  "max_tool_calls": "integer 1–1000 or null (optional — the agent's own tool-call cap per run; null = global setting. Stored in metadata without replacing the other metadata.)",
   "visibility": "private | public",
   "owner_id": "uuid (optional — owner; default: creating admin. On PATCH: ownership transfer.)",
   "allowed_user_ids": ["uuid or email (authorized users)"],

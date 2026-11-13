@@ -16,13 +16,14 @@ Caps the number of tool calls in a single agent run — the second guardrail alo
 - **Scope:** Global for every provider path — the Anthropic API, the OpenAI Responses API and OpenAI-compatible chat completions.
 - **Purpose:** Cost protection. A runaway agent loop stops after the configured number of calls even when every single call is fast, so the time-based timeout alone would never trigger.
 - **Stored as:** `max_tool_calls` in `app.system_settings` (unlike the neighboring fields, which live in the system user's `app.user_settings` entry); read per run with a 30-second cache.
-- **Applies per run:** A delegated agent counts its own calls, against the same limit. A run with many delegations can therefore use a multiple of the limit in total; the setting is not a cap on the overall cost of a job.
+- **Own cap per agent:** The agent editor can set a different cap for individual agents (field "Max. Tool Calls per Run"). It replaces the global one for runs of that agent. The global cap can then stay low and stop loops early, while an agent doing batch work gets more calls.
+- **Applies per run:** A delegated agent counts its own calls, against its own cap or the global one. A run with many delegations can therefore use a multiple of the limit in total; the setting is not a cap on the overall cost of a job.
 
 ### What happens when a limit is reached
 A run that reaches the timeout or the maximum number of tool calls does not stop at once. The model gets one last request without tools, asking it to sum up what is done and what is still open.
 
 - The run ends as completed, with that partial result as its answer. In the inbox it appears as a result, not as an error.
-- The trace carries a warning with the code `run_limit_reached`. Calls the model had still asked for are recorded there as not executed.
+- The trace carries a warning with the code `run_limit_reached`. For the tool-call cap it names the applied value and its origin (agent or global). Calls the model had still asked for are recorded there as not executed.
 - If the last request returns no text either, the run ends with the error `tool_call_limit_exceeded` or `tool_loop_timeout`.
 - The limit is not announced to the model beforehand.
 

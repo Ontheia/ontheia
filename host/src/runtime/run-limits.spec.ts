@@ -23,7 +23,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LIMIT_ERROR_CODE, limitError, limitWarning, skippedCallText, wrapUpNotice } from './run-limits.js';
+import {
+  LIMIT_ERROR_CODE,
+  limitError,
+  limitWarning,
+  parseAgentMaxToolCalls,
+  skippedCallText,
+  wrapUpNotice
+} from './run-limits.js';
 
 test('each cause has one error code', () => {
   assert.equal(LIMIT_ERROR_CODE.tool_calls, 'tool_call_limit_exceeded');
@@ -53,4 +60,20 @@ test('the warning is a warning, so the run still counts as a result', () => {
 test('a skipped call says why it was not run', () => {
   assert.match(skippedCallText('tool_calls'), /tool call limit/);
   assert.match(skippedCallText('time'), /time limit/);
+});
+
+test('an agent cap is a whole number from 1 to 1000, anything else is ignored', () => {
+  assert.equal(parseAgentMaxToolCalls(3), 3);
+  assert.equal(parseAgentMaxToolCalls(1000), 1000);
+  for (const bad of [0, -1, 1001, 1e9, 2.5, '200', 'abc', null, undefined, NaN]) {
+    assert.equal(parseAgentMaxToolCalls(bad), null, String(bad));
+  }
+});
+
+const text = (event: unknown) => String((event as { message?: string }).message);
+
+test('the warning names the applied cap and its origin', () => {
+  assert.match(text(limitWarning('tool_calls', { limit: 3, source: 'agent' })), /\(3, set for this agent\)/);
+  assert.match(text(limitWarning('tool_calls', { limit: 60, source: 'global' })), /\(60, global setting\)/);
+  assert.doesNotMatch(text(limitWarning('time', { limit: 60, source: 'global' })), /60/);
 });
