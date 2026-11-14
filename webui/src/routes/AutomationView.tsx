@@ -29,6 +29,7 @@ import {
   runCronJobManually,
   listCronJobRuns,
   listChats,
+  listProjects,
   listChains,
   type CronJobEntry,
   type CronJobRunEntry,
@@ -570,6 +571,8 @@ function JobDialog({
   const [promptTemplateId, setPromptTemplateId] = useState('');
   const [promptText, setPromptText] = useState('');
   const [chatId, setChatId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [notify, setNotify] = useState(false);
   const [approvalMode, setApprovalMode] = useState<'granted' | 'inbox'>('granted');
   const [preventOverlap, setPreventOverlap] = useState(true);
@@ -592,6 +595,7 @@ function JobDialog({
       setPromptTemplateId(initialJob.prompt_template_id || '');
       setPromptText(initialJob.prompt_text || '');
       setChatId(initialJob.chat_id || '');
+      setProjectId(initialJob.project_id || '');
       setNotify(initialJob.notify ?? false);
       setApprovalMode(initialJob.approval_mode === 'inbox' ? 'inbox' : 'granted');
       setPreventOverlap(initialJob.prevent_overlap ?? true);
@@ -608,6 +612,7 @@ function JobDialog({
       setPromptTemplateId('');
       setPromptText('');
       setChatId('');
+      setProjectId('');
       setNotify(false);
       setPreventOverlap(true);
     }
@@ -622,7 +627,15 @@ function JobDialog({
         return { id, title: c.title || id };
       }));
     }).catch(() => setChats([]));
+    void listProjects().then((data) => setProjects(data.map((p) => ({ id: p.id, name: p.name })))).catch(() => setProjects([]));
   }, [open]);
+
+  // A stored project that is not in the list (deleted meanwhile) stays
+  // selectable, so opening and saving the dialog does not silently drop it.
+  const projectOptions = [
+    ...projects.map((p) => ({ value: p.id, label: p.name })),
+    ...(projectId && !projects.some((p) => p.id === projectId) ? [{ value: projectId, label: t('chatProjectUnknown') }] : [])
+  ];
 
   // Fetch templates based on context
   useEffect(() => {
@@ -706,6 +719,7 @@ function JobDialog({
         prompt_template_id: promptMode === 'template' ? (promptTemplateId || null) : null,
         prompt_text: promptMode === 'text' ? (promptText || null) : null,
         chat_id: chatId || null,
+        project_id: chatId ? null : (projectId || null),
         notify,
         approval_mode: approvalMode,
         prevent_overlap: preventOverlap,
@@ -917,6 +931,20 @@ function JobDialog({
                 ]}
               />
               <p className="settings-hint">{t('chatTargetHint')}</p>
+            </div>
+
+            <div className="settings-field">
+              <span>{t('chatProject')}</span>
+              <AppSelect
+                value={projectId || 'none'}
+                onValueChange={(val) => setProjectId(val === 'none' ? '' : val)}
+                disabled={Boolean(chatId)}
+                options={[
+                  { value: 'none', label: t('noChatProject') },
+                  ...projectOptions
+                ]}
+              />
+              <p className="settings-hint">{t('chatProjectHint')}</p>
             </div>
 
             {/* Always shown: the result entry in the inbox does not depend on

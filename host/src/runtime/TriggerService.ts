@@ -201,6 +201,7 @@ export type TriggerRow = {
   approval_mode: 'inbox' | 'granted' | 'denied';
   inbox_result: 'always' | 'errors' | 'never';
   chat_id: string | null;
+  project_id: string | null;
   chat_title_template: string;
   rate_limit_per_min: number;
   prevent_overlap: boolean;
@@ -367,6 +368,7 @@ export class TriggerService {
           systemNote: buildAutomationSystemNote('webhook', trigger.name),
           message: renderTriggerPrompt(trigger.prompt_template, payload, { name: trigger.name, timestamp }),
           chatId: trigger.chat_id,
+          projectId: trigger.project_id,
           chatTitleTemplate: renderTriggerTitle(trigger.chat_title_template || 'Trigger: {{name}} [{{timestamp}}]', payload),
           approval: trigger.approval_mode,
           inboxResult: trigger.inbox_result,

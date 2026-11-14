@@ -27,6 +27,9 @@ Wird einem Job ein **Chat-Ziel** zugewiesen, lädt der Job beim Ausführen den b
 
 Übernommen werden die Nachrichten und die Antworten des Agenten aus den früheren Läufen, nicht die einzelnen Tool-Ergebnisse. Dasselbe gilt für [Trigger](./02_triggers.md) mit festem Chat.
 
+### Projekt für neue Chats
+Jobs und Trigger ohne Chat-Ziel legen bei jeder Ausführung einen neuen Chat an. Mit einem **Projekt für neue Chats** landen diese Chats im gewählten Projekt statt in der allgemeinen Chat-Liste; alle Läufe eines Triggers stehen dann beisammen. Wird das Projekt gelöscht, bleibt die Automatisierung bestehen und legt ihre Chats wieder in der allgemeinen Liste ab.
+
 **Wann ein fester Chat passt:** wenn die Läufe aufeinander aufbauen, etwa bei einem fortlaufenden Bericht oder einer Erinnerung, die den Stand vom letzten Mal kennen soll. **Wann nicht:** bei gleichförmigen Einzelaufträgen, zum Beispiel „prüfe Dokument N". Das Modell liest den Verlauf als eine zusammenhängende Aufgabe und kann ein früheres Ereignis mit dem aktuellen verwechseln; im Praxistest hat ein Agent so das Dokument des vorigen Laufs erneut bearbeitet. Für solche Aufträge ist ein neuer Chat je Ausführung die sichere Einstellung, und sie ist auch die sparsamere, weil nicht jeder Lauf den ganzen Verlauf mitschickt.
 
 ## Funktionen

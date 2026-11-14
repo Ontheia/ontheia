@@ -41,7 +41,7 @@ const PROMPT_MAX = 20_000;
 
 // The hash never leaves the host: a trigger is listed without it.
 const PUBLIC_COLUMNS = `id, user_id, name, agent_id, task_id, chain_id, prompt_template, approval_mode, inbox_result,
-  chat_id, chat_title_template, rate_limit_per_min, prevent_overlap, active,
+  chat_id, project_id, chat_title_template, rate_limit_per_min, prevent_overlap, active,
   last_triggered_at, last_error, created_at, updated_at`;
 
 function clientIp(request: FastifyRequest): string {
@@ -52,7 +52,7 @@ function clientIp(request: FastifyRequest): string {
 
 type Fields = Partial<Pick<TriggerRow,
   'name' | 'agent_id' | 'task_id' | 'chain_id' | 'prompt_template' | 'approval_mode' | 'inbox_result' |
-  'chat_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
+  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
 
 /** Reads the editable fields from a request body; returns an error code for the first invalid one. */
 function parseFields(body: Record<string, unknown>, requireName: boolean): { fields: Fields } | { error: string } {
@@ -87,6 +87,11 @@ function parseFields(body: Record<string, unknown>, requireName: boolean): { fie
     if (body.chat_id !== null && body.chat_id !== '' && typeof body.chat_id !== 'string') return { error: 'invalid_chat_id' };
     fields.chat_id = body.chat_id ? (body.chat_id as string) : null;
   }
+  if ('project_id' in body) {
+    const parsed = idOrNull(body.project_id);
+    if (parsed === undefined) return { error: 'invalid_project_id' };
+    fields.project_id = parsed;
+  }
   if ('chat_title_template' in body) {
     const tpl = typeof body.chat_title_template === 'string' ? body.chat_title_template.trim() : '';
     if (!tpl || tpl.length > 200) return { error: 'invalid_chat_title_template' };
@@ -109,6 +114,15 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
   // approvals land in that user's inbox. An admin manages the triggers of every
   // user, because setting up the sender (a mail watcher, a monitoring system)
   // is admin work; everyone else sees only their own.
+  // The chats a trigger creates belong to its owner, so the project they are
+  // filed under has to be the owner's too — also when an admin sets it up.
+  // Read as the owner, so the row-level rules decide together with the filter.
+  const projectOwnedBy = async (ownerId: string, projectId: string): Promise<boolean> =>
+    withRls(db, ownerId, 'user', async (client) => {
+      const res = await client.query('SELECT 1 FROM app.projects WHERE id = $1 AND user_id = $2', [projectId, ownerId]);
+      return (res.rowCount ?? 0) > 0;
+    });
+
   const loadManaged = (userId: string, role: string, id: string) =>
     withRls(db, userId, role, async (client) => {
       const res = await client.query(
@@ -182,21 +196,26 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       reply.code(403);
       return { error: 'target_not_accessible' };
     }
+    if (f.project_id && !(await projectOwnedBy(owner.userId, f.project_id))) {
+      reply.code(403);
+      return { error: 'project_not_accessible' };
+    }
 
     const token = generateTriggerToken();
     const row = await withRls(db, userId, role, async (client) => {
       const res = await client.query(
         `INSERT INTO app.triggers (user_id, name, token_hash, agent_id, task_id, chain_id, prompt_template,
                                    approval_mode, inbox_result, chat_id, chat_title_template,
-                                   rate_limit_per_min, prevent_overlap, active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                                   rate_limit_per_min, prevent_overlap, active, project_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING ${PUBLIC_COLUMNS}`,
         [
           owner.userId, f.name, hashTriggerToken(token),
           f.agent_id ?? null, f.task_id ?? null, f.chain_id ?? null, f.prompt_template ?? '',
           f.approval_mode ?? 'inbox', f.inbox_result ?? 'always',
           f.chat_id ?? null, f.chat_title_template ?? 'Trigger: {{name}} [{{timestamp}}]',
-          f.rate_limit_per_min ?? 10, f.prevent_overlap ?? false, f.active ?? true
+          f.rate_limit_per_min ?? 10, f.prevent_overlap ?? false, f.active ?? true,
+          f.project_id ?? null
         ]
       );
       return res.rows[0];
@@ -236,6 +255,10 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     if (!(await triggerService.targetAccessible(existing.user_id, ownerRole, merged))) {
       reply.code(403);
       return { error: 'target_not_accessible' };
+    }
+    if (parsed.fields.project_id && !(await projectOwnedBy(existing.user_id, parsed.fields.project_id))) {
+      reply.code(403);
+      return { error: 'project_not_accessible' };
     }
     const sets = entries.map(([key], index) => `${key} = $${index + 3}`);
     const row = await withRls(db, userId, role, async (client) => {

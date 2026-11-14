@@ -5736,6 +5736,18 @@ textarea.app-input {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* A dialog taller than the window scrolls inside itself. Without this the form
+   dialogs (job, trigger) ran off both ends of the screen: neither the first
+   fields nor the buttons were reachable, and on a phone — no Esc key — the only
+   way out was to close the app. dvh follows the mobile browser's real visible
+   height; the vh line is the fallback for browsers that do not know it. */
+[role="alertdialog"] {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* Anpassung der admin-card für Konsistenz */
 .admin-card {
   background: rgba(11, 19, 35, 0.8);

@@ -132,6 +132,7 @@ export class CronService {
         systemNote: buildAutomationSystemNote('cron', name),
         message: messageContent,
         chatId: jobData.chat_id,
+        projectId: jobData.project_id,
         chatTitleTemplate: chat_title_template || 'Auto-Run: {{name}} [{{timestamp}}]',
         // 'granted' is the default: a job approves its own tool calls unless it asks.
         approval: jobData.approval_mode === 'inbox' ? 'inbox' : 'granted',

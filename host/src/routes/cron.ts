@@ -24,10 +24,25 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import { CronExpressionParser } from 'cron-parser';
 import { requireSession } from './security.js';
-import { withRls } from './utils.js';
+import { withRls, isUuid } from './utils.js';
 import { RouteContext } from './types.js';
 import { CronService } from '../runtime/CronService.js';
 import { loadGlobalRuntime } from './settings-utils.js';
+
+/**
+ * The project a job files its chats under, or null. A project that is not the
+ * user's own is dropped rather than refused, like the other optional job
+ * fields here.
+ */
+async function ownProjectOrNull(
+  client: { query: (text: string, values?: unknown[]) => Promise<{ rowCount: number | null }> },
+  userId: string,
+  projectId: unknown
+): Promise<string | null> {
+  if (typeof projectId !== 'string' || !isUuid(projectId)) return null;
+  const res = await client.query('SELECT 1 FROM app.projects WHERE id = $1 AND user_id = $2', [projectId, userId]);
+  return (res.rowCount ?? 0) > 0 ? projectId : null;
+}
 
 export function registerCronRoutes(server: FastifyInstance, context: RouteContext & { cronService: CronService }) {
   const { db, cronService } = context;
@@ -89,8 +104,8 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
     try {
       const job = await withRls(db, auth.session.userId, auth.session.role, async (client) => {
         const res = await client.query(
-          `INSERT INTO app.cron_jobs (user_id, name, schedule, run_at, chat_title_template, agent_id, task_id, chain_id, prompt_template_id, prompt_text, chat_id, notify, active, prevent_overlap, approval_mode)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          `INSERT INTO app.cron_jobs (user_id, name, schedule, run_at, chat_title_template, agent_id, task_id, chain_id, prompt_template_id, prompt_text, chat_id, notify, active, prevent_overlap, approval_mode, project_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
            RETURNING *`,
           [
             auth.session.userId, body.name,
@@ -100,7 +115,8 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
             body.prompt_template_id || null, body.prompt_text || null,
             body.chat_id || null, body.notify === true,
             body.active !== false, body.prevent_overlap !== false,
-            body.approval_mode === 'inbox' ? 'inbox' : 'granted'
+            body.approval_mode === 'inbox' ? 'inbox' : 'granted',
+            await ownProjectOrNull(client, auth.session.userId, body.project_id)
           ]
         );
         return res.rows[0];
@@ -136,6 +152,7 @@ export function registerCronRoutes(server: FastifyInstance, context: RouteContex
         if ('prompt_text' in body) { updates.push(`prompt_text = $${idx++}`); values.push(body.prompt_text || null); }
         if ('chat_id' in body) { updates.push(`chat_id = $${idx++}`); values.push(body.chat_id || null); }
         if ('notify' in body) { updates.push(`notify = $${idx++}`); values.push(body.notify === true); }
+        if ('project_id' in body) { updates.push(`project_id = $${idx++}`); values.push(await ownProjectOrNull(client, auth.session.userId, body.project_id)); }
         // eslint-disable-next-line no-useless-assignment -- uniform $${idx++} pattern; a field added below must not reuse the number
         if ('approval_mode' in body) { updates.push(`approval_mode = $${idx++}`); values.push(body.approval_mode === 'inbox' ? 'inbox' : 'granted'); }
 

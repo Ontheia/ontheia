@@ -50,6 +50,7 @@ Button: **[New Job]** — opens the create modal.
 | Chain (Optional) | Dropdown | | Chain to execute. Excludes Task. Offers all chains of the agent — both chain-designer assignments (`app.chains.agent_id`) and delegation bindings (`app.agent_chains`) — each only with an active version. |
 | Chat Title Template | Text | | Title template for the automatically created chat. Placeholders: `{{name}}`, `{{timestamp}}`. |
 | Chat Target | Dropdown | | Select an existing chat to continue the job in. Empty = new chat per execution. |
+| Project for new chats | Dropdown | | Project the chats created by this job are filed under, so a frequently running job does not fill the general chat list. Only selectable without a chat target; a fixed chat keeps its project. |
 | Prevent Overlap | Checkbox | | If enabled: a scheduled run is skipped if the previous execution has not yet finished. |
 | Report the result | Switch | | Puts the result of every run into the [inbox](/en/webui_navi/16_inbox/). With desktop notifications enabled, a browser notification is sent as well. A failed run reaches the inbox either way. |
 | Ask for approvals in the inbox | Switch | | Off (default): the job approves every tool call itself. On: every tool call waits in the inbox for an answer, except for tools the agent is always allowed to use. |
@@ -96,6 +97,9 @@ If triggers are switched off for the installation, a notice is shown above the l
 | Instruction | Textarea | | User message to the agent. Placeholders: `{{payload}}`, `{{payload.field}}`, `{{name}}`, `{{timestamp}}`. Empty = the agent receives the data with the request to handle it according to its task. |
 | Tool approval | Dropdown | ✓ | **Ask in the inbox** (default) · **Allow all tools** (with a warning) · **No tools**. |
 | Report to the inbox | Dropdown | ✓ | **Every result** (default) · **Errors only** · **Nothing**. |
+| Output chat | Dropdown | | "New chat per run" (default) or an existing chat that all runs continue. A fixed chat only fits when the events build on each other; see [Chat Continuation](/en/automation/01_overview/). |
+| Chat Title Template | Text | | Title of the newly created chat. Placeholders: `{{name}}`, `{{timestamp}}` and fields of the received data such as `{{payload.id}}`. Only with "New chat per run". |
+| Project for new chats | Dropdown | | Project the chats of this trigger are filed under. Only with "New chat per run". |
 | Calls per minute | Number | ✓ | 1 – 600, default 10. Further calls are refused. |
 | Prevent Overlap | Switch | | A call during an active run of this trigger is skipped. |
 

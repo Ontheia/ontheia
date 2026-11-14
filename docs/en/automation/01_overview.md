@@ -27,6 +27,9 @@ When a job has a **Chat Target** assigned, it loads the existing chat history on
 
 What carries over are the messages and the agent's answers from earlier runs, not the individual tool results. The same holds for [triggers](./02_triggers.md) with a fixed chat.
 
+### Project for New Chats
+Jobs and triggers without a chat target create a new chat on every execution. With a **project for new chats** these chats go into the chosen project instead of the general chat list, so all runs of a trigger stay together. If the project is deleted, the automation remains and files its chats in the general list again.
+
 **When a fixed chat fits:** when the runs build on each other, such as a running report or a reminder that should know last time's state. **When it does not:** for uniform one-off jobs, for example "check document N". The model reads the history as one continuous task and can mix up an earlier event with the current one; in practice an agent re-processed the previous run's document that way. For such jobs a new chat per execution is the safe setting, and the cheaper one too, since not every run sends the whole history along.
 
 ## Functions

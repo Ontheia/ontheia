@@ -1780,6 +1780,7 @@ export type CronJobEntry = {
   prompt_template_id: string | null;
   prompt_text: string | null;
   chat_id: string | null;
+  project_id?: string | null;
   created_by_agent_id: string | null;
   schedule_depth: number;
   notify: boolean;
@@ -1884,6 +1885,7 @@ export function createCronJob(payload: {
   prompt_template_id?: string | null;
   prompt_text?: string | null;
   chat_id?: string | null;
+  project_id?: string | null;
   notify?: boolean;
   approval_mode?: 'granted' | 'inbox';
   prevent_overlap?: boolean;
@@ -1907,6 +1909,7 @@ export function updateCronJob(id: string, payload: {
   prompt_template_id?: string | null;
   prompt_text?: string | null;
   chat_id?: string | null;
+  project_id?: string | null;
   notify?: boolean;
   approval_mode?: 'granted' | 'inbox';
   active?: boolean;
@@ -2024,6 +2027,7 @@ export type TriggerEntry = {
   approval_mode: TriggerApprovalMode;
   inbox_result: TriggerInboxResult;
   chat_id: string | null;
+  project_id: string | null;
   chat_title_template: string;
   rate_limit_per_min: number;
   prevent_overlap: boolean;
@@ -2047,7 +2051,7 @@ export type TriggerEventEntry = {
 
 export type TriggerInput = Partial<Pick<TriggerEntry,
   'name' | 'agent_id' | 'task_id' | 'chain_id' | 'prompt_template' | 'approval_mode' | 'inbox_result' |
-  'chat_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
+  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
 
 /** Address a sender posts to. The token goes into a header, never into this URL. */
 export function triggerHookUrl(id: string) {

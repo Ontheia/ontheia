@@ -50,6 +50,7 @@ Button: **[Neuer Job]** — öffnet das Erstell-Modal.
 | Chain (Optional) | Dropdown | | Chain, die ausgeführt wird. Schließt Task aus. Angeboten werden alle Chains des Agenten — sowohl die Zuweisungen aus dem Chain-Designer (`app.chains.agent_id`) als auch Delegations-Bindungen (`app.agent_chains`) —, jeweils nur mit aktiver Version. |
 | Chat-Titel Vorlage | Text | | Titelvorlage für den automatisch erstellten Chat. Platzhalter: `{{name}}`, `{{timestamp}}`. |
 | Chat-Ziel | Dropdown | | Bestehenden Chat auswählen, in dem der Job fortgesetzt wird. Leer = neuer Chat bei jeder Ausführung. |
+| Projekt für neue Chats | Dropdown | | Projekt, unter dem die von diesem Job angelegten Chats abgelegt werden. So füllt ein häufig laufender Job nicht die allgemeine Chat-Liste. Nur ohne Chat-Ziel wählbar; ein fester Chat behält sein Projekt. |
 | Überlappung verhindern | Checkbox | | Falls aktiviert: geplanter Lauf wird übersprungen, wenn die vorherige Ausführung noch läuft. |
 | Ergebnis melden | Schalter | | Legt das Ergebnis jedes Laufs in den [Posteingang](/de/webui_navi/16_inbox/). Mit aktivierten Desktop-Benachrichtigungen kommt zusätzlich eine Browser-Benachrichtigung. Ein fehlgeschlagener Lauf landet in jedem Fall im Posteingang. |
 | Freigaben im Posteingang anfragen | Schalter | | Aus (Standard): Der Job genehmigt sich jeden Tool-Aufruf selbst. An: Jeder Tool-Aufruf wartet im Posteingang auf eine Antwort, außer bei Tools, die der Agent immer nutzen darf. |
@@ -96,6 +97,9 @@ Sind Trigger für die Installation ausgeschaltet, steht ein Hinweis über der Li
 | Anweisung | Textarea | | Benutzernachricht an den Agenten. Platzhalter: `{{payload}}`, `{{payload.feld}}`, `{{name}}`, `{{timestamp}}`. Leer = der Agent bekommt die Daten mit der Bitte, sie gemäß seiner Aufgabe zu verarbeiten. |
 | Tool-Freigabe | Dropdown | ✓ | **Im Posteingang anfragen** (Standard) · **Alle Tools erlauben** (mit Warnhinweis) · **Keine Tools**. |
 | Im Posteingang melden | Dropdown | ✓ | **Jedes Ergebnis** (Standard) · **Nur Fehler** · **Nichts**. |
+| Ausgabe-Chat | Dropdown | | „Neuer Chat pro Lauf" (Standard) oder ein bestehender Chat, in dem alle Läufe fortgesetzt werden. Ein fester Chat passt nur, wenn die Ereignisse aufeinander aufbauen; siehe [Chat-Fortsetzung](/de/automation/01_overview/). |
+| Chat-Titel Vorlage | Text | | Titel des neu angelegten Chats. Platzhalter: `{{name}}`, `{{timestamp}}` und Felder der empfangenen Daten wie `{{payload.id}}`. Nur bei „Neuer Chat pro Lauf". |
+| Projekt für neue Chats | Dropdown | | Projekt, unter dem die Chats dieses Triggers abgelegt werden. Nur bei „Neuer Chat pro Lauf". |
 | Aufrufe pro Minute | Zahl | ✓ | 1 – 600, Standard 10. Weitere Aufrufe werden abgewiesen. |
 | Überlappung verhindern | Schalter | | Ein Aufruf während eines laufenden Laufs dieses Triggers wird übersprungen. |
 

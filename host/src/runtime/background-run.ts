@@ -56,6 +56,8 @@ export type BackgroundRunSpec = {
   message: string;
   /** Continue this chat; empty starts a new one. */
   chatId?: string | null;
+  /** Project a newly created chat is filed under. Ignored with a fixed chat. */
+  projectId?: string | null;
   chatTitleTemplate: string;
   approval: BackgroundApproval;
   inboxResult: BackgroundInboxResult;
@@ -174,6 +176,9 @@ export async function executeBackgroundRun(deps: BackgroundRunDeps, spec: Backgr
       role: spec.role,
       runId,
       chatId,
+      // Only for a chat this run creates: a fixed chat keeps the project its
+      // owner gave it, the automation must not move it.
+      ...(!spec.chatId && spec.projectId ? { projectId: spec.projectId } : {}),
       trigger: spec.trigger,
       scheduleDepth: spec.scheduleDepth ?? 0,
       title,

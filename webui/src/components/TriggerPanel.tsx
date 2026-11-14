@@ -27,7 +27,7 @@ import {
   AlertCircle, AlertTriangle, Check, Copy, History, KeyRound, Loader2, MessageSquare, Pencil, Play, Trash2, Webhook, X
 } from 'lucide-react';
 import {
-  createTrigger, deleteTrigger, listTriggerEvents, listTriggers, rotateTriggerToken, testTrigger,
+  createTrigger, deleteTrigger, listChats, listProjects, listTriggerEvents, listTriggers, rotateTriggerToken, testTrigger,
   triggerHookUrl, updateTrigger,
   type TriggerApprovalMode, type TriggerEntry, type TriggerEventEntry, type TriggerInboxResult
 } from '../lib/api';
@@ -45,6 +45,7 @@ import {
 } from './ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
+const DEFAULT_CHAT_TITLE = 'Trigger: {{name}} [{{timestamp}}]';
 const DEFAULT_TEST_PAYLOAD = '{\n  "event": "test"\n}';
 
 type Props = {
@@ -573,6 +574,11 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
   const [inboxResult, setInboxResult] = useState<TriggerInboxResult>('always');
   const [rateLimit, setRateLimit] = useState('10');
   const [preventOverlap, setPreventOverlap] = useState(false);
+  const [chatId, setChatId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [chatTitle, setChatTitle] = useState(DEFAULT_CHAT_TITLE);
+  const [chats, setChats] = useState<{ id: string; title: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -588,7 +594,35 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
     setInboxResult(initial?.inbox_result ?? 'always');
     setRateLimit(String(initial?.rate_limit_per_min ?? 10));
     setPreventOverlap(initial?.prevent_overlap ?? false);
+    setChatId(initial?.chat_id ?? '');
+    setProjectId(initial?.project_id ?? '');
+    setChatTitle(initial?.chat_title_template || DEFAULT_CHAT_TITLE);
   }, [open, initial]);
+
+  useEffect(() => {
+    if (!open) return;
+    void (listChats() as Promise<any[]>)
+      .then((data) => setChats(data.map((c: any) => {
+        const id = c.id || c.chatId || c.chat_id;
+        return { id, title: c.title || id };
+      })))
+      .catch(() => setChats([]));
+    void listProjects()
+      .then((data) => setProjects(data.map((p) => ({ id: p.id, name: p.name }))))
+      .catch(() => setProjects([]));
+  }, [open]);
+
+  // A stored chat or project that is not in the list stays selectable: an
+  // admin editing another user's trigger sees their own chats and projects
+  // here, and saving must not drop the owner's choice.
+  const chatOptions = [
+    ...chats.map((c) => ({ value: c.id, label: c.title.length > 60 ? `${c.title.slice(0, 60)}…` : c.title })),
+    ...(chatId && !chats.some((c) => c.id === chatId) ? [{ value: chatId, label: t('trigger.currentChat') }] : [])
+  ];
+  const projectOptions = [
+    ...projects.map((p) => ({ value: p.id, label: p.name })),
+    ...(projectId && !projects.some((p) => p.id === projectId) ? [{ value: projectId, label: t('chatProjectUnknown') }] : [])
+  ];
 
   const activeAgent = agents.find((a) => a.id === agentId);
   const taskOptions = (activeAgent?.tasks || []).map((task) => ({ value: task.id, label: task.label }));
@@ -621,7 +655,10 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
         approval_mode: approvalMode,
         inbox_result: inboxResult,
         rate_limit_per_min: rate,
-        prevent_overlap: preventOverlap
+        prevent_overlap: preventOverlap,
+        chat_id: chatId || null,
+        project_id: chatId ? null : (projectId || null),
+        chat_title_template: chatTitle.trim() || DEFAULT_CHAT_TITLE
       };
       if (initial) {
         await updateTrigger(initial.id, payload);
@@ -639,7 +676,7 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{t(initial ? 'trigger.editTitle' : 'trigger.createTitle')}</AlertDialogTitle>
           <AlertDialogDescription>{t('trigger.dialogDesc')}</AlertDialogDescription>
@@ -724,6 +761,36 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
               }))}
             />
           </div>
+
+          <div className="settings-field">
+            <span>{t('chatTarget')}</span>
+            <AppSelect
+              value={chatId || 'none'}
+              onValueChange={(val) => setChatId(val === 'none' ? '' : val)}
+              options={[{ value: 'none', label: t('noChatTarget') }, ...chatOptions]}
+            />
+            <p className="settings-hint">{t('trigger.chatTargetHint')}</p>
+          </div>
+
+          {!chatId && (
+            <>
+              <div className="settings-field">
+                <span>{t('chatTitleTemplate')}</span>
+                <Input className="app-input" value={chatTitle} maxLength={200} onChange={(e) => setChatTitle(e.target.value)} />
+                <p className="settings-hint">{t('trigger.chatTitleHint')}</p>
+              </div>
+
+              <div className="settings-field">
+                <span>{t('chatProject')}</span>
+                <AppSelect
+                  value={projectId || 'none'}
+                  onValueChange={(val) => setProjectId(val === 'none' ? '' : val)}
+                  options={[{ value: 'none', label: t('noChatProject') }, ...projectOptions]}
+                />
+                <p className="settings-hint">{t('chatProjectHint')}</p>
+              </div>
+            </>
+          )}
 
           <div className="settings-field">
             <span>{t('trigger.rateLimit')}</span>
