@@ -21,7 +21,7 @@
  * or contact https://ontheia.ai
  */
 import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
-import { mcpErrorText } from './tool-result.js';
+import { DEFAULT_TOOL_RESULT_MAX_CHARS, capToolText, mcpErrorText, toolResultTruncatedWarning } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
@@ -50,6 +50,7 @@ export async function runAnthropicCompletion(
     waitForToolApproval?: any;
     toolLoopTimeoutMs?: number;
     toolCallLimit?: import('./run-limits.js').ToolCallLimit;
+    toolResultMaxChars?: number;
     userId?: string;
     role?: string;
   }
@@ -108,6 +109,14 @@ export async function runAnthropicCompletion(
   }
 
   let toolCallCounter = 0;
+  // A tool result goes to the model cut to this bound, see capToolText.
+  const maxResultChars = options?.toolResultMaxChars ?? DEFAULT_TOOL_RESULT_MAX_CHARS;
+  const capped = (text: string, def: { server?: string; name: string }): string => {
+    const cut = capToolText(text, maxResultChars);
+    if (!cut) return text;
+    emit(toolResultTruncatedWarning(def.server, def.name, cut.originalLength, maxResultChars));
+    return cut.text;
+  };
   let wrapUp: LimitReason | null = null;
   let wrapUpSent = false;
 
@@ -409,7 +418,7 @@ export async function runAnthropicCompletion(
               error: reported,
               finished_at: new Date().toISOString()
             });
-            conversation.push({ role: 'tool', content: `Error: ${reported}`, tool_call_id: tc.id });
+            conversation.push({ role: 'tool', content: `Error: ${capped(reported, toolDef)}`, tool_call_id: tc.id });
             continue;
           }
 
@@ -426,7 +435,7 @@ export async function runAnthropicCompletion(
 
           conversation.push({
             role: 'tool',
-            content: typeof result === 'string' ? result : JSON.stringify(result),
+            content: capped(typeof result === 'string' ? result : JSON.stringify(result), toolDef),
             tool_call_id: tc.id
           });
 
@@ -443,7 +452,7 @@ export async function runAnthropicCompletion(
           });
           conversation.push({
             role: 'tool',
-            content: `Error: ${errorMsg}`,
+            content: `Error: ${capped(errorMsg, toolDef)}`,
             tool_call_id: tc.id
           });
         }

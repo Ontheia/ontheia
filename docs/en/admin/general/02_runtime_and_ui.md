@@ -27,24 +27,33 @@ A run that reaches the timeout or the maximum number of tool calls does not stop
 - If the last request returns no text either, the run ends with the error `tool_call_limit_exceeded` or `tool_loop_timeout`.
 - The limit is not announced to the model beforehand.
 
-## 3. Memory Context Size (Top K)
+## 3. Max Characters per Tool Result
+Caps how much a single tool result passes on to the model.
+- **Range:** 1000 to 1000000 characters.
+- **Default:** 100000 (an empty field restores the default).
+- **Purpose:** A tool can return far more than a run can carry, such as the full OCR text of a newspaper. Without a cap the prompt then exceeds the safety limit and the whole run stops, even if the model did not need the content.
+- **Behaviour:** The model gets the beginning of the result and a note that it was cut and how to ask more narrowly. The run goes on. The trace carries a `tool_result_truncated` warning with the tool, the original length and the cap. Applies to error messages as well. Images in a result are not counted.
+- **Not affected:** Trace and chat history keep the full result; only what the model sees is cut. Tool steps in chains pass their result on to the next step uncut.
+- **Stored as:** `max_tool_result_chars` in `app.system_settings`, read per run with a 30-second cache.
+
+## 4. Memory Context Size (Top K)
 Defines how many relevant fragments from the vector memory are passed to the LLM per request.
 - **Range:** 1 to 50 entries.
 - **Default:** 5 entries.
 - **Note:** Higher values provide more context but consume more tokens and can confuse the model ("Lost in the Middle").
 
-## 4. Automatic Memory Storage
+## 5. Automatic Memory Storage
 Controls the agents' default write access to the memory.
 - **Allow write access:** If active, agents can automatically store important information from the conversation in the long-term memory.
 - **Effect:** Applies as the default for all new agents/tasks, but can be overridden by specific policies (see Memory documentation).
 
-## 5. Provider Requests per Minute
+## 6. Provider Requests per Minute
 A global rate limiting for outgoing API calls to AI providers (OpenAI, Anthropic etc.).
 - **Range:** 1 to 500 requests.
 - **Default:** 10 requests per minute.
 - **Purpose:** Protection against unexpected costs and avoidance of "429 Too Many Requests" errors at the providers.
 
-## 6. System Timezone
+## 7. System Timezone
 Determines the local time for the entire Ontheia host.
 - **Format:** IANA timezone string (e.g., `Europe/Berlin`, `UTC`).
 - **Default:** `Europe/Berlin` (or value from `APP_TIMEZONE`).
@@ -54,7 +63,7 @@ Determines the local time for the entire Ontheia host.
     - **Cron Jobs**: Schedules are executed based on this timezone.
     - **Agent Context**: The "Current Time" injected into the agent follows this setting.
 
-## 7. Response Streaming
+## 8. Response Streaming
 A global switch that enables or disables token-by-token streaming of LLM responses into the chat.
 - **Default:** enabled.
 - **Effect:** When enabled, agent responses appear in the chat while the model generates them. When disabled, the full response appears as one block after generation completes.
@@ -63,7 +72,7 @@ A global switch that enables or disables token-by-token streaming of LLM respons
 
 **When to disable?** Only when something misbehaves — for example if a provider rejects streaming requests, or a reverse proxy in front of Ontheia buffers SSE responses so streaming never reaches the browser anyway.
 
-## 8. Prompt Caching (Anthropic API)
+## 9. Prompt Caching (Anthropic API)
 A global switch that enables or disables prompt caching on the **Anthropic API path**.
 - **Default:** enabled.
 - **Effect:** When enabled, Ontheia places `cache_control` markers on the stable prefix (tools + system prompt) and the growing chat history. Recurring requests then read that prefix at the heavily reduced cache price (~0.1× input).

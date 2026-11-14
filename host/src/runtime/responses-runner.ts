@@ -45,7 +45,7 @@
  * (dispatch in provider-run.ts). Chat completions stays the default.
  */
 import { limitError, limitWarning, skippedCallText, wrapUpNotice, type LimitReason } from './run-limits.js';
-import { mcpErrorText } from './tool-result.js';
+import { DEFAULT_TOOL_RESULT_MAX_CHARS, capToolText, mcpErrorText, toolResultTruncatedWarning } from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { OrchestratorService } from '../orchestrator/service.js';
@@ -318,6 +318,7 @@ export async function runResponsesCompletion(
   }
 
   let toolCallCounter = 0;
+  const maxResultChars = options?.toolResultMaxChars ?? DEFAULT_TOOL_RESULT_MAX_CHARS;
   let wrapUp: LimitReason | null = null;
   let wrapUpSent = false;
 
@@ -465,8 +466,14 @@ export async function runResponsesCompletion(
 
         const callId = String((call as any).call_id ?? '');
         const callName = String((call as any).name ?? '');
+        // Every output goes to the model cut to the run's bound, see capToolText.
         const pushOutput = (result: string) => {
-          input.push({ type: 'function_call_output', call_id: callId, output: result });
+          const cut = capToolText(result, maxResultChars);
+          if (cut) {
+            const def = toolset.find((t) => (t.call_name || t.name) === callName);
+            emit(toolResultTruncatedWarning(def?.server, def?.name ?? callName, cut.originalLength, maxResultChars));
+          }
+          input.push({ type: 'function_call_output', call_id: callId, output: cut ? cut.text : result });
         };
 
         toolCallCounter++;

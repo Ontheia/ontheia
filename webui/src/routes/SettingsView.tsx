@@ -816,11 +816,13 @@ function GeneralSection({
   promptOptimizer,
   rollingSummary,
   maxToolCalls,
+  maxToolResultChars,
   approvalTimeoutHours,
   onRuntimeChange,
   onPromptOptimizerChange,
   onRollingSummaryChange,
   onMaxToolCallsChange,
+  onMaxToolResultCharsChange,
   onApprovalTimeoutHoursChange,
   onHasChanges
 }: {
@@ -829,11 +831,13 @@ function GeneralSection({
   promptOptimizer: { providerId: string | null; modelId: string | null };
   rollingSummary: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number };
   maxToolCalls: string;
+  maxToolResultChars: string;
   approvalTimeoutHours: string;
   onRuntimeChange: (patch: Partial<typeof runtimeSettings>) => void;
   onPromptOptimizerChange: (value: { providerId: string | null; modelId: string | null }) => void;
   onRollingSummaryChange: (value: { providerId: string | null; modelId: string | null; thresholdTokens: number; maxMessages: number }) => void;
   onMaxToolCallsChange: (value: string) => void;
+  onMaxToolResultCharsChange: (value: string) => void;
   onApprovalTimeoutHoursChange: (value: string) => void;
   onHasChanges: (hasChanges: boolean) => void;
 }) {
@@ -974,6 +978,24 @@ function GeneralSection({
             />
             <p className="settings-hint">
               {t('general.maxToolCallsHint')}
+            </p>
+          </label>
+          <label className="settings-field">
+            <span>{t('general.maxToolResultChars')}</span>
+            <Input
+              type="number"
+              min={1000}
+              max={1000000}
+              value={maxToolResultChars}
+              onChange={(event) => {
+                if (event.target.value !== '' && !/^\d+$/.test(event.target.value)) return;
+                onMaxToolResultCharsChange(event.target.value);
+                onHasChanges(true);
+              }}
+              placeholder={t('general.maxToolResultCharsPlaceholder')}
+            />
+            <p className="settings-hint">
+              {t('general.maxToolResultCharsHint')}
             </p>
           </label>
           <label className="settings-field">
@@ -9001,6 +9023,9 @@ export function SettingsView() {
   // dirty check — only a changed value is PATCHed.
   const [maxToolCalls, setMaxToolCalls] = useState('');
   const maxToolCallsInitialRef = useRef('');
+  // Same pattern for the largest tool result handed to the model (characters).
+  const [maxToolResultChars, setMaxToolResultChars] = useState('');
+  const maxToolResultCharsInitialRef = useRef('');
   // Same pattern for the inbox approval wait (system setting, hours).
   const [approvalTimeoutHours, setApprovalTimeoutHours] = useState('');
   const approvalTimeoutInitialRef = useRef('');
@@ -9011,6 +9036,10 @@ export function SettingsView() {
         const draft = typeof entry?.value === 'number' ? String(entry.value) : '';
         setMaxToolCalls(draft);
         maxToolCallsInitialRef.current = draft;
+        const resultEntry = rows.find((item) => item.key === 'max_tool_result_chars');
+        const resultDraft = typeof resultEntry?.value === 'number' ? String(resultEntry.value) : '';
+        setMaxToolResultChars(resultDraft);
+        maxToolResultCharsInitialRef.current = resultDraft;
         const timeoutEntry = rows.find((item) => item.key === 'inbox_approval_timeout_hours');
         const timeoutDraft = typeof timeoutEntry?.value === 'number' ? String(timeoutEntry.value) : '';
         setApprovalTimeoutHours(timeoutDraft);
@@ -9136,6 +9165,17 @@ export function SettingsView() {
         }
       }
 
+      if (maxToolResultChars !== maxToolResultCharsInitialRef.current) {
+        const trimmed = maxToolResultChars.trim();
+        const value = trimmed === '' ? null : Math.max(1000, Math.min(1000000, Number.parseInt(trimmed, 10)));
+        if (trimmed === '' || Number.isFinite(value)) {
+          await updateSystemSettingsAdmin({ max_tool_result_chars: value });
+          const normalized = value === null ? '' : String(value);
+          maxToolResultCharsInitialRef.current = normalized;
+          setMaxToolResultChars(normalized);
+        }
+      }
+
       if (approvalTimeoutHours !== approvalTimeoutInitialRef.current) {
         const trimmed = approvalTimeoutHours.trim();
         const value = trimmed === '' ? null : Math.max(1, Math.min(720, Number.parseInt(trimmed, 10)));
@@ -9158,6 +9198,7 @@ export function SettingsView() {
     builderDefaults,
     chainSteps,
     maxToolCalls,
+    maxToolResultChars,
     mcpConfigDraft,
     promptOptimizer,
     rollingSummary,
@@ -9316,11 +9357,13 @@ export function SettingsView() {
             promptOptimizer={promptOptimizer}
             rollingSummary={rollingSummary}
             maxToolCalls={maxToolCalls}
+            maxToolResultChars={maxToolResultChars}
             approvalTimeoutHours={approvalTimeoutHours}
             onRuntimeChange={(patch) => configureRuntimeSettings(patch)}
             onPromptOptimizerChange={setPromptOptimizer}
             onRollingSummaryChange={setRollingSummary}
             onMaxToolCallsChange={setMaxToolCalls}
+            onMaxToolResultCharsChange={setMaxToolResultChars}
             onApprovalTimeoutHoursChange={setApprovalTimeoutHours}
             onHasChanges={setHasChanges}
           />

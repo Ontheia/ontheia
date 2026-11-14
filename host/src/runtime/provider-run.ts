@@ -31,7 +31,14 @@ import {
   type ToolCallLimit
 } from './run-limits.js';
 import { isUuid, withRls } from '../routes/utils.js';
-import { mcpErrorText } from './tool-result.js';
+import {
+  DEFAULT_TOOL_RESULT_MAX_CHARS,
+  capToolContent,
+  capToolText,
+  mcpErrorText,
+  normalizeToolResultMaxChars,
+  toolResultTruncatedWarning
+} from './tool-result.js';
 import { isPastDeadline } from './approval-clock.js';
 import type { Pool, PoolClient } from 'pg';
 import type { Logger } from 'pino';
@@ -319,6 +326,8 @@ export interface RunOptions {
   toolLoopTimeoutMs?: number;
   /** The run's tool-call cap, resolved once in runProviderCompletion. */
   toolCallLimit?: ToolCallLimit;
+  /** Largest tool result handed to the model, resolved once in runProviderCompletion. */
+  toolResultMaxChars?: number;
   session?: any;
   userId?: string;
   role?: string;
@@ -396,9 +405,14 @@ export async function runProviderCompletion(
 ): Promise<RunEvent[]> {
   const toolLoopTimeoutMs = await resolveToolLoopTimeoutMs(db, options);
   const toolCallLimit = await resolveToolCallLimit(db, payload.agent_id, options);
+  // Admin setting 'max_tool_result_chars', see capToolText.
+  const toolResultMaxChars =
+    options?.toolResultMaxChars ??
+    normalizeToolResultMaxChars(await getSystemNumber(db, 'max_tool_result_chars', DEFAULT_TOOL_RESULT_MAX_CHARS));
   return dispatchProviderCompletion(db, orchestrator, payload, {
     ...options,
     toolCallLimit,
+    toolResultMaxChars,
     ...(toolLoopTimeoutMs === undefined ? {} : { toolLoopTimeoutMs })
   });
 }
@@ -1500,7 +1514,11 @@ async function handleOpenAiToolCalls(params: {
           arguments: args,
           error: reported
         });
-        conversation.push({ role: 'tool', content: `Error: ${reported}`, tool_call_id: rawCall.id });
+        conversation.push({
+          role: 'tool',
+          content: `Error: ${capToolText(reported, options?.toolResultMaxChars ?? DEFAULT_TOOL_RESULT_MAX_CHARS)?.text ?? reported}`,
+          tool_call_id: rawCall.id
+        });
         continue;
       }
 
@@ -1514,7 +1532,13 @@ async function handleOpenAiToolCalls(params: {
         result
       });
 
-      conversation.push({ role: 'tool', content: mcpResultToOpenAiContent(result) as any, tool_call_id: rawCall.id });
+      const maxResultChars = options?.toolResultMaxChars ?? DEFAULT_TOOL_RESULT_MAX_CHARS;
+      const toolContent = mcpResultToOpenAiContent(result);
+      const cappedContent = capToolContent(toolContent as any, maxResultChars);
+      if (cappedContent) {
+        emit(toolResultTruncatedWarning(toolDefinition.server, toolDefinition.name, cappedContent.originalLength, maxResultChars));
+      }
+      conversation.push({ role: 'tool', content: (cappedContent ? cappedContent.content : toolContent) as any, tool_call_id: rawCall.id });
 
       // --- SPECIAL TASKMANAGER CHAINING ---
       // If we just marked a task as done, and we are in technical approval mode,
@@ -1576,7 +1600,7 @@ async function handleOpenAiToolCalls(params: {
 
       conversation.push({
         role: 'tool',
-        content: `Error: ${errorMessage}`,
+        content: `Error: ${capToolText(errorMessage, options?.toolResultMaxChars ?? DEFAULT_TOOL_RESULT_MAX_CHARS)?.text ?? errorMessage}`,
         tool_call_id: rawCall.id
       });
     }

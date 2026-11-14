@@ -27,24 +27,33 @@ Erreicht ein Lauf das Timeout oder die maximale Zahl der Tool-Aufrufe, bricht er
 - Liefert auch die letzte Anfrage keinen Text, endet der Lauf mit dem Fehler `tool_call_limit_exceeded` bzw. `tool_loop_timeout`.
 - Die Grenze wird dem Modell vorher nicht angekündigt.
 
-## 3. Memory Kontext-Größe (Top K)
+## 3. Max. Zeichen pro Tool-Ergebnis
+Begrenzt, wie viel ein einzelnes Tool-Ergebnis an das Modell weitergibt.
+- **Bereich:** 1000 bis 1000000 Zeichen.
+- **Standard:** 100000 (leeres Feld stellt den Standard wieder her).
+- **Zweck:** Ein Tool kann weit mehr liefern, als ein Lauf tragen kann, etwa den vollständigen OCR-Text einer Zeitung. Ohne Grenze überschreitet der Prompt dann das Schutzlimit, und der ganze Lauf bricht ab, auch wenn das Modell den Inhalt gar nicht gebraucht hätte.
+- **Verhalten:** Das Modell bekommt den Anfang des Ergebnisses und den Hinweis, dass gekürzt wurde und wie es gezielter abfragen kann. Der Lauf geht weiter. Im Trace steht eine Warnung `tool_result_truncated` mit Tool, Originallänge und Grenze. Gilt auch für Fehlermeldungen. Bilder in einem Ergebnis werden nicht mitgezählt.
+- **Nicht betroffen:** Trace und Chat-Verlauf speichern das vollständige Ergebnis; gekürzt wird nur, was das Modell sieht. Tool-Schritte in Chains geben ihr Ergebnis ungekürzt an den nächsten Schritt weiter.
+- **Gespeichert als:** `max_tool_result_chars` in `app.system_settings`, pro Run gelesen, mit 30 Sekunden Cache.
+
+## 4. Memory Kontext-Größe (Top K)
 Legt fest, wie viele relevante Fragmente aus dem Vektorspeicher pro Anfrage an das LLM übergeben werden.
 - **Bereich:** 1 bis 50 Einträge.
 - **Standard:** 5 Einträge.
 - **Hinweis:** Höhere Werte liefern mehr Kontext, verbrauchen aber mehr Token und können das Modell verwirren ("Lost in the Middle").
 
-## 4. Automatische Memory-Speicherung
+## 5. Automatische Memory-Speicherung
 Steuert den standardmäßigen Schreibzugriff der Agenten auf das Gedächtnis.
 - **Schreibzugriff erlauben:** Wenn aktiv, können Agenten wichtige Informationen aus dem Gespräch automatisch im Langzeitgedächtnis hinterlegen.
 - **Wirkung:** Gilt als Standard für alle neuen Agenten/Tasks, kann aber durch spezifische Policies (siehe Memory-Dokumentation) übersteuert werden.
 
-## 5. Provider-Requests pro Minute
+## 6. Provider-Requests pro Minute
 Ein globales Rate-Limiting für ausgehende API-Aufrufe zu AI-Providern (OpenAI, Anthropic etc.).
 - **Bereich:** 1 bis 500 Requests.
 - **Standard:** 10 Requests pro Minute.
 - **Zweck:** Schutz vor unerwarteten Kosten und Vermeidung von "429 Too Many Requests" Fehlern bei den Providern.
 
-## 6. System Zeitzone
+## 7. System Zeitzone
 Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
 - **Format:** IANA Zeitzonen-String (z. B. `Europe/Berlin`, `UTC`).
 - **Standard:** `Europe/Berlin` (bzw. Wert aus `APP_TIMEZONE`).
@@ -54,7 +63,7 @@ Bestimmt die lokale Uhrzeit für den gesamten Ontheia-Host.
     - **Cron-Jobs**: Zeitpläne werden basierend auf dieser Zeitzone ausgeführt.
     - **Agenten-Kontext**: Die dem Agenten injizierte "Aktuelle Uhrzeit" folgt dieser Einstellung.
 
-## 7. Response-Streaming
+## 8. Response-Streaming
 Ein globaler Schalter, der das tokenweise Streaming der LLM-Antworten in den Chat aktiviert oder deaktiviert.
 - **Standard:** aktiviert.
 - **Wirkung:** Ist der Schalter aktiv, erscheinen Agenten-Antworten im Chat, während das Modell sie generiert. Deaktiviert erscheint die vollständige Antwort erst nach Abschluss der Generierung als Block.
@@ -63,7 +72,7 @@ Ein globaler Schalter, der das tokenweise Streaming der LLM-Antworten in den Cha
 
 **Wann deaktivieren?** Nur bei Problemen — etwa wenn ein Provider Streaming-Anfragen ablehnt oder ein Reverse-Proxy vor Ontheia SSE-Antworten puffert und das Streaming dadurch ohnehin nicht ankommt.
 
-## 8. Prompt-Caching (Anthropic API)
+## 9. Prompt-Caching (Anthropic API)
 Ein globaler Schalter, der das Prompt-Caching auf dem **Anthropic-API-Pfad** aktiviert oder deaktiviert.
 - **Standard:** aktiviert.
 - **Wirkung:** Ist der Schalter aktiv, setzt Ontheia `cache_control`-Markierungen auf den stabilen Prefix (Tools + System-Prompt) und die wachsende Chat-History. Wiederkehrende Anfragen lesen diesen Prefix dann zum stark reduzierten Cache-Preis (~0,1× Input).

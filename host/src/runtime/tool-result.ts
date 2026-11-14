@@ -50,3 +50,96 @@ export function mcpErrorText(result: unknown): string | null {
   const text = parts.join('\n').replace(/^\s*error:\s*/i, '');
   return text.trim().length > 0 ? text : 'The tool reported an error without a message.';
 }
+
+/**
+ * Upper bound for one tool result handed to the model.
+ *
+ * A tool may return far more than a run can carry: one Paperless history call
+ * returned 689,666 characters (the full OCR text of a newspaper) and pushed
+ * the prompt past the 200,000-token guard, which then killed the whole run —
+ * although the model needed none of it. Cut at this bound, the run goes on
+ * and the model is told that it saw only the beginning.
+ *
+ * Counted in characters, not tokens: the bound has to hold before any
+ * tokenizer is involved, and for text one token is roughly three to four
+ * characters, so 100,000 characters stay well below the prompt guard.
+ */
+export const DEFAULT_TOOL_RESULT_MAX_CHARS = 100_000;
+export const TOOL_RESULT_MAX_CHARS_RANGE = { min: 1_000, max: 1_000_000 } as const;
+
+/** A usable bound from a stored setting, or the default. */
+export function normalizeToolResultMaxChars(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_TOOL_RESULT_MAX_CHARS;
+  return Math.min(TOOL_RESULT_MAX_CHARS_RANGE.max, Math.max(TOOL_RESULT_MAX_CHARS_RANGE.min, Math.floor(value)));
+}
+
+function truncationNotice(originalLength: number, shown: number): string {
+  return (
+    `\n\n[Tool result truncated: ${originalLength} characters, the first ${shown} are shown. ` +
+    'If you need more, request less data at once (a filter, a page, a maximum length) instead of repeating the call.]'
+  );
+}
+
+/** Cuts without splitting a surrogate pair. */
+function cutAt(text: string, length: number): string {
+  const cut = text.slice(0, length);
+  const last = cut.charCodeAt(cut.length - 1);
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut;
+}
+
+/** The text cut to the bound plus a notice, or null when it fits. */
+export function capToolText(text: string, maxChars: number): { text: string; originalLength: number } | null {
+  if (text.length <= maxChars) return null;
+  const kept = cutAt(text, maxChars);
+  return { text: kept + truncationNotice(text.length, kept.length), originalLength: text.length };
+}
+
+type ContentPart = { type: string; text?: unknown; [key: string]: unknown };
+
+/**
+ * Same for a multimodal tool message: the text parts share the bound, image
+ * parts pass through untouched (they are not text the model reads).
+ */
+export function capToolContent(
+  content: string | ContentPart[],
+  maxChars: number
+): { content: string | ContentPart[]; originalLength: number } | null {
+  if (typeof content === 'string') {
+    const capped = capToolText(content, maxChars);
+    return capped ? { content: capped.text, originalLength: capped.originalLength } : null;
+  }
+  if (!Array.isArray(content)) return null;
+  const parts: ContentPart[] = content;
+  const textLength = parts.reduce((sum, part) => sum + (typeof part?.text === 'string' ? part.text.length : 0), 0);
+  if (textLength <= maxChars) return null;
+  let budget = maxChars;
+  const kept: ContentPart[] = [];
+  for (const part of parts) {
+    if (typeof part?.text !== 'string') {
+      kept.push(part);
+      continue;
+    }
+    if (budget <= 0) continue;
+    const text = cutAt(part.text, budget);
+    budget -= text.length;
+    kept.push({ ...part, text });
+  }
+  kept.push({ type: 'text', text: truncationNotice(textLength, maxChars - budget).trimStart() });
+  return { content: kept, originalLength: textLength };
+}
+
+/** Trace entry for a cut result. */
+export function toolResultTruncatedWarning(
+  server: string | undefined,
+  tool: string,
+  originalLength: number,
+  maxChars: number
+) {
+  const name = server ? `${server}::${tool}` : tool;
+  return {
+    type: 'warning' as const,
+    code: 'tool_result_truncated',
+    message: `Result of ${name} truncated: ${originalLength} characters, limit ${maxChars}.`,
+    timestamp: new Date().toISOString()
+  };
+}
