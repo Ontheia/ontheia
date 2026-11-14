@@ -29,13 +29,13 @@ import type { AutomationTrigger } from './automation-utils.js';
 import { outcomeFromEvents, type InboxService } from './InboxService.js';
 import { registerActiveRun, unregisterActiveRun } from './run-registry.js';
 import { withTransaction } from '../routes/utils.js';
+import { buildBackgroundHistory, type HistoryMessage } from './background-history.js';
 
 /**
  * What a scheduled job and a webhook trigger have in common once they fire: a
  * run without anyone watching, in a chat of its own, that reports to the inbox.
  */
 
-type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
 
 export type BackgroundApproval = 'granted' | 'inbox' | 'denied';
 export type BackgroundInboxResult = 'always' | 'errors' | 'never';
@@ -122,7 +122,7 @@ export async function executeBackgroundRun(deps: BackgroundRunDeps, spec: Backgr
   }
 
   let chatId: string;
-  let history: Array<{ role: ChatRole; content: string }> = [];
+  let history: HistoryMessage[] = [];
   if (spec.chatId) {
     chatId = spec.chatId;
     try {
@@ -134,9 +134,7 @@ export async function executeBackgroundRun(deps: BackgroundRunDeps, spec: Backgr
           [chatId]
         )
       );
-      history = histRes.rows
-        .filter((r: { role: string }) => ['user', 'assistant', 'system', 'tool'].includes(r.role))
-        .map((r: { role: string; content: string }) => ({ role: r.role as ChatRole, content: r.content }));
+      history = buildBackgroundHistory(histRes.rows);
     } catch (err) {
       log.warn({ err, triggerId: spec.trigger.id, chatId }, 'Failed to load chat history — proceeding without history');
     }

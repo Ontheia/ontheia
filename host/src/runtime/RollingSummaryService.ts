@@ -190,6 +190,46 @@ function buildSkillReattachMessages(skills: Map<string, string>): ChatMessage[] 
   return msgs;
 }
 
+/**
+ * Takes the run's own notes out of the message list before the summary sees
+ * it, and puts them back afterwards.
+ *
+ * A background run (trigger, scheduler) places a system note directly before
+ * its user message — among other things the instruction that the received
+ * data is data, not a command. The summary works on positions: it remembers
+ * how many leading messages it has compressed. With the note in the list,
+ *  - the note itself was summarised away in the run that compressed, and
+ *  - the remembered position pointed one message too far on the next run, so
+ *    the previous event's message dropped out of the context.
+ * Without the note the list has the same shape as a chat continued by a
+ * person, which is what the positions were designed for.
+ */
+export function splitRunNotes(messages: ChatMessage[]): { core: ChatMessage[]; notes: ChatMessage[] } {
+  let lastUser = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') { lastUser = i; break; }
+  }
+  if (lastUser <= 0) return { core: messages, notes: [] };
+  let first = lastUser;
+  while (first > 0 && messages[first - 1].role === 'system') first--;
+  if (first === lastUser) return { core: messages, notes: [] };
+  return {
+    core: [...messages.slice(0, first), ...messages.slice(lastUser)],
+    notes: messages.slice(first, lastUser)
+  };
+}
+
+/** Puts the notes back directly before the last user message. */
+export function joinRunNotes(messages: ChatMessage[], notes: ChatMessage[]): ChatMessage[] {
+  if (notes.length === 0) return messages;
+  let lastUser = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') { lastUser = i; break; }
+  }
+  if (lastUser < 0) return [...messages, ...notes];
+  return [...messages.slice(0, lastUser), ...notes, ...messages.slice(lastUser)];
+}
+
 export class RollingSummaryService {
   constructor(
     private db: Pool,

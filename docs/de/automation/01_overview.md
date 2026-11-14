@@ -25,6 +25,10 @@ Jeder Cron-Job wird im Namen eines spezifischen Benutzers ausgeführt. Der Job n
 ### Chat-Fortsetzung
 Wird einem Job ein **Chat-Ziel** zugewiesen, lädt der Job beim Ausführen den bisherigen Chat-Verlauf und setzt die Konversation in diesem bestehenden Chat fort. Die Chat-History wird automatisch per Rolling Summary komprimiert, falls der Kontext zu lang wird. Ohne Chat-Ziel erstellt jede Ausführung einen neuen Chat.
 
+Übernommen werden die Nachrichten und die Antworten des Agenten aus den früheren Läufen, nicht die einzelnen Tool-Ergebnisse. Dasselbe gilt für [Trigger](./02_triggers.md) mit festem Chat.
+
+**Wann ein fester Chat passt:** wenn die Läufe aufeinander aufbauen, etwa bei einem fortlaufenden Bericht oder einer Erinnerung, die den Stand vom letzten Mal kennen soll. **Wann nicht:** bei gleichförmigen Einzelaufträgen, zum Beispiel „prüfe Dokument N". Das Modell liest den Verlauf als eine zusammenhängende Aufgabe und kann ein früheres Ereignis mit dem aktuellen verwechseln; im Praxistest hat ein Agent so das Dokument des vorigen Laufs erneut bearbeitet. Für solche Aufträge ist ein neuer Chat je Ausführung die sichere Einstellung, und sie ist auch die sparsamere, weil nicht jeder Lauf den ganzen Verlauf mitschickt.
+
 ## Funktionen
 
 ### Überlappungsschutz (Concurrency Control)

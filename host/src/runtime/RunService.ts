@@ -51,7 +51,7 @@ import { observeRun } from '../metrics.js';
 import { ChainRunner } from './chain-runner.js';
 import { buildSystemMessages, appendDateTimeContext, appendMemoryContext, appendArtifactContext, formatMemoryContext } from './prompt-utils.js';
 import { runAgentSnapshots } from '../routes/runs-state.js';
-import { RollingSummaryService } from './RollingSummaryService.js';
+import { RollingSummaryService, joinRunNotes, splitRunNotes } from './RollingSummaryService.js';
 import { createAgentTurnState, feedAgentTurnEvent } from './agent-turn-tracker.js';
 import { SkillService } from './SkillService.js';
 import {
@@ -470,9 +470,11 @@ export class RunService {
         const rsConfig = userSettings.rollingSummary ?? {};
         if (rsConfig.providerId && rsConfig.modelId) {
           const rollingSummaryService = new RollingSummaryService(this.db, this.orchestrator);
+          // The run's own notes stay out of the summary, see splitRunNotes.
+          const { core: summaryInput, notes: runNotes } = splitRunNotes(enrichedInput.messages);
           const summaryResult = await rollingSummaryService.maybeApplySummary(
             chatId,
-            enrichedInput.messages,
+            summaryInput,
             {
               providerId: rsConfig.providerId,
               modelId: rsConfig.modelId,
@@ -483,7 +485,7 @@ export class RunService {
             role,
             logger
           );
-          enrichedInput.messages = summaryResult.messages;
+          enrichedInput.messages = joinRunNotes(summaryResult.messages, runNotes);
           if (summaryResult.applied && !summaryResult.reused) {
             emitRunEvent({
               type: 'info',

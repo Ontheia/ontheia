@@ -25,6 +25,10 @@ Each cron job is executed on behalf of a specific user. The job uses:
 ### Chat Continuation
 When a job has a **Chat Target** assigned, it loads the existing chat history on execution and continues the conversation in that chat. The chat history is automatically compressed via Rolling Summary if the context becomes too long. Without a chat target, each execution creates a new chat.
 
+What carries over are the messages and the agent's answers from earlier runs, not the individual tool results. The same holds for [triggers](./02_triggers.md) with a fixed chat.
+
+**When a fixed chat fits:** when the runs build on each other, such as a running report or a reminder that should know last time's state. **When it does not:** for uniform one-off jobs, for example "check document N". The model reads the history as one continuous task and can mix up an earlier event with the current one; in practice an agent re-processed the previous run's document that way. For such jobs a new chat per execution is the safe setting, and the cheaper one too, since not every run sends the whole history along.
+
 ## Functions
 
 ### Concurrency Control

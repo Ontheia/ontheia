@@ -120,3 +120,39 @@ test('stripRecentMessagesBlock leaves a summary without such a block untouched',
   const summary = '### Main Topics\nDeployment\n\n### Decisions\nUse the tree view';
   assert.equal(stripRecentMessagesBlock(summary), summary);
 });
+
+import { joinRunNotes, splitRunNotes } from './RollingSummaryService.js';
+
+test('splitRunNotes: takes the system note before the last user message out', () => {
+  const messages = [
+    { role: 'user', content: 'a' },
+    { role: 'assistant', content: 'b' },
+    { role: 'system', content: 'note' },
+    { role: 'user', content: 'c' }
+  ] as any[];
+  const { core, notes } = splitRunNotes(messages);
+  assert.deepEqual(core.map((m) => m.content), ['a', 'b', 'c']);
+  assert.deepEqual(notes.map((m) => m.content), ['note']);
+});
+
+test('splitRunNotes: a chat continued by a person is left alone', () => {
+  const messages = [
+    { role: 'system', content: 'leading' },
+    { role: 'user', content: 'a' },
+    { role: 'assistant', content: 'b' },
+    { role: 'user', content: 'c' }
+  ] as any[];
+  const { core, notes } = splitRunNotes(messages);
+  assert.equal(core, messages);
+  assert.deepEqual(notes, []);
+});
+
+test('joinRunNotes: puts the note back before the last user message', () => {
+  const summarised = [
+    { role: 'system', content: 'summary' },
+    { role: 'user', content: 'c' }
+  ] as any[];
+  const joined = joinRunNotes(summarised, [{ role: 'system', content: 'note' }] as any[]);
+  assert.deepEqual(joined.map((m) => m.content), ['summary', 'note', 'c']);
+  assert.equal(joinRunNotes(summarised, []), summarised);
+});
