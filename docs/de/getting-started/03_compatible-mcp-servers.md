@@ -1094,6 +1094,28 @@ PAPERLESS_API_KEY=dein-api-token
 > - **Semantische Suche und KI-Workflows** (`EMBEDDINGS_ENABLED`, `run_task`) sind standardmäßig aus; eingeschaltet senden sie Dokumentinhalte an OpenAI oder Ollama.
 > - **Bekannte Grenze (1.6.1):** `download_document` liefert bei einem PDF nur die Größe, nicht die Datei.
 
+**Variante: Lesen und Metadaten pflegen.** Statt `PAPERLESS_READ_ONLY` sperrt `PAPERLESS_DISABLED_TOOLS` gezielt. Mit der folgenden Liste bleiben alle lesenden Tools und genau zwei schreibende: `update_document` (Titel, Tags, Korrespondent, Dokumenttyp, Speicherpfad eines Dokuments ändern) und `add_document_note` (Notiz anlegen). Löschen, Hochladen, Versenden, PDF-Bearbeitung, Freigaben, Benutzer, Mail-Konten und Systemeinstellungen sind gesperrt. Geeignet für einen Agenten, der eingehende Dokumente prüft und verschlagwortet, etwa über einen [Trigger](/de/automation/02_triggers/).
+
+```json
+{
+  "mcpServers": {
+    "paperless3": {
+      "command": "npx",
+      "args": ["-y", "@orellbuehler/paperless-mcp@1.6.1"],
+      "env": {
+        "PAPERLESS_URL": "secret:PAPERLESS_URL",
+        "PAPERLESS_TOKEN": "secret:PAPERLESS_API_KEY",
+        "PAPERLESS_API_VERSION": "10",
+        "PAPERLESS_DISABLED_TOOLS": "delete_document,upload_document,delete_document_note,bulk_edit_documents,bulk_set_object_permissions,create_correspondent,update_correspondent,delete_correspondent,create_document_type,update_document_type,delete_document_type,create_tag,update_tag,delete_tag,create_saved_view,update_saved_view,create_storage_path,update_storage_path,delete_storage_path,create_custom_field,update_custom_field,auto_classify_document,bulk_tag_by_content,upload_from_url,create_user,update_user,create_group,update_group,create_workflow,update_workflow,upload_document_version,set_document_version_label,delete_document_version,bulk_download_documents,extract_document_pages,rotate_documents,merge_documents,edit_pdf_document,remove_document_password,reprocess_documents,create_mail_account,update_mail_account,process_mail_account,create_mail_rule,update_mail_rule,create_share_link,create_share_link_bundle,rebuild_share_link_bundle,email_document,email_documents,update_config,restore_from_trash,empty_trash,acknowledge_tasks,run_task,sync_embeddings"
+      }
+    }
+  }
+}
+```
+
+> - **Sperrliste statt Freigabeliste:** Was nicht auf der Liste steht, ist erlaubt. Bringt eine neue Version des Servers ein weiteres schreibendes Tool mit, ist es sofort verfügbar. Deshalb die Version pinnen (`@1.6.1`) und die Liste vor jedem Update gegen die neuen Tools prüfen.
+> - **Zusätzlich absichern:** Die beiden schreibenden Tools beim Agenten nicht dauerhaft erlauben, solange die Ergebnisse noch geprüft werden; dann wartet jeder Aufruf auf deine Freigabe, bei unbeaufsichtigten Läufen im Posteingang.
+
 </details>
 
 <details>

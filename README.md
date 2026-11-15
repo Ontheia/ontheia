@@ -28,6 +28,8 @@ Most AI setups stay fragmented: separate chats, tools, scripts, and automations 
 - 🔗 **MCP-native** — Built on the open Model Context Protocol — connect agents to any external tool.
 - 🧩 **Skills** — Knowledge and workflows as reusable modules — define once, use from any agent.
 - ⏰ **Cron automation** — One-time or recurring jobs — set up via form or directly in chat.
+- 🪝 **Webhook triggers** — Mail, documents, sensors: any system can start an agent via webhook.
+- 📥 **Inbox** — Results, errors and pending approvals of unattended runs — decide from anywhere.
 - ⚙️ **Workflow engine** — Visual automation pipelines. Complex agent logic without code.
 - 🧠 **Long-term memory** — Built-in RAG with pgvector. Agents remember and access your knowledge base.
 - 🤝 **Agent-to-agent** — Agents communicate directly — complex tasks get split and coordinated.
@@ -55,6 +57,8 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 - **Diagrams in chat** — the agent writes Mermaid, the chat renders it live: flowcharts, sequence, class, ER, Gantt, state, mind maps, and more (12+ types). No render server, no export detour — a built-in skill keeps the syntax and layout clean.
 - **Files as artifacts, not walls of text** — when an agent reads or writes a file, a card appears; one click opens it in a side panel with edit/preview, conflict-safe saving, and a built-in PDF and image viewer. Every code block in an answer carries a pencil: revise it in the panel and save it as a file. The agent stops repeating file contents in its answers and quotes only what it discusses — which also saves a substantial number of tokens.
 - **Scheduling** — run recurring or one-time jobs automatically, including jobs that resume an existing chat where it left off.
+- **Webhook triggers** — any system that can send an HTTP request can start an agent or a chain: a mail watcher, a document system, a sensor, a monitoring tool. Each trigger has its own address and token, a rate limit and its own approval setting. The received JSON reaches the agent through placeholders and is marked as data, not as instructions. Chats created by a trigger can be filed under a project, so a busy trigger does not flood the chat list.
+- **Inbox for unattended work** — runs nobody is watching, from triggers and schedules, report here: results, errors, and tool calls waiting for approval. Approve once, for the whole run, or deny — at the desk or on the phone. Nothing that needs a decision happens without you, which is what makes it safe to let outside events drive agents. A run that reaches its tool-call or time limit still delivers what it has done and what is left open, instead of failing silently.
 - **Vendor-agnostic** — Claude, GPT, Gemini, Grok, Ollama, or any OpenAI-compatible model. Switch providers without rewriting agents.
 - **Reasoning models, made visible** — Ontheia speaks both reasoning paths: OpenAI's Responses API, so reasoning and function tools work together where chat completions no longer allows it, and Anthropic's extended thinking. Effort is configurable per model, thinking survives across tool iterations, and a dedicated **Reasoning tab** in the trace panel shows what the model actually thought — not just what it answered.
 - **Safe file handling** — a built-in `files` skill lets agents search, read, write, edit and move files with guarantees that make mistakes impossible, not just discouraged: writes never clobber (recoverable trash), edits need an exact match, and concurrent changes are caught by content hash. No config needed.
@@ -68,6 +72,9 @@ This isn't a chat UI with plugins, prompt-based automation, or a bare agent runt
 flowchart TB
     subgraph infra["🔒 Your Infrastructure"]
         UI[WebUI / Chat] --> A1[Agent]
+        TRG[Triggers] --> A1
+        A1 -->|results · approvals| INBOX[Inbox]
+        INBOX --- UI
         A1 --- SK[Skills]
         A1 --- MEM[Memory / RAG]
         MEM --- DB[(PostgreSQL + pgvector)]
@@ -78,12 +85,13 @@ flowchart TB
         A1 --> OLLAMA[Ollama<br/>local models]
     end
     A1 -.-> PROV[Cloud AI Providers<br/>Claude · GPT · Gemini · Grok]
+    EXT[Event Sources<br/>mail · documents · sensors] -->|webhook| TRG
 
     classDef external fill:#fff3cd,stroke:#d4a017,stroke-width:1px,color:#5c4400,font-weight:bold;
-    class PROV external;
+    class PROV,EXT external;
 ```
 
-Everything that matters — chat history, memory, skills, workflows, schedules, tool connections — stays inside your infrastructure. Only the model inference call crosses the boundary, and you choose which provider gets it.
+Everything that matters — chat history, memory, skills, workflows, schedules, triggers, the inbox, tool connections — stays inside your infrastructure. Two kinds of calls cross the boundary: model inference going out to the provider you choose, and webhook calls coming in to the triggers you set up.
 
 ---
 

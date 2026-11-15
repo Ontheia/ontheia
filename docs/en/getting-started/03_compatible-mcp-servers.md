@@ -1094,6 +1094,28 @@ PAPERLESS_API_KEY=your-api-token
 > - **Semantic search and AI workflows** (`EMBEDDINGS_ENABLED`, `run_task`) are off by default; switched on, they send document content to OpenAI or Ollama.
 > - **Known limit (1.6.1):** `download_document` returns only the size of a PDF, not the file.
 
+**Variant: read and maintain metadata.** Instead of `PAPERLESS_READ_ONLY`, `PAPERLESS_DISABLED_TOOLS` blocks tools selectively. With the list below, all reading tools remain plus exactly two writing ones: `update_document` (change a document's title, tags, correspondent, document type, storage path) and `add_document_note` (add a note). Deleting, uploading, sending, PDF editing, sharing, users, mail accounts and system settings are blocked. Suited to an agent that reviews and tags incoming documents, for instance through a [trigger](/en/automation/02_triggers/).
+
+```json
+{
+  "mcpServers": {
+    "paperless3": {
+      "command": "npx",
+      "args": ["-y", "@orellbuehler/paperless-mcp@1.6.1"],
+      "env": {
+        "PAPERLESS_URL": "secret:PAPERLESS_URL",
+        "PAPERLESS_TOKEN": "secret:PAPERLESS_API_KEY",
+        "PAPERLESS_API_VERSION": "10",
+        "PAPERLESS_DISABLED_TOOLS": "delete_document,upload_document,delete_document_note,bulk_edit_documents,bulk_set_object_permissions,create_correspondent,update_correspondent,delete_correspondent,create_document_type,update_document_type,delete_document_type,create_tag,update_tag,delete_tag,create_saved_view,update_saved_view,create_storage_path,update_storage_path,delete_storage_path,create_custom_field,update_custom_field,auto_classify_document,bulk_tag_by_content,upload_from_url,create_user,update_user,create_group,update_group,create_workflow,update_workflow,upload_document_version,set_document_version_label,delete_document_version,bulk_download_documents,extract_document_pages,rotate_documents,merge_documents,edit_pdf_document,remove_document_password,reprocess_documents,create_mail_account,update_mail_account,process_mail_account,create_mail_rule,update_mail_rule,create_share_link,create_share_link_bundle,rebuild_share_link_bundle,email_document,email_documents,update_config,restore_from_trash,empty_trash,acknowledge_tasks,run_task,sync_embeddings"
+      }
+    }
+  }
+}
+```
+
+> - **Block list, not allow list:** anything not on the list is allowed. If a new server version brings another writing tool, it is available at once. Pin the version (`@1.6.1`) and check the list against the new tools before every update.
+> - **Extra safeguard:** do not permanently allow the two writing tools for the agent while its results are still being checked; every call then waits for your approval, in the inbox for unattended runs.
+
 </details>
 
 <details>
