@@ -29,7 +29,7 @@ Steuert, wie viele Einträge in der Sidebar angezeigt werden (min. 5, max. 50).
 
 | Feld | Typ | Beschreibung |
 | --- | --- | --- |
-| Nachrichten (Chats) | Zahl | Maximale Anzahl angezeigter Chats in der Sidebar. |
+| Nachrichten (Chats) | Zahl | Anzahl der neuesten Chats, die der Verlauf und jeder Projektordner in der Sidebar zeigen; die Grenze gilt je Gruppe getrennt. Hat ein Projekt mehr Chats, steht am Ende des Ordners „N weitere". Eine Suche zeigt alle Treffer. |
 | Status-Meldungen | Zahl | Maximale Anzahl angezeigter Status-Meldungen. |
 | Warnungen | Zahl | Maximale Anzahl angezeigter Warnungen. |
 

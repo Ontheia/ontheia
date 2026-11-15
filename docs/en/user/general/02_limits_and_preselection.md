@@ -4,7 +4,7 @@ Optimize your workflows with individual default settings.
 
 ## 1. Sidebar History & Limits
 Control how much history Ontheia provides in the left sidebar for quick access:
-- **Messages (Chats):** Number of recent sub-conversations displayed.
+- **Messages (Chats):** Number of newest chats in the history and in each project folder, separately per group. A project that an automation fills with many chats therefore takes no room from the history. Further chats of a project can be expanded in its folder with "N more"; the search finds every chat.
 - **Status Messages & Warnings:** Limit on entries in the activity lists.
 - **Range:** 5 to 50 entries.
 

@@ -105,7 +105,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const sidebar = useSidebar()
   const { isMobile } = sidebar
-  const { messages: historyEntries, activeChatId, removeChat, refreshChats, upsertMessage, activeRunByChatId } = useChatSidebar()
+  const { messages: historyEntries, limits, activeChatId, removeChat, refreshChats, upsertMessage, activeRunByChatId } = useChatSidebar()
   const { logout, user } = useAuth()
   const isCollapsed = sidebar.state === "collapsed"
   const inboxCount = useInboxCount(Boolean(user))
@@ -222,10 +222,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     )
   }, [historyEntries, searchQuery])
 
-  const filteredHistory = useMemo(
-    () => filteredEntries.filter((entry) => !entry.projectId),
-    [filteredEntries]
-  )
+  // The limit applies to each group on its own: the history and every project
+  // folder show their newest entries. A search shows every hit.
+  const searching = searchQuery.trim().length > 0
+  const groupLimit = searching ? undefined : limits.messages
+  const filteredHistory = useMemo(() => {
+    const history = filteredEntries.filter((entry) => !entry.projectId)
+    return groupLimit ? history.slice(0, groupLimit) : history
+  }, [filteredEntries, groupLimit])
 
   const buildProjectTree = useCallback(() => {
     const map = new Map<string, any>()
@@ -535,6 +539,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 onDeleteChat={handleDeleteProjectChat}
                 onCreateChat={handleCreateProjectChat}
                 moveTargets={flattenedProjects}
+                chatLimit={groupLimit}
+                forceOpen={searching}
               />
             </div>
           </SidebarGroupContent>

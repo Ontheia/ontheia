@@ -451,9 +451,9 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       };
       const next = [...filtered, nextEntry];
       next.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      return next.slice(0, limits.messages);
+      return next;
     });
-  }, [limits.messages]);
+  }, []);
 
 
   const upsertRunStatus = useCallback((status: RunStatusEntry) => {
@@ -697,8 +697,13 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
           setChatPreferencesState((prev) => ({ ...prev, ...newPreferences }));
         }
 
+        // The full list stays here. The sidebar applies the limit per group
+        // (history, each project): cut here, a busy project used up every
+        // slot and the history showed nothing, older project chats vanished
+        // from their folders, and the search could not find them.
         chatEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setMessages(chatEntries.slice(0, limit));
+        void limit;
+        setMessages(chatEntries);
       }
     },
     []

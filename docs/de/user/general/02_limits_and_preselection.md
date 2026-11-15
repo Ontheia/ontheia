@@ -4,7 +4,7 @@ Optimiere deine Arbeitsabläufe durch individuelle Standardeinstellungen.
 
 ## 1. Sidebar Verlauf & Limits
 Steuere, wie viel Historie Ontheia in der linken Sidebar für den schnellen Zugriff bereitstellt:
-- **Nachrichten (Chats):** Anzahl der angezeigten letzten Untergespräche.
+- **Nachrichten (Chats):** Anzahl der neuesten Chats im Verlauf und in jedem Projektordner, je Gruppe getrennt. Ein Projekt, in das eine Automatisierung viele Chats schreibt, nimmt dem Verlauf damit keinen Platz weg. Weitere Chats eines Projekts lassen sich im Ordner mit „N weitere" aufklappen; die Suche findet alle Chats.
 - **Status-Meldungen & Warnungen:** Begrenzung der Einträge in den Aktivitätslisten.
 - **Bereich:** 5 bis 50 Einträge.
 

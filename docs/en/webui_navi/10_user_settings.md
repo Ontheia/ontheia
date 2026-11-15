@@ -29,7 +29,7 @@ Controls how many entries are shown in the sidebar (min. 5, max. 50).
 
 | Field | Type | Description |
 | --- | --- | --- |
-| Messages (Chats) | Number | Maximum number of chats shown in the sidebar. |
+| Messages (Chats) | Number | Number of newest chats the history and each project folder show in the sidebar; the limit applies to each group separately. If a project has more chats, its folder ends with "N more". A search shows every hit. |
 | Status Messages | Number | Maximum number of status messages shown. |
 | Warnings | Number | Maximum number of warnings shown. |
 

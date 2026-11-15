@@ -60,6 +60,8 @@ export function NavProjects({
   onDeleteChat,
   onCreateChat,
   moveTargets,
+  chatLimit,
+  forceOpen = false,
 }: {
   projects: {
     id: string
@@ -86,11 +88,17 @@ export function NavProjects({
   onDeleteChat?: (id: string) => void
   onCreateChat?: (projectId: string) => void
   moveTargets?: { id: string; name: string }[]
+  /** Newest chats shown per folder before "N more"; undefined shows all. */
+  chatLimit?: number
+  /** Opens every folder that holds a match, used while searching. */
+  forceOpen?: boolean
 }) {
   const { t } = useTranslation(["sidebar", "common"])
   const { isMobile } = useSidebar()
   const location = useLocation()
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({})
+  // Folders whose chats are shown in full instead of the newest few.
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
 
   const toggleFolder = (id: string) => {
     setOpenFolders((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -289,12 +297,35 @@ export function NavProjects({
       </>
     )
 
+    const children: any[] = Array.isArray(node.children) ? node.children : []
+    const isOpen = forceOpen ? children.length > 0 : Boolean(openFolders[node.id])
+    const subfolders = children.filter((child) => (child.type ?? "item") === "folder")
+    const chats = children.filter((child) => (child.type ?? "item") !== "folder")
+    const expanded = Boolean(expandedFolders[node.id])
+    const visibleChats = chatLimit && !expanded ? chats.slice(0, chatLimit) : chats
+    const hiddenCount = chats.length - visibleChats.length
+
     return (
       <SidebarMenuItem key={node.id}>
         {itemContent}
-        {isFolder && node.children && openFolders[node.id] && node.children.length > 0 ? (
+        {isFolder && isOpen ? (
           <>
-            {node.children.map((child: any) => renderNode(child, depth + 1))}
+            {subfolders.map((child) => renderNode(child, depth + 1))}
+            {visibleChats.map((child) => renderNode(child, depth + 1))}
+            {chatLimit && chats.length > chatLimit ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="sidebar-project-button text-muted-foreground"
+                  onClick={() => setExpandedFolders((prev) => ({ ...prev, [node.id]: !expanded }))}
+                >
+                  <span className="truncate">
+                    {expanded
+                      ? t("showFewerChats", { ns: "sidebar" })
+                      : t("showMoreChats", { ns: "sidebar", count: hiddenCount })}
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
           </>
         ) : null}
       </SidebarMenuItem>
