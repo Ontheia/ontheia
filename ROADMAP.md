@@ -6,9 +6,28 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.7.x — Security & Platform Refresh
+## Current: v0.8.x — Triggers & Inbox
 
-Building on the v0.6.x feature base. Shipped with 0.7.0:
+Ontheia reacts to events, not only to the chat and the clock. Shipped with 0.8.0:
+
+- **Webhook triggers** — any system that can send an HTTP request starts an agent or a chain: a mail watcher, a document system, a sensor. Each trigger has its own address and token, a rate limit and its own approval setting; the received JSON reaches the prompt through placeholders and is marked as data, not instructions. Admins can set up triggers for other users.
+- **Inbox for unattended work** — runs from triggers and schedules report results and errors here, and a tool call can wait for approval: once, for the whole run, or denied. An unanswered approval counts as denied after a configurable time.
+- **Runs end with an answer at their limits** — a run that reaches its tool-call cap or time limit gets one last request without tools and reports what is done and what is open, instead of stopping with nothing. Agents can carry their own tool-call cap, a single tool result is cut to a configurable length before it reaches the model, and the tool loop timeout set in the admin console now actually applies.
+- **Tool errors recognised** — a tool result flagged as an error counts as a failed call in the trace and reaches the model as an error
+- **Automation chats in projects** — the chats a trigger or job creates can be filed under a project; a job or trigger that continues a fixed chat now loads its history correctly
+- **MCP servers show their current state** — a status line for a failed start or a server without tools, the recent starts, stops and failures, and an API that reports the same. The package check for `uvx` reads every option correctly and covers `--with` packages, and auto-start skips a rejected server instead of starting none.
+- **cli-server 2.3.0** — the allowed commands are part of the tool definition, a command given with a path is refused, and errors name the allowed commands
+- **Smaller things** — memory tools carry their upkeep rules in their descriptions, the sidebar chat limit applies per project and to the history separately, and the MCP server list shows which agents use a server
+
+Breaking changes in 0.8.0:
+
+- **`uvx` configurations are checked more strictly** — the main package is no longer confused with an option's value, and every `--with` package must be allowlisted too. A configuration that passed before only because the wrong argument was checked is now refused; on auto-start that server stays down and shows "Start failed" with the reason, the others start.
+- **Run limits no longer end in an error** — a run at its tool-call cap or time limit completes with a closing answer and a `run_limit_reached` warning. Only when that answer fails does the run end with an error, now always `tool_call_limit_exceeded` or `tool_loop_timeout`; the codes `limit` and `timeout` are gone.
+- **The tool loop timeout setting applies** — it was ignored and every run used 600 seconds. An installation that set another value gets that value now.
+- **Tool errors are errors** — a tool result with `isError: true` is recorded with `status: error` instead of `success`.
+- **cli-server refuses paths** — `execute` takes a command name only; `/bin/ls` is rejected.
+
+Shipped with 0.7.0:
 
 - **Server control behind sign-in** — starting, stopping and validating MCP servers is admin-only, the process list and tool approvals need a session, and an approval can only be answered by the owner of the run. The unused memory bridge routes, which accepted any caller, are gone.
 - **Replace a model in one step** — when a successor model arrives, the admin console moves every agent, active chain and system setting from the old model to the new one, across providers if needed, with a preview to deselect individual places. Chains get a new version, so the previous one stays restorable.
@@ -71,7 +90,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.7.x)
+## Near-term (v0.8.x)
 
 | Feature | Description |
 |---|---|
@@ -79,13 +98,13 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Mid-term (v0.8+)
+## Mid-term (v0.9+)
 
 | Feature | Description |
 |---|---|
 | **Docker Hub / GHCR Images** | Pre-built images for direct `docker pull` — no local build step required |
 | **Bulk Ingest: More Formats** | Extend document ingestion beyond MD and PDF: HTML, DOCX, PPTX, CSV, XLSX |
-| **Notifications** | Notify via external channels when runs complete or fail |
+| **Notifications** | Notify via external channels (mail, messenger, push) when runs complete, fail or wait for approval — beyond the in-app inbox |
 | **Cost Tracking** | Cost calculation per provider/model on top of the shipped per-run token usage, with usage dashboard |
 | **Voice (TTS / STT)** | Speech input and output in chat — provider infrastructure already prepared |
 | **Chat Search** | Full-text search across chat history |
