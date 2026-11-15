@@ -5948,9 +5948,7 @@ function AgentsSection({
                             })()}
                           </label>
                         ) : (
-                          <div className="empty-state-container py-4">
-                            <p className="empty-state-text">{t('agents.noMcp')}</p>
-                          </div>
+                          <p className="muted text-xs">{t('agents.noMcp')}</p>
                         )}
                       </div>
                       {availableSkills.length > 0 && (
@@ -5999,9 +5997,7 @@ function AgentsSection({
                             ))}
                           </ul>
                         ) : (
-                          <div className="empty-state-container py-4">
-                            <p className="empty-state-text">{t('agents.noTasks')}</p>
-                          </div>
+                          <p className="muted text-xs">{t('agents.noTasks')}</p>
                         )}
                       </div>
                       <div className="admin-agent-tasks">
@@ -6036,9 +6032,7 @@ function AgentsSection({
                               ))}
                           </ul>
                         ) : (
-                          <div className="empty-state-container py-4">
-                            <p className="empty-state-text">{t('agents.noChains')}</p>
-                          </div>
+                          <p className="muted text-xs">{t('agents.noChains')}</p>
                         )}
                       </div>
                       <div className="admin-agent-remove" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
