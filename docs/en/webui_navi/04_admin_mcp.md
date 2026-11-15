@@ -42,7 +42,9 @@ Buttons: **[Save Configuration]** · **[Validate]** · **[Dry Run]** · **[Stop 
 
 **Saved MCP Servers (Accordion):**
 
-Each saved server appears as a collapsible entry. When expanded: Command, Last Start, Status Time, Validated / Auto-Start, the assigned agents, and the list of available tools.
+Each saved server appears as a collapsible entry. If something is wrong, a **status line** appears at the top: "Start failed on …: <error line>" (red) or "Running since … · no tools loaded" (amber). It follows the current state; an old error from an earlier start does not appear there. When the server runs normally, the line is not shown. **Recent events** lists the five latest start, stop and failure events with their time, and the most recently written log excerpt with its date.
+
+When expanded, also shown: Command, Last Start, Status Time, Validated / Auto-Start, the assigned agents, and the list of available tools.
 
 **Assigned agents** shows which agents carry the server in their configuration. An agent marked "no tool" has the server assigned but none of its tools bound; it cannot see the server as long as it has any tools bound at all. Tools are bound under Agents → Tools.
 

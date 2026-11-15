@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { errorLineOf } from './server-status.js';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -354,7 +355,8 @@ export class OrchestratorService {
         if (!options?.dryRun) {
           await this.recordStatus(name, {
             status: 'failed',
-            logExcerpt: `Secrets missing: ${spec.missingSecrets.join(', ')}`
+            logExcerpt: `Secrets missing: ${spec.missingSecrets.join(', ')}`,
+            event: { kind: 'start_failed', message: `Secrets missing: ${spec.missingSecrets.join(', ')}` }
           });
         }
         continue;
@@ -420,7 +422,16 @@ export class OrchestratorService {
           launch[name] = 'started';
           this.logger.info({ server: name, command: spec.command, url: spec.url }, isRemote ? 'MCP server connected (remote)' : 'MCP server (stdio) started');
           if (!options?.dryRun) {
-            await this.recordStatus(name, { status: 'running', startedAt: new Date() });
+            // The tools are listed once right away: until someone asked, the
+            // count was unknown and every running server looked like one
+            // without tools. A failed listing does not fail the start.
+            let toolCount: number | null = null;
+            try {
+              toolCount = (await this.listTools(name)).length;
+            } catch (err) {
+              this.logger.warn({ server: name, err: err instanceof Error ? err.message : String(err) }, 'Tool listing after start failed');
+            }
+            await this.recordStatus(name, { status: 'running', startedAt: new Date(), event: { kind: 'start_ok', toolCount } });
           }
         } catch (error) {
           launch[name] = 'failed';
@@ -439,7 +450,8 @@ export class OrchestratorService {
           if (!options?.dryRun) {
             await this.recordStatus(name, {
               status: 'failed',
-              logExcerpt
+              logExcerpt,
+              event: { kind: 'start_failed', message: errorLineOf(logExcerpt) }
             });
           }
         }
@@ -526,7 +538,7 @@ export class OrchestratorService {
       await client.stop();
       this.clients.delete(name);
       this.toolCache.delete(name);
-      await this.recordStatus(name, { status: 'stopped', stoppedAt: new Date() });
+      await this.recordStatus(name, { status: 'stopped', stoppedAt: new Date(), event: { kind: 'stop' } });
       return { status: 'stopped' as const };
     }
     return this.runner.stop(name);
@@ -707,6 +719,16 @@ export class OrchestratorService {
     return tools;
   }
 
+  /** Tools of a running server as last listed; null before the first listing. */
+  getCachedToolCount(serverName: string): number | null {
+    return this.toolCache.get(serverName)?.tools.length ?? null;
+  }
+
+  /** Whether a client for this server is connected in this host process. */
+  isConnected(serverName: string): boolean {
+    return this.clients.has(serverName) || this.runner.list().some((p: { name: string; status: string }) => p.name === serverName && p.status === 'running');
+  }
+
   getToolCacheMeta(serverName: string) {
     const entry = this.toolCache.get(serverName);
     if (!entry) {
@@ -843,7 +865,7 @@ export class OrchestratorService {
 
   private async handleRunnerLifecycle(event: RunnerLifecycleEvent) {
     if (event.type === 'running') {
-      await this.recordStatus(event.name, { status: 'running', startedAt: new Date(event.startedAt) });
+      await this.recordStatus(event.name, { status: 'running', startedAt: new Date(event.startedAt), event: { kind: 'start_ok' } });
       return;
     }
     const stoppedAt = new Date();
@@ -853,7 +875,10 @@ export class OrchestratorService {
       exitCode: event.exitCode ?? null,
       signal: event.signal ?? null,
       stoppedAt,
-      logExcerpt
+      logExcerpt,
+      event: event.type === 'stopped'
+        ? { kind: 'stop' }
+        : { kind: 'crash', message: errorLineOf(logExcerpt) ?? (event.exitCode != null ? `Exit code ${event.exitCode}` : null) }
     });
   }
 

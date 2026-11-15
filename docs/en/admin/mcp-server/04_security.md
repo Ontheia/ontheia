@@ -8,7 +8,11 @@ Before a process is started, the orchestrator verifies compliance with global se
 ### Available Lists:
 - **Docker Images (`config/allowlist.images`):** Names or patterns of permitted Docker images (e.g., `node:20-alpine`, `python:3.11-slim`). Every image used in an MCP configuration must be listed here.
 - **npm Packages (`config/allowlist.packages.npm`):** Names of packages that may be executed via `npx` (e.g., `@modelcontextprotocol/server-filesystem`).
-- **Python Packages (`config/allowlist.packages.pypi`):** Names of packages for `uvx` (e.g., `mcp-server-git`).
+- **Python Packages (`config/allowlist.packages.pypi`):** Names of packages for `uvx` (e.g., `mcp-server-git`). Every package `uvx` installs is checked:
+  - the main package, that is the value of `--from` or else the first argument that is neither an option nor an option's value (`--overrides file.txt` and `--overrides=file.txt` are treated alike);
+  - every package from `--with` or `-w`, exactly as written in the configuration (`mcp<2` needs the entry `mcp<2`).
+  Entries match exactly, version specifiers included: `postgres-mcp` does not allow `postgres-mcp==0.3.0`. For any version a pattern such as `postgres-mcp==*` works. Ontheia does not check the contents of a `--with-requirements` file.
+- **On auto-start** each configuration is checked on its own. A rejected configuration does not start and shows "Start failed" in the admin console; the other servers start regardless.
 - **Bun Packages (`config/allowlist.packages.bun`):** Names of packages that may be executed via `bunx`.
 - **Outbound Connections (`config/allowlist.urls`):** Controls which external URLs MCP servers are permitted to call (egress control).
 

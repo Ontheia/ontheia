@@ -8,7 +8,11 @@ Bevor ein Prozess gestartet wird, prüft der Orchestrator die Einhaltung globale
 ### Verfügbare Listen:
 - **Docker-Bilder (`config/allowlist.images`):** Enthält Namen oder Patterns von erlaubten Docker-Images (z. B. `node:20-alpine`, `python:3.11-slim`). Jedes Image, das in einer MCP-Konfiguration verwendet wird, muss hier eingetragen sein.
 - **npm-Pakete (`config/allowlist.packages.npm`):** Namen von Paketen, die via `npx` ausgeführt werden dürfen (z. B. `@modelcontextprotocol/server-filesystem`).
-- **Python-Pakete (`config/allowlist.packages.pypi`):** Namen von Paketen für `uvx` (z. B. `mcp-server-git`).
+- **Python-Pakete (`config/allowlist.packages.pypi`):** Namen von Paketen für `uvx` (z. B. `mcp-server-git`). Geprüft werden alle Pakete, die `uvx` installiert:
+  - das Hauptpaket, also der Wert von `--from` oder sonst das erste Argument, das weder Option noch Wert einer Option ist (`--overrides datei.txt` und `--overrides=datei.txt` gelten gleich);
+  - jedes Paket aus `--with` bzw. `-w`, genau so geschrieben wie in der Konfiguration (`mcp<2` braucht den Eintrag `mcp<2`).
+  Einträge vergleichen exakt, Versionsangaben eingeschlossen: `postgres-mcp` erlaubt nicht `postgres-mcp==0.3.0`. Für beliebige Versionen eignet sich ein Muster wie `postgres-mcp==*`. Den Inhalt einer Datei aus `--with-requirements` prüft Ontheia nicht.
+- **Beim Autostart** wird jede Konfiguration einzeln geprüft. Eine abgelehnte Konfiguration startet nicht und zeigt in der Admin-Konsole „Start fehlgeschlagen"; die übrigen Server starten trotzdem.
 - **Ausgehende Verbindungen (`config/allowlist.urls`):** Regelt, welche externen URLs die MCP-Server aufrufen dürfen (Egress-Kontrolle).
 
 ### Wann und wie eintragen?

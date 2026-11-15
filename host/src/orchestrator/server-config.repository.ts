@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import type { ServerEvent, ServerEventKind } from './server-status.js';
 import type { Queryable } from '../providers/repository.js';
 
 export interface McpServerConfigRecord {
@@ -38,6 +39,10 @@ export interface McpServerConfigRecord {
   exit_code?: number | null;
   signal?: string | null;
   log_excerpt?: string | null;
+  /** When log_excerpt was written. */
+  log_excerpt_at?: string | null;
+  /** Newest first, at most 20. */
+  recent_events?: ServerEvent[];
 }
 
 export interface UpsertServerConfigParams {
@@ -57,6 +62,8 @@ export interface ServerStatusUpdateParams {
   startedAt?: Date | null;
   stoppedAt?: Date | null;
   logExcerpt?: string | null;
+  /** Recorded in the server's event list together with the status. */
+  event?: { kind: ServerEventKind; message?: string | null; toolCount?: number | null };
 }
 
 function mapRow(row: any): McpServerConfigRecord {
@@ -75,7 +82,8 @@ function mapRow(row: any): McpServerConfigRecord {
     last_stopped_at: row.last_stopped_at ? new Date(row.last_stopped_at).toISOString() : null,
     exit_code: row.exit_code ?? null,
     signal: row.signal ?? null,
-    log_excerpt: row.log_excerpt ?? null
+    log_excerpt: row.log_excerpt ?? null,
+    log_excerpt_at: row.log_excerpt_at ? new Date(row.log_excerpt_at).toISOString() : null
   };
 }
 
@@ -88,12 +96,47 @@ export async function listServerConfigs(db: Queryable): Promise<McpServerConfigR
         st.last_stopped_at,
         st.exit_code,
         st.signal,
-        st.log_excerpt
+        st.log_excerpt,
+        st.log_excerpt_at
      FROM app.mcp_server_configs cfg
      LEFT JOIN app.mcp_server_status st ON st.name = cfg.name
      ORDER BY cfg.name ASC`
   );
-  return result.rows.map(mapRow);
+  const records = result.rows.map(mapRow);
+  const events = await loadRecentServerEvents(db);
+  for (const record of records) record.recent_events = events.get(record.name) ?? [];
+  return records;
+}
+
+const EVENTS_KEPT = 20;
+
+/** The newest events of every server, newest first. */
+async function loadRecentServerEvents(db: Queryable): Promise<Map<string, ServerEvent[]>> {
+  const map = new Map<string, ServerEvent[]>();
+  try {
+    const result = await db.query(
+      `SELECT name, at, kind, message, tool_count FROM (
+         SELECT *, row_number() OVER (PARTITION BY name ORDER BY at DESC, id DESC) AS rn
+           FROM app.mcp_server_events
+       ) e
+       WHERE rn <= $1
+       ORDER BY name, at DESC, id DESC`,
+      [EVENTS_KEPT]
+    );
+    for (const row of result.rows) {
+      const list = map.get(row.name) ?? [];
+      list.push({
+        at: new Date(row.at).toISOString(),
+        kind: row.kind,
+        message: row.message ?? null,
+        tool_count: row.tool_count ?? null
+      });
+      map.set(row.name, list);
+    }
+  } catch {
+    // Before V90 there is no event table; the configs are still listed.
+  }
+  return map;
 }
 
 export async function upsertServerConfig(
@@ -144,7 +187,8 @@ export async function getServerConfigsMap(
         st.last_stopped_at,
         st.exit_code,
         st.signal,
-        st.log_excerpt
+        st.log_excerpt,
+        st.log_excerpt_at
      FROM app.mcp_server_configs cfg
      LEFT JOIN app.mcp_server_status st ON st.name = cfg.name
      WHERE cfg.name = ANY($1::text[])`,
@@ -170,6 +214,8 @@ export async function updateServerStatus(db: Queryable, params: ServerStatusUpda
           exit_code = COALESCE(EXCLUDED.exit_code, app.mcp_server_status.exit_code),
           signal = COALESCE(EXCLUDED.signal, app.mcp_server_status.signal),
           log_excerpt = COALESCE(EXCLUDED.log_excerpt, app.mcp_server_status.log_excerpt),
+          log_excerpt_at = CASE WHEN EXCLUDED.log_excerpt IS NOT NULL THEN now()
+                                ELSE app.mcp_server_status.log_excerpt_at END,
           updated_at = now()
     `,
     [
@@ -182,4 +228,16 @@ export async function updateServerStatus(db: Queryable, params: ServerStatusUpda
       params.logExcerpt ?? null
     ]
   );
+  if (params.event) {
+    await db.query(
+      `INSERT INTO app.mcp_server_events (name, kind, message, tool_count) VALUES ($1, $2, $3, $4)`,
+      [params.name, params.event.kind, params.event.message ?? null, params.event.toolCount ?? null]
+    );
+    await db.query(
+      `DELETE FROM app.mcp_server_events
+        WHERE name = $1
+          AND id NOT IN (SELECT id FROM app.mcp_server_events WHERE name = $1 ORDER BY at DESC, id DESC LIMIT $2)`,
+      [params.name, EVENTS_KEPT]
+    );
+  }
 }

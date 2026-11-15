@@ -42,7 +42,9 @@ Buttons: **[Konfiguration speichern]** · **[Validieren]** · **[Dry Run]** · *
 
 **Gespeicherte MCP-Server (Akkordeon):**
 
-Jeder gespeicherte Server wird als aufklappbarer Eintrag angezeigt. Im geöffneten Zustand sichtbar: Befehl, Letzter Start, Statuszeit, Validiert / Auto-Start, die zugewiesenen Agenten und die Liste der verfügbaren Tools.
+Jeder gespeicherte Server wird als aufklappbarer Eintrag angezeigt. Stimmt etwas nicht, steht ganz oben eine **Statuszeile**: „Start fehlgeschlagen am …: <Fehlerzeile>" (rot) oder „Läuft seit … · keine Tools geladen" (gelb). Sie richtet sich nach dem aktuellen Zustand; ein alter Fehler eines früheren Starts erscheint dort nicht. Läuft der Server normal, entfällt sie. Unter **Letzte Meldungen** stehen die fünf jüngsten Start-, Stopp- und Fehlerereignisse mit Zeitpunkt sowie der zuletzt geschriebene Protokollauszug mit seinem Datum.
+
+Im geöffneten Zustand außerdem sichtbar: Befehl, Letzter Start, Statuszeit, Validiert / Auto-Start, die zugewiesenen Agenten und die Liste der verfügbaren Tools.
 
 **Zugewiesene Agenten** zeigt, welche Agenten den Server in ihrer Konfiguration führen. Ein Agent mit dem Zusatz „kein Tool" hat den Server zugewiesen, aber keines seiner Tools gebunden; er sieht den Server nicht, solange er überhaupt Tools gebunden hat. Die Bindung erfolgt unter Agenten → Tools.
 

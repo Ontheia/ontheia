@@ -127,6 +127,27 @@ export type McpServerConfig = {
   exit_code?: number | null;
   signal?: string | null;
   log_excerpt?: string | null;
+  log_excerpt_at?: string | null;
+  /** Newest first. */
+  recent_events?: McpServerEvent[];
+  /** Built by the host from the current state; see status_message for an English sentence. */
+  status_summary?: McpServerStatusSummary;
+  status_message?: string;
+};
+
+export type McpServerEvent = {
+  at: string;
+  kind: 'start_ok' | 'start_failed' | 'stop' | 'crash';
+  message: string | null;
+  tool_count: number | null;
+};
+
+export type McpServerStatusSummary = {
+  state: 'running' | 'running_no_tools' | 'failed' | 'stopped' | 'starting' | 'never_started';
+  since: string | null;
+  tool_count: number | null;
+  error: string | null;
+  auto_start: boolean;
 };
 
 export function listServerConfigs() {

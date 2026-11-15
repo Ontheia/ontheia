@@ -22,7 +22,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateMcpServersConfig, type ValidationDeps } from './validator.js';
+import { readUvxPackages, validateMcpServersConfig, type ValidationDeps } from './validator.js';
 
 const deps: ValidationDeps = {
   imageAllowlist: ['mcp/filesystem-server', 'alpine:3'],
@@ -292,4 +292,44 @@ test('still accepts a named network and --pid with another value', () => {
   );
 
   assert.equal(result.valid, true, JSON.stringify(result.errors));
+});
+
+const uvxDeps: ValidationDeps = {
+  ...deps,
+  packageAllowlist: { ...deps.packageAllowlist, pypi: ['postgres-mcp==0.2.1', 'mcp<2', '/srv/fakt-mcp-server'] }
+};
+const uvx = (args: string[]) =>
+  validateMcpServersConfig({ mcpServers: { srv: { command: 'uvx', args } } }, uvxDeps);
+
+test('uvx: an option value is not taken for the package', () => {
+  for (const args of [
+    ['--overrides', '/app/config/o.txt', '--with', 'mcp<2', 'postgres-mcp==0.2.1', '--access-mode=unrestricted'],
+    ['--overrides=/app/config/o.txt', '--with', 'mcp<2', 'postgres-mcp==0.2.1']
+  ]) {
+    assert.deepEqual(readUvxPackages(args), { main: 'postgres-mcp==0.2.1', extra: ['mcp<2'] });
+    assert.equal(uvx(args).valid, true, args.join(' '));
+  }
+});
+
+test('uvx: the main package is checked, not the value of --with', () => {
+  // Before, "mcp<2" was checked here and the unlisted version slipped through.
+  const result = uvx(['--with', 'mcp<2', 'postgres-mcp==0.3.0']);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((err) => err.message.includes('Package postgres-mcp==0.3.0 is not in the allowlist')));
+});
+
+test('uvx: a --with package must be allowlisted too', () => {
+  const result = uvx(['--with', 'unlisted-helper', 'postgres-mcp==0.2.1']);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((err) => err.message.includes('Package unlisted-helper is not in the allowlist')));
+});
+
+test('uvx: --from names the package, the next argument is the command', () => {
+  const args = ['--with', 'mcp<2', '--from', '/srv/fakt-mcp-server', 'fakt-mcp-server'];
+  assert.deepEqual(readUvxPackages(args), { main: '/srv/fakt-mcp-server', extra: ['mcp<2'] });
+  assert.equal(uvx(args).valid, true);
+});
+
+test('uvx: arguments after the command belong to the server', () => {
+  assert.deepEqual(readUvxPackages(['postgres-mcp==0.2.1', '--with', 'x']), { main: 'postgres-mcp==0.2.1', extra: [] });
 });

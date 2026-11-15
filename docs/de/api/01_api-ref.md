@@ -306,7 +306,7 @@ Verwaltung von Model Context Protocol Servern und Tool-Konfigurationen.
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `GET` | `/servers/configs` | Listet MCP-Server-Konfigurationen auf. |
+| `GET` | `/servers/configs` | Listet MCP-Server-Konfigurationen auf. Jeder Eintrag enthält `status_summary` (`state`: `running`, `running_no_tools`, `failed`, `stopped`, `starting`, `never_started`; dazu `since`, `tool_count`, `error`), `status_message` (derselbe Zustand als englischer Satz) und `recent_events` (bis zu 20 Ereignisse, neueste zuerst: `at`, `kind` = `start_ok` \| `start_failed` \| `stop` \| `crash`, `message`, `tool_count`). |
 | `POST` | `/servers/configs` | Speichert/Aktualisiert eine MCP-Server-Konfiguration. |
 | `DELETE` | `/servers/configs/:name` | Löscht eine MCP-Server-Konfiguration. |
 | `POST` | `/servers/validate` | Prüft eine Konfiguration auf Korrektheit. Nur Admin. |

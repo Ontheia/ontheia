@@ -252,7 +252,11 @@ function validatePackageSpec(
     errors.push({ message: `Server ${name}: args must not be empty.`, code: 'args_empty' });
     return;
   }
-  const pkg = (() => {
+  // uvx gets its own reading: options that take a value would otherwise have
+  // their value taken for the package, and `--from` / `--with` name packages
+  // of their own. See readUvxPackages.
+  const uvx = spec.command === 'uvx' ? readUvxPackages(args) : null;
+  const pkg = uvx ? uvx.main : (() => {
     for (const raw of args) {
       const token = raw.trim();
       if (!token || token.startsWith('-')) continue;
@@ -278,13 +282,69 @@ function validatePackageSpec(
     list = allowlists.bun;
     file = 'config/allowlist.packages.bun';
   }
-  if (!matchesAllowlist(pkg, list)) {
-    errors.push({
-      message: `Server ${name}: Package ${pkg} is not in the allowlist for ${spec.command}.`,
-      code: 'package_not_allowlisted',
-      details: { name, package: pkg, command: spec.command, file }
-    });
+  // Packages added with --with are installed just like the main one, so the
+  // allowlist covers them too.
+  for (const candidate of [pkg, ...(uvx?.extra ?? [])]) {
+    if (!matchesAllowlist(candidate, list)) {
+      errors.push({
+        message: `Server ${name}: Package ${candidate} is not in the allowlist for ${spec.command}.`,
+        code: 'package_not_allowlisted',
+        details: { name, package: candidate, command: spec.command, file }
+      });
+    }
   }
+}
+
+// `uvx` (uv tool run) options that take a value as the next token. Without
+// them the value was taken for the package: `--overrides file.txt` was
+// refused as package "file.txt", and `--with mcp<2 postgres-mcp` checked
+// "mcp<2" instead of postgres-mcp. The `--opt=value` form needs no entry.
+const UVX_FLAGS_WITH_VALUES = new Set([
+  '--from', '--with', '-w', '--with-editable', '--with-requirements',
+  '--python', '-p', '--index', '--default-index', '--index-url', '-i', '--extra-index-url',
+  '--find-links', '-f', '--index-strategy', '--keyring-provider', '--allow-insecure-host',
+  '--resolution', '--prerelease', '--fork-strategy', '--exclude-newer', '--exclude-newer-package',
+  '--overrides', '--constraints', '-c', '--build-constraints', '-b',
+  '--no-build-package', '--no-binary-package', '--refresh-package', '--reinstall-package',
+  '--upgrade-package', '-P', '--config-setting', '-C', '--link-mode', '--python-platform',
+  '--python-preference', '--env-file', '--cache-dir', '--directory', '--project',
+  '--config-file', '--color', '--torch-backend'
+]);
+
+/**
+ * The packages an uvx call installs: the main one (the value of `--from`, or
+ * else the first argument that is neither an option nor an option's value)
+ * and every `--with` / `-w` package. A `--with` value is checked as written;
+ * a comma inside it can be part of a version range ("mcp>=1,<2"), so it is not
+ * split. `--with-requirements` names a file whose contents are not checked.
+ */
+export function readUvxPackages(args: string[]): { main: string | undefined; extra: string[] } {
+  let from: string | undefined;
+  let positional: string | undefined;
+  const extra: string[] = [];
+  const valueOf = (flag: string, token: string, next: string | undefined) =>
+    token === flag ? next : token.startsWith(`${flag}=`) ? token.slice(flag.length + 1) : undefined;
+
+  for (let i = 0; i < args.length; i += 1) {
+    const token = args[i].trim();
+    if (!token) continue;
+    if (token === '--') break;
+    if (token.startsWith('-')) {
+      const next = args[i + 1]?.trim();
+      const fromValue = valueOf('--from', token, next);
+      if (fromValue !== undefined) from = fromValue;
+      for (const flag of ['--with', '-w']) {
+        const withValue = valueOf(flag, token, next);
+        if (withValue) extra.push(withValue);
+      }
+      if (UVX_FLAGS_WITH_VALUES.has(token)) i += 1;
+      continue;
+    }
+    // Everything after the command belongs to the server, not to uv.
+    positional = token;
+    break;
+  }
+  return { main: from ?? positional, extra };
 }
 
 // `docker run` options that take a value as the next token (`--opt value`). Without a complete

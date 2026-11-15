@@ -4779,6 +4779,32 @@ function McpServerSection({
                     </button>
                     {isOpen && (
                       <div className="admin-mcp-accordion-content">
+                        {(() => {
+                          // One line from the current state. The tool list loaded
+                          // here is fresher than the host's cache, so its count wins.
+                          const summary = row.record?.status_summary;
+                          if (!summary) return null;
+                          const toolCount = row.toolInfo ? row.toolInfo.tools.length : summary.tool_count;
+                          // Unknown is not none: only an empty listing is a warning.
+                          const state =
+                            summary.state === 'running' || summary.state === 'running_no_tools'
+                              ? (toolCount === 0 ? 'running_no_tools' : 'running')
+                              : summary.state;
+                          // Shown only when it says something the fields below do not:
+                          // a failed start with its reason, or a server without tools.
+                          // Running, stopped and starting are already in the header
+                          // badge, "Last started" and the tool list.
+                          if (state !== 'failed' && state !== 'running_no_tools') return null;
+                          const since = summary.since ? formatTimestamp(summary.since) : '–';
+                          const text =
+                            state === 'running_no_tools'
+                              ? t('mcp.stateRunningNoTools', { since })
+                              : summary.error
+                              ? t('mcp.stateFailed', { since, error: summary.error })
+                              : t('mcp.stateFailedNoReason', { since });
+                          const tone = state === 'failed' ? 'text-red-400' : 'text-amber-400';
+                          return <p className={`text-sm mb-3 ${tone}`}>{text}</p>;
+                        })()}
                         <div className="admin-mcp-meta-grid">
                           <div>
                             <span className="admin-mcp-meta-label">{t('mcp.command')}</span>
@@ -4965,14 +4991,37 @@ function McpServerSection({
                             </AlertDialog>
                           </div>
                         )}
-                        {row.logExcerpt ? (
-                          <details className="admin-mcp-logs">
-                            <summary>{t('mcp.showLogs')}</summary>
-                            <pre>{row.logExcerpt}</pre>
-                          </details>
-                        ) : (
-                          <span className="muted">{t('mcp.noLogs')}</span>
-                        )}
+                        {/* History, not state: an old error stays available for
+                            finding a cause but is no longer shown as the current one. */}
+                        <details className="admin-mcp-logs">
+                          <summary>{t('mcp.recentEvents')}</summary>
+                          {(row.record?.recent_events ?? []).length > 0 ? (
+                            <ul className="text-xs grid gap-1 my-2">
+                              {(row.record?.recent_events ?? []).slice(0, 5).map((event, index) => (
+                                <li key={`${event.at}-${index}`} className="flex gap-3">
+                                  <span className="text-slate-400 shrink-0">{formatTimestamp(event.at)}</span>
+                                  <span className={event.kind === 'start_failed' || event.kind === 'crash' ? 'text-red-400' : ''}>
+                                    {t(`mcp.event_${event.kind}`)}
+                                    {event.tool_count != null ? ` · ${t('mcp.eventTools', { count: event.tool_count })}` : ''}
+                                    {event.message ? `: ${event.message}` : ''}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="muted text-xs my-2">{t('mcp.noEvents')}</p>
+                          )}
+                          {row.logExcerpt ? (
+                            <details className="admin-mcp-logs">
+                              <summary>
+                                {row.record?.log_excerpt_at
+                                  ? t('mcp.logExcerptAt', { time: formatTimestamp(row.record.log_excerpt_at) })
+                                  : t('mcp.logExcerpt')}
+                              </summary>
+                              <pre>{row.logExcerpt}</pre>
+                            </details>
+                          ) : null}
+                        </details>
                       </div>
                     )}
                   </div>

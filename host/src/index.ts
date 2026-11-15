@@ -291,9 +291,32 @@ async function bootstrapAutoStartServers(attempt = 1, maxAttempts = 5) {
       server.log.info('No MCP auto-start configurations found.');
       return;
     }
+    // Each configuration is checked on its own. Validated as one payload, a
+    // single rejected server stopped the start of every other one.
     const payload: Record<string, any> = { mcpServers: {} };
     for (const row of result.rows) {
-      payload.mcpServers[row.name] = row.config ?? {};
+      const single = { mcpServers: { [row.name]: row.config ?? {} } };
+      const check = orchestrator.validate(single);
+      if (check.valid) {
+        payload.mcpServers[row.name] = row.config ?? {};
+        continue;
+      }
+      const reason = check.errors.map((err) => err.message).join(' ');
+      server.log.error({ server: row.name, errors: check.errors }, 'Auto-start skipped this MCP configuration (validation).');
+      try {
+        await updateServerStatus(dbPool, {
+          name: row.name,
+          status: 'failed',
+          logExcerpt: `Configuration rejected: ${reason}`,
+          event: { kind: 'start_failed', message: `Configuration rejected: ${reason}`.slice(0, 200) }
+        });
+      } catch (err) {
+        server.log.warn({ err, server: row.name }, 'Could not record the rejected configuration');
+      }
+    }
+    if (Object.keys(payload.mcpServers).length === 0) {
+      server.log.warn('No valid MCP auto-start configuration left to start.');
+      return;
     }
     const startResult = await orchestrator.start(payload);
     if (startResult.status === 'validation_failed') {

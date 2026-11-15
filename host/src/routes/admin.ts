@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { statusMessage, summarizeServerStatus } from '../orchestrator/server-status.js';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
@@ -379,7 +380,26 @@ export function registerAdminRoutes(server: FastifyInstance, context: RouteConte
   server.get('/servers/configs', async (request, reply) => {
     await requireSession(db, request, reply, { requireAdmin: true });
     const configs = await listServerConfigs(db);
-    return { configs };
+    // The state line is built from what the host sees now (connected, tools)
+    // and the latest event — never from the stored excerpt alone, which kept
+    // an old error on display for a server that has run fine since.
+    return {
+      configs: configs.map((config) => {
+        const summary = summarizeServerStatus({
+          storedStatus: config.status,
+          connected: orchestrator.isConnected(config.name),
+          toolCount: orchestrator.getCachedToolCount(config.name),
+          lastStartedAt: config.last_started_at,
+          lastStoppedAt: config.last_stopped_at,
+          logExcerpt: config.log_excerpt,
+          logExcerptAt: config.log_excerpt_at,
+          updatedAt: config.updated_at,
+          autoStart: config.auto_start,
+          recentEvents: config.recent_events ?? []
+        });
+        return { ...config, status_summary: summary, status_message: statusMessage(summary) };
+      })
+    };
   });
 
   server.post('/servers/configs', async (request, reply) => {
