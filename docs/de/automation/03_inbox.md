@@ -1,6 +1,6 @@
 # Posteingang
 
-Der Posteingang sammelt, was Läufe im Hintergrund dir vorlegen müssen: eine offene Tool-Freigabe, ein Ergebnis, einen Fehler. Hintergrundläufe sind Läufe aus einem [Zeitplan](./01_overview.md) oder einem [Trigger](./02_triggers.md). Läufe, die du im Chat startest, erzeugen keine Einträge; dort siehst du das Ergebnis direkt.
+Der Posteingang sammelt, was Läufe im Hintergrund dir vorlegen müssen: eine offene Tool-Freigabe, ein Ergebnis, einen Fehler. Hintergrundläufe sind Läufe aus einem [Zeitplan](/de/automation/01_overview/) oder einem [Trigger](/de/automation/02_triggers/). Läufe, die du im Chat startest, erzeugen keine Einträge; dort siehst du das Ergebnis direkt.
 
 **Pfad:** Linke Sidebar → **Posteingang**. Die Zahl daneben nennt die offenen Einträge und aktualisiert sich von selbst.
 

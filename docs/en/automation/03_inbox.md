@@ -1,6 +1,6 @@
 # Inbox
 
-The inbox collects what background runs need to put in front of you: a pending tool approval, a result, an error. Background runs are runs from a [schedule](./01_overview.md) or a [trigger](./02_triggers.md). Runs you start in the chat create no entries; there you see the result directly.
+The inbox collects what background runs need to put in front of you: a pending tool approval, a result, an error. Background runs are runs from a [schedule](/en/automation/01_overview/) or a [trigger](/en/automation/02_triggers/). Runs you start in the chat create no entries; there you see the result directly.
 
 **Path:** Left sidebar → **Inbox**. The number next to it is the count of open entries and updates on its own.
 

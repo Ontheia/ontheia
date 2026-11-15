@@ -160,7 +160,7 @@ docker compose up --build -d host webui
 
 ### Webhook-Trigger
 
-Die Adresse eines [Triggers](../automation/02_triggers.md) setzt sich aus `VITE_HOST_API_URL` und `/hooks/<id>` zusammen, hinter dem Proxy also `https://meine-domain.de/api/hooks/<id>`. Die Oberfläche zeigt diese Adresse beim Anlegen an. Ein eigener Proxy-Eintrag ist nicht nötig; der Eintrag für `/api/` deckt sie ab.
+Die Adresse eines [Triggers](/de/automation/02_triggers/) setzt sich aus `VITE_HOST_API_URL` und `/hooks/<id>` zusammen, hinter dem Proxy also `https://meine-domain.de/api/hooks/<id>`. Die Oberfläche zeigt diese Adresse beim Anlegen an. Ein eigener Proxy-Eintrag ist nicht nötig; der Eintrag für `/api/` deckt sie ab.
 
 ---
 
@@ -205,7 +205,7 @@ In `.env` steht dann `VITE_HOST_API_URL=https://192.168.1.10/api` und `ALLOWED_O
 
 > **Hinweis:** Browser zeigen eine Sicherheitswarnung für Self-Signed-Zertifikate. Das Zertifikat kann im Browser oder im Betriebssystem als vertrauenswürdig markiert werden.
 
-Dasselbe gilt für jeden Absender eines [Webhook-Triggers](../automation/02_triggers.md): Er lehnt die Verbindung ab, solange er dem Zertifikat nicht vertraut (`curl: (60) SSL certificate problem: self-signed certificate`). Gib dem Absender das Zertifikat mit, nicht den Schlüssel:
+Dasselbe gilt für jeden Absender eines [Webhook-Triggers](/de/automation/02_triggers/): Er lehnt die Verbindung ab, solange er dem Zertifikat nicht vertraut (`curl: (60) SSL certificate problem: self-signed certificate`). Gib dem Absender das Zertifikat mit, nicht den Schlüssel:
 
 ```bash
 curl --cacert ontheia.crt -X POST 'https://192.168.1.10/api/hooks/<id>' …

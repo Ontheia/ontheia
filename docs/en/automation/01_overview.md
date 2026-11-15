@@ -2,7 +2,7 @@
 
 Ontheia offers an integrated system for automating agent workflows via scheduled jobs. This allows for the execution of regular tasks (e.g., daily briefings, weekly reports, or continuous data processing) without manual interaction.
 
-This page describes runs on a schedule. Runs set off by another system are described in [Triggers (Webhook)](./02_triggers.md). What background runs put in front of you is collected in the [Inbox](./03_inbox.md).
+This page describes runs on a schedule. Runs set off by another system are described in [Triggers (Webhook)](/en/automation/02_triggers/). What background runs put in front of you is collected in the [Inbox](/en/automation/03_inbox/).
 
 ## Concepts
 
@@ -25,7 +25,7 @@ Each cron job is executed on behalf of a specific user. The job uses:
 ### Chat Continuation
 When a job has a **Chat Target** assigned, it loads the existing chat history on execution and continues the conversation in that chat. The chat history is automatically compressed via Rolling Summary if the context becomes too long. Without a chat target, each execution creates a new chat.
 
-What carries over are the messages and the agent's answers from earlier runs, not the individual tool results. The same holds for [triggers](./02_triggers.md) with a fixed chat.
+What carries over are the messages and the agent's answers from earlier runs, not the individual tool results. The same holds for [triggers](/en/automation/02_triggers/) with a fixed chat.
 
 ### Project for New Chats
 Jobs and triggers without a chat target create a new chat on every execution. With a **project for new chats** these chats go into the chosen project instead of the general chat list, so all runs of a trigger stay together. If the project is deleted, the automation remains and files its chats in the general list again.
@@ -38,10 +38,10 @@ Jobs and triggers without a chat target create a new chat on every execution. Wi
 To conserve resources and avoid logic conflicts, the **"Prevent Overlap"** option can be activated. If active, a scheduled run is skipped if the previous execution of the same job has not yet finished.
 
 ### Report the Result
-If the **"Report the result"** option is active, every run puts its result into the owner's [inbox](./03_inbox.md). If the user has enabled desktop notifications in their settings, a browser notification with a direct link to the chat is shown as well. A failed run reaches the inbox regardless of this option.
+If the **"Report the result"** option is active, every run puts its result into the owner's [inbox](/en/automation/03_inbox/). If the user has enabled desktop notifications in their settings, a browser notification with a direct link to the chat is shown as well. A failed run reaches the inbox regardless of this option.
 
 ### Tool Approval
-By default a job approves every tool call itself, because nobody sits at the screen to be asked. With **"Ask for approvals in the inbox"** every tool call waits in the inbox for an answer instead — except for tools the agent is always allowed to use. Without an answer, the approval counts as refused after the configured waiting time (default 24 hours) and the run carries on with that. Details: [Inbox › Approvals](./03_inbox.md#approvals).
+By default a job approves every tool call itself, because nobody sits at the screen to be asked. With **"Ask for approvals in the inbox"** every tool call waits in the inbox for an answer instead — except for tools the agent is always allowed to use. Without an answer, the approval counts as refused after the configured waiting time (default 24 hours) and the run carries on with that. Details: [Inbox › Approvals](/en/automation/03_inbox/#approvals).
 
 The option applies to jobs created in the interface or through the API. Jobs an agent creates through `create_schedule` approve their tool calls themselves.
 

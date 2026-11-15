@@ -160,7 +160,7 @@ docker compose up --build -d host webui
 
 ### Webhook Triggers
 
-The address of a [trigger](../automation/02_triggers.md) is `VITE_HOST_API_URL` followed by `/hooks/<id>`, so behind the proxy `https://my-domain.com/api/hooks/<id>`. The interface shows this address when the trigger is created. No proxy entry of its own is needed; the entry for `/api/` covers it.
+The address of a [trigger](/en/automation/02_triggers/) is `VITE_HOST_API_URL` followed by `/hooks/<id>`, so behind the proxy `https://my-domain.com/api/hooks/<id>`. The interface shows this address when the trigger is created. No proxy entry of its own is needed; the entry for `/api/` covers it.
 
 ---
 
@@ -205,7 +205,7 @@ Certificate and key must be readable by the Caddy service. Each block goes on li
 
 > **Note:** Browsers show a security warning for self-signed certificates. The certificate can be marked as trusted in your browser or operating system.
 
-The same applies to every sender of a [webhook trigger](../automation/02_triggers.md): it refuses the connection as long as it does not trust the certificate (`curl: (60) SSL certificate problem: self-signed certificate`). Hand the sender the certificate, not the key:
+The same applies to every sender of a [webhook trigger](/en/automation/02_triggers/): it refuses the connection as long as it does not trust the certificate (`curl: (60) SSL certificate problem: self-signed certificate`). Hand the sender the certificate, not the key:
 
 ```bash
 curl --cacert ontheia.crt -X POST 'https://192.168.1.10/api/hooks/<id>' …

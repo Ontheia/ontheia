@@ -2,7 +2,7 @@
 
 Ontheia bietet ein integriertes System zur Automatisierung von Agenten-Workflows über zeitgesteuerte Jobs. Dies ermöglicht es, regelmäßige Aufgaben (z. B. tägliche Briefings, wöchentliche Berichte oder kontinuierliche Datenverarbeitung) ohne manuelle Interaktion auszuführen.
 
-Diese Seite beschreibt Läufe nach Zeitplan. Läufe, die ein anderes System auslöst, beschreibt [Trigger (Webhook)](./02_triggers.md). Was Hintergrundläufe dir vorlegen, sammelt der [Posteingang](./03_inbox.md).
+Diese Seite beschreibt Läufe nach Zeitplan. Läufe, die ein anderes System auslöst, beschreibt [Trigger (Webhook)](/de/automation/02_triggers/). Was Hintergrundläufe dir vorlegen, sammelt der [Posteingang](/de/automation/03_inbox/).
 
 ## Konzepte
 
@@ -25,7 +25,7 @@ Jeder Cron-Job wird im Namen eines spezifischen Benutzers ausgeführt. Der Job n
 ### Chat-Fortsetzung
 Wird einem Job ein **Chat-Ziel** zugewiesen, lädt der Job beim Ausführen den bisherigen Chat-Verlauf und setzt die Konversation in diesem bestehenden Chat fort. Die Chat-History wird automatisch per Rolling Summary komprimiert, falls der Kontext zu lang wird. Ohne Chat-Ziel erstellt jede Ausführung einen neuen Chat.
 
-Übernommen werden die Nachrichten und die Antworten des Agenten aus den früheren Läufen, nicht die einzelnen Tool-Ergebnisse. Dasselbe gilt für [Trigger](./02_triggers.md) mit festem Chat.
+Übernommen werden die Nachrichten und die Antworten des Agenten aus den früheren Läufen, nicht die einzelnen Tool-Ergebnisse. Dasselbe gilt für [Trigger](/de/automation/02_triggers/) mit festem Chat.
 
 ### Projekt für neue Chats
 Jobs und Trigger ohne Chat-Ziel legen bei jeder Ausführung einen neuen Chat an. Mit einem **Projekt für neue Chats** landen diese Chats im gewählten Projekt statt in der allgemeinen Chat-Liste; alle Läufe eines Triggers stehen dann beisammen. Wird das Projekt gelöscht, bleibt die Automatisierung bestehen und legt ihre Chats wieder in der allgemeinen Liste ab.
@@ -38,10 +38,10 @@ Jobs und Trigger ohne Chat-Ziel legen bei jeder Ausführung einen neuen Chat an.
 Um Ressourcen zu schonen und Logik-Konflikte zu vermeiden, kann die Option **„Überlappung verhindern"** aktiviert werden. Ist diese aktiv, wird ein geplanter Lauf übersprungen, falls die vorherige Ausführung desselben Jobs noch nicht abgeschlossen ist.
 
 ### Ergebnis melden
-Ist die Option **„Ergebnis melden"** aktiv, legt jeder Lauf sein Ergebnis in den [Posteingang](./03_inbox.md) des Besitzers. Hat der Benutzer Desktop-Benachrichtigungen in seinen Einstellungen aktiviert, erscheint zusätzlich eine Browser-Notification mit Direktlink zum Chat. Ein fehlgeschlagener Lauf landet unabhängig von dieser Option im Posteingang.
+Ist die Option **„Ergebnis melden"** aktiv, legt jeder Lauf sein Ergebnis in den [Posteingang](/de/automation/03_inbox/) des Besitzers. Hat der Benutzer Desktop-Benachrichtigungen in seinen Einstellungen aktiviert, erscheint zusätzlich eine Browser-Notification mit Direktlink zum Chat. Ein fehlgeschlagener Lauf landet unabhängig von dieser Option im Posteingang.
 
 ### Tool-Freigabe
-Ein Job genehmigt sich standardmäßig jeden Tool-Aufruf selbst, weil niemand am Bildschirm sitzt, den er fragen könnte. Mit **„Freigaben im Posteingang anfragen"** wartet stattdessen jeder Tool-Aufruf im Posteingang auf eine Antwort – außer bei Tools, die der Agent immer nutzen darf. Bleibt die Antwort aus, gilt die Freigabe nach der eingestellten Wartezeit (Standard 24 Stunden) als abgelehnt, und der Lauf geht damit weiter. Details: [Posteingang › Freigaben](./03_inbox.md#freigaben).
+Ein Job genehmigt sich standardmäßig jeden Tool-Aufruf selbst, weil niemand am Bildschirm sitzt, den er fragen könnte. Mit **„Freigaben im Posteingang anfragen"** wartet stattdessen jeder Tool-Aufruf im Posteingang auf eine Antwort – außer bei Tools, die der Agent immer nutzen darf. Bleibt die Antwort aus, gilt die Freigabe nach der eingestellten Wartezeit (Standard 24 Stunden) als abgelehnt, und der Lauf geht damit weiter. Details: [Posteingang › Freigaben](/de/automation/03_inbox/#freigaben).
 
 Die Option gilt für Jobs, die in der Oberfläche oder über die API angelegt werden. Jobs, die ein Agent über `create_schedule` anlegt, genehmigen sich ihre Tool-Aufrufe selbst.
 

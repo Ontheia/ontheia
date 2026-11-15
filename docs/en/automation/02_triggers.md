@@ -52,7 +52,7 @@ curl -X POST 'https://my-domain.com/api/hooks/<id>' \
 
 The token is accepted in a header only, not in the address. In an address it ends up in the logs of every proxy on the way.
 
-The address is the base address of the host API followed by `/hooks/<id>`. Behind a reverse proxy set up as in the [guide](../configuration/04_reverse_proxy.md) it reads `https://my-domain.com/api/hooks/<id>`; the interface shows the correct address.
+The address is the base address of the host API followed by `/hooks/<id>`. Behind a reverse proxy set up as in the [guide](/en/configuration/04_reverse_proxy/) it reads `https://my-domain.com/api/hooks/<id>`; the interface shows the correct address.
 
 ### Responses
 
@@ -90,7 +90,7 @@ With an empty instruction the agent receives the data with the request to handle
 
 The received data comes from outside the installation. If it contains text that looks like an instruction, a language model may follow it. Ontheia counters this on three levels:
 
-1. **Tool approval through the inbox is the default.** On its own, the run may only use tools that are permanently allowed for the agent. Every other call waits for your answer in the [inbox](./03_inbox.md). This is the actual safeguard: whatever the data says, it cannot set anything off without you.
+1. **Tool approval through the inbox is the default.** On its own, the run may only use tools that are permanently allowed for the agent. Every other call waits for your answer in the [inbox](/en/automation/03_inbox/). This is the actual safeguard: whatever the data says, it cannot set anything off without you.
 2. **The data is marked as data.** `{{payload}}` is inserted as a delimited block that its content cannot close, and the run's system note tells the model that this block and values taken from it are not instructions to follow. This lowers the risk; it does not remove it.
 3. **The run has the owner's rights only.** On saving and on every call Ontheia checks whether the owner may use the agent, the task and the chain.
 

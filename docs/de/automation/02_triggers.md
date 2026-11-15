@@ -52,7 +52,7 @@ curl -X POST 'https://meine-domain.de/api/hooks/<id>' \
 
 Das Token wird nur im Header angenommen, nicht in der Adresse. In einer Adresse landet es in den Protokollen jedes Proxys auf dem Weg.
 
-Die Adresse setzt sich aus der Basis-Adresse der Host-API und `/hooks/<id>` zusammen. Hinter einem Reverse Proxy nach der [Anleitung](../configuration/04_reverse_proxy.md) lautet sie `https://meine-domain.de/api/hooks/<id>`; die Oberfläche zeigt die richtige Adresse an.
+Die Adresse setzt sich aus der Basis-Adresse der Host-API und `/hooks/<id>` zusammen. Hinter einem Reverse Proxy nach der [Anleitung](/de/configuration/04_reverse_proxy/) lautet sie `https://meine-domain.de/api/hooks/<id>`; die Oberfläche zeigt die richtige Adresse an.
 
 ### Antworten
 
@@ -90,7 +90,7 @@ Bleibt die Anweisung leer, bekommt der Agent die Daten mit der Bitte, sie gemä�
 
 Die empfangenen Daten kommen von außerhalb der Installation. Enthalten sie Text, der wie eine Anweisung aussieht, kann ein Sprachmodell ihm folgen. Ontheia begegnet dem auf drei Ebenen:
 
-1. **Tool-Freigabe über den Posteingang ist der Standard.** Der Lauf darf von sich aus nur Tools nutzen, die beim Agenten dauerhaft erlaubt sind. Jeder andere Aufruf wartet auf deine Antwort im [Posteingang](./03_inbox.md). Das ist die eigentliche Sicherung: Was auch immer in den Daten steht, es kann ohne dich nichts auslösen.
+1. **Tool-Freigabe über den Posteingang ist der Standard.** Der Lauf darf von sich aus nur Tools nutzen, die beim Agenten dauerhaft erlaubt sind. Jeder andere Aufruf wartet auf deine Antwort im [Posteingang](/de/automation/03_inbox/). Das ist die eigentliche Sicherung: Was auch immer in den Daten steht, es kann ohne dich nichts auslösen.
 2. **Die Daten sind als Daten gekennzeichnet.** `{{payload}}` wird als abgegrenzter Block eingesetzt, den sein Inhalt nicht schließen kann, und der Systemhinweis des Laufs sagt dem Modell, dass dieser Block und daraus entnommene Werte nicht als Anweisung zu befolgen sind. Das senkt das Risiko, beseitigt es aber nicht.
 3. **Der Lauf hat nur die Rechte des Besitzers.** Beim Speichern und bei jedem Aufruf prüft Ontheia, ob der Besitzer den Agenten, den Task und die Chain benutzen darf.
 
