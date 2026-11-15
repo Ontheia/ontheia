@@ -412,7 +412,7 @@ CALDAV_PASSWORD=password
 | Server | Description | Repository |
 |---|---|---|
 | **email-mcp** | Send and receive emails (IMAP + SMTP) | [github.com/codefuturist/email-mcp](https://github.com/codefuturist/email-mcp) |
-| **mcp-email-server** | Send and receive emails | [github.com/ai-zerolab/mcp-email-server](https://github.com/ai-zerolab/mcp-email-server) |
+| **mcp-email-server** | Send and receive emails | [github.com/Wh1isper/mcp-email-server](https://github.com/Wh1isper/mcp-email-server) |
 | **ntfy-me-mcp** | Send push notifications via ntfy | [github.com/gitmotion/ntfy-me-mcp](https://github.com/gitmotion/ntfy-me-mcp) |
 | **Bluesky Context Server** | Read and create Bluesky posts | [github.com/brianellin/bsky-mcp-server](https://github.com/brianellin/bsky-mcp-server) |
 | **slack-mcp-server** (korotovsky) | Read and write Slack messages and channels | [github.com/korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) |
