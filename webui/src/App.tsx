@@ -362,10 +362,13 @@ function AuthenticatedApp() {
           <SidebarInset className="flex flex-col flex-1 overflow-hidden">
             <div className={cn("main-layout", !showSecondarySidebar && "secondary-sidebar-collapsed")}>
               <main className="main-content">
-                {showGlobalTopbar && (
-                  <GlobalTopbar showSecondary={showSecondarySidebar} onToggleSecondary={toggleSecondary} />
-                )}
                 <div className="main-scroll">
+                  {/* Inside the scroll area, like the chat's own bar: it sticks
+                      to the top and the page scrolls through behind it. Outside,
+                      it stood on the page background and read as a solid strip. */}
+                  {showGlobalTopbar && (
+                    <GlobalTopbar showSecondary={showSecondarySidebar} onToggleSecondary={toggleSecondary} />
+                  )}
                   <Routes>
                     <Route path="/chat/:id?" element={chatRouteElement} />
                     <Route
