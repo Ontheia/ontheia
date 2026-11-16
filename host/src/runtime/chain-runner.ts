@@ -1626,7 +1626,9 @@ ${contextSnippet}
       const anyErr = err as any;
       const errorMsg = err instanceof Error ? `${err.message}${anyErr.cause ? ' (Cause: ' + JSON.stringify(anyErr.cause) + ')' : ''}` : String(err);
       this.debug(`RestCall failed: ${mask(errorMsg)}`, err instanceof Error ? { message: mask(err.message) } : undefined);
-      // No cause attached: it can carry the unmasked request.
+      // The caught error is not attached as cause: it can carry the unmasked
+      // request (url, headers), and the cause travels into logs and traces.
+      // eslint-disable-next-line preserve-caught-error
       throw new Error(mask(`HTTP ${method} to ${url} failed: ${errorMsg}`));
     }
   }
