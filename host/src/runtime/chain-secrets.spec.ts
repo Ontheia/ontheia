@@ -31,18 +31,18 @@ import {
   resolveSecretPlaceholders
 } from './chain-secrets.js';
 
-const env: Record<string, string> = { WEBSPS_BASIC_AUTH: 'Basic dXNlcjpwYXNz', API_TOKEN: 'tok-12345' };
+const env: Record<string, string> = { API_BASIC_AUTH: 'Basic dXNlcjpwYXNz', API_TOKEN: 'tok-12345' };
 const source = (name: string) => env[name];
 
 test('placeholders are found in strings, arrays and objects', () => {
-  assert.equal(containsSecretPlaceholder({ headers: { Authorization: '${secret:WEBSPS_BASIC_AUTH}' } }), true);
+  assert.equal(containsSecretPlaceholder({ headers: { Authorization: '${secret:API_BASIC_AUTH}' } }), true);
   assert.equal(containsSecretPlaceholder(['x', { y: 'https://h/?t=${secret:API_TOKEN}' }]), true);
   assert.equal(containsSecretPlaceholder({ a: '${input}', b: 'secret:API_TOKEN', c: '${secret:lowercase}' }), false);
 });
 
 test('placeholders resolve from the source, and the used values are returned', () => {
   const { value, secrets } = resolveSecretPlaceholders(
-    { url: 'http://h/api?t=${secret:API_TOKEN}', headers: { Authorization: '${secret:WEBSPS_BASIC_AUTH}' }, body: { n: 1 } },
+    { url: 'http://h/api?t=${secret:API_TOKEN}', headers: { Authorization: '${secret:API_BASIC_AUTH}' }, body: { n: 1 } },
     [source]
   );
   assert.deepEqual(value, { url: 'http://h/api?t=tok-12345', headers: { Authorization: 'Basic dXNlcjpwYXNz' }, body: { n: 1 } });
@@ -80,11 +80,11 @@ test('credential headers are masked whatever they contain', () => {
 test('plain-text credential headers in rest_call steps are reported, placeholders are not', () => {
   const spec = {
     steps: [
-      { id: 'sps_read', type: 'rest_call', headers: { Authorization: 'Basic dXNlcjpwYXNz' } },
-      { id: 'sps_write', type: 'rest_call', headers: { Authorization: '${secret:WEBSPS_BASIC_AUTH}' } },
+      { id: 'status', type: 'rest_call', headers: { Authorization: 'Basic dXNlcjpwYXNz' } },
+      { id: 'update', type: 'rest_call', headers: { Authorization: '${secret:API_BASIC_AUTH}' } },
       { id: 'ask', type: 'llm', headers: { Authorization: 'x' } }
     ]
   };
-  assert.deepEqual(findPlaintextCredentialHeaders(spec), [{ step: 'sps_read', header: 'Authorization' }]);
+  assert.deepEqual(findPlaintextCredentialHeaders(spec), [{ step: 'status', header: 'Authorization' }]);
   assert.deepEqual(findPlaintextCredentialHeaders(null), []);
 });

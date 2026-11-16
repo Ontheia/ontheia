@@ -112,17 +112,17 @@ Ruft externe APIs auf.
 
 ```json
 {
-  "id": "sps_read",
+  "id": "status",
   "type": "rest_call",
   "method": "GET",
-  "url": "http://192.168.2.222/api",
-  "headers": { "Authorization": "${secret:WEBSPS_BASIC_AUTH}" }
+  "url": "https://api.example.com/v1/status",
+  "headers": { "Authorization": "${secret:API_BASIC_AUTH}" }
 }
 ```
 
 ```
 # .env des Hosts
-WEBSPS_BASIC_AUTH=Basic dXNlcjpwYXNzd29yZA==
+API_BASIC_AUTH=Basic dXNlcjpwYXNzd29yZA==
 ```
 
 *   `${secret:NAME}` wirkt in `url`, `headers` und `body` eines `rest_call`, sonst nirgends. `NAME` besteht aus Großbuchstaben, Ziffern und Unterstrichen, wie eine Umgebungsvariable. Es ist dieselbe Quelle wie `secret:NAME` bei MCP-Servern.
