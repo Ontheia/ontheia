@@ -13,8 +13,8 @@ Der Agent nutzt ein KI-Modell und Werkzeuge (Tools), um eine Antwort zu generier
 Der Agent ist mit einer Kette verknüpft (`app.agent_chains`). Sobald dieser Agent delegiert wird, führt Ontheia **keinen** KI-Prompt aus, sondern startet sofort den `ChainRunner` für die verknüpfte Kette.
 
 **Vorteile:**
-- **Stabilität:** Der Master-Agent muss nur wissen: *"Frag Homeautomation nach dem Wasserstand"*.
-- **Flexibilität:** Die Implementierung von `Homeauto` kann morgen eine Chain, übermorgen ein Python-Skript und nächste Woche wieder ein reines LLM sein.
+- **Stabilität:** Der Master-Agent muss nur wissen: *"Frag den Tank-Monitor nach dem Wasserstand"*.
+- **Flexibilität:** Die Implementierung von `Tank_Monitor` kann morgen eine Chain, übermorgen ein Python-Skript und nächste Woche wieder ein reines LLM sein.
 
 ---
 
@@ -33,7 +33,7 @@ Das Tool `delegate-to-agent` verlangt immer `agent` und `input`; `task` und `cha
 ### 2.1 Delegation an Agent/Task (Empfohlen)
 ```json
 {
-  "agent": "Homeauto",
+  "agent": "Tank_Monitor",
   "task": "Status_Check",
   "input": "Wie ist der Füllstand?"
 }
@@ -44,8 +44,8 @@ Das Tool `delegate-to-agent` verlangt immer `agent` und `input`; `task` und `cha
 ### 2.2 Spezifische Chain erzwingen
 ```json
 {
-  "agent": "Homeauto",
-  "chain": "Homeauto_Chain",
+  "agent": "Tank_Monitor",
+  "chain": "Tank_Monitor_Chain",
   "input": "..."
 }
 ```

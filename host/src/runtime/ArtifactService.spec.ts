@@ -237,7 +237,7 @@ test('extractFilesEnvelope: info.py on text or without a path yields nothing', (
   // Text files carry no content in info output — a snapshot-less text
   // artifact would be worse than none.
   assert.equal(extractFilesEnvelope(infoEvent(textInfo)), null);
-  assert.equal(extractFilesEnvelope(infoEvent('files skill configuration\n  user: wbrangl')), null);
+  assert.equal(extractFilesEnvelope(infoEvent('files skill configuration\n  user: alice')), null);
 });
 
 test('kindForPath: pdf', () => {

@@ -32,13 +32,13 @@ const src = (map: Record<string, string>) => (name: string) => map[name];
 
 test('resolveEnvMap: value: prefix is stripped (regression — used to crash MCP servers)', () => {
   // A child MCP server validates its config at startup; an unstripped
-  // "value:wbrangl@brangl.de" is an invalid email and crashes the server.
+  // "value:alice@example.com" is an invalid email and crashes the server.
   const result = resolveEnvMap(
-    { MCP_EMAIL_ADDRESS: 'value:wbrangl@brangl.de', MCP_IMAP_HOST: 'value:mx2f53.netcup.net' },
+    { MCP_EMAIL_ADDRESS: 'value:alice@example.com', MCP_IMAP_HOST: 'value:mail.example.com' },
     [src({})]
   );
-  assert.equal(result.resolved.MCP_EMAIL_ADDRESS, 'wbrangl@brangl.de');
-  assert.equal(result.resolved.MCP_IMAP_HOST, 'mx2f53.netcup.net');
+  assert.equal(result.resolved.MCP_EMAIL_ADDRESS, 'alice@example.com');
+  assert.equal(result.resolved.MCP_IMAP_HOST, 'mail.example.com');
   assert.equal(result.masked.MCP_EMAIL_ADDRESS, undefined, 'value: is not a secret and must not be masked');
   assert.deepEqual(result.missing, []);
 });

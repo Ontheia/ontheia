@@ -13,8 +13,8 @@ The agent uses an AI model and tools to generate a response. It "thinks" freely 
 The agent is linked to a chain (`app.agent_chains`). As soon as this agent is delegated to, Ontheia executes **no** AI prompt but immediately starts the `ChainRunner` for the linked chain.
 
 **Advantages:**
-- **Stability:** The master agent only needs to know: *"Ask Homeautomation for the water level"*.
-- **Flexibility:** The implementation of `Homeauto` can be a chain today, a Python script tomorrow, and a pure LLM again next week.
+- **Stability:** The master agent only needs to know: *"Ask the tank monitor for the water level"*.
+- **Flexibility:** The implementation of `Tank_Monitor` can be a chain today, a Python script tomorrow, and a pure LLM again next week.
 
 ---
 
@@ -33,7 +33,7 @@ The `delegate-to-agent` tool always requires `agent` and `input`; `task` and `ch
 ### 2.1 Delegation to Agent/Task (Recommended)
 ```json
 {
-  "agent": "Homeauto",
+  "agent": "Tank_Monitor",
   "task": "Status_Check",
   "input": "What is the fill level?"
 }
@@ -44,8 +44,8 @@ The `delegate-to-agent` tool always requires `agent` and `input`; `task` and `ch
 ### 2.2 Forcing a specific chain
 ```json
 {
-  "agent": "Homeauto",
-  "chain": "Homeauto_Chain",
+  "agent": "Tank_Monitor",
+  "chain": "Tank_Monitor_Chain",
   "input": "..."
 }
 ```

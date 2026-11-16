@@ -32,7 +32,7 @@ Diese Variablen regeln den Zugriff auf die API und die Browser-Sicherheit.
 
 | Variable | Beschreibung |
 | :--- | :--- |
-| `ALLOWED_ORIGINS` | Kommagetrennte Liste der erlaubten Domains/IPs für CORS. Unterstützt Wildcards (z.B. `http://192.168.2.*`). |
+| `ALLOWED_ORIGINS` | Kommagetrennte Liste der erlaubten Domains/IPs für CORS. Unterstützt Wildcards (z.B. `http://192.168.1.*`). |
 | `METRICS_TOKEN` | Bearer-Token für das Scrapen von `/metrics`. Wird bei einer Neuinstallation erzeugt; bleibt der Wert leer, ist der Endpunkt offen und der Host schreibt beim Start eine Warnung ins Log. Siehe [Metriken](/de/observability/02_metrics/). |
 
 ## 4. MCP Orchestrator (Docker)
@@ -92,7 +92,7 @@ Diese Variablen müssen mit dem Präfix `VITE_` versehen sein, damit sie im Brow
 
 | Variable | Beschreibung |
 | :--- | :--- |
-| `VITE_HOST_API_URL` | Die URL, unter der das Frontend den Host-Service erreichen kann (z.B. `http://192.168.2.13:8080`). |
+| `VITE_HOST_API_URL` | Die URL, unter der das Frontend den Host-Service erreichen kann (z.B. `http://192.168.1.10:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Muss identisch mit `PROMPT_OPTIMIZER_CHAIN_ID` sein. |
 
 ## 9. Sicherheit & Mandantentrennung (RLS)
@@ -117,8 +117,8 @@ Vermeiden Sie es, `DATABASE_URL` als Umgebungsvariable in Ihrer Shell zu exporti
 ### Beispiel für ein lokales Netzwerk (Produktion)
 ```bash
 APP_ENV=production
-ALLOWED_ORIGINS=http://192.168.2.*,http://localhost:5173
-VITE_HOST_API_URL=http://192.168.2.13:8080
+ALLOWED_ORIGINS=http://192.168.1.*,http://localhost:5173
+VITE_HOST_API_URL=http://192.168.1.10:8080
 
 # Administrator
 ADMIN_EMAIL=admin@ontheia.local

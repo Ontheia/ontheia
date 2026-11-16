@@ -42,7 +42,7 @@ function names(tools: RunToolDefinition[]): string[] {
 }
 
 test('filterRunTools: skills write tools stay out unless explicitly bound', () => {
-  // A_Ontheia's shape: the reading tools bound, create_skill NOT granted.
+  // An agent with only the reading tools bound, create_skill NOT granted.
   const selection: TaskToolBinding[] = [
     { server: 'skills', tool: 'activate_skill' },
     { server: 'skills', tool: 'read_skill_resource' },
@@ -56,7 +56,7 @@ test('filterRunTools: skills write tools stay out unless explicitly bound', () =
 });
 
 test('filterRunTools: skill-creator agents keep all skills tools when bound', () => {
-  // G_Briefe / W_Skill_Creator shape: all four tools explicitly granted.
+  // An agent with all four tools explicitly granted.
   const selection: TaskToolBinding[] = [
     { server: 'skills', tool: 'activate_skill' },
     { server: 'skills', tool: 'read_skill_resource' },
@@ -102,15 +102,15 @@ test('filterRunTools: scheduled runs never see create_schedule', () => {
   ], 'the recursion guard still holds');
 });
 test('findServersWithoutTools: an empty tool list means "all tools" — nothing to warn about', () => {
-  assert.deepEqual(findServersWithoutTools(['websps', 'memory'], []), []);
+  assert.deepEqual(findServersWithoutTools(['device-api', 'memory'], []), []);
 });
 
 test('findServersWithoutTools: flags assigned servers that have no bound tool', () => {
   const bound: TaskToolBinding[] = [{ server: 'memory', tool: 'memory-search' }];
-  assert.deepEqual(findServersWithoutTools(['memory', 'websps'], bound), ['websps']);
+  assert.deepEqual(findServersWithoutTools(['memory', 'device-api'], bound), ['device-api']);
 });
 
 test('findServersWithoutTools: one bound tool is enough, and skills is exempt', () => {
-  const bound: TaskToolBinding[] = [{ server: 'websps', tool: 'devices_list' }];
-  assert.deepEqual(findServersWithoutTools(['websps', 'skills'], bound), []);
+  const bound: TaskToolBinding[] = [{ server: 'device-api', tool: 'list_devices' }];
+  assert.deepEqual(findServersWithoutTools(['device-api', 'skills'], bound), []);
 });

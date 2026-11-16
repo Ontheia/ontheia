@@ -39,7 +39,7 @@ Zwei gekoppelte Dropdowns:
 
 | Dropdown | Inhalt |
 | --- | --- |
-| **Primär** | Provider (z. B. „OpenAI") oder Agent (z. B. „W_Ontheia") |
+| **Primär** | Provider (z. B. „OpenAI") oder Agent (z. B. „Personal Assistant") |
 | **Sekundär** | Bei Provider: Modell · Bei Agent: Task oder Chain |
 
 Nur Einträge mit aktivem „Im Composer anzeigen"-Flag erscheinen in der Auswahl.

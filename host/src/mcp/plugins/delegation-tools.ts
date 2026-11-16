@@ -29,8 +29,8 @@
  * apart. Two of the three lacked the `chain` parameter entirely, so a model on
  * those paths could not name a specific chain at all. And every copy described
  * `task` as "specification of the task/context", which reads like free text: a
- * model that read `G_Homeauto` in its task context sent `task: "control the
- * home automation"` instead of `task: "G_Homeauto"`, missed the task, and fell
+ * model that read `Tank_Monitor` in its task context sent `task: "check the
+ * water tank"` instead of `task: "Tank_Monitor"`, missed the task, and fell
  * through to the agent's default chain. Naming the task by its identifier is
  * the whole point — the agent, task and chain names are what a delegating
  * agent's task context actually contains; UUIDs are not.
@@ -65,21 +65,21 @@ export function buildDelegationToolSpec(): DelegationToolSpec {
       type: 'object',
       properties: {
         // Identifier, not free text: the description must steer the model to
-        // send the name it read in its task context (e.g. "G_Homeauto"), not a
+        // send the name it read in its task context (e.g. "Tank_Monitor"), not a
         // paraphrase of what the agent does.
         agent: {
           type: 'string',
-          description: 'Name or UUID of the target agent (e.g. `G_Homeauto`).'
+          description: 'Name or UUID of the target agent (e.g. `Tank_Monitor`).'
         },
         task: {
           type: 'string',
           description:
-            'Name or UUID of the task to run (e.g. `G_Homeauto`). Send the task\'s own name, not a description of what it does. If omitted, the agent\'s default applies. An explicit, existing task wins over the agent\'s default chain.'
+            'Name or UUID of the task to run (e.g. `Tank_Monitor`). Send the task\'s own name, not a description of what it does. If omitted, the agent\'s default applies. An explicit, existing task wins over the agent\'s default chain.'
         },
         chain: {
           type: 'string',
           description:
-            'Name or UUID of a specific chain to run (e.g. `G_Homeauto_Chain`). If omitted, the agent\'s default chain applies unless a task is requested.'
+            'Name or UUID of a specific chain to run (e.g. `Tank_Monitor_Chain`). If omitted, the agent\'s default chain applies unless a task is requested.'
         },
         input: {
           type: 'string',

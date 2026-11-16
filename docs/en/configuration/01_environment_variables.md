@@ -32,7 +32,7 @@ These variables control API access and browser security.
 
 | Variable | Description |
 | :--- | :--- |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed domains/IPs for CORS. Supports wildcards (e.g., `http://192.168.2.*`). |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed domains/IPs for CORS. Supports wildcards (e.g., `http://192.168.1.*`). |
 | `METRICS_TOKEN` | Bearer token required to scrape `/metrics`. Generated on a fresh installation; if empty, the endpoint stays open and the host logs a warning at startup. See [Metrics](/en/observability/02_metrics/). |
 
 ## 4. MCP Orchestrator (Docker)
@@ -92,7 +92,7 @@ These variables must be prefixed with `VITE_` to be available in the browser cod
 
 | Variable | Description |
 | :--- | :--- |
-| `VITE_HOST_API_URL` | The URL where the frontend can reach the host service (e.g., `http://192.168.2.13:8080`). |
+| `VITE_HOST_API_URL` | The URL where the frontend can reach the host service (e.g., `http://192.168.1.10:8080`). |
 | `VITE_PROMPT_OPTIMIZER_CHAIN_ID` | Must be identical to `PROMPT_OPTIMIZER_CHAIN_ID`. |
 
 ## 9. Security & Tenant Separation (RLS)
@@ -117,8 +117,8 @@ Avoid exporting `DATABASE_URL` as an environment variable in your shell. Docker 
 ### Example for a Local Network (Production)
 ```bash
 APP_ENV=production
-ALLOWED_ORIGINS=http://192.168.2.*,http://localhost:5173
-VITE_HOST_API_URL=http://192.168.2.13:8080
+ALLOWED_ORIGINS=http://192.168.1.*,http://localhost:5173
+VITE_HOST_API_URL=http://192.168.1.10:8080
 
 # Administrator
 ADMIN_EMAIL=admin@ontheia.local

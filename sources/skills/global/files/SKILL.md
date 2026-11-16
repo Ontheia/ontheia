@@ -155,7 +155,7 @@ message. There is no fallback to "all users". `info.py` (no arguments)
 shows the resolved user and active roots at any time.
 
 **Uniqueness is enforced:** two addresses sharing a local part
-(`rasher@a.de` and `rasher@b.de`) would resolve to the same directory.
+(`alice@a.example` and `alice@b.example`) would resolve to the same directory.
 Ontheia therefore rejects creating an account whose normalized local part
 is already taken — a unique index on `app.users.email_local` backs this, so
 it holds for every creation path. Such an attempt fails with HTTP 409 and a

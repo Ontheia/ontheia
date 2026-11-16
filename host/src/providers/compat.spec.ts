@@ -113,7 +113,7 @@ test('detectOpenAiCompatibility: local/private hosts are assumed compatible (sel
       providerType: 'http',
       providerMetadata: {},
       modelMetadata: {},
-      baseUrl: 'http://192.168.2.9:8000'
+      baseUrl: 'http://192.168.1.50:8000'
     }),
     true
   );
@@ -165,6 +165,6 @@ test('reasoningToolsRestricted: Google is not restricted (verified permissive)',
 
 test('reasoningToolsRestricted: unverified providers default to restricted (xAI, local, custom)', () => {
   assert.equal(reasoningToolsRestricted({ baseUrl: 'https://api.x.ai' }), true);
-  assert.equal(reasoningToolsRestricted({ baseUrl: 'http://192.168.2.9:11434' }), true);
+  assert.equal(reasoningToolsRestricted({ baseUrl: 'http://192.168.1.50:11434' }), true);
   assert.equal(reasoningToolsRestricted({ baseUrl: 'not-a-valid-url' }), true);
 });

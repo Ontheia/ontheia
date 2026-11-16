@@ -242,7 +242,7 @@ test('chain-runner: a named chain_id on the step is forwarded and runs the chain
   // chain_id (by name) is set on the step. handleAgentStep must read it into
   // chainRef and the chain must run — not the task, and not silently dropped.
   const spec = {
-    steps: [{ id: 'step1', type: 'agent' as const, agent_id: AGENT_ID, chain_id: 'G_Homeauto_Chain', input: 'test input' }],
+    steps: [{ id: 'step1', type: 'agent' as const, agent_id: AGENT_ID, chain_id: 'Tank_Monitor_Chain', input: 'test input' }],
     edges: []
   };
   const runner = new ChainRunner(
@@ -263,7 +263,7 @@ test('chain-runner: a named chain_id on the step is forwarded and runs the chain
 
   const debugs = events.filter((e) => e.code === 'chain_debug').map((e) => e.message ?? '');
   assert.ok(
-    debugs.some((m) => /Delegation Request:.*Chain='G_Homeauto_Chain'/.test(m)),
+    debugs.some((m) => /Delegation Request:.*Chain='Tank_Monitor_Chain'/.test(m)),
     "the chain_id from the step must be forwarded as chainRef in the delegation request"
   );
   assert.ok(

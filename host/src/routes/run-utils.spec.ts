@@ -35,10 +35,10 @@ test('parseRunRequest: top-level tool_approval and tool_permissions reach the Ru
   const parsed = parseRunRequest({
     ...base,
     tool_approval: 'granted',
-    tool_permissions: { 'websps::io_read': 'always' }
+    tool_permissions: { 'device-api::read_status': 'always' }
   });
   assert.equal(parsed?.tool_approval, 'granted');
-  assert.deepEqual(parsed?.tool_permissions, { 'websps::io_read': 'always' });
+  assert.deepEqual(parsed?.tool_permissions, { 'device-api::read_status': 'always' });
 });
 
 test('parseRunRequest: options.metadata still works as the fallback (WebUI path)', () => {
@@ -72,9 +72,9 @@ test('parseRunRequest: unknown modes are ignored, an invalid top level falls bac
 test('parseRunRequest: tool_permissions drops bad values and keys without the server:: separator', () => {
   const parsed = parseRunRequest({
     ...base,
-    tool_permissions: { 'websps::io_read': 'always', 'websps::bad': 'sometimes', 'no_separator': 'always' }
+    tool_permissions: { 'device-api::read_status': 'always', 'device-api::bad': 'sometimes', 'no_separator': 'always' }
   });
-  assert.deepEqual(parsed?.tool_permissions, { 'websps::io_read': 'always' });
+  assert.deepEqual(parsed?.tool_permissions, { 'device-api::read_status': 'always' });
 });
 
 test('parseRunRequest: without the fields nothing is added (the runtime default stays prompt)', () => {

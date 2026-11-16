@@ -71,7 +71,7 @@ test('chain spec rejects unknown step type', () => {
 test('chain spec accepts an agent step with chain_id (name or UUID)', () => {
   const spec = {
     steps: [
-      { id: 's1', type: 'agent', agent_id: 'G_Homeauto', chain_id: 'G_Homeauto_Chain', input: 'go' }
+      { id: 's1', type: 'agent', agent_id: 'Tank_Monitor', chain_id: 'Tank_Monitor_Chain', input: 'go' }
     ]
   };
   const ok = validate(spec);

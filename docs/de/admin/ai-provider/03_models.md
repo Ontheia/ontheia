@@ -51,7 +51,7 @@ Pro Modell können zusätzliche technische Parameter als JSON-Objekt hinterlegt 
   "dimension": 1024,
   "metric": "cosine",
   "normalize": true,
-  "endpoint": "http://192.168.2.9:11434/api/embed"
+  "endpoint": "http://192.168.1.50:11434/api/embed"
 }
 ```
 

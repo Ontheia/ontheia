@@ -3568,7 +3568,7 @@ function MemorySection({
               </label>
               <label className="settings-field">
                 <span>{t('memory.ocrEndpoint')}</span>
-                <Input value={pdfOcrEndpoint} onChange={e => setPdfOcrEndpoint(e.target.value)} placeholder="http://192.168.2.19:9998/tika" style={{ backgroundColor: '#121B2B' }} />
+                <Input value={pdfOcrEndpoint} onChange={e => setPdfOcrEndpoint(e.target.value)} placeholder="http://192.168.1.50:9998/tika" style={{ backgroundColor: '#121B2B' }} />
               </label>
               <label className="settings-field">
                 <span>{t('memory.pdfMdConflict')}</span>
