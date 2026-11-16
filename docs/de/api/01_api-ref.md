@@ -70,13 +70,13 @@ Chains sind komplexe Workflows, die aus mehreren Schritten bestehen können.
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
 | `GET` | `/chains` | Listet alle verfügbaren Chains auf. |
-| `POST` | `/chains` | Erstellt eine neue Chain (Initialversion). |
+| `POST` | `/chains` | Erstellt eine neue Chain (Initialversion). Nur für Admins. |
 | `GET` | `/chains/:id` | Liefert Details zu einer Chain. |
-| `PATCH` | `/chains/:id` | Aktualisiert Metadaten einer Chain. |
-| `DELETE` | `/chains/:id` | Löscht eine gesamte Chain. |
-| `GET` | `/chains/:id/versions` | Listet alle Versionen einer Chain auf. |
-| `POST` | `/chains/:id/versions` | Erstellt eine neue Version für eine Chain. |
-| `POST` | `/chains/:id/versions/activate` | Setzt eine spezifische Version als aktiv. |
+| `PATCH` | `/chains/:id` | Aktualisiert Metadaten einer Chain. Nur für Admins. |
+| `DELETE` | `/chains/:id` | Löscht eine gesamte Chain. Nur für Admins. |
+| `GET` | `/chains/:id/versions` | Listet alle Versionen einer Chain auf. Nur für Admins. |
+| `POST` | `/chains/:id/versions` | Erstellt eine neue Version für eine Chain. Nur für Admins. |
+| `POST` | `/chains/:id/versions/activate` | Setzt eine spezifische Version als aktiv. Nur für Admins. |
 | `POST` | `/chains/:id/run` | Startet die Ausführung einer Chain. |
 
 ---

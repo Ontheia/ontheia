@@ -70,13 +70,13 @@ Chains are complex workflows that can consist of multiple steps.
 | Method | Path | Description |
 | :--- | :--- | :--- |
 | `GET` | `/chains` | Lists all available chains. |
-| `POST` | `/chains` | Creates a new chain (initial version). |
+| `POST` | `/chains` | Creates a new chain (initial version). Admin only. |
 | `GET` | `/chains/:id` | Returns details for a chain. |
-| `PATCH` | `/chains/:id` | Updates metadata of a chain. |
-| `DELETE` | `/chains/:id` | Deletes an entire chain. |
-| `GET` | `/chains/:id/versions` | Lists all versions of a chain. |
-| `POST` | `/chains/:id/versions` | Creates a new version for a chain. |
-| `POST` | `/chains/:id/versions/activate` | Sets a specific version as active. |
+| `PATCH` | `/chains/:id` | Updates metadata of a chain. Admin only. |
+| `DELETE` | `/chains/:id` | Deletes an entire chain. Admin only. |
+| `GET` | `/chains/:id/versions` | Lists all versions of a chain. Admin only. |
+| `POST` | `/chains/:id/versions` | Creates a new version for a chain. Admin only. |
+| `POST` | `/chains/:id/versions/activate` | Sets a specific version as active. Admin only. |
 | `POST` | `/chains/:id/run` | Starts the execution of a chain. |
 
 ---

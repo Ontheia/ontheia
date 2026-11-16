@@ -1174,8 +1174,15 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
     }
   });
 
+  // Chains are part of an agent's setup, so like agents and tasks only an
+  // admin creates or changes them, and only an admin reads a version's spec
+  // (it can hold a step's request headers). Everyone else lists the chains
+  // they can see and runs them. These routes used to check the session only,
+  // leaving the rest to the row rules — which let anyone who could see a
+  // chain, for instance through a public agent, delete it or activate a
+  // version of their own.
   server.patch('/chains/:id', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const { session } = auth;
     const { id } = request.params as { id?: string };
@@ -1215,7 +1222,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.get('/chains/:id/versions', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const { id } = request.params as { id?: string };
     const chainId = typeof id === 'string' ? id.trim() : '';
@@ -1246,7 +1253,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.post('/chains', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const body = request.body as any;
     const name = typeof body?.name === 'string' ? body.name.trim() : '';
@@ -1276,7 +1283,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.delete('/chains/:id', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const { id } = request.params as { id?: string };
     const chainId = typeof id === 'string' ? id.trim() : '';
@@ -1304,7 +1311,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.post('/chains/:id/versions', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const { id } = request.params as { id?: string };
     const chainId = typeof id === 'string' ? id.trim() : '';
@@ -1336,7 +1343,7 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
   });
 
   server.post('/chains/:id/versions/activate', async (request, reply) => {
-    const auth = await requireSession(db, request, reply);
+    const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const { id } = request.params as { id?: string };
     const chainId = typeof id === 'string' ? id.trim() : '';
