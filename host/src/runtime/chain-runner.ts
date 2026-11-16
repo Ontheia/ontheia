@@ -20,6 +20,8 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { containsSecretPlaceholder, maskCredentialHeaders, maskSecrets, resolveSecretPlaceholders } from './chain-secrets.js';
+import { defaultEnvSource } from '../secrets/resolver.js';
 import type { PoolClient } from 'pg';
 import { OrchestratorService } from '../orchestrator/service.js';
 import { runProviderCompletion } from './provider-run.js';
@@ -1543,10 +1545,25 @@ ${contextSnippet}
   }
 
   private async handleRestCallStep(step: ChainStep) {
-    const url = String(this.resolveAll(step.url)).trim();
+    // Secrets first, on the step as written: step outputs and template values
+    // filled in afterwards can never name one. See chain-secrets.ts.
+    let raw: { url: unknown; headers: unknown; body: unknown } = {
+      url: step.url,
+      headers: step.headers || {},
+      body: step.body
+    };
+    let secrets: string[] = [];
+    if (containsSecretPlaceholder(raw)) {
+      const resolved = resolveSecretPlaceholders(raw, [defaultEnvSource]);
+      raw = resolved.value;
+      secrets = resolved.secrets;
+    }
+    const mask = <T>(value: T): T => maskSecrets(value, secrets);
+
+    const url = String(this.resolveAll(raw.url)).trim();
     const method = step.method?.toUpperCase() || 'GET';
-    const headers = this.resolveAll(step.headers || {});
-    const body = this.resolveAll(step.body);
+    const headers = this.resolveAll(raw.headers);
+    const body = this.resolveAll(raw.body);
 
     // Add default Content-Type if body is present
     if (body && !Object.keys(headers).some(h => h.toLowerCase() === 'content-type')) {
@@ -1564,7 +1581,7 @@ ${contextSnippet}
         this.abortSignal.addEventListener('abort', onAbort);
       }
 
-      this.debug(`RestCall: ${method} ${url}`, { headers, body });
+      this.debug(`RestCall: ${method} ${mask(url)}`, mask({ headers: maskCredentialHeaders(headers), body }));
 
       const response = await fetch(url, {
         method,
@@ -1581,33 +1598,36 @@ ${contextSnippet}
       const text = await response.text();
       const data = tryParseJson(text);
 
-      const result = {
+      // A server that echoes a credential back must not put it into the trace
+      // or into a later step's input.
+      const result = mask({
         status: response.status,
         ok: response.ok,
         body: text,
         data
-      };
+      });
 
       this.chainContext.steps[step.id] = { 
         ...this.chainContext.steps[step.id],
         result,
-        output: text,
-        data
+        output: result.body,
+        data: result.data
       };
       
       this.emit({
         type: 'tool_call',
         tool: method,
         server: 'rest',
-        arguments: { url, headers, body },
+        arguments: mask({ url, headers: maskCredentialHeaders(headers), body }),
         status: response.ok ? 'success' : 'error',
         result
       });
     } catch (err) {
       const anyErr = err as any;
       const errorMsg = err instanceof Error ? `${err.message}${anyErr.cause ? ' (Cause: ' + JSON.stringify(anyErr.cause) + ')' : ''}` : String(err);
-      this.debug(`RestCall failed: ${errorMsg}`, err instanceof Error ? { message: err.message } : undefined);
-      throw new Error(`HTTP ${method} to ${url} failed: ${errorMsg}`, { cause: err });
+      this.debug(`RestCall failed: ${mask(errorMsg)}`, err instanceof Error ? { message: mask(err.message) } : undefined);
+      // No cause attached: it can carry the unmasked request.
+      throw new Error(mask(`HTTP ${method} to ${url} failed: ${errorMsg}`));
     }
   }
 }

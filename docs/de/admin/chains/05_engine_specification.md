@@ -108,6 +108,32 @@ Ruft externe APIs auf.
 *   **Parameter:**
     *   `url`, `method`, `headers`, `body`.
 
+**Zugangsdaten nicht in die Spec schreiben.** Statt eines Klartext-Headers wie `Authorization: Basic …` steht in der Spec ein Platzhalter, der Wert kommt aus der `.env` des Hosts:
+
+```json
+{
+  "id": "sps_read",
+  "type": "rest_call",
+  "method": "GET",
+  "url": "http://192.168.2.222/api",
+  "headers": { "Authorization": "${secret:WEBSPS_BASIC_AUTH}" }
+}
+```
+
+```
+# .env des Hosts
+WEBSPS_BASIC_AUTH=Basic dXNlcjpwYXNzd29yZA==
+```
+
+*   `${secret:NAME}` wirkt in `url`, `headers` und `body` eines `rest_call`, sonst nirgends. `NAME` besteht aus Großbuchstaben, Ziffern und Unterstrichen, wie eine Umgebungsvariable. Es ist dieselbe Quelle wie `secret:NAME` bei MCP-Servern.
+*   Der Platzhalter wird vor allen anderen Ersetzungen aufgelöst (`${input}`, `${steps.…}`). Text aus einer Modell- oder Tool-Ausgabe kann deshalb kein Secret anfordern.
+*   Der eingesetzte Wert und die Header `Authorization`, `Proxy-Authorization`, `Cookie` und `X-Api-Key` erscheinen in Trace, Debug-Meldungen, Fehlermeldungen und dem Schritt-Ergebnis als `***`.
+*   Fehlt die Variable, scheitert der Schritt mit `Secret NAME could not be resolved.`
+*   Nach einer Änderung der `.env` den Host neu erstellen (`docker compose up -d host`); ein Neustart allein liest sie nicht neu ein.
+*   Eine Version mit Zugangsdaten im Klartext lässt sich weiter speichern, die API antwortet dann aber mit einer Warnung im Feld `warnings`.
+
+Chains und ihre Versionen kann nur ein Admin anlegen und ändern; das macht den Zugriff auf die `.env` vertretbar.
+
 ### `router` (Mehrweg-Verzweigung)
 Ähnlich wie `branch`, evaluiert jedoch alle Fälle gegen einen zentralen Eingabewert und leitet die Ausführung an den passenden Zweig.
 *   **Parameter:**

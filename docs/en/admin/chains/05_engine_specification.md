@@ -108,6 +108,32 @@ Calls external APIs.
 *   **Parameters:**
     *   `url`, `method`, `headers`, `body`.
 
+**Keep credentials out of the spec.** Instead of a clear-text header such as `Authorization: Basic …`, the spec carries a placeholder and the value comes from the host's `.env`:
+
+```json
+{
+  "id": "sps_read",
+  "type": "rest_call",
+  "method": "GET",
+  "url": "http://192.168.2.222/api",
+  "headers": { "Authorization": "${secret:WEBSPS_BASIC_AUTH}" }
+}
+```
+
+```
+# host .env
+WEBSPS_BASIC_AUTH=Basic dXNlcjpwYXNzd29yZA==
+```
+
+*   `${secret:NAME}` works in the `url`, `headers` and `body` of a `rest_call`, nowhere else. `NAME` consists of capital letters, digits and underscores, like an environment variable. It is the same source as `secret:NAME` for MCP servers.
+*   The placeholder is resolved before every other substitution (`${input}`, `${steps.…}`), so text from a model or tool output cannot ask for a secret.
+*   The inserted value and the headers `Authorization`, `Proxy-Authorization`, `Cookie` and `X-Api-Key` appear as `***` in the trace, debug messages, error messages and the step result.
+*   If the variable is missing, the step fails with `Secret NAME could not be resolved.`
+*   After changing the `.env`, recreate the host (`docker compose up -d host`); a restart alone does not read it again.
+*   A version with credentials in clear text can still be saved, but the API answers with a warning in the `warnings` field.
+
+Only an admin can create and change chains and their versions, which is what makes access to the `.env` acceptable.
+
 ### `router` (Multi-way Branching)
 Similar to `branch`, but evaluates all cases against a central input value and routes execution to the matching branch.
 *   **Parameters:**

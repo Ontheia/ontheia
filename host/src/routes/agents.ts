@@ -20,6 +20,7 @@
  * For commercial licensing inquiries, please see LICENSE-COMMERCIAL.md
  * or contact https://ontheia.ai
  */
+import { findPlaintextCredentialHeaders } from '../runtime/chain-secrets.js';
 import { MAX_TOOL_CALLS_CEILING, parseAgentMaxToolCalls } from '../runtime/run-limits.js';
 import type { FastifyInstance } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
@@ -1333,8 +1334,19 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
         }
         return result.rows[0];
       });
+      // A credential written into a step is stored in every version and shown
+      // in run traces; the save goes through, but says so.
+      const warnings = findPlaintextCredentialHeaders(body.spec).map(
+        ({ step, header }) =>
+          `Step ${step} sends the ${header} header in clear text. It is stored in every version and shown in run traces; put the value into the host's .env and write \${secret:NAME} instead.`
+      );
       reply.code(201);
-      return { ...row, id: String(row.id), created_at: toIsoString(row.created_at) };
+      return {
+        ...row,
+        id: String(row.id),
+        created_at: toIsoString(row.created_at),
+        ...(warnings.length > 0 ? { warnings } : {})
+      };
     } catch (error) {
       request.log.error({ err: error }, 'Chain version could not be created');
       reply.code(500);
