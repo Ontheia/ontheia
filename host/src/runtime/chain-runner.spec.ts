@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ChainRunner } from './chain-runner.js';
+import { ChainRunner, buildLlmStepMessages } from './chain-runner.js';
 
 const AGENT_ID = '00000000-0000-0000-0000-000000000001';
 const TASK_ID  = '00000000-0000-0000-0000-000000000002';
@@ -350,4 +350,26 @@ test('chain-runner: edge ohne map wirft nicht und ist ein Datenfluss-No-op', asy
   assert.equal(ctx.steps['s1']?.output, 'Hallo Wolfgang');
   assert.equal(ctx.steps['s2']?.output, 'OUT=[Hallo Wolfgang]');
   assert.notEqual(ctx.steps['s2']?.status, 'failed', 's2 darf bei einer map-losen Edge nicht fehlschlagen');
+});
+
+test('buildLlmStepMessages: the step system prompt leads as a system message', () => {
+  const messages = buildLlmStepMessages('Return only the improved prompt.', [], 'write a poem', 'write a poem');
+  assert.deepEqual(messages, [{ role: 'system', content: 'Return only the improved prompt.' }]);
+});
+
+test('buildLlmStepMessages: appends the step prompt unless history already ends with it', () => {
+  const history = [{ role: 'user' as const, content: 'original' }];
+  assert.deepEqual(
+    buildLlmStepMessages('SYS', history, 'rewritten', 'original').map((m) => m.role),
+    ['system', 'user', 'user']
+  );
+  assert.deepEqual(
+    buildLlmStepMessages('SYS', history, 'original', 'other').map((m) => m.role),
+    ['system', 'user']
+  );
+});
+
+test('buildLlmStepMessages: no system message for an empty system prompt', () => {
+  const messages = buildLlmStepMessages('', [], 'hello', '');
+  assert.deepEqual(messages, [{ role: 'user', content: 'hello' }]);
 });

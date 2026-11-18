@@ -178,6 +178,34 @@ function tryParseJson(text: string): unknown | null {
 /**
  * Modern Chain Engine
  */
+/**
+ * Messages for an llm step: the step's system prompt first, then the history,
+ * then the step prompt unless the history already ends with it.
+ *
+ * The system prompt travels as a system message and not as
+ * options.metadata.system_prompt: only the chat-completions and CLI paths read
+ * that field. The Anthropic and Responses runners take their instructions
+ * from system messages alone, so a step's system prompt was dropped there and
+ * the model answered the bare input — a prompt optimizer on a Responses model
+ * answered the prompt instead of improving it.
+ */
+export function buildLlmStepMessages(
+  systemContent: string,
+  history: ChatMessage[],
+  prompt: string,
+  originInput: string
+): ChatMessage[] {
+  const messages: ChatMessage[] = [];
+  if (systemContent) messages.push({ role: 'system', content: systemContent });
+  messages.push(...history);
+  const lastUserMsg = [...history].reverse().find((m) => m.role === 'user');
+  const lastUserContent = lastUserMsg ? extractText(lastUserMsg.content) : '';
+  if (prompt && prompt !== lastUserContent && prompt !== originInput) {
+    messages.push({ role: 'user', content: prompt });
+  }
+  return messages;
+}
+
 export class ChainRunner {
   private chainContext: ChainContext = { steps: {} };
   private edgesByTarget = new Map<string, ChainEdge[]>();
@@ -1167,14 +1195,12 @@ ${contextSnippet}
       }
     }
 
-    // Combine history with the new prompt for LLM step
-    const messages: ChatMessage[] = this.sanitizeHistory([...this.history]);
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-    const lastUserContent = lastUserMsg ? extractText(lastUserMsg.content) : '';
-
-    if (prompt && prompt !== lastUserContent && prompt !== originInput) {
-      messages.push({ role: 'user', content: prompt });
-    }
+    const messages = buildLlmStepMessages(
+      systemContent,
+      this.sanitizeHistory([...this.history]),
+      prompt,
+      String(originInput)
+    );
 
     // Filter out internal params that should not be sent to the AI provider
     const providerParams = { ...(step.params ?? {}) };
@@ -1196,7 +1222,6 @@ ${contextSnippet}
           step_id: stepId,
           agent_id: step.agent_id || this.templateContext.agent_id,
           task_id: step.task_id || this.templateContext.task_id,
-          system_prompt: systemContent,
           depth: this.depth,
           history: this.history
         }
