@@ -10,7 +10,10 @@ Every user can create triggers of their own. The run acts as the trigger's owner
 Sender (device, script, service)
   │  POST /hooks/<id>   Authorization: Bearer <token>   JSON data
   ▼
-Ontheia checks token and limits  →  answers 202 at once
+Ontheia checks the token  →  answers 202 at once
+  │
+  ├─ trigger idle      →  the run starts
+  └─ run still active  →  queue, run once more, or skip
   │
   ▼
 Run in the background, in a chat of its own
@@ -19,7 +22,9 @@ Run in the background, in a chat of its own
   └─ done or failed    →  entry in the inbox
 ```
 
-The sender does not wait for the result. It receives `202` with `event_id` and `run_id`; the run carries on afterwards.
+The sender does not wait for the result. It receives `202` with `event_id` (and `run_id` when the run starts at once); the run carries on afterwards.
+
+A trigger works off one call at a time. Different triggers run at the same time, up to three per user.
 
 ## Creating a Trigger
 
@@ -59,12 +64,40 @@ The address is the base address of the host API followed by `/hooks/<id>`. Behin
 | Status | Meaning |
 | --- | --- |
 | `202` `{"status":"accepted", …}` | Accepted, the run has started. |
-| `202` `{"status":"skipped","reason":"overlap"}` | Skipped, because a run of this trigger is still active and "Prevent overlap" is set. |
+| `202` `{"status":"queued", "event_id": …}` | Accepted, the call waits for its run. |
+| `202` `{"status":"duplicate", "event_id": …}` | A call with the same `Idempotency-Key` has already arrived; it is not run again. |
+| `202` `{"status":"skipped","reason":"overlap"}` | Skipped (mode "Skip"), because a run of this trigger is still active. `reason: "busy"`: the user already has three trigger runs active. |
+| `400` | The `Idempotency-Key` header is empty or longer than 200 characters. |
 | `401` | The token is missing or wrong, the trigger is unknown or deactivated. All cases answer alike, so the response says nothing about which triggers exist. |
 | `404` | Triggers are switched off for this installation. |
 | `413` | Data larger than 256 KB. |
 | `415` | The data is not JSON. |
-| `429` | A limit is reached: calls per minute, simultaneous runs, or too many failed attempts from this address. |
+| `429` | `queue_full`: 100 calls are already waiting. `rate_limited`: per-minute limit in mode "Skip". `too_many_failed_attempts`: too many failed attempts from this address. |
+| `503` | `queue_unavailable`: the call could not be stored. Send it again. |
+
+### Avoiding double delivery
+
+If the sender passes an `Idempotency-Key` header (unique per event, at most 200 characters), Ontheia does not run a second call with the same key and answers `duplicate`. This prevents double runs when a sender retries because a response got lost on the way. The key holds as long as the first call is in the log. A skipped or refused call does not take it: the retry with the same key is admitted as usual.
+
+## While a run is active
+
+What happens to a call that arrives while the trigger is still running is set by the field **While a run is active**:
+
+| Mode | Behaviour | Suited for |
+| --- | --- | --- |
+| **Queue** (default) | Every call waits and runs in turn, in the order received. | Calls that are each a job of their own, such as a mail. |
+| **Run once more** | At most one call waits. A newer one replaces it (status "Replaced"); the active run is followed by exactly one more, with the newest call. | Agents that look for their work themselves, such as all documents with a certain tag. A burst of ten calls leads to two runs instead of ten. |
+| **Skip** | The call is dropped, the sender receives `skipped`. | Messages where only the newest counts, or senders that retry by themselves on `skipped`. |
+
+Waiting calls:
+
+- also start when a run of another trigger ends and frees one of the user's three slots,
+- survive a restart of the host,
+- expire after 24 hours (status "Expired", entry in the inbox unless the trigger reports nothing),
+- expire at once when the trigger is deactivated, so they do not start unexpectedly when it is switched on again,
+- can be discarded one by one in the log.
+
+The trigger list shows how many calls of a trigger are waiting.
 
 ## Instruction and Placeholders
 
@@ -104,12 +137,14 @@ The received data comes from outside the installation. If it contains text that 
 
 | Limit | Value | Effect |
 | --- | --- | --- |
-| Calls per minute | adjustable per trigger, default 10 | further calls: `429` |
-| Simultaneous trigger runs | 3 per user | further calls: `429` |
+| Runs per minute | adjustable per trigger, default 10 | further calls wait; with "Skip": `429` |
+| Simultaneous runs | 1 per trigger, 3 per user | further calls wait or are skipped |
+| Waiting calls | 100 per trigger | further calls: `429 queue_full` |
+| Waiting time | 24 hours | the call expires afterwards |
 | Failed attempts | 20 per minute per sender address | further calls: `429` |
 | Data size | 256 KB | `413` |
 
-Every accepted call starts a run and therefore uses tokens at the provider. The per-minute limit is the brake for a sender that sends more than expected.
+Every run uses tokens at the provider. The per-minute limit is the brake for a sender that sends more than expected: it limits how many runs start, without losing calls.
 
 ## Log and Test
 
@@ -117,17 +152,22 @@ The **log** (clock icon) shows a trigger's latest calls with time, status, the r
 
 | Status | Meaning |
 | --- | --- |
+| Waiting | The call waits for its run. **Discard** removes it. |
 | Running | The run is active. |
 | Done | The run has finished. |
 | Error | The run failed or could not start. |
-| Limit reached | Refused because of the calls per minute. |
-| Skipped | A run of this trigger was still active. |
-| Too many runs | Refused because of the simultaneous runs. |
+| Replaced | Was waiting and was replaced by a newer call ("Run once more"). |
+| Expired | Waited longer than 24 hours, or the trigger was deactivated. |
+| Discarded | Removed from the queue by hand. |
+| Queue full | Refused because 100 calls were already waiting. |
+| Limit reached | Refused because of the per-minute limit ("Skip"). |
+| Skipped | A run of this trigger was still active ("Skip"). |
+| Too many runs | Skipped because the user already had three trigger runs active ("Skip"). |
 
-**Test** (play icon) starts a run with sample data, as if a sender had called the address. The test goes through your sign-in and does not need the token. It counts against the same limits and also works for a deactivated trigger.
+**Test** (play icon) starts a run with sample data, as if a sender had called the address. The test goes through your sign-in and does not need the token. It follows the same rules as a real call, so it may wait in the queue, and it also works for a deactivated trigger.
 
 ## Operation
 
 - **Global switch:** Administration → General → **Webhook triggers**. Switched off, every call answers `404`; the triggers themselves are kept. The change takes effect within 30 seconds.
-- **Host restart:** A run does not survive a restart. On start the host marks the log entries and run logs of interrupted runs as errors and open approvals as expired. The sender has to send the event again in that case.
-- **No retry:** A failed run is not repeated on its own.
+- **Host restart:** A run does not survive a restart. On start the host marks the log entries and run logs of interrupted runs as errors and open approvals as expired, and reports every interrupted run in the inbox. Waiting calls are kept and start afterwards.
+- **No retry:** A run that failed or was interrupted by a restart is not repeated on its own. It may have done part of its work already, such as sending a reply; a second run would repeat that.

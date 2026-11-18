@@ -27,9 +27,9 @@ import {
   AlertCircle, AlertTriangle, Check, Copy, History, KeyRound, Loader2, MessageSquare, Pencil, Play, Trash2, Webhook, X
 } from 'lucide-react';
 import {
-  createTrigger, deleteTrigger, listChats, listProjects, listTriggerEvents, listTriggers, rotateTriggerToken, testTrigger,
-  triggerHookUrl, updateTrigger,
-  type TriggerApprovalMode, type TriggerEntry, type TriggerEventEntry, type TriggerInboxResult
+  cancelTriggerEvent, createTrigger, deleteTrigger, listChats, listProjects, listTriggerEvents, listTriggers,
+  rotateTriggerToken, testTrigger, triggerHookUrl, updateTrigger,
+  type TriggerApprovalMode, type TriggerEntry, type TriggerEventEntry, type TriggerInboxResult, type TriggerOverlapMode
 } from '../lib/api';
 import type { AgentDefinition } from '../types/agents';
 import type { ChainEntry } from '../types/chains';
@@ -239,6 +239,9 @@ export function TriggerPanel({ agents, allChains, timezone }: Props) {
                   <div>
                     {t('trigger.lastTriggered')}: {trigger.last_triggered_at ? formatDate(trigger.last_triggered_at) : t('never', { ns: 'common' })}
                   </div>
+                  {(trigger.queued_count ?? 0) > 0 && (
+                    <div className="text-sky-400">{t('trigger.queuedCount', { count: trigger.queued_count })}</div>
+                  )}
                   {trigger.last_error && (
                     <div className="flex items-start gap-1 text-red-400">
                       <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />
@@ -383,6 +386,8 @@ function TriggerEvents({ triggerId, version, formatDate }: {
   const { t } = useTranslation(['automation']);
   const [events, setEvents] = useState<TriggerEventEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,12 +401,25 @@ function TriggerEvents({ triggerId, version, formatDate }: {
     // A started run finishes on its own; follow it while the protocol is open.
     const interval = setInterval(load, 5000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [triggerId, version]);
+  }, [triggerId, version, reload]);
+
+  const discard = async (eventId: string) => {
+    setCancelError(null);
+    try {
+      await cancelTriggerEvent(triggerId, eventId);
+    } catch (err) {
+      // 409: it started in the meantime — the reload shows it running.
+      if ((err as { status?: number } | null)?.status !== 409) setCancelError(localizeError(err, t, 'automation:trigger.discardError'));
+    }
+    setReload((n) => n + 1);
+  };
 
   if (loading) return <p className="settings-hint">{t('trigger.eventsLoading')}</p>;
   if (events.length === 0) return <p className="settings-hint">{t('trigger.eventsEmpty')}</p>;
 
   return (
+    <>
+    {cancelError && <p className="settings-hint text-red-400 mb-2">{cancelError}</p>}
     <ul className="space-y-2">
       {events.map((event) => (
         <li key={event.id} className="text-xs">
@@ -411,11 +429,23 @@ function TriggerEvents({ triggerId, version, formatDate }: {
               'px-1.5 py-0.5 rounded text-[10px] uppercase font-bold',
               event.status === 'success' ? 'bg-emerald-500/10 text-emerald-400'
                 : event.status === 'started' ? 'bg-sky-500/10 text-sky-400'
+                : event.status === 'queued' ? 'bg-violet-500/10 text-violet-300'
                 : event.status === 'error' ? 'bg-red-500/10 text-red-400'
+                : event.status === 'superseded' || event.status === 'cancelled' ? 'bg-slate-500/20 text-slate-300'
                 : 'bg-amber-500/10 text-amber-400'
             )}>
               {t(`trigger.eventStatus.${event.status}`)}
             </span>
+            {event.status === 'queued' && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-red-400"
+                onClick={() => void discard(event.id)}
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+                {t('trigger.discard')}
+              </button>
+            )}
             {event.source === 'test' && (
               <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-white/10 text-white/70">
                 {t('trigger.eventTest')}
@@ -438,6 +468,7 @@ function TriggerEvents({ triggerId, version, formatDate }: {
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -573,7 +604,7 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
   const [approvalMode, setApprovalMode] = useState<TriggerApprovalMode>('inbox');
   const [inboxResult, setInboxResult] = useState<TriggerInboxResult>('always');
   const [rateLimit, setRateLimit] = useState('10');
-  const [preventOverlap, setPreventOverlap] = useState(false);
+  const [overlapMode, setOverlapMode] = useState<TriggerOverlapMode>('queue');
   const [chatId, setChatId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [chatTitle, setChatTitle] = useState(DEFAULT_CHAT_TITLE);
@@ -593,7 +624,7 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
     setApprovalMode(initial?.approval_mode ?? 'inbox');
     setInboxResult(initial?.inbox_result ?? 'always');
     setRateLimit(String(initial?.rate_limit_per_min ?? 10));
-    setPreventOverlap(initial?.prevent_overlap ?? false);
+    setOverlapMode(initial?.overlap_mode ?? 'queue');
     setChatId(initial?.chat_id ?? '');
     setProjectId(initial?.project_id ?? '');
     setChatTitle(initial?.chat_title_template || DEFAULT_CHAT_TITLE);
@@ -655,7 +686,7 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
         approval_mode: approvalMode,
         inbox_result: inboxResult,
         rate_limit_per_min: rate,
-        prevent_overlap: preventOverlap,
+        overlap_mode: overlapMode,
         chat_id: chatId || null,
         project_id: chatId ? null : (projectId || null),
         chat_title_template: chatTitle.trim() || DEFAULT_CHAT_TITLE
@@ -805,16 +836,16 @@ function TriggerDialog({ open, onOpenChange, agents, allChains, initial, onSaved
           </div>
 
           <div className="settings-field">
-            <div className="flex items-center justify-between">
-              <span>{t('preventOverlap')}</span>
-              <input
-                type="checkbox"
-                className="app-toggle"
-                checked={preventOverlap}
-                onChange={(e) => setPreventOverlap(e.target.checked)}
-              />
-            </div>
-            <p className="settings-hint">{t('trigger.preventOverlapHint')}</p>
+            <span>{t('trigger.overlapMode')}</span>
+            <AppSelect
+              value={overlapMode}
+              onValueChange={(value) => setOverlapMode(value as TriggerOverlapMode)}
+              options={(['queue', 'coalesce', 'skip'] as const).map((mode) => ({
+                value: mode,
+                label: t(`trigger.overlapOption.${mode}`)
+              }))}
+            />
+            <p className="settings-hint">{t(`trigger.overlapHint.${overlapMode}`)}</p>
           </div>
         </div>
 

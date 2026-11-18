@@ -129,7 +129,7 @@ Runs set off by another system. Concept: [Triggers (Webhook)](/en/automation/02_
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `POST` | `/hooks/:id` | Starts the trigger's run. No session; token in the header `Authorization: Bearer <token>` or `X-Ontheia-Token`. Body: JSON up to 256 KB. Response `202` with `{ status: "accepted", event_id, run_id }` or `{ status: "skipped", reason: "overlap" }`. Errors: `401` (token wrong/missing, trigger unknown or inactive), `404` (triggers switched off globally), `413`, `415`, `429`. |
+| `POST` | `/hooks/:id` | Starts the trigger's run or queues the call. No session; token in the header `Authorization: Bearer <token>` or `X-Ontheia-Token`. Optional header `Idempotency-Key` (at most 200 characters): a second call with the same key is not run again. Body: JSON up to 256 KB. Response `202` with `{ status: "accepted", event_id, run_id }`, `{ status: "queued", event_id }`, `{ status: "duplicate", event_id }` or `{ status: "skipped", reason: "overlap" \| "busy" }`. Errors: `400 invalid_idempotency_key`, `401` (token wrong/missing, trigger unknown or inactive), `404` (triggers switched off globally), `413`, `415`, `429` (`queue_full`, `rate_limited`, `too_many_failed_attempts`), `503 queue_unavailable`. |
 
 ### Management
 
@@ -137,13 +137,14 @@ All routes require a session and act on your own triggers only.
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/triggers` | Lists your triggers. Response: `{ triggers, enabled }`; `enabled` is the global switch. The token hash is never returned. |
+| `GET` | `/api/triggers` | Lists your triggers. Response: `{ triggers, enabled }`; `enabled` is the global switch. Each trigger carries `queued_count`, the number of waiting calls. The token hash is never returned. |
 | `POST` | `/api/triggers` | Creates a trigger. Response `201` with `{ trigger, token }` — the only response that carries the token. |
-| `PATCH` | `/api/triggers/:id` | Changes fields of a trigger. |
+| `PATCH` | `/api/triggers/:id` | Changes fields of a trigger. Setting `active` to `false` expires the waiting calls. |
 | `DELETE` | `/api/triggers/:id` | Deletes trigger and log. |
 | `POST` | `/api/triggers/:id/rotate-token` | Creates a new token (`{ token }`); the previous one stops working at once. |
 | `POST` | `/api/triggers/:id/test` | Starts a run with `{ payload }` through the session instead of the token. Counts against the same limits; also works for an inactive trigger. |
-| `GET` | `/api/triggers/:id/events` | The latest 50 log entries: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
+| `GET` | `/api/triggers/:id/events` | The latest 50 log entries: `id`, `received_at`, `started_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. `status`: `queued`, `started`, `success`, `error`, `superseded`, `expired`, `cancelled`, `queue_full`, `rate_limited`, `overlap_skipped`, `busy`. |
+| `DELETE` | `/api/triggers/:id/events/:eventId` | Discards a waiting call (`status` becomes `cancelled`). `204`; `409 not_queued` when it is no longer waiting. |
 
 **Triggers of other users (admin only):** An admin creates a trigger for another user by passing `user_id` in the body of `POST /api/triggers`. The trigger then belongs to that user: the run has that user's rights, results and approvals go to that user's inbox, and access to the agent, task and chain is checked for that user. `GET /api/triggers?user_id=<uuid>` lists that user's triggers. Changing, deleting, renewing the token, testing and the log work for an admin on every trigger. Every trigger carries `user_id`. Without the admin role, a foreign `user_id` yields `403` and a foreign trigger `404`.
 
@@ -161,7 +162,7 @@ All routes require a session and act on your own triggers only.
 | `chat_id` | string \| null | Existing chat every run continues in. Empty = new chat per call. |
 | `chat_title_template` | string | Title template with `{{name}}`, `{{timestamp}}` and `{{payload.field}}` (one line, at most 80 characters per field). |
 | `rate_limit_per_min` | integer | 1 – 600, default 10. |
-| `prevent_overlap` | boolean | Skip calls during an active run. |
+| `overlap_mode` | `"queue"` \| `"coalesce"` \| `"skip"` | What happens to a call during an active run: wait in turn, at most one waits and a newer one replaces it, or skipped. Default `queue`. The former `prevent_overlap` is still accepted (`true` → `skip`, `false` → `queue`). |
 | `active` | boolean | Switch the trigger on or off. |
 
 If a trigger targets an agent, a task or a chain its owner has no access to, the route answers `403 target_not_accessible`.

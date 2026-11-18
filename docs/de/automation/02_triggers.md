@@ -10,7 +10,10 @@ Jeder Benutzer kann eigene Trigger anlegen. Der Lauf handelt als Besitzer des Tr
 Absender (Gerät, Skript, Dienst)
   │  POST /hooks/<id>   Authorization: Bearer <Token>   JSON-Daten
   ▼
-Ontheia prüft Token und Limits  →  antwortet sofort mit 202
+Ontheia prüft das Token  →  antwortet sofort mit 202
+  │
+  ├─ Trigger frei     →  Lauf startet
+  └─ Lauf noch aktiv  →  Warteschlange, einmal nachlaufen oder überspringen
   │
   ▼
 Lauf im Hintergrund, in einem eigenen Chat
@@ -19,7 +22,9 @@ Lauf im Hintergrund, in einem eigenen Chat
   └─ fertig oder Fehler →  Eintrag im Posteingang
 ```
 
-Der Absender wartet nicht auf das Ergebnis. Er bekommt `202` mit `event_id` und `run_id`, der Lauf geht danach weiter.
+Der Absender wartet nicht auf das Ergebnis. Er bekommt `202` mit `event_id` (und `run_id`, wenn der Lauf sofort startet), der Lauf geht danach weiter.
+
+Ein Trigger arbeitet immer nur einen Aufruf zur Zeit ab. Verschiedene Trigger laufen gleichzeitig, bis zu drei je Benutzer.
 
 ## Trigger anlegen
 
@@ -59,12 +64,40 @@ Die Adresse setzt sich aus der Basis-Adresse der Host-API und `/hooks/<id>` zusa
 | Status | Bedeutung |
 | --- | --- |
 | `202` `{"status":"accepted", …}` | Angenommen, der Lauf ist gestartet. |
-| `202` `{"status":"skipped","reason":"overlap"}` | Übersprungen, weil ein Lauf dieses Triggers noch aktiv ist und „Überlappung verhindern" gesetzt ist. |
+| `202` `{"status":"queued", "event_id": …}` | Angenommen, der Aufruf wartet auf seinen Lauf. |
+| `202` `{"status":"duplicate", "event_id": …}` | Ein Aufruf mit demselben `Idempotency-Key` ist schon angekommen; er wird nicht noch einmal ausgeführt. |
+| `202` `{"status":"skipped","reason":"overlap"}` | Übersprungen (Modus „Überspringen“), weil ein Lauf dieses Triggers noch aktiv ist. `reason: "busy"`: Der Benutzer hat schon drei Trigger-Läufe aktiv. |
+| `400` | Header `Idempotency-Key` leer oder länger als 200 Zeichen. |
 | `401` | Token fehlt oder ist falsch, der Trigger ist unbekannt oder deaktiviert. Alle Fälle antworten gleich, damit die Antwort nichts über vorhandene Trigger verrät. |
 | `404` | Trigger sind für diese Installation ausgeschaltet. |
 | `413` | Daten größer als 256 KB. |
 | `415` | Daten sind kein JSON. |
-| `429` | Limit erreicht: Aufrufe pro Minute, gleichzeitige Läufe oder zu viele Fehlversuche von dieser Adresse. |
+| `429` | `queue_full`: Es warten schon 100 Aufrufe. `rate_limited`: Limit pro Minute im Modus „Überspringen“. `too_many_failed_attempts`: zu viele Fehlversuche von dieser Adresse. |
+| `503` | `queue_unavailable`: Der Aufruf konnte nicht gespeichert werden. Erneut senden. |
+
+### Doppelte Zustellung vermeiden
+
+Schickt der Absender einen Header `Idempotency-Key` (eindeutig je Ereignis, höchstens 200 Zeichen), führt Ontheia einen zweiten Aufruf mit demselben Schlüssel nicht noch einmal aus und antwortet mit `duplicate`. Das schützt vor doppelten Läufen, wenn der Absender wiederholt, weil eine Antwort unterwegs verloren ging. Der Schlüssel gilt, solange der erste Aufruf im Protokoll steht. Ein übersprungener oder abgewiesener Aufruf belegt ihn nicht: Die Wiederholung mit demselben Schlüssel wird ganz normal angenommen.
+
+## Während ein Lauf aktiv ist
+
+Was mit einem Aufruf passiert, der eintrifft, während der Trigger noch läuft, legt das Feld **Während ein Lauf aktiv ist** fest:
+
+| Modus | Verhalten | Geeignet für |
+| --- | --- | --- |
+| **Warteschlange** (Standard) | Jeder Aufruf wartet und läuft der Reihe nach, in Eingangsreihenfolge. | Aufrufe, die jeweils ein eigener Auftrag sind, z. B. eine Mail. |
+| **Einmal nachlaufen** | Es wartet höchstens ein Aufruf. Ein neuerer ersetzt ihn (Status „Ersetzt“); nach dem laufenden Lauf folgt genau ein weiterer, mit dem neuesten Aufruf. | Agenten, die sich ihre Arbeit selbst suchen, z. B. alle Dokumente mit einem bestimmten Tag. Ein Schub von zehn Aufrufen führt zu zwei Läufen statt zehn. |
+| **Überspringen** | Der Aufruf wird verworfen, der Absender bekommt `skipped`. | Meldungen, bei denen nur die neueste zählt, oder Absender, die bei `skipped` selbst später wiederholen. |
+
+Wartende Aufrufe:
+
+- laufen auch an, wenn ein Lauf eines anderen Triggers endet und damit einer der drei Plätze des Benutzers frei wird,
+- überstehen einen Neustart des Hosts,
+- verfallen nach 24 Stunden (Status „Verfallen“, Eintrag im Posteingang, außer bei „Nichts“ melden),
+- verfallen sofort, wenn der Trigger deaktiviert wird, damit sie nicht beim Wiedereinschalten unerwartet starten,
+- lassen sich im Protokoll einzeln verwerfen.
+
+Die Trigger-Liste zeigt, wie viele Aufrufe eines Triggers warten.
 
 ## Anweisung und Platzhalter
 
@@ -104,12 +137,14 @@ Die empfangenen Daten kommen von außerhalb der Installation. Enthalten sie Text
 
 | Limit | Wert | Wirkung |
 | --- | --- | --- |
-| Aufrufe pro Minute | je Trigger einstellbar, Standard 10 | weitere Aufrufe: `429` |
-| Gleichzeitige Trigger-Läufe | 3 je Benutzer | weitere Aufrufe: `429` |
+| Läufe pro Minute | je Trigger einstellbar, Standard 10 | weitere Aufrufe warten; bei „Überspringen“: `429` |
+| Läufe gleichzeitig | 1 je Trigger, 3 je Benutzer | weitere Aufrufe warten bzw. werden übersprungen |
+| Wartende Aufrufe | 100 je Trigger | weitere Aufrufe: `429 queue_full` |
+| Wartezeit | 24 Stunden | danach verfällt der Aufruf |
 | Fehlversuche | 20 pro Minute je Absender-Adresse | weitere Aufrufe: `429` |
 | Datengröße | 256 KB | `413` |
 
-Jeder angenommene Aufruf startet einen Lauf und verbraucht damit Tokens beim Provider. Das Limit pro Minute ist die Bremse für einen Absender, der mehr schickt als gedacht.
+Jeder Lauf verbraucht Tokens beim Provider. Das Limit pro Minute ist die Bremse für einen Absender, der mehr schickt als gedacht: Es begrenzt, wie viele Läufe starten, ohne Aufrufe zu verlieren.
 
 ## Protokoll und Test
 
@@ -117,17 +152,22 @@ Das **Protokoll** (Uhr-Symbol) zeigt die letzten Aufrufe eines Triggers mit Zeit
 
 | Status | Bedeutung |
 | --- | --- |
+| Wartet | Der Aufruf wartet auf seinen Lauf. Mit **Verwerfen** lässt er sich entfernen. |
 | Läuft | Der Lauf ist aktiv. |
 | Fertig | Der Lauf ist abgeschlossen. |
 | Fehler | Der Lauf ist gescheitert oder konnte nicht starten. |
-| Limit erreicht | Abgewiesen wegen der Aufrufe pro Minute. |
-| Übersprungen | Ein Lauf dieses Triggers war noch aktiv. |
-| Zu viele Läufe | Abgewiesen wegen der gleichzeitigen Läufe. |
+| Ersetzt | Wartete und wurde von einem neueren Aufruf ersetzt („Einmal nachlaufen“). |
+| Verfallen | Wartete länger als 24 Stunden, oder der Trigger wurde deaktiviert. |
+| Verworfen | Von Hand aus der Warteschlange entfernt. |
+| Warteschlange voll | Abgewiesen, weil schon 100 Aufrufe warteten. |
+| Limit erreicht | Abgewiesen wegen des Limits pro Minute („Überspringen“). |
+| Übersprungen | Ein Lauf dieses Triggers war noch aktiv („Überspringen“). |
+| Zu viele Läufe | Übersprungen, weil der Benutzer schon drei Trigger-Läufe aktiv hatte („Überspringen“). |
 
-**Testen** (Play-Symbol) startet einen Lauf mit Beispieldaten, als hätte ein Absender die Adresse aufgerufen. Der Test läuft über deine Anmeldung und braucht das Token nicht. Er zählt gegen dieselben Limits und funktioniert auch bei einem deaktivierten Trigger.
+**Testen** (Play-Symbol) startet einen Lauf mit Beispieldaten, als hätte ein Absender die Adresse aufgerufen. Der Test läuft über deine Anmeldung und braucht das Token nicht. Er unterliegt denselben Regeln wie ein echter Aufruf, wartet also gegebenenfalls in der Warteschlange, und funktioniert auch bei einem deaktivierten Trigger.
 
 ## Betrieb
 
 - **Globaler Schalter:** Administration → Allgemein → **Webhook-Trigger**. Ausgeschaltet antwortet jeder Aufruf mit `404`; die Trigger selbst bleiben erhalten. Die Änderung wirkt nach bis zu 30 Sekunden.
-- **Neustart des Hosts:** Ein Lauf überlebt keinen Neustart. Beim Start markiert der Host die Protokolleinträge und Run-Protokolle unterbrochener Läufe als Fehler und offene Freigaben als abgelaufen. Der Absender muss das Ereignis in diesem Fall erneut senden.
-- **Keine Wiederholung:** Ein gescheiterter Lauf wird nicht von selbst wiederholt.
+- **Neustart des Hosts:** Ein Lauf überlebt keinen Neustart. Beim Start markiert der Host die Protokolleinträge und Run-Protokolle unterbrochener Läufe als Fehler, offene Freigaben als abgelaufen und meldet jeden unterbrochenen Lauf im Posteingang. Wartende Aufrufe bleiben erhalten und laufen danach an.
+- **Keine Wiederholung:** Ein gescheiterter oder durch einen Neustart unterbrochener Lauf wird nicht von selbst wiederholt. Er kann einen Teil seiner Arbeit schon erledigt haben, etwa eine Antwort verschickt; ein zweiter Lauf würde das wiederholen.

@@ -240,7 +240,7 @@ try {
 const inboxService = new InboxService(dbPool, server.log);
 await inboxService.expireOrphanedApprovals();
 const triggerService = new TriggerService(dbPool, runService, inboxService, server.log);
-await triggerService.closeOrphanedEvents();
+await triggerService.start();
 const cronService = new CronService(dbPool, runService, server.log, inboxService);
 await cronService.start();
 

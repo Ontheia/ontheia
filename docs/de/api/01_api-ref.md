@@ -129,7 +129,7 @@ Läufe, die ein anderes System auslöst. Konzept: [Trigger (Webhook)](/de/automa
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `POST` | `/hooks/:id` | Startet den Lauf des Triggers. Keine Session; Token im Header `Authorization: Bearer <Token>` oder `X-Ontheia-Token`. Body: JSON bis 256 KB. Antwort `202` mit `{ status: "accepted", event_id, run_id }` oder `{ status: "skipped", reason: "overlap" }`. Fehler: `401` (Token falsch/fehlend, Trigger unbekannt oder inaktiv), `404` (Trigger global aus), `413`, `415`, `429`. |
+| `POST` | `/hooks/:id` | Startet den Lauf des Triggers oder reiht den Aufruf ein. Keine Session; Token im Header `Authorization: Bearer <Token>` oder `X-Ontheia-Token`. Optionaler Header `Idempotency-Key` (höchstens 200 Zeichen): Ein zweiter Aufruf mit demselben Schlüssel wird nicht noch einmal ausgeführt. Body: JSON bis 256 KB. Antwort `202` mit `{ status: "accepted", event_id, run_id }`, `{ status: "queued", event_id }`, `{ status: "duplicate", event_id }` oder `{ status: "skipped", reason: "overlap" \| "busy" }`. Fehler: `400 invalid_idempotency_key`, `401` (Token falsch/fehlend, Trigger unbekannt oder inaktiv), `404` (Trigger global aus), `413`, `415`, `429` (`queue_full`, `rate_limited`, `too_many_failed_attempts`), `503 queue_unavailable`. |
 
 ### Verwaltung
 
@@ -137,13 +137,14 @@ Alle Routen erfordern eine Session und wirken nur auf die eigenen Trigger.
 
 | Methode | Pfad | Beschreibung |
 | :--- | :--- | :--- |
-| `GET` | `/api/triggers` | Listet die eigenen Trigger. Antwort: `{ triggers, enabled }`; `enabled` ist der globale Schalter. Der Token-Hash wird nie ausgegeben. |
+| `GET` | `/api/triggers` | Listet die eigenen Trigger. Antwort: `{ triggers, enabled }`; `enabled` ist der globale Schalter. Jeder Trigger enthält `queued_count`, die Zahl der wartenden Aufrufe. Der Token-Hash wird nie ausgegeben. |
 | `POST` | `/api/triggers` | Legt einen Trigger an. Antwort `201` mit `{ trigger, token }` — die einzige Antwort, die das Token enthält. |
-| `PATCH` | `/api/triggers/:id` | Ändert Felder eines Triggers. |
+| `PATCH` | `/api/triggers/:id` | Ändert Felder eines Triggers. `active` auf `false` lässt die wartenden Aufrufe verfallen. |
 | `DELETE` | `/api/triggers/:id` | Löscht Trigger und Protokoll. |
 | `POST` | `/api/triggers/:id/rotate-token` | Erzeugt ein neues Token (`{ token }`); das bisherige ist sofort ungültig. |
 | `POST` | `/api/triggers/:id/test` | Startet einen Lauf mit `{ payload }` über die Session statt des Tokens. Zählt gegen dieselben Limits; funktioniert auch bei inaktivem Trigger. |
-| `GET` | `/api/triggers/:id/events` | Die letzten 50 Protokolleinträge: `id`, `received_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. |
+| `GET` | `/api/triggers/:id/events` | Die letzten 50 Protokolleinträge: `id`, `received_at`, `started_at`, `status`, `source` (`webhook`/`test`), `run_id`, `chat_id`, `payload`, `error`. `status`: `queued`, `started`, `success`, `error`, `superseded`, `expired`, `cancelled`, `queue_full`, `rate_limited`, `overlap_skipped`, `busy`. |
+| `DELETE` | `/api/triggers/:id/events/:eventId` | Verwirft einen wartenden Aufruf (`status` wird `cancelled`). `204`; `409 not_queued`, wenn er nicht mehr wartet. |
 
 **Trigger anderer Benutzer (nur Admin):** Ein Admin legt mit `user_id` im Body von `POST /api/triggers` einen Trigger für einen anderen Benutzer an. Der Trigger gehört dann diesem Benutzer: Der Lauf arbeitet mit dessen Rechten, Ergebnisse und Freigaben landen in dessen Posteingang, und der Zugriff auf Agent, Task und Chain wird für ihn geprüft. `GET /api/triggers?user_id=<uuid>` listet dessen Trigger. Ändern, Löschen, Token erneuern, Testen und das Protokoll funktionieren für einen Admin bei jedem Trigger. Jeder Trigger enthält `user_id`. Ohne Admin-Rolle führt ein fremdes `user_id` zu `403`, ein fremder Trigger zu `404`.
 
@@ -161,7 +162,7 @@ Alle Routen erfordern eine Session und wirken nur auf die eigenen Trigger.
 | `chat_id` | string \| null | Bestehender Chat, in dem jeder Lauf fortgesetzt wird. Leer = neuer Chat pro Aufruf. |
 | `chat_title_template` | string | Titelvorlage mit `{{name}}`, `{{timestamp}}` und `{{payload.feld}}` (einzeilig, höchstens 80 Zeichen je Feld). |
 | `rate_limit_per_min` | integer | 1 – 600, Standard 10. |
-| `prevent_overlap` | boolean | Aufrufe während eines laufenden Laufs überspringen. |
+| `overlap_mode` | `"queue"` \| `"coalesce"` \| `"skip"` | Was mit einem Aufruf während eines laufenden Laufs passiert: der Reihe nach warten, höchstens einer wartet und ein neuerer ersetzt ihn, oder überspringen. Standard `queue`. Das frühere `prevent_overlap` wird weiter angenommen (`true` → `skip`, `false` → `queue`). |
 | `active` | boolean | Trigger aktiv/inaktiv schalten. |
 
 Zielt ein Trigger auf einen Agenten, einen Task oder eine Chain, auf die der Besitzer keinen Zugriff hat, antwortet die Route mit `403 target_not_accessible`.

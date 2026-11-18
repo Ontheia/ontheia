@@ -2029,6 +2029,8 @@ export function markAllInboxDone() {
 
 export type TriggerApprovalMode = 'inbox' | 'granted' | 'denied';
 export type TriggerInboxResult = 'always' | 'errors' | 'never';
+/** What happens to a call while a run of the trigger is active. */
+export type TriggerOverlapMode = 'queue' | 'coalesce' | 'skip';
 
 export type TriggerEntry = {
   id: string;
@@ -2043,18 +2045,22 @@ export type TriggerEntry = {
   project_id: string | null;
   chat_title_template: string;
   rate_limit_per_min: number;
-  prevent_overlap: boolean;
+  overlap_mode: TriggerOverlapMode;
   active: boolean;
   last_triggered_at: string | null;
   last_error: string | null;
   created_at: string;
   updated_at: string;
+  /** Calls waiting for their run; only in the list. */
+  queued_count?: number;
 };
 
 export type TriggerEventEntry = {
   id: string;
   received_at: string;
-  status: 'started' | 'success' | 'error' | 'rate_limited' | 'overlap_skipped' | 'busy';
+  started_at: string | null;
+  status: 'queued' | 'started' | 'success' | 'error' | 'rate_limited' | 'overlap_skipped' | 'busy'
+    | 'superseded' | 'expired' | 'cancelled' | 'queue_full';
   source: 'webhook' | 'test';
   run_id: string | null;
   chat_id: string | null;
@@ -2064,7 +2070,7 @@ export type TriggerEventEntry = {
 
 export type TriggerInput = Partial<Pick<TriggerEntry,
   'name' | 'agent_id' | 'task_id' | 'chain_id' | 'prompt_template' | 'approval_mode' | 'inbox_result' |
-  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
+  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'overlap_mode' | 'active'>>;
 
 /** Address a sender posts to. The token goes into a header, never into this URL. */
 export function triggerHookUrl(id: string) {
@@ -2103,7 +2109,12 @@ export function testTrigger(id: string, payload: unknown) {
   return request(`/api/triggers/${encodeURIComponent(id)}/test`, {
     method: 'POST',
     body: JSON.stringify({ payload })
-  }) as Promise<{ status: 'accepted' | 'skipped'; event_id?: string; run_id?: string; reason?: string }>;
+  }) as Promise<{ status: 'accepted' | 'queued' | 'duplicate' | 'skipped'; event_id?: string; run_id?: string; reason?: string }>;
+}
+
+/** Drops a call that is still waiting; 409 when it has started meanwhile. */
+export function cancelTriggerEvent(id: string, eventId: string) {
+  return request(`/api/triggers/${encodeURIComponent(id)}/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
 }
 
 export function listTriggerEvents(id: string) {

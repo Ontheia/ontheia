@@ -100,8 +100,8 @@ Sind Trigger für die Installation ausgeschaltet, steht ein Hinweis über der Li
 | Ausgabe-Chat | Dropdown | | „Neuer Chat pro Lauf" (Standard) oder ein bestehender Chat, in dem alle Läufe fortgesetzt werden. Ein fester Chat passt nur, wenn die Ereignisse aufeinander aufbauen; siehe [Chat-Fortsetzung](/de/automation/01_overview/). |
 | Chat-Titel Vorlage | Text | | Titel des neu angelegten Chats. Platzhalter: `{{name}}`, `{{timestamp}}` und Felder der empfangenen Daten wie `{{payload.id}}`. Nur bei „Neuer Chat pro Lauf". |
 | Projekt für neue Chats | Dropdown | | Projekt, unter dem die Chats dieses Triggers abgelegt werden. Nur bei „Neuer Chat pro Lauf". |
-| Aufrufe pro Minute | Zahl | ✓ | 1 – 600, Standard 10. Weitere Aufrufe werden abgewiesen. |
-| Überlappung verhindern | Schalter | | Ein Aufruf während eines laufenden Laufs dieses Triggers wird übersprungen. |
+| Läufe pro Minute | Zahl | ✓ | 1 – 600, Standard 10. Weitere Aufrufe warten; bei „Überspringen“ werden sie abgewiesen. |
+| Während ein Lauf aktiv ist | Dropdown | ✓ | **Warteschlange** (Standard): jeder Aufruf läuft der Reihe nach · **Einmal nachlaufen**: höchstens ein Aufruf wartet, ein neuerer ersetzt ihn · **Überspringen**: der Aufruf wird verworfen. Siehe [Trigger](/de/automation/02_triggers/). |
 
 Buttons: **[Speichern]** · **[Abbrechen]**
 

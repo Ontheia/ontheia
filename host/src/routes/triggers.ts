@@ -25,8 +25,10 @@ import { requireSession } from './security.js';
 import { isUuid, withRls } from './utils.js';
 import type { RouteContext } from './types.js';
 import {
+  OVERLAP_MODES,
   TRIGGER_BODY_LIMIT_BYTES,
   generateTriggerToken,
+  idempotencyKeyFromHeaders,
   hashTriggerToken,
   tokenFromHeaders,
   type TriggerRow,
@@ -41,7 +43,7 @@ const PROMPT_MAX = 20_000;
 
 // The hash never leaves the host: a trigger is listed without it.
 const PUBLIC_COLUMNS = `id, user_id, name, agent_id, task_id, chain_id, prompt_template, approval_mode, inbox_result,
-  chat_id, project_id, chat_title_template, rate_limit_per_min, prevent_overlap, active,
+  chat_id, project_id, chat_title_template, rate_limit_per_min, overlap_mode, active,
   last_triggered_at, last_error, created_at, updated_at`;
 
 function clientIp(request: FastifyRequest): string {
@@ -52,7 +54,7 @@ function clientIp(request: FastifyRequest): string {
 
 type Fields = Partial<Pick<TriggerRow,
   'name' | 'agent_id' | 'task_id' | 'chain_id' | 'prompt_template' | 'approval_mode' | 'inbox_result' |
-  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'prevent_overlap' | 'active'>>;
+  'chat_id' | 'project_id' | 'chat_title_template' | 'rate_limit_per_min' | 'overlap_mode' | 'active'>>;
 
 /** Reads the editable fields from a request body; returns an error code for the first invalid one. */
 function parseFields(body: Record<string, unknown>, requireName: boolean): { fields: Fields } | { error: string } {
@@ -102,7 +104,13 @@ function parseFields(body: Record<string, unknown>, requireName: boolean): { fie
     if (!Number.isInteger(n) || n < 1 || n > 600) return { error: 'invalid_rate_limit' };
     fields.rate_limit_per_min = n;
   }
-  if ('prevent_overlap' in body) fields.prevent_overlap = body.prevent_overlap === true;
+  if ('overlap_mode' in body) {
+    if (!OVERLAP_MODES.includes(body.overlap_mode as never)) return { error: 'invalid_overlap_mode' };
+    fields.overlap_mode = body.overlap_mode as TriggerRow['overlap_mode'];
+  } else if ('prevent_overlap' in body) {
+    // Earlier versions had a switch; its two settings are the modes skip and queue.
+    fields.overlap_mode = body.prevent_overlap === true ? 'skip' : 'queue';
+  }
   if ('active' in body) fields.active = body.active === true;
   return { fields };
 }
@@ -164,7 +172,10 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     }
     const triggers = await withRls(db, userId, role, async (client) => {
       const res = await client.query(
-        `SELECT ${PUBLIC_COLUMNS} FROM app.triggers WHERE user_id = $1 ORDER BY created_at DESC`,
+        `SELECT ${PUBLIC_COLUMNS},
+                (SELECT count(*)::int FROM app.trigger_events e
+                  WHERE e.trigger_id = app.triggers.id AND e.status = 'queued') AS queued_count
+         FROM app.triggers WHERE user_id = $1 ORDER BY created_at DESC`,
         [owner.userId]
       );
       return res.rows;
@@ -206,7 +217,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       const res = await client.query(
         `INSERT INTO app.triggers (user_id, name, token_hash, agent_id, task_id, chain_id, prompt_template,
                                    approval_mode, inbox_result, chat_id, chat_title_template,
-                                   rate_limit_per_min, prevent_overlap, active, project_id)
+                                   rate_limit_per_min, overlap_mode, active, project_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING ${PUBLIC_COLUMNS}`,
         [
@@ -214,7 +225,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
           f.agent_id ?? null, f.task_id ?? null, f.chain_id ?? null, f.prompt_template ?? '',
           f.approval_mode ?? 'inbox', f.inbox_result ?? 'always',
           f.chat_id ?? null, f.chat_title_template ?? 'Trigger: {{name}} [{{timestamp}}]',
-          f.rate_limit_per_min ?? 10, f.prevent_overlap ?? false, f.active ?? true,
+          f.rate_limit_per_min ?? 10, f.overlap_mode ?? 'queue', f.active ?? true,
           f.project_id ?? null
         ]
       );
@@ -269,6 +280,10 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       );
       return res.rows[0];
     });
+    // Calls waiting for a switched-off trigger would otherwise start the moment it is switched on again.
+    if (parsed.fields.active === false && existing.active) {
+      await triggerService.expireQueued(id, 'The trigger was deactivated.');
+    }
     return { trigger: row };
   });
 
@@ -347,7 +362,7 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
     }
     return withRls(db, userId, role, async (client) => {
       const res = await client.query(
-        `SELECT e.id, e.received_at, e.status, e.source, e.run_id, e.payload, e.error,
+        `SELECT e.id, e.received_at, e.started_at, e.status, e.source, e.run_id, e.payload, e.error,
                 CASE WHEN c.id IS NULL THEN NULL ELSE e.chat_id END AS chat_id
          FROM app.trigger_events e
          LEFT JOIN app.chats c ON c.id = e.chat_id
@@ -357,6 +372,25 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       );
       return { events: res.rows };
     });
+  });
+
+  // Drops a call that is still waiting; one that has started or ended stays as it is.
+  server.delete('/api/triggers/:id/events/:eventId', async (request, reply) => {
+    const auth = await requireSession(db, request, reply);
+    if (!auth) return;
+    const { userId, role } = auth.session;
+    const { id, eventId } = request.params as { id: string; eventId: string };
+    const trigger = isUuid(id) && isUuid(eventId) ? await loadManaged(userId, role, id) : undefined;
+    if (!trigger) {
+      reply.code(404);
+      return { error: 'not_found' };
+    }
+    if (!(await triggerService.cancelQueued(id, eventId))) {
+      reply.code(409);
+      return { error: 'not_queued' };
+    }
+    reply.code(204);
+    return null;
   });
 
   // ── Incoming (token, no session) ───────────────────────────────────────────
@@ -369,11 +403,17 @@ export function registerTriggerRoutes(server: FastifyInstance, context: RouteCon
       reply.code(415);
       return { error: 'json_required' };
     }
+    const idempotency = idempotencyKeyFromHeaders(request.headers);
+    if ('error' in idempotency) {
+      reply.code(400);
+      return { error: idempotency.error };
+    }
     const result = await triggerService.handleIncoming({
       id,
       token: tokenFromHeaders(request.headers),
       payload: request.body ?? {},
-      clientIp: clientIp(request)
+      clientIp: clientIp(request),
+      idempotencyKey: idempotency.key
     });
     reply.code(result.status);
     return result.body;

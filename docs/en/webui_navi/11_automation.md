@@ -100,8 +100,8 @@ If triggers are switched off for the installation, a notice is shown above the l
 | Output chat | Dropdown | | "New chat per run" (default) or an existing chat that all runs continue. A fixed chat only fits when the events build on each other; see [Chat Continuation](/en/automation/01_overview/). |
 | Chat Title Template | Text | | Title of the newly created chat. Placeholders: `{{name}}`, `{{timestamp}}` and fields of the received data such as `{{payload.id}}`. Only with "New chat per run". |
 | Project for new chats | Dropdown | | Project the chats of this trigger are filed under. Only with "New chat per run". |
-| Calls per minute | Number | ✓ | 1 – 600, default 10. Further calls are refused. |
-| Prevent Overlap | Switch | | A call during an active run of this trigger is skipped. |
+| Runs per minute | Number | ✓ | 1 – 600, default 10. Further calls wait; with "Skip" they are refused. |
+| While a run is active | Dropdown | ✓ | **Queue** (default): every call runs in turn · **Run once more**: at most one call waits, a newer one replaces it · **Skip**: the call is dropped. See [Triggers](/en/automation/02_triggers/). |
 
 Buttons: **[Save]** · **[Cancel]**
 

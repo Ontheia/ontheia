@@ -24,6 +24,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SlidingWindowLimiter,
+  TRIGGER_QUEUE_MAX,
+  admissionKeepsIdempotencyKey,
+  decideAdmission,
+  idempotencyKeyFromHeaders,
   TRIGGER_EVENT_PAYLOAD_MAX_CHARS,
   TRIGGER_TOKEN_PREFIX,
   generateTriggerToken,
@@ -140,4 +144,68 @@ test('a chat title takes fields of the payload, on one line and cut short', () =
 
 test('a payload value cannot smuggle placeholders into the title', () => {
   assert.equal(renderTriggerTitle('{{payload.s}}', { s: '{{name}}' }), 'name');
+});
+
+const idle = { triggerRunning: false, userAtLimit: false, rateExhausted: false, queued: 0 };
+
+test('an idle trigger starts the call in every mode', () => {
+  for (const mode of ['queue', 'coalesce', 'skip'] as const) {
+    assert.deepEqual(decideAdmission({ mode, ...idle }), { action: 'start' });
+  }
+});
+
+test('queue: a call waits while the trigger runs, the user is at the limit or the rate is used up', () => {
+  for (const busy of [{ triggerRunning: true }, { userAtLimit: true }, { rateExhausted: true }]) {
+    assert.deepEqual(decideAdmission({ mode: 'queue', ...idle, ...busy }), { action: 'enqueue', replaceWaiting: false });
+  }
+});
+
+test('queue: a call never overtakes one that is already waiting', () => {
+  assert.deepEqual(decideAdmission({ mode: 'queue', ...idle, queued: 1 }), { action: 'enqueue', replaceWaiting: false });
+});
+
+test('queue: a full queue refuses the call', () => {
+  assert.deepEqual(
+    decideAdmission({ mode: 'queue', ...idle, triggerRunning: true, queued: TRIGGER_QUEUE_MAX }),
+    { action: 'reject', error: 'queue_full' }
+  );
+});
+
+test('coalesce: a waiting call is replaced, the queue never fills', () => {
+  assert.deepEqual(
+    decideAdmission({ mode: 'coalesce', ...idle, triggerRunning: true, queued: 1 }),
+    { action: 'enqueue', replaceWaiting: true }
+  );
+  assert.deepEqual(
+    decideAdmission({ mode: 'coalesce', ...idle, triggerRunning: true, queued: TRIGGER_QUEUE_MAX }),
+    { action: 'enqueue', replaceWaiting: true }
+  );
+});
+
+test('skip: a call during a run is skipped, the rate limit refuses', () => {
+  assert.deepEqual(decideAdmission({ mode: 'skip', ...idle, triggerRunning: true }), { action: 'skip', reason: 'overlap' });
+  assert.deepEqual(decideAdmission({ mode: 'skip', ...idle, userAtLimit: true }), { action: 'skip', reason: 'busy' });
+  assert.deepEqual(decideAdmission({ mode: 'skip', ...idle, rateExhausted: true }), { action: 'reject', error: 'rate_limited' });
+});
+
+test('the Idempotency-Key header is optional, trimmed and bounded', () => {
+  assert.deepEqual(idempotencyKeyFromHeaders({}), { key: null });
+  assert.deepEqual(idempotencyKeyFromHeaders({ 'idempotency-key': ' abc-1 ' }), { key: 'abc-1' });
+  assert.deepEqual(idempotencyKeyFromHeaders({ 'idempotency-key': '' }), { error: 'invalid_idempotency_key' });
+  assert.deepEqual(idempotencyKeyFromHeaders({ 'idempotency-key': 'x'.repeat(201) }), { error: 'invalid_idempotency_key' });
+  assert.deepEqual(idempotencyKeyFromHeaders({ 'idempotency-key': ['a', 'b'] }), { error: 'invalid_idempotency_key' });
+});
+
+test('only an accepted call keeps its Idempotency-Key, so a retry after skipped or refused is admitted again', () => {
+  const running = { ...idle, triggerRunning: true };
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'queue', ...idle })), true);
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'queue', ...running })), true);
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'coalesce', ...running })), true);
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'skip', ...running })), false);
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'skip', ...idle, userAtLimit: true })), false);
+  assert.equal(admissionKeepsIdempotencyKey(decideAdmission({ mode: 'skip', ...idle, rateExhausted: true })), false);
+  assert.equal(
+    admissionKeepsIdempotencyKey(decideAdmission({ mode: 'queue', ...running, queued: TRIGGER_QUEUE_MAX })),
+    false
+  );
 });
