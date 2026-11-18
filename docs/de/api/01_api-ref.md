@@ -16,7 +16,7 @@ Alle Endpunkte (außer `/auth/login`, `/auth/signup`, `/auth/logout` und `/healt
 | `GET` | `/auth/me/export` | **Art. 20 DSGVO** – Exportiert alle persönlichen Daten als `ontheia-export.json` (Profil, Chats, Run-Logs, Memory-Einträge). |
 | `PUT` | `/auth/profile` | Aktualisiert das Benutzerprofil. Erlaubt die Steuerung des Admin-Memory-Zugriffs via `allow_admin_memory`. |
 | `POST` | `/auth/change-password` | Ändert das Passwort des Benutzers. |
-| `GET` | `/user/settings` | Ruft Benutzereinstellungen ab. Enthält u. a. `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`. |
+| `GET` | `/user/settings` | Ruft Benutzereinstellungen ab. Enthält u. a. `runtime`, `uiFlags`, `promptOptimizer`, `rollingSummary`. |
 | `PUT` | `/user/settings` | Speichert Benutzereinstellungen. Admins können globale Felder (z. B. `rollingSummary`) systemweit persistieren. Beispiel-Payload: `{ "rollingSummary": { "providerId": "openai", "modelId": "gpt-6-luna", "thresholdTokens": 32000, "minRecent": 20 } }`. |
 | `GET` | `/user/audit` | Liefert Audit-Logs für den Benutzer (Sitzungen, Runs). |
 
@@ -344,7 +344,7 @@ Globale Konfiguration des Ontheia-Hosts.
 | :--- | :--- | :--- |
 | `GET` | `/admin/settings` | Ruft alle globalen Systemeinstellungen ab. |
 | `PATCH` | `/admin/settings` | Aktualisiert spezifische Systemeinstellungen (z.B. `allow_self_signup`, `max_tool_calls`, `triggers_enabled`, `inbox_approval_timeout_hours`). |
-| `GET` | `/admin/model-usage` | Listet alle verwendeten Provider/Modell-Paare mit den Agenten, aktiven Chains und Systemeinstellungen (`promptOptimizer`, `rollingSummary`), die sie nutzen; `known` zeigt, ob das Paar als Chat-Modell angelegt ist. Agent-Builder ausgenommen. |
+| `GET` | `/admin/model-usage` | Listet alle verwendeten Provider/Modell-Paare mit den Agenten, aktiven Chains und Systemeinstellungen (`promptOptimizer`, `rollingSummary`), die sie nutzen; `known` zeigt, ob das Paar als Chat-Modell angelegt ist. |
 | `POST` | `/admin/model-replace` | Ersetzt ein Modell an den gewählten Stellen. Body: `{ from: { provider, model }, to: { provider, model }, agent_ids, chain_ids, settings }`. `to` muss ein aktives Chat-Modell sein. Chains erhalten eine neue aktive Version. Gibt die geänderten `agents`, `chains` und `settings` zurück. |
 | `GET` | `/admin/system/status` | Gibt Systemstatus zurück: Memory-Modus (`disabled`/`cloud`/`local`) und installierte Version. Nützlich für Monitoring und Skripte. |
 

@@ -40,8 +40,7 @@ import type { RouteContext } from './types.js';
  * alone — the old model stays, the replacement only rewrites references.
  *
  * Deliberately out of scope: embedding models (a different model means a
- * different vector space and a re-embed) and the Agent-Builder, whose chain
- * and model setting are excluded.
+ * different vector space and a re-embed).
  */
 
 export interface ModelRef {
@@ -139,7 +138,7 @@ interface UsageEntry extends ModelRef {
   settings: ReplaceableSetting[];
 }
 
-async function collectUsage(client: PoolClient, builderChainId: string): Promise<UsageEntry[]> {
+async function collectUsage(client: PoolClient): Promise<UsageEntry[]> {
   const usage = new Map<string, UsageEntry>();
   const entry = (ref: ModelRef): UsageEntry => {
     const key = pairKey(ref);
@@ -167,7 +166,6 @@ async function collectUsage(client: PoolClient, builderChainId: string): Promise
   );
   for (const row of chains.rows) {
     const id = String(row.id);
-    if (builderChainId && id === builderChainId) continue;
     const seen = new Set<string>();
     for (const ref of specModelRefs(row.spec)) {
       const key = pairKey(ref);
@@ -210,13 +208,13 @@ const stringList = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.map(asString).filter(Boolean))] : [];
 
 export function registerModelReplaceRoutes(server: FastifyInstance, context: RouteContext) {
-  const { db, builderChainId } = context;
+  const { db } = context;
 
   server.get('/admin/model-usage', async (request, reply) => {
     const auth = await requireSession(db, request, reply, { requireAdmin: true });
     if (!auth) return;
     const usage = await withRls(db, auth.session.userId, auth.session.role, (client) =>
-      collectUsage(client, builderChainId)
+      collectUsage(client)
     );
     return { usage };
   });
@@ -236,7 +234,7 @@ export function registerModelReplaceRoutes(server: FastifyInstance, context: Rou
       return { error: 'invalid_argument', message: 'from and to are the same model.' };
     }
     const agentIds = stringList(body.agent_ids);
-    const chainIds = stringList(body.chain_ids).filter((id) => !builderChainId || id !== builderChainId);
+    const chainIds = stringList(body.chain_ids);
     const settingKeys = stringList(body.settings).filter((key): key is ReplaceableSetting =>
       (REPLACEABLE_SETTINGS as readonly string[]).includes(key)
     );

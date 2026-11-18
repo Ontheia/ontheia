@@ -479,7 +479,6 @@ export function ChatView({
     updateChatPreferences,
     messages: sidebarMessages,
     runtimeSettings,
-    builderDefaults,
     defaultToolApproval,
     preferences,
     setActiveRunForChat,
@@ -539,9 +538,7 @@ export function ChatView({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
-  const [builderMode] = useState(false);
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const consoleLines: string[] = [];
@@ -1323,33 +1320,7 @@ export function ChatView({
       let taskIdForMetadata: string | undefined;
       let chainIdForPayload: string | undefined;
 
-      if (builderMode) {
-        if (!isAdmin) {
-          setError(t('adminOnlyBuilder'));
-          setLoading(false);
-          setIsProcessing(false);
-          return;
-        }
-        const overrideProvider =
-          typeof builderDefaults.providerId === 'string' ? builderDefaults.providerId.trim() : '';
-        const overrideModel =
-          typeof builderDefaults.modelId === 'string' ? builderDefaults.modelId.trim() : '';
-        if (!builderChainId) {
-          setError(t('noBuilderConfig'));
-          setLoading(false);
-          setIsProcessing(false);
-          return;
-        }
-        if (!overrideProvider || !overrideModel) {
-          setError(t('setBuilderDefaults'));
-          setLoading(false);
-          setIsProcessing(false);
-          return;
-        }
-        providerId = overrideProvider;
-        modelId = overrideModel;
-        chainIdForPayload = builderChainId;
-      } else if (primary.type === 'provider') {
+      if (primary.type === 'provider') {
         if (!secondary) {
           setError(t('selectModelError'));
           setLoading(false);
@@ -1449,7 +1420,6 @@ export function ChatView({
         source: 'webui-demo',
         chat_id: effectiveChatId
       };
-      if (builderMode) metadata.builder_mode = true;
       if (projectIdRef.current) metadata.project_id = projectIdRef.current;
       if (agentIdForMetadata) metadata.agent_id = agentIdForMetadata;
       if (taskIdForMetadata) metadata.task_id = taskIdForMetadata;
@@ -1468,10 +1438,10 @@ export function ChatView({
       if (chainIdForPayload) {
         payload.chain_id = chainIdForPayload;
         metadata.chain_id = chainIdForPayload;
-        if (!builderMode && secondary?.label) metadata.chain_label = secondary.label;
+        if (secondary?.label) metadata.chain_label = secondary.label;
         delete payload.task_id;
       }
-      if (!builderMode && primary.type === 'agent') {
+      if (primary.type === 'agent') {
         metadata.tool_approval = approvalMode;
         metadata.tool_permissions = toolApprovalMap;
         payload.tool_permissions = toolApprovalMap;
@@ -2000,10 +1970,6 @@ export function ChatView({
     import.meta.env.VITE_PROMPT_OPTIMIZER_CHAIN_ID ??
     import.meta.env.VITE_PROMPT_OPTIMIZER_CHAIN ??
     '';
-  const builderChainId =
-    import.meta.env.VITE_BUILDER_CHAIN_ID ??
-    import.meta.env.VITE_BUILDER_CHAIN ??
-    '';
   const handleOptimizePrompt = useCallback(async () => {
     const text = message.trim();
     if (!text) {
@@ -2011,7 +1977,7 @@ export function ChatView({
       return;
     }
     if (!optimizerChainId) {
-      setOptimizeError(t('noBuilderConfig'));
+      setOptimizeError(t('noOptimizerConfig'));
       return;
     }
     try {

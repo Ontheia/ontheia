@@ -47,7 +47,6 @@ export type RouteContext = {
   runService: RunService;
   config: ServiceConfig;
   promptOptimizerChainId: string;
-  builderChainId: string;
 };
 
 export type ToolApprovalWaiter = {

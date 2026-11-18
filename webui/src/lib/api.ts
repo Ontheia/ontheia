@@ -1465,11 +1465,6 @@ export type PromptOptimizerDefaultsPayload = {
   modelId: string | null;
 };
 
-export type BuilderDefaultsPayload = {
-  providerId: string | null;
-  modelId: string | null;
-};
-
 export type RollingSummaryPayload = {
   providerId: string | null;
   modelId: string | null;
@@ -1519,7 +1514,6 @@ export type UserSettingsPayload = {
   runtime?: UserRuntimeSettingsPayload;
   uiFlags?: UserUiFlagsPayload;
   promptOptimizer?: PromptOptimizerDefaultsPayload;
-  builder?: BuilderDefaultsPayload;
   rollingSummary?: RollingSummaryPayload;
   memoryIngest?: UserMemoryIngestPayload;
 };
@@ -1550,7 +1544,6 @@ export function getUserSettingsApi() {
     runtime?: UserRuntimeSettingsPayload;
     uiFlags?: UserUiFlagsPayload;
     promptOptimizer?: PromptOptimizerDefaultsPayload;
-    builder?: BuilderDefaultsPayload;
     rollingSummary?: RollingSummaryPayload;
     memoryIngest?: UserMemoryIngestPayload;
     updatedAt?: string;
@@ -1572,7 +1565,6 @@ export function updateUserSettingsApi(payload: UserSettingsPayload) {
     runtime?: UserRuntimeSettingsPayload;
     uiFlags?: UserUiFlagsPayload;
     promptOptimizer?: PromptOptimizerDefaultsPayload;
-    builder?: BuilderDefaultsPayload;
     rollingSummary?: RollingSummaryPayload;
     memoryIngest?: UserMemoryIngestPayload;
     updatedAt: string;

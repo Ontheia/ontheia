@@ -39,15 +39,12 @@ import {
   loadGlobalRuntime, 
   loadGlobalUiFlags, 
   loadGlobalPromptOptimizer, 
-  loadGlobalBuilder, 
   normalizeRuntimeSettings, 
   persistGlobalRuntime, 
   normalizeUiFlags, 
   persistGlobalUiFlags, 
   normalizePromptOptimizer, 
   persistGlobalPromptOptimizer, 
-  normalizeBuilderDefaults,
-  persistGlobalBuilder,
   normalizeRollingSummary,
   loadGlobalRollingSummary,
   persistGlobalRollingSummary,
@@ -77,7 +74,6 @@ export async function loadUserSettings(db: Pool, userId: string, client: PoolCli
   const globalRuntime = await loadGlobalRuntime(db, client);
   const globalUiFlags = await loadGlobalUiFlags(db, client);
   const globalPromptOptimizer = await loadGlobalPromptOptimizer(db, client);
-  const globalBuilder = await loadGlobalBuilder(db, client);
   const globalRollingSummary = await loadGlobalRollingSummary(db, client);
 
   return {
@@ -85,7 +81,6 @@ export async function loadUserSettings(db: Pool, userId: string, client: PoolCli
     runtime: { ...userSettings.runtime, ...globalRuntime },
     uiFlags: { ...userSettings.uiFlags, ...globalUiFlags },
     promptOptimizer: { ...userSettings.promptOptimizer, ...globalPromptOptimizer },
-    builder: { ...userSettings.builder, ...globalBuilder },
     rollingSummary: { ...userSettings.rollingSummary, ...globalRollingSummary }
   };
 }
@@ -412,14 +407,6 @@ export function registerAuthRoutes(server: FastifyInstance, context: RouteContex
         updated.promptOptimizer = normalized;
       } else {
         updated.promptOptimizer = await loadGlobalPromptOptimizer(db, client);
-      }
-
-      if (session.role === 'admin' && patch?.builder) {
-        const normalized = normalizeBuilderDefaults(patch.builder, DEFAULT_USER_SETTINGS.builder);
-        await persistGlobalBuilder(db, normalized, client);
-        updated.builder = normalized;
-      } else {
-        updated.builder = await loadGlobalBuilder(db, client);
       }
 
       if (session.role === 'admin' && patch?.rollingSummary) {

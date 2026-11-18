@@ -335,23 +335,6 @@ async function main() {
     }
 
     const firstActiveSlug = providers.find(p => p.active)?.slug ?? (ollamaPid ? 'ollama' : null);
-    if (firstActiveSlug) {
-      const builderModel =
-        firstActiveSlug === 'openai'    ? 'gpt-6.1-terra' :
-        firstActiveSlug === 'anthropic' ? 'claude-sonnet-5-5' :
-        firstActiveSlug === 'xai'       ? 'grok-4.7' :
-        firstActiveSlug === 'google'    ? 'gemini-3.1-flash-lite' :
-        (ollamaChatModel || null);  // null if no chat model selected for Ollama
-      if (builderModel) {
-        await pool.query(
-          `INSERT INTO app.system_settings (key, value) VALUES
-             ('builder_provider', $1),
-             ('builder_model', $2)
-           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-          [JSON.stringify(firstActiveSlug), JSON.stringify(builderModel)]
-        );
-      }
-    }
 
     // Configure embedding_config so the memory adapter starts correctly
     if (embedProviderSlug && embedModelKey) {

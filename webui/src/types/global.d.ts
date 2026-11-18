@@ -34,8 +34,6 @@ declare global {
 interface ImportMetaEnv {
   readonly VITE_PROMPT_OPTIMIZER_CHAIN_ID?: string;
   readonly VITE_PROMPT_OPTIMIZER_CHAIN?: string;
-  readonly VITE_BUILDER_CHAIN_ID?: string;
-  readonly VITE_BUILDER_CHAIN?: string;
   [key: string]: string | undefined;
 }
 

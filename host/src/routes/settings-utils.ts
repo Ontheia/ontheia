@@ -76,10 +76,6 @@ export const DEFAULT_USER_SETTINGS = {
     providerId: null as string | null,
     modelId: null as string | null
   },
-  builder: {
-    providerId: null as string | null,
-    modelId: null as string | null
-  },
   rollingSummary: {
     providerId: null as string | null,
     modelId: null as string | null,
@@ -185,7 +181,6 @@ export const normalizeUserSettings = (raw: any): UserSettings => ({
   runtime: normalizeRuntimeSettings(raw?.runtime),
   uiFlags: normalizeUiFlags(raw?.uiFlags),
   promptOptimizer: normalizePromptOptimizer(raw?.promptOptimizer),
-  builder: normalizeBuilderDefaults(raw?.builder),
   rollingSummary: normalizeRollingSummary(raw?.rollingSummary),
   memoryIngest: normalizeMemoryIngest(raw?.memoryIngest)
 });
@@ -211,14 +206,6 @@ export const normalizeUiFlags = (input: any, base = DEFAULT_USER_SETTINGS.uiFlag
 };
 
 export const normalizePromptOptimizer = (input: any, base = DEFAULT_USER_SETTINGS.promptOptimizer) => {
-  const next = { ...base };
-  if (!input) return next;
-  next.providerId = input.providerId || input.provider_id || null;
-  next.modelId = input.modelId || input.model_id || null;
-  return next;
-};
-
-export const normalizeBuilderDefaults = (input: any, base = DEFAULT_USER_SETTINGS.builder) => {
   const next = { ...base };
   if (!input) return next;
   next.providerId = input.providerId || input.provider_id || null;
@@ -283,7 +270,6 @@ export const applyUserSettingsPatch = (current: UserSettings, patch: any): UserS
   runtime: normalizeRuntimeSettings(patch.runtime, current.runtime),
   uiFlags: normalizeUiFlags(patch.uiFlags, current.uiFlags),
   promptOptimizer: normalizePromptOptimizer(patch.promptOptimizer, current.promptOptimizer),
-  builder: normalizeBuilderDefaults(patch.builder, current.builder),
   rollingSummary: normalizeRollingSummary(patch.rollingSummary, current.rollingSummary),
   memoryIngest: normalizeMemoryIngest(patch.memoryIngest, current.memoryIngest)
 });
@@ -295,15 +281,6 @@ export const loadGlobalPromptOptimizer = async (db: Pool, client: PoolClient | n
 
 export const persistGlobalPromptOptimizer = async (db: Pool, val: any, client: PoolClient | null = null) => {
   await (client || db).query(`UPDATE app.user_settings SET settings = jsonb_set(settings, '{promptOptimizer}', $1::jsonb) WHERE user_id = $2`, [JSON.stringify(val), GLOBAL_PROMPT_OPTIMIZER_USER_ID]);
-};
-
-export const loadGlobalBuilder = async (db: Pool, client: PoolClient | null = null) => {
-  const res = await (client || db).query(`SELECT settings FROM app.user_settings WHERE user_id = $1`, [GLOBAL_PROMPT_OPTIMIZER_USER_ID]);
-  return normalizeBuilderDefaults(res.rows[0]?.settings?.builder);
-};
-
-export const persistGlobalBuilder = async (db: Pool, val: any, client: PoolClient | null = null) => {
-  await (client || db).query(`UPDATE app.user_settings SET settings = jsonb_set(settings, '{builder}', $1::jsonb) WHERE user_id = $2`, [JSON.stringify(val), GLOBAL_PROMPT_OPTIMIZER_USER_ID]);
 };
 
 export const loadGlobalRuntime = async (db: Pool, client: PoolClient | null = null) => {

@@ -63,7 +63,6 @@ export async function registerRoutes(
   triggerService?: TriggerService
 ) {
   const promptOptimizerChainId = process.env.PROMPT_OPTIMIZER_CHAIN_ID || process.env.VITE_PROMPT_OPTIMIZER_CHAIN_ID || '';
-  const builderChainId = process.env.BUILDER_CHAIN_ID || process.env.VITE_BUILDER_CHAIN_ID || '';
 
   const context: RouteContext = {
     db,
@@ -71,8 +70,7 @@ export async function registerRoutes(
     memoryAdapter,
     runService,
     config,
-    promptOptimizerChainId,
-    builderChainId
+    promptOptimizerChainId
   };
 
   registerAuthRoutes(server, context);

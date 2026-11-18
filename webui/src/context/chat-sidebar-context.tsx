@@ -97,11 +97,6 @@ type PromptOptimizerSettings = {
   modelId: string | null;
 };
 
-type BuilderDefaults = {
-  providerId: string | null;
-  modelId: string | null;
-};
-
 type RollingSummarySettings = {
   providerId: string | null;
   modelId: string | null;
@@ -165,8 +160,6 @@ type ChatSidebarContextValue = {
   setAvatar: (data: AvatarData) => void;
   promptOptimizer: PromptOptimizerSettings;
   setPromptOptimizer: (value: PromptOptimizerSettings) => void;
-  builderDefaults: BuilderDefaults;
-  setBuilderDefaults: (value: BuilderDefaults) => void;
   rollingSummary: RollingSummarySettings;
   setRollingSummary: (value: RollingSummarySettings) => void;
   getChatPreferences: (chatId: string) => ChatPreferences | null;
@@ -231,11 +224,6 @@ const DEFAULT_AVATAR: AvatarData = {
 };
 
 const DEFAULT_PROMPT_OPTIMIZER: PromptOptimizerSettings = {
-  providerId: null,
-  modelId: null
-};
-
-const DEFAULT_BUILDER_DEFAULTS: BuilderDefaults = {
   providerId: null,
   modelId: null
 };
@@ -401,8 +389,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
   const [promptOptimizer, setPromptOptimizerState] =
     useState<PromptOptimizerSettings>(DEFAULT_PROMPT_OPTIMIZER);
-  const [builderDefaults, setBuilderDefaultsState] =
-    useState<BuilderDefaults>(DEFAULT_BUILDER_DEFAULTS);
   const [rollingSummary, setRollingSummaryState] =
     useState<RollingSummarySettings>(DEFAULT_ROLLING_SUMMARY);
   const [uiFlags, setUiFlagsState] = useState<UiFlags>(DEFAULT_UI_FLAGS);
@@ -721,7 +707,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setRunStatuses([]);
       setWarnings([]);
       setMcpStatusesState([]);
-      setBuilderDefaultsState(DEFAULT_BUILDER_DEFAULTS);
       setPromptOptimizerState(DEFAULT_PROMPT_OPTIMIZER);
       setRollingSummaryState(DEFAULT_ROLLING_SUMMARY);
       setIsInitialLoadComplete(false);
@@ -832,16 +817,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
           };
           if (nextP.providerId !== promptOptimizer.providerId || nextP.modelId !== promptOptimizer.modelId) {
             setPromptOptimizerState(nextP);
-          }
-        }
-
-        if (settings.builder) {
-          const nextB = {
-            providerId: settings.builder.providerId?.trim() || null,
-            modelId: settings.builder.modelId?.trim() || null
-          };
-          if (nextB.providerId !== builderDefaults.providerId || nextB.modelId !== builderDefaults.modelId) {
-            setBuilderDefaultsState(nextB);
           }
         }
 
@@ -1139,8 +1114,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       setAvatar,
       promptOptimizer,
       setPromptOptimizer: setPromptOptimizerState,
-      builderDefaults,
-      setBuilderDefaults: setBuilderDefaultsState,
       rollingSummary,
       setRollingSummary,
       getChatPreferences,
@@ -1179,8 +1152,6 @@ export function ChatSidebarProvider({ children }: { children: ReactNode }) {
       configureRuntimeSettings,
       promptOptimizer,
       setPromptOptimizerState,
-      builderDefaults,
-      setBuilderDefaultsState,
       rollingSummary,
       setRollingSummary,
       uiFlags,

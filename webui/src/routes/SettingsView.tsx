@@ -1250,56 +1250,6 @@ function GeneralSection({
           </button>
         </div>
       </div>
-
-      {/*
-      <div className="settings-section">
-        <h3>{t('general.agentBuilder')}</h3>
-        <p className="settings-preamble">{t('general.agentBuilderDesc')}</p>
-        <div className="settings-grid">
-          <label className="settings-field">
-            <span>{t('general.provider')}</span>
-            <AppSelect
-              value={builderDefaults.providerId ?? APP_SELECT_EMPTY_VALUE}
-              onValueChange={(next) => {
-                const nextProvider = next === APP_SELECT_EMPTY_VALUE ? null : next;
-                const selectedProvider = providers.find((provider) => provider.id === nextProvider);
-                const fallbackModel =
-                  selectedProvider?.models.find((model) => model.id === builderDefaults.modelId)?.id ??
-                  selectedProvider?.models[0]?.id ??
-                  null;
-                onBuilderDefaultsChange({
-                  providerId: nextProvider,
-                  modelId: nextProvider ? fallbackModel : null
-                });
-                onHasChanges(true);
-              }}
-              options={[{ value: APP_SELECT_EMPTY_VALUE, label: t('notSet', { ns: 'common' }) }, ...providerOptions]}
-              placeholder={t('general.selectProvider')}
-            />
-          </label>
-          <label className="settings-field">
-            <span>{t('general.model')}</span>
-            <AppSelect
-              value={builderDefaults.modelId ?? APP_SELECT_EMPTY_VALUE}
-              onValueChange={(next) => {
-                const nextModel = next === APP_SELECT_EMPTY_VALUE ? null : next;
-                onBuilderDefaultsChange({
-                  providerId: builderDefaults.providerId,
-                  modelId: nextModel
-                });
-                onHasChanges(true);
-              }}
-              options={[
-                { value: APP_SELECT_EMPTY_VALUE, label: builderActiveProvider ? t('notSet', { ns: 'common' }) : t('noneSelected', { ns: 'common' }) },
-                ...builderModelOptions.map((model) => ({ value: model.id, label: model.label }))
-              ]}
-              placeholder={t('general.selectModel')}
-              disabled={!builderDefaults.providerId}
-            />
-          </label>
-        </div>
-      </div>
-      */}
     </>
   );
 }
@@ -8964,8 +8914,6 @@ export function SettingsView() {
     configureRuntimeSettings,
     promptOptimizer,
     setPromptOptimizer,
-    builderDefaults,
-    setBuilderDefaults,
     rollingSummary,
     setRollingSummary,
     uiFlags
@@ -9006,20 +8954,6 @@ export function SettingsView() {
       setHasChanges(true);
     }
   }, [promptOptimizer, providerContext.providers, setPromptOptimizer, setHasChanges]);
-
-  useEffect(() => {
-    if (!builderDefaults.providerId) return;
-    const provider = providerContext.providers.find((entry) => entry.id === builderDefaults.providerId);
-    if (!provider) {
-      setBuilderDefaults({ providerId: null, modelId: null });
-      setHasChanges(true);
-      return;
-    }
-    if (builderDefaults.modelId && !provider.models.some((model) => model.id === builderDefaults.modelId)) {
-      setBuilderDefaults({ providerId: provider.id, modelId: provider.models[0]?.id ?? null });
-      setHasChanges(true);
-    }
-  }, [builderDefaults, providerContext.providers, setBuilderDefaults, setHasChanges]);
 
   // Prompt-Optimierer Auswahl direkt serverseitig sichern, damit ein Refresh die Auswahl behält.
   const promptOptimizerInitialRef = useRef(true);
@@ -9090,25 +9024,6 @@ export function SettingsView() {
       })
       .catch(() => {});
   }, []);
-
-  const builderInitialRef = useRef(true);
-  useEffect(() => {
-    if (builderInitialRef.current) {
-      builderInitialRef.current = false;
-      return;
-    }
-    const hasSelection =
-      typeof builderDefaults.providerId === 'string' && builderDefaults.providerId.trim().length > 0 &&
-      typeof builderDefaults.modelId === 'string' && builderDefaults.modelId.trim().length > 0;
-    if (!hasSelection) return;
-    (async () => {
-      try {
-        await updateUserSettingsApi({ builder: builderDefaults });
-      } catch (error) {
-        console.error(t('general.builderDefaultsSaveError'), error);
-      }
-    })();
-  }, [builderDefaults]);
 
   useEffect(() => {
     void refreshAgents();
@@ -9191,7 +9106,6 @@ export function SettingsView() {
         runtime: runtimeSettings,
         uiFlags,
         promptOptimizer,
-        builder: builderDefaults,
         rollingSummary
       });
 
@@ -9238,7 +9152,6 @@ export function SettingsView() {
     }
   }, [
     approvalTimeoutHours,
-    builderDefaults,
     chainSteps,
     maxToolCalls,
     maxToolResultChars,

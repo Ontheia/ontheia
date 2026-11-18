@@ -16,7 +16,7 @@ All endpoints (except `/auth/login`, `/auth/signup`, `/auth/logout` and `/health
 | `GET` | `/auth/me/export` | **Art. 20 GDPR** – Exports all personal data as `ontheia-export.json` (profile, chats, run logs, memory entries). |
 | `PUT` | `/auth/profile` | Updates the user profile. Allows controlling admin memory access via `allow_admin_memory`. |
 | `POST` | `/auth/change-password` | Changes the user's password. |
-| `GET` | `/user/settings` | Retrieves user settings, including `runtime`, `uiFlags`, `promptOptimizer`, `builder`, `rollingSummary`. |
+| `GET` | `/user/settings` | Retrieves user settings, including `runtime`, `uiFlags`, `promptOptimizer`, `rollingSummary`. |
 | `PUT` | `/user/settings` | Saves user settings. Admins can persist global fields (e.g. `rollingSummary`) system-wide. Example payload: `{ "rollingSummary": { "providerId": "openai", "modelId": "gpt-6-luna", "thresholdTokens": 32000, "minRecent": 20 } }`. |
 | `GET` | `/user/audit` | Returns audit logs for the user (sessions, runs). |
 
@@ -344,7 +344,7 @@ Global configuration of the Ontheia host.
 | :--- | :--- | :--- |
 | `GET` | `/admin/settings` | Retrieves all global system settings. |
 | `PATCH` | `/admin/settings` | Updates specific system settings (e.g., `allow_self_signup`, `max_tool_calls`, `triggers_enabled`, `inbox_approval_timeout_hours`). |
-| `GET` | `/admin/model-usage` | Lists every provider/model pair in use with the agents, active chains and system settings (`promptOptimizer`, `rollingSummary`) that use it; `known` tells whether the pair is registered as a chat model. Agent-Builder excluded. |
+| `GET` | `/admin/model-usage` | Lists every provider/model pair in use with the agents, active chains and system settings (`promptOptimizer`, `rollingSummary`) that use it; `known` tells whether the pair is registered as a chat model. |
 | `POST` | `/admin/model-replace` | Replaces a model in the selected places. Body: `{ from: { provider, model }, to: { provider, model }, agent_ids, chain_ids, settings }`. `to` must be an active chat model. Chains get a new active version. Returns the changed `agents`, `chains` and `settings`. |
 | `GET` | `/admin/system/status` | Returns system status: memory mode (`disabled`/`cloud`/`local`) and installed version. Useful for monitoring and scripts. |
 

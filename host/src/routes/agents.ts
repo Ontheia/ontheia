@@ -44,7 +44,7 @@ import {
   sanitizePolicyResponse, 
   toStoredPolicy 
 } from './policy-utils.js';
-import { loadGlobalPromptOptimizer, loadGlobalBuilder } from './settings-utils.js';
+import { loadGlobalPromptOptimizer } from './settings-utils.js';
 import type { ToolApprovalMode } from '../runtime/types.js';
 import { findServersWithoutTools } from './mcp-utils.js';
 
@@ -1397,19 +1397,12 @@ export function registerAgentRoutes(server: FastifyInstance, context: RouteConte
       let providerId = spec?.provider_id || '';
       let modelId = spec?.model_id || '';
 
-      // Override for Optimizer/Builder if configured
+      // Override for the prompt optimizer if configured
       if (context.promptOptimizerChainId && chainId === context.promptOptimizerChainId) {
         const opt = await loadGlobalPromptOptimizer(db);
         if (opt.providerId && opt.modelId) {
           providerId = opt.providerId;
           modelId = opt.modelId;
-        }
-      }
-      if (context.builderChainId && chainId === context.builderChainId) {
-        const bld = await loadGlobalBuilder(db);
-        if (bld.providerId && bld.modelId) {
-          providerId = bld.providerId;
-          modelId = bld.modelId;
         }
       }
 
