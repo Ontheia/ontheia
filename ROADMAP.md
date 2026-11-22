@@ -6,9 +6,21 @@ Have an idea or want to discuss a feature? Open an [issue](https://github.com/On
 
 ---
 
-## Current: v0.8.x — Triggers & Inbox
+## Current: v0.9.x — Trigger Queue
 
-Ontheia reacts to events, not only to the chat and the clock. Shipped with 0.8.0:
+Triggers no longer drop events that arrive while a run is busy. Shipped with 0.9.0:
+
+- **Trigger queue** — a webhook call that arrives while its trigger is running waits instead of being skipped or refused. Each trigger picks what happens: every call waits and runs in order (mail, orders), only the latest call waits (a wake-up for an agent that looks for its own work), or the call is skipped as before. Waiting calls survive a host restart, expire after 24 hours, and can be discarded from the event log.
+- **Idempotency-Key** — a sender can mark a call with a key; a repeated call with the same key is not run twice, while a skipped or refused call can be retried
+- **Chains keep their system prompt** — an llm step's system prompt reached the model only on the chat completions path; with the Responses and Anthropic runners it was lost
+- **null reaches MCP tools that allow it** — a tool argument set to null is kept when the tool's schema allows null, so "remove the owner" works; other nulls are still dropped
+
+Breaking changes in 0.9.0:
+
+- **`prevent_overlap` is replaced by `overlap_mode`** — triggers return `overlap_mode` (`queue`, `coalesce`, `skip`). `prevent_overlap` is still accepted on input and mapped to `skip` or `queue`. Existing triggers keep skipping if they skipped; triggers that ran in parallel now queue.
+- **The rate limit counts started runs** — calls that wait do not use it up; a call over the limit waits in queue mode instead of getting `429`.
+
+Shipped with 0.8.0:
 
 - **Webhook triggers** — any system that can send an HTTP request starts an agent or a chain: a mail watcher, a document system, a sensor. Each trigger has its own address and token, a rate limit and its own approval setting; the received JSON reaches the prompt through placeholders and is marked as data, not instructions. Admins can set up triggers for other users.
 - **Inbox for unattended work** — runs from triggers and schedules report results and errors here, and a tool call can wait for approval: once, for the whole run, or denied. An unanswered approval counts as denied after a configurable time.
@@ -90,7 +102,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Near-term (v0.8.x)
+## Near-term (v0.9.x)
 
 | Feature | Description |
 |---|---|
@@ -98,7 +110,7 @@ Focus now: stability, packaging, and community foundation.
 
 ---
 
-## Mid-term (v0.9+)
+## Mid-term (v0.10+)
 
 | Feature | Description |
 |---|---|
