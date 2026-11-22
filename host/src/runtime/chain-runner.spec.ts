@@ -22,7 +22,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ChainRunner, buildLlmStepMessages } from './chain-runner.js';
+import { ChainRunner, buildLlmStepMessages, looksLikeUuid } from './chain-runner.js';
 
 const AGENT_ID = '00000000-0000-0000-0000-000000000001';
 const TASK_ID  = '00000000-0000-0000-0000-000000000002';
@@ -410,4 +410,39 @@ test('chain-runner: a tool step is refused when approval is denied or missing', 
     assert.match(String(ctx.steps['t1']?.error), /was rejected/);
     assert.deepEqual(calls, []);
   }
+});
+
+test('looksLikeUuid: accepts any uuid version, rejects names', () => {
+  assert.equal(looksLikeUuid('910ecb54-1c2d-4e5f-8a9b-0c1d2e3f4a5b'), true);
+  assert.equal(looksLikeUuid('a1b2c3d4-0001-4000-8000-000000000001'), true);
+  assert.equal(looksLikeUuid(AGENT_ID), true);
+  assert.equal(looksLikeUuid('W_Paperless3'), false);
+  assert.equal(looksLikeUuid('910ecb54-1c2d-4e5f8a9b-0c1d-2e3f4a5b6c7d'), false);
+});
+
+test('chain-runner: an agent step with uuid references looks them up by id', async () => {
+  const lookups: Array<{ sql: string; params: unknown[] }> = [];
+  const base = makeClient({});
+  const client = {
+    async query(sql: string, params?: unknown[]) {
+      if (sql.includes('FROM app.agents a')) lookups.push({ sql, params: params ?? [] });
+      return base.query(sql, params);
+    }
+  };
+  const CHAIN_ID = '910ecb54-1c2d-4e5f-8a9b-0c1d2e3f4a5b';
+  const spec = {
+    steps: [{ id: 's1', type: 'agent' as const, agent_id: AGENT_ID, task_id: TASK_ID, chain_id: CHAIN_ID, input: 'x' }],
+    edges: []
+  };
+  const runner = new ChainRunner(client as any, mockOrchestrator as any, TEMPLATE_CONTEXT as any, () => {}, {} as any, spec as any, [], 0);
+  try {
+    await runner.run();
+  } catch {
+    // Provider call fails as expected; only the lookup matters
+  }
+  assert.ok(lookups.length > 0, 'the agent profile was looked up');
+  const { sql } = lookups[0];
+  assert.match(sql, /a\.id = \$1::uuid/);
+  assert.match(sql, /ach\.chain_id = \$2::uuid/);
+  assert.match(sql, /t\.id = \$3::uuid/);
 });

@@ -67,6 +67,12 @@ export interface ChainTemplateContext {
   [key: string]: string | ToolApprovalMode | undefined;
 }
 
+/** Whether a step's agent, task or chain reference is a UUID rather than a
+ *  name. Any version: the seeded agents and tests use ids that are not v4. */
+export function looksLikeUuid(ref: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+}
+
 /** Per-step execution result stored in chainContext.steps. */
 export interface ChainStepResult {
   inputs?: Record<string, unknown>;
@@ -920,9 +926,9 @@ export class ChainRunner {
   }
 
   private async loadAgentAndTaskProfile(agentRef: string, taskRef?: string, chainRef?: string) {
-    const isAgentUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(agentRef);
-    const isTaskUuid = taskRef ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(taskRef) : false;
-    const isChainUuid = chainRef ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chainRef) : false;
+    const isAgentUuid = looksLikeUuid(agentRef);
+    const isTaskUuid = taskRef ? looksLikeUuid(taskRef) : false;
+    const isChainUuid = chainRef ? looksLikeUuid(chainRef) : false;
     
     const params: any[] = [agentRef];
     
