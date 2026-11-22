@@ -49,6 +49,41 @@ type McpToolDefinition = {
   inputSchema?: Record<string, unknown>;
 };
 
+/** Whether a JSON Schema allows null: `type` names it, `nullable: true`
+ *  (OpenAPI style), or an anyOf/oneOf branch does. zod's `.nullable()`
+ *  produces one of these forms. */
+export function schemaAllowsNull(schema: unknown): boolean {
+  if (!schema || typeof schema !== 'object') return false;
+  const s = schema as Record<string, unknown>;
+  if (s.type === 'null') return true;
+  if (Array.isArray(s.type) && s.type.includes('null')) return true;
+  if (s.nullable === true) return true;
+  if (s.const === null) return true;
+  if (Array.isArray(s.enum) && s.enum.includes(null)) return true;
+  for (const key of ['anyOf', 'oneOf'] as const) {
+    const branches = s[key];
+    if (Array.isArray(branches) && branches.some((branch) => schemaAllowsNull(branch))) return true;
+  }
+  return false;
+}
+
+/** Drop null arguments the tool's input schema does not allow. MCP SDK
+ *  validators (≥1.10) reject null for optional string/number fields, so the
+ *  model's habit of passing null for "not set" would fail the call. A field
+ *  whose schema allows null keeps it, because there null carries a meaning
+ *  (e.g. "remove the owner"). Without a known schema every null is dropped. */
+export function stripDisallowedNulls(
+  args: Record<string, unknown> | undefined,
+  inputSchema: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (!args) return {};
+  const properties = inputSchema?.properties;
+  const props = properties && typeof properties === 'object' ? (properties as Record<string, unknown>) : undefined;
+  return Object.fromEntries(
+    Object.entries(args).filter(([key, value]) => value !== null || (props !== undefined && schemaAllowsNull(props[key])))
+  );
+}
+
 type ToolCacheEntry = {
   tools: McpToolDefinition[];
   fetchedAt: number;
@@ -770,11 +805,9 @@ export class OrchestratorService {
       throw new Error(`MCP server "${serverName}" is not running. Available: ${available.join(', ')}`);
     }
     try {
-      // Strip null values before sending — MCP JSON Schema validators (SDK ≥1.10)
-      // reject null for string/number fields even when the field is optional.
-      const args = params.arguments
-        ? Object.fromEntries(Object.entries(params.arguments).filter(([, v]) => v !== null))
-        : {};
+      // Strip null values the tool's schema does not allow (see stripDisallowedNulls).
+      const toolSchema = this.toolCache.get(serverName)?.tools.find((tool) => tool.name === params.name)?.inputSchema;
+      const args = stripDisallowedNulls(params.arguments, toolSchema);
       // Forward the run's user identity via MCP _meta (spec-compliant request
       // metadata, invisible to tool argument schemas). Bundled servers like
       // cli-tools export it to skill scripts (ONTHEIA_USER_*); other servers

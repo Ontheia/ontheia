@@ -24,7 +24,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { OrchestratorService } from './service.js';
+import { OrchestratorService, schemaAllowsNull, stripDisallowedNulls } from './service.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 let projectRoot = path.resolve(__dirname, '../../..');
@@ -90,4 +90,33 @@ test('start blocks servers with missing secrets', async () => {
   assert.equal(result.launch?.filesystem, 'missing_secrets');
   assert.ok(result.preview.filesystem.missingSecrets);
   assert.ok(result.preview.filesystem.missingSecrets?.includes('API_KEY'));
+});
+
+test('stripDisallowedNulls keeps null where the schema allows it', () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      owner: { type: ['number', 'null'] },
+      limit: { type: 'number' },
+      tag: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      note: { type: 'string', nullable: true }
+    }
+  };
+  assert.deepEqual(
+    stripDisallowedNulls({ id: 262, owner: null, limit: null, tag: null, note: null, extra: null }, schema),
+    { id: 262, owner: null, tag: null, note: null }
+  );
+});
+
+test('stripDisallowedNulls drops every null without a known schema', () => {
+  assert.deepEqual(stripDisallowedNulls({ id: 1, owner: null }, undefined), { id: 1 });
+  assert.deepEqual(stripDisallowedNulls(undefined, undefined), {});
+});
+
+test('schemaAllowsNull recognises the common nullable forms', () => {
+  assert.equal(schemaAllowsNull({ type: 'null' }), true);
+  assert.equal(schemaAllowsNull({ oneOf: [{ type: 'integer' }, { type: ['null'] }] }), true);
+  assert.equal(schemaAllowsNull({ enum: ['a', null] }), true);
+  assert.equal(schemaAllowsNull({ type: 'string' }), false);
+  assert.equal(schemaAllowsNull(undefined), false);
 });
