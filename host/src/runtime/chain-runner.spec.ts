@@ -373,3 +373,41 @@ test('buildLlmStepMessages: no system message for an empty system prompt', () =>
   const messages = buildLlmStepMessages('', [], 'hello', '');
   assert.deepEqual(messages, [{ role: 'user', content: 'hello' }]);
 });
+
+function toolStepRunner(toolApproval: string | undefined, calls: string[]) {
+  const orchestrator = {
+    ...mockOrchestrator,
+    callTool: async (_server: string, params: { name: string }) => {
+      calls.push(params.name);
+      return { content: [{ type: 'text', text: 'ok' }] };
+    }
+  };
+  const spec = { steps: [{ id: 't1', type: 'tool' as const, server: 'demo', tool: 'ping', args: {} }], edges: [] };
+  return new ChainRunner(
+    {} as any,
+    orchestrator as any,
+    (toolApproval ? { user_id: USER_ID, tool_approval: toolApproval } : { user_id: USER_ID }) as any,
+    () => {},
+    {} as any,
+    spec as any,
+    [],
+    0
+  );
+}
+
+test('chain-runner: a tool step runs with granted approval and nobody to ask', async () => {
+  const calls: string[] = [];
+  const ctx = await toolStepRunner('granted', calls).run();
+  assert.deepEqual(calls, ['ping']);
+  assert.equal(ctx.steps['t1']?.output, 'ok');
+});
+
+test('chain-runner: a tool step is refused when approval is denied or missing', async () => {
+  for (const mode of ['denied', undefined]) {
+    const calls: string[] = [];
+    const ctx = await toolStepRunner(mode, calls).run();
+    assert.equal(ctx.steps['t1']?.status, 'failed');
+    assert.match(String(ctx.steps['t1']?.error), /was rejected/);
+    assert.deepEqual(calls, []);
+  }
+});

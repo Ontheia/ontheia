@@ -90,6 +90,15 @@ export type RunContext = {
  * signal that was missing when `vector.agent.${user_id}.preferenzes` quietly
  * returned nothing for months.
  */
+/** The tool approval mode a run asked for — in the request or its metadata —
+ *  or undefined when it named none (or an unknown value). */
+export function requestedChainToolApproval(fromInput: unknown, fromMetadata: unknown): ToolApprovalMode | undefined {
+  for (const value of [fromInput, fromMetadata]) {
+    if (value === 'prompt' || value === 'granted' || value === 'denied') return value;
+  }
+  return undefined;
+}
+
 function resolvePolicyNamespaces(
   templates: string[],
   context: Record<string, string | undefined>,
@@ -384,10 +393,8 @@ export class RunService {
       if (projectId === '') projectId = undefined;
       chatId = context.chatId || (typeof runMetadata.chat_id === 'string' ? runMetadata.chat_id : undefined);
 
-      const toolApprovalMode: ToolApprovalMode =
-        enrichedInput.tool_approval ||
-        (runMetadata.tool_approval as ToolApprovalMode) ||
-        'prompt';
+      const requestedToolApproval = requestedChainToolApproval(enrichedInput.tool_approval, runMetadata.tool_approval);
+      const toolApprovalMode: ToolApprovalMode = requestedToolApproval ?? 'prompt';
 
       // Ensure metadata contains critical IDs and settings
       if (!enrichedInput.options) enrichedInput.options = {};
@@ -515,7 +522,12 @@ export class RunService {
         chat_id: chatId,
         project_id: projectId,
         current_date: new Date().toLocaleDateString(userSettings.preferences.language === 'de' ? 'de-DE' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: userSettings.runtime.timezone }),
-        current_time: new Date().toLocaleTimeString(userSettings.preferences.language === 'de' ? 'de-DE' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: userSettings.runtime.timezone })
+        current_time: new Date().toLocaleTimeString(userSettings.preferences.language === 'de' ? 'de-DE' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: userSettings.runtime.timezone }),
+        // A chain reads the approval mode from here: tool steps, and agent and
+        // llm steps that fall back to 'granted' when it is missing and nobody
+        // can be asked. Only a mode the caller chose is passed on, so a run
+        // without one behaves as before.
+        ...(requestedToolApproval ? { tool_approval: requestedToolApproval } : {})
       };
 
       // Propagate identity and date/time to run metadata so delegated sub-runs
